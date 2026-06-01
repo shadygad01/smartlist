@@ -1398,7 +1398,8 @@ def build_report(holiday_mode=False, last_trading=None):
   <tr><td align="center" style="font-family:Arial,sans-serif;font-size:11px;color:#999;">EGX Institutional Scanner · TradingView Data Engine</td></tr>
 </table>""")
 
-    return f"""<!DOCTYPE html><html><body style="margin:0;padding:20px;background:#eef2f7;"><table width="680" cellpadding="0" cellspacing="0" border="0" align="center" style="background:#ffffff;border:1px solid #d0d7e2;"><tr><td style="padding:0 24px 24px 24px;">{"".join(parts)}</td></tr></table></body></html>"""
+    html = f"""<!DOCTYPE html><html><body style="margin:0;padding:20px;background:#eef2f7;"><table width="680" cellpadding="0" cellspacing="0" border="0" align="center" style="background:#ffffff;border:1px solid #d0d7e2;"><tr><td style="padding:0 24px 24px 24px;">{"".join(parts)}</td></tr></table></body></html>"""
+    return html, results
 
 # =========================================
 # EMAIL
@@ -1425,6 +1426,105 @@ def send_email(html, subject_suffix=""):
     return False
 
 # =========================================
+# TELEGRAM ALERTS
+# =========================================
+
+def send_telegram_alerts(results):
+    """
+    Send a Telegram message for every stock with score >= 35.
+    Requires TELEGRAM_TOKEN and TELEGRAM_CHAT_ID env vars.
+    """
+    token   = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        print("Telegram: TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not set — skipping.")
+        return
+
+    # Collect qualifying stocks sorted by score descending
+    alerts = [
+        (s, results[s])
+        for s in STOCKS
+        if results[s].get("ok") and results[s].get("score", 0) >= 35
+    ]
+    alerts.sort(key=lambda x: x[1].get("score", 0), reverse=True)
+
+    if not alerts:
+        # Send a "nothing today" summary so you know the scan ran
+        msg = (
+            f"📊 *EGX Daily Scan — {now_cairo().strftime('%d %b %Y')}*\n"
+            f"No stocks reached the Watch threshold (≥35) today."
+        )
+        try:
+            requests.post(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                json={"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"},
+                timeout=10,
+            )
+        except Exception as e:
+            print(f"Telegram error: {e}")
+        return
+
+    # Build one summary message with all qualifying stocks
+    date_str = now_cairo().strftime("%d %b %Y")
+    lines = [f"📊 *EGX Daily Scan — {date_str}*\n_{len(alerts)} stock(s) above threshold_\n"]
+
+    SIGNAL_EMOJI = {
+        "STRONG BUY":  "🟢",
+        "BUY":         "🟩",
+        "WATCH":       "🟡",
+        "NEUTRAL":     "⚪",
+        "SELL":        "🔴",
+        "STRONG SELL": "🔴",
+    }
+
+    for s, r in alerts:
+        emoji  = SIGNAL_EMOJI.get(r.get("signal", "").upper(), "🔵")
+        upside = ""
+        try:
+            pct = (float(r["target"]) - float(r["price"])) / float(r["price"]) * 100
+            upside = f" (+{pct:.1f}%)"
+        except Exception:
+            pass
+
+        fresh_flag = "✅" if r.get("is_fresh") else "⚠️"
+        lines.append(
+            f"{emoji} *{NAMES.get(s, s)}* `{s}`\n"
+            f"   Signal: *{r['signal']}*  |  Score: *{r['score']}/100*\n"
+            f"   Price: *{r['price']} EGP*  →  Target: *{r['target']} EGP*{upside}\n"
+            f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
+        )
+
+    full_msg = "\n".join(lines)
+
+    # Telegram limit: 4096 chars per message — split if needed
+    MAX = 4000
+    chunks = []
+    current = ""
+    for line in full_msg.split("\n"):
+        if len(current) + len(line) + 1 > MAX:
+            chunks.append(current)
+            current = line + "\n"
+        else:
+            current += line + "\n"
+    if current:
+        chunks.append(current)
+
+    for chunk in chunks:
+        try:
+            resp = requests.post(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                json={"chat_id": chat_id, "text": chunk, "parse_mode": "Markdown"},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                print(f"Telegram: chunk sent ({len(chunk)} chars)")
+            else:
+                print(f"Telegram: HTTP {resp.status_code} — {resp.text[:200]}")
+        except Exception as e:
+            print(f"Telegram error: {e}")
+
+
+# =========================================
 # RUN
 # =========================================
 
@@ -1434,10 +1534,12 @@ if __name__ == "__main__":
 
     if is_egx_trading_day(today):
         print("EGX Open Session — analyzing...")
-        html = build_report(holiday_mode=False)
+        html, _results = build_report(holiday_mode=False)
         send_email(html)
+        send_telegram_alerts(_results)
     else:
         last_td = most_recent_trading_day(today)
         print(f"Today ({today}) is NOT a trading day. Last active session: {last_td}")
-        html = build_report(holiday_mode=True, last_trading=str(last_td))
+        html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
         send_email(html, subject_suffix=f" (Holiday — Active Session: {last_td})")
+        send_telegram_alerts(_results)

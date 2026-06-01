@@ -106,8 +106,8 @@ TV_HEADERS = {
 }
 
 W_PRICE  = 30
-W_OB     = 10
-W_LIQ    = 20
+W_OB     = 18
+W_LIQ    = 12
 W_HTF    = 10
 W_AVWAP  =  8
 W_MACD   =  4
@@ -552,18 +552,18 @@ def sc_price(cur, lo, hi, eq, buy_hi, sell_lo):
         # Inside buy zone (0.00–0.15): score 100% → 60% linearly
         ratio = (cur - lo) / (buy_hi - lo) if (buy_hi - lo) > 0 else 0
         pts   = max(round(W_PRICE * (1.0 - ratio * 0.40)), 0)
-        pct   = round((cur - lo) / rng * 100, 1)
-        return pts, f"Buy Zone (0–15%) @ {cur:.1f} — level {pct:.1f}% — {pts}/{W_PRICE}"
+        dist_pct = round((cur - lo) / lo * 100, 1) if lo > 0 else 0
+        return pts, f"Buy Zone @ {cur:.1f} — {dist_pct}% above Deep Discount floor — {pts}/{W_PRICE}"
 
     if cur < eq:
         # Mid-discount (0.15–0.50): score 60% → 0% linearly
         ratio = (cur - buy_hi) / (eq - buy_hi) if (eq - buy_hi) > 0 else 1
         pts   = max(round(W_PRICE * 0.60 * (1.0 - ratio)), 0)
-        pct   = round((cur - lo) / rng * 100, 1)
-        return pts, f"Mid-Discount (15–50%) @ {cur:.1f} — level {pct:.1f}% — {pts}/{W_PRICE}"
+        dist_to_dd = round((cur - buy_hi) / rng * 100, 1)
+        return pts, f"Mid-Discount @ {cur:.1f} — {dist_to_dd}% away from Deep Discount — {pts}/{W_PRICE}"
 
     pct = round((cur - lo) / rng * 100, 1)
-    return 0, f"Premium Zone — level {pct:.1f}% (above EQ {eq:.1f})"
+    return 0, f"Premium Zone @ {cur:.1f} — {pct:.1f}% (above EQ {eq:.1f})"
 
 def sc_ob(df, cur, eq, lo, buy_hi):
     """
@@ -643,7 +643,7 @@ def sc_ob(df, cur, eq, lo, buy_hi):
     ob    = best["level"]
     qual  = best["quality"]
     dist  = best["dist"]
-    zone_lbl = "Buy Zone (0–15%)" if ob <= buy_hi else "Mid-Discount (15–50%)"
+    zone_lbl = "Buy Zone" if ob <= buy_hi else "Mid-Discount"
 
     if dist > 0.10:
         pts = round(W_OB * qual * 0.15)
@@ -1099,7 +1099,8 @@ def analyze(symbol):
         # At EQ or above → SMC setup does not exist → all scores locked at zero
         if cur >= eq:
             pct_pos = round((cur - lo) / (hi - lo) * 100, 1) if hi > lo else 0
-            r1 = 0; l1 = f"Premium Zone — {pct_pos:.1f}% level (above EQ {eq:.1f}) — SMC setup inactive"
+            pct_above_eq = round((cur - eq) / (hi - lo) * 100, 1) if hi > lo else 0
+            r1 = 0; l1 = f"Premium Zone @ {cur:.1f} — {pct_above_eq}% above EQ — SMC setup inactive"
             locked     = "Locked — price not in discount zone (0–50%)"
             r2,l2 = 0,locked; r3,l3 = 0,locked; r4,l4 = 0,locked
             r5,l5 = 0,locked; r6,l6 = 0,locked; r7,l7 = 0,locked

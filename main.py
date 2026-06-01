@@ -291,11 +291,9 @@ def _patch_today_from_tv(df, symbol):
 
 
 def download_data(symbol, days=110):
-    # ── ORAS: TradingView + local CSV ─────────────────────────────────────────
-    if "ORAS" in symbol:
-        return _oras_history(days)
-
-    # ── All other stocks: yfinance for history + TradingView for today ────────
+    # ── All stocks: yfinance for history + TradingView patch for today ────────
+    # ORAS.CA is listed on Yahoo Finance and works identically to other EGX stocks.
+    # TradingView patch (applied at the end) ensures today's price is always current.
     yf_symbol = symbol if symbol.endswith(".CA") else f"{symbol}.CA"
     df = pd.DataFrame()
 

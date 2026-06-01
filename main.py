@@ -84,87 +84,80 @@ def fmt_cairo(fmt="%A, %d %B %Y  |  %H:%M"): return now_cairo().strftime(fmt)
 # =========================================
 
 STOCKS = [
-    "COMI.CA",  # Commercial International Bank (CIB)
-    "TMGH.CA",  # Talaat Moustafa Group
-    "ETEL.CA",  # Telecom Egypt
-    "EAST.CA",  # Eastern Company
-    "EGAL.CA",  # Egypt Aluminum
-    "ABUK.CA",  # Abou Kir Fertilizers
-    "EFIH.CA",  # e-finance
-    "FWRY.CA",  # Fawry
-    "ADIB.CA",  # Abu Dhabi Islamic Bank - Egypt
-    "ORAS.CA",  # Orascom Construction
-    "MFPC.CA",  # Misr Fertilizers MOPCO
-    "EGS30921C012.CA",  # Qatar National Bank Egypt
-    "ALCN.CA",  # Alexandria Container & Cargo
-    "EMFD.CA",  # Emaar Misr
-    "HDBK.CA",  # Housing and Development Bank
-    "SWDY.CA",  # El Sewedy Electric
-    "HRHO.CA",  # EFG Holding
-    "EFID.CA",  # Edita Food Industries
-    "PHDC.CA",  # Palm Hills Developments
-    "OCDI.CA",  # SODIC
-    "SKPC.CA",  # Sidi Kerir Petrochemicals
-    "CLHO.CA",  # Cleopatra Hospitals
-    "JUFO.CA",  # Juhayna Food Industries
-    "MCQE.CA",  # Misr Cement Qena
-    "EGS505Z1C018.CA",  # U Consumer Finance
-    "ORWE.CA",  # Oriental Weavers
-    "ORHD.CA",  # Orascom Development Egypt
-    "ARCC.CA",  # Arabian Cement
-    "PHAR.CA",  # EIPICO
-    "EGS490S1C014.CA",  # TAQA Arabia
+    "COMI.CA",   # Commercial International Bank (CIB)
+    "TMGH.CA",   # Talaat Moustafa Group
+    "ETEL.CA",   # Telecom Egypt
+    "EGAL.CA",   # Egypt Aluminum
+    "EAST.CA",   # Eastern Company
+    "ABUK.CA",   # Abou Kir Fertilizers
+    "ORAS.CA",   # Orascom Construction
+    "EFIH.CA",   # e-finance
+    "ADIB.CA",   # Abu Dhabi Islamic Bank Egypt
+    "FWRY.CA",   # Fawry
+    "EMFD.CA",   # Emaar Misr
+    "PHDC.CA",   # Palm Hills Developments
+    "ORHD.CA",   # Orascom Development Egypt
+    "EFID.CA",   # Edita Food Industries
+    "HRHO.CA",   # EFG Holding
+    "JUFO.CA",   # Juhayna Food Industries
+    "BTFH.CA",   # Beltone Holding
+    "RAYA.CA",   # Raya Holding
+    "GBCO.CA",   # GB Corp
+    "HELI.CA",   # Heliopolis Housing
+    "ARCC.CA",   # Arabian Cement
+    "MCQE.CA",   # Misr Cement Qena
+    "ORWE.CA",   # Oriental Weavers
+    "ISPH.CA",   # Integrated Diagnostics Holdings
+    "RMDA.CA",   # Rameda Pharmaceuticals
+    "OIH.CA",    # October for Urban Development
+    "CCAP.CA",   # QALA For Financial Investments
 ]
 
 NAMES = {
     "COMI.CA": "Commercial International Bank",
     "TMGH.CA": "Talaat Moustafa Group",
     "ETEL.CA": "Telecom Egypt",
-    "EAST.CA": "Eastern Company",
     "EGAL.CA": "Egypt Aluminum",
+    "EAST.CA": "Eastern Company",
     "ABUK.CA": "Abou Kir Fertilizers",
-    "EFIH.CA": "e-finance",
-    "FWRY.CA": "Fawry",
-    "ADIB.CA": "Abu Dhabi Islamic Bank Egypt",
     "ORAS.CA": "Orascom Construction",
-    "MFPC.CA": "Misr Fertilizers MOPCO",
-    "EGS30921C012.CA": "QNB Egypt",
-    "ALCN.CA": "Alexandria Container & Cargo",
+    "EFIH.CA": "e-finance",
+    "ADIB.CA": "Abu Dhabi Islamic Bank Egypt",
+    "FWRY.CA": "Fawry",
     "EMFD.CA": "Emaar Misr",
-    "HDBK.CA": "Housing & Development Bank",
-    "SWDY.CA": "El Sewedy Electric",
-    "HRHO.CA": "EFG Holding",
-    "EFID.CA": "Edita Food Industries",
     "PHDC.CA": "Palm Hills Developments",
-    "OCDI.CA": "SODIC",
-    "SKPC.CA": "Sidi Kerir Petrochemicals",
-    "CLHO.CA": "Cleopatra Hospitals",
-    "JUFO.CA": "Juhayna Food Industries",
-    "MCQE.CA": "Misr Cement Qena",
-    "EGS505Z1C018.CA": "U Consumer Finance",
-    "ORWE.CA": "Oriental Weavers",
     "ORHD.CA": "Orascom Development Egypt",
+    "EFID.CA": "Edita Food Industries",
+    "HRHO.CA": "EFG Holding",
+    "JUFO.CA": "Juhayna Food Industries",
+    "BTFH.CA": "Beltone Holding",
+    "RAYA.CA": "Raya Holding",
+    "GBCO.CA": "GB Corp",
+    "HELI.CA": "Heliopolis Housing",
     "ARCC.CA": "Arabian Cement",
-    "PHAR.CA": "EIPICO",
-    "EGS490S1C014.CA": "TAQA Arabia",
+    "MCQE.CA": "Misr Cement Qena",
+    "ORWE.CA": "Oriental Weavers",
+    "ISPH.CA": "Integrated Diagnostics",
+    "RMDA.CA": "Rameda Pharmaceuticals",
+    "OIH.CA":  "October for Urban Development",
+    "CCAP.CA": "QALA For Financial Investments",
 }
 
 SECTORS = {
-    "COMI.CA": "Banking",          "TMGH.CA": "Real Estate",
-    "ETEL.CA": "Telecom",          "EAST.CA": "Consumer Non-Durables",
-    "EGAL.CA": "Non-Energy Minerals","ABUK.CA": "Fertilizers",
-    "EFIH.CA": "Technology Services","FWRY.CA": "Technology Services",
-    "ADIB.CA": "Banking",           "ORAS.CA": "Industrial Services",
-    "MFPC.CA": "Fertilizers",       "EGS30921C012.CA": "Banking",
-    "ALCN.CA": "Transportation",    "EMFD.CA": "Real Estate",
-    "HDBK.CA": "Banking",           "SWDY.CA": "Industrial",
-    "HRHO.CA": "Finance",           "EFID.CA": "Consumer Non-Durables",
-    "PHDC.CA": "Real Estate",       "OCDI.CA": "Real Estate",
-    "SKPC.CA": "Petrochemicals",    "CLHO.CA": "Healthcare",
-    "JUFO.CA": "Consumer Non-Durables","MCQE.CA": "Construction Materials",
-    "EGS505Z1C018.CA": "Finance",           "ORWE.CA": "Manufacturing",
-    "ORHD.CA": "Real Estate",       "ARCC.CA": "Construction Materials",
-    "PHAR.CA": "Healthcare",        "EGS490S1C014.CA": "Energy Services",
+    "COMI.CA": "Banking",               "TMGH.CA": "Real Estate",
+    "ETEL.CA": "Telecom",               "EGAL.CA": "Non-Energy Minerals",
+    "EAST.CA": "Consumer Non-Durables", "ABUK.CA": "Fertilizers",
+    "ORAS.CA": "Industrial Services",   "EFIH.CA": "Technology Services",
+    "ADIB.CA": "Banking",               "FWRY.CA": "Technology Services",
+    "EMFD.CA": "Real Estate",           "PHDC.CA": "Real Estate",
+    "ORHD.CA": "Real Estate",           "EFID.CA": "Consumer Non-Durables",
+    "HRHO.CA": "Finance",               "JUFO.CA": "Consumer Non-Durables",
+    "BTFH.CA": "Finance",               "RAYA.CA": "Finance",
+    "GBCO.CA": "Consumer Services",     "HELI.CA": "Real Estate",
+    "ARCC.CA": "Construction Materials","MCQE.CA": "Construction Materials",
+    "ORWE.CA": "Manufacturing",         "ISPH.CA": "Healthcare",
+    "RMDA.CA": "Healthcare",            "OIH.CA":  "Real Estate",
+    "CCAP.CA": "Finance",
 }
 
 # =========================================

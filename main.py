@@ -272,13 +272,43 @@ def _oras_history(days=120):
 # DATA DOWNLOADER
 # =========================================
 
+def _patch_today_from_tv(df, symbol):
+    """
+    Patch the latest row in df with today's price from TradingView Scanner.
+    This ensures we always show today's closing price, not yesterday's.
+    """
+    ticker_code = symbol.replace(".CA", "")
+    tv_symbol   = f"EGX:{ticker_code}"
+    quote       = tv_get_quote(tv_symbol)
+
+    if not quote or not quote["close"]:
+        print(f"  [{symbol}] TradingView patch failed — using Yahoo price")
+        return df
+
+    today_ts = pd.Timestamp(most_recent_trading_day()).normalize()
+
+    new_row = pd.DataFrame([{
+        "Open":   quote["open"],
+        "High":   quote["high"],
+        "Low":    quote["low"],
+        "Close":  quote["close"],
+        "Volume": quote["volume"],
+    }], index=[today_ts])
+
+    df = df[df.index.normalize() != today_ts]
+    df = pd.concat([df, new_row]).sort_index()
+    print(f"  [{symbol}] TradingView patch: close={quote['close']:.2f} EGP")
+    return df
+
+
 def download_data(symbol, days=110):
     # ── ORAS: TradingView + local CSV ─────────────────────────────────────────
     if "ORAS" in symbol:
         return _oras_history(days)
 
-    # ── All other stocks: yfinance (.CA = EGX, works correctly) ──────────────
+    # ── All other stocks: yfinance for history + TradingView for today ────────
     yf_symbol = symbol if symbol.endswith(".CA") else f"{symbol}.CA"
+    df = pd.DataFrame()
 
     try:
         ticker = yf.Ticker(yf_symbol)
@@ -286,33 +316,36 @@ def download_data(symbol, days=110):
         if not df.empty and len(df) > 5:
             df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
             df.index = df.index.tz_localize(None)
-            return df
     except Exception as e:
         print(f"  [{symbol}] yfinance error: {e}")
 
-    # Fallback: direct Yahoo Finance chart API
-    try:
-        url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_symbol}"
-               f"?range=6mo&interval=1d&includeAdjustedClose=false")
-        r    = requests.get(url, headers=HEADERS, timeout=15)
-        data = r.json()
-        res  = data["chart"]["result"][0]
-        ind  = res["indicators"]["quote"][0]
-        df   = pd.DataFrame({
-            "Open":   ind["open"],
-            "High":   ind["high"],
-            "Low":    ind["low"],
-            "Close":  ind["close"],
-            "Volume": ind["volume"],
-        }, index=pd.to_datetime(res["timestamp"], unit="s"))
-        df = df.dropna(subset=["Close"])
-        if not df.empty:
-            df.index = df.index.tz_localize(None)
-            return df
-    except Exception as ex:
-        print(f"  [{symbol}] direct API error: {ex}")
+    if df.empty:
+        try:
+            url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_symbol}"
+                   f"?range=6mo&interval=1d&includeAdjustedClose=false")
+            r    = requests.get(url, headers=HEADERS, timeout=15)
+            data = r.json()
+            res  = data["chart"]["result"][0]
+            ind  = res["indicators"]["quote"][0]
+            df   = pd.DataFrame({
+                "Open":   ind["open"],
+                "High":   ind["high"],
+                "Low":    ind["low"],
+                "Close":  ind["close"],
+                "Volume": ind["volume"],
+            }, index=pd.to_datetime(res["timestamp"], unit="s"))
+            df = df.dropna(subset=["Close"])
+            if not df.empty:
+                df.index = df.index.tz_localize(None)
+        except Exception as ex:
+            print(f"  [{symbol}] direct API error: {ex}")
 
-    return pd.DataFrame()
+    if df.empty:
+        return pd.DataFrame()
+
+    # ── Patch today's price from TradingView (always up-to-date) ─────────────
+    df = _patch_today_from_tv(df, symbol)
+    return df
 
 
 def col(df, name):
@@ -876,7 +909,7 @@ def analyze(symbol):
         hist_date  = df.index[-1].strftime("%Y-%m-%d")
         cur        = hist_price
         last_dt    = hist_date
-        src        = "TradingView Scanner" if "ORAS" in symbol else "EGX yfinance"
+        src        = "TradingView Scanner"
         is_fresh   = True
 
         close            = df["Close"]

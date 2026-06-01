@@ -1204,7 +1204,8 @@ def analyze(symbol):
         if not price_ok:
             sig = "Ignore"
             tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
-            l1  = l1 + " ⛔ Price gate failed — not in Deep Discount (need >= 15/30)"
+            if cur < eq:
+                l1  = l1 + " ⛔ Price gate failed — not in Deep Discount (need >= 15/30)"
         elif price_ok and not liq_ok:
             sig = "Watch"
             tc  = "#856404"; tbg = "#fff3cd"; tbr = "#ffc107"

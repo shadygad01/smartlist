@@ -1069,12 +1069,7 @@ def build_report(holiday_mode=False, last_trading=None):
     results={}; news={}
     for s in STOCKS:
         print(f"  Analyzing: {NAMES.get(s,s)} ...")
-        results[s]=analyze(s)
-news[s]=get_news(s)
-save_history(s,results[s])
-
-if "ORAS" in s:
-    print("DEBUG ORAS =", results[s])
+        results[s]=analyze(s); news[s]=get_news(s); save_history(s,results[s])
 
     fresh_n=sum(1 for s in STOCKS if results[s].get("ok") and results[s].get("is_fresh"))
     stale  =[NAMES.get(s,s) for s in STOCKS if results[s].get("ok") and not results[s].get("is_fresh")]

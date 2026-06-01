@@ -1195,7 +1195,7 @@ def analyze(symbol):
         #   r1 >= 15 AND r3 <  20  →  WATCH (price ok, waiting for sweep)
         #   r1 <  15               →  IGNORE (hard block)
         # ══════════════════════════════════════════════════════════════════
-        PRICE_GATE = 15
+        PRICE_GATE = 18
         LIQ_GATE   = 12
 
         price_ok = (r1 >= PRICE_GATE)
@@ -1205,7 +1205,7 @@ def analyze(symbol):
             sig = "Ignore"
             tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
             if cur < eq:
-                l1  = l1 + " ⛔ Price gate failed — not in Deep Discount (need >= 15/30)"
+                l1  = l1 + " ⛔ Price gate failed — not in Deep Discount (need >= 18/30)"
         elif price_ok and not liq_ok:
             sig = "Watch"
             tc  = "#856404"; tbg = "#fff3cd"; tbr = "#ffc107"
@@ -1228,7 +1228,7 @@ def analyze(symbol):
             "target":round(cur*1.12,2),
             "eq":round(eq,2),"buy_hi":round(buy_hi,2),"sell_lo":round(sell_lo,2),
             "avwap":round(av,2),"avwap_l":round(alo,2),
-            "score":total,"signal":sig,"tc":tc,"tbg":tbg,"tbr":tbr,
+            "score":total,"signal":sig,"tc":tc,"tbg":tbg,"tbr":tbr,"r1":r1,
             "entry_zones": entry_zones,
             "rows":[
                 ("Price Position",      r1,W_PRICE,l1),
@@ -1394,6 +1394,7 @@ def build_report(holiday_mode=False, last_trading=None):
     for s in sorted_stocks:
         r=results[s]
         if not r["ok"] or r["score"]<35: continue
+        if r.get("r1", 0) < 18: continue
         _,tc,tbg,tbr=sig_info(r["score"])
         wr+=f"""
 <tr style="border-bottom:1px solid #e0e0e0;">

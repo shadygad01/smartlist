@@ -924,6 +924,28 @@ def analyze(symbol):
             r2,l2 = 0,locked; r3,l3 = 0,locked; r4,l4 = 0,locked
             r5,l5 = 0,locked; r6,l6 = 0,locked; r7,l7 = 0,locked
             r8,l8 = 0,locked
+            # ── ORAS: always return full result even in premium zone ──────────
+            if "ORAS" in symbol:
+                return {
+                    "ok":True,"price":round(cur,2),"last_dt":last_dt,
+                    "is_fresh":is_fresh,"price_src":src,
+                    "target":round(hi*0.88,2),
+                    "eq":round(eq,2),"buy_hi":round(buy_hi,2),"sell_lo":round(sell_lo,2),
+                    "avwap":round(av,2),"avwap_l":round(alo,2),
+                    "score":0,"signal":"Premium Zone — Monitoring",
+                    "tc":"#5a3e8a","tbg":"#ede7f6","tbr":"#d1c4e9",
+                    "entry_zones": None,
+                    "rows":[
+                        ("Price Position",      r1,W_PRICE,l1),
+                        ("Demand Zone (SV+VP)", r8,W_DZ,   l8),
+                        ("Order Block Quality", r2,W_OB,   l2),
+                        ("Liquidity Context",   r3,W_LIQ,  l3),
+                        ("Higher Timeframe",    r4,W_HTF,  l4),
+                        ("Anchored VWAP",       r5,W_AVWAP,l5),
+                        ("MACD vs Zero",        r6,W_MACD, l6),
+                        ("Divergence",          r7,W_DIV,  l7),
+                    ],
+                }
         else:
             r1,l1  = sc_price(cur,lo,hi,eq,buy_hi,sell_lo)
             r2,l2  = sc_ob(close,cur,eq,lo,buy_hi)
@@ -1106,7 +1128,8 @@ def build_report(holiday_mode=False, last_trading=None):
     sorted_stocks = sorted(STOCKS, key=lambda s: results[s].get("score", 0) if results[s].get("ok") else 0, reverse=True)
     for s in sorted_stocks:
         r=results[s]
-        if not r["ok"] or r["score"]<35: continue
+        if not r["ok"]: continue
+        if r["score"] < 35 and s != "ORAS.CA": continue
         _,tc,tbg,tbr=sig_info(r["score"])
         wr+=f"""
 <tr style="border-bottom:1px solid #e0e0e0;">
@@ -1134,7 +1157,7 @@ def build_report(holiday_mode=False, last_trading=None):
 
     for s in sorted_stocks:
         r=results[s]; nws=news[s]
-        if not r["ok"]:
+        if not r["ok"] and s != "ORAS.CA":
             parts.append(f"""
 <table width="100%" cellpadding="12" cellspacing="0" border="0" style="margin:24px 0;border-top:3px solid #b02a2a;background:#fff5f5;border:1px solid #f5c6cb;">
   <tr><td style="font-family:Arial,sans-serif;">

@@ -21,32 +21,6 @@ CAIRO = ZoneInfo("Africa/Cairo")
 # CONFIG
 # =========================================
 
-STOCKS = [
-    "COMI.CA", "PHAR.CA", "TMGH.CA", "ORWE.CA",
-    "ORHD.CA", "CSAG.CA", "EAST.CA", "ARCC.CA",
-    "ORAS.CA",
-]
-
-NAMES = {
-    "COMI.CA": "Commercial International Bank",
-    "PHAR.CA": "Pharco Pharmaceuticals",
-    "TMGH.CA": "Talaat Moustafa Group",
-    "ORWE.CA": "Oriental Weavers",
-    "ORHD.CA": "Orascom Development",
-    "CSAG.CA": "Canal Shipping Agencies",
-    "EAST.CA": "Eastern Company",
-    "ARCC.CA": "Arabian Cement Company",
-    "ORAS.CA": "Orascom Construction PLC",
-}
-
-SECTORS = {
-    "COMI.CA": "Banking",         "PHAR.CA": "Healthcare",
-    "TMGH.CA": "Real Estate",     "ORWE.CA": "Manufacturing",
-    "ORHD.CA": "Real Estate",     "CSAG.CA": "Transportation",
-    "EAST.CA": "Consumer Goods",  "ARCC.CA": "Construction Materials",
-    "ORAS.CA": "Engineering & Construction",
-}
-
 EMAIL = "shady.gad@live.com"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -104,6 +78,87 @@ def most_recent_trading_day(from_date=None):
 def now_cairo():  return datetime.now(CAIRO)
 def today_cairo(): return now_cairo().date()
 def fmt_cairo(fmt="%A, %d %B %Y  |  %H:%M"): return now_cairo().strftime(fmt)
+
+# =========================================
+# DYNAMIC EGX30 COMPONENTS FROM TRADINGVIEW
+# =========================================
+
+STOCKS = [
+    "COMI.CA",   # Commercial International Bank (CIB)
+    "TMGH.CA",   # Talaat Moustafa Group
+    "ETEL.CA",   # Telecom Egypt
+    "EGAL.CA",   # Egypt Aluminum
+    "EAST.CA",   # Eastern Company
+    "ABUK.CA",   # Abou Kir Fertilizers
+    "ORAS.CA",   # Orascom Construction
+    "EFIH.CA",   # e-finance
+    "ADIB.CA",   # Abu Dhabi Islamic Bank Egypt
+    "FWRY.CA",   # Fawry
+    "EMFD.CA",   # Emaar Misr
+    "PHDC.CA",   # Palm Hills Developments
+    "ORHD.CA",   # Orascom Development Egypt
+    "EFID.CA",   # Edita Food Industries
+    "HRHO.CA",   # EFG Holding
+    "JUFO.CA",   # Juhayna Food Industries
+    "BTFH.CA",   # Beltone Holding
+    "RAYA.CA",   # Raya Holding
+    "GBCO.CA",   # GB Corp
+    "HELI.CA",   # Heliopolis Housing
+    "ARCC.CA",   # Arabian Cement
+    "MCQE.CA",   # Misr Cement Qena
+    "ORWE.CA",   # Oriental Weavers
+    "ISPH.CA",   # Integrated Diagnostics Holdings
+    "RMDA.CA",   # Rameda Pharmaceuticals
+    "OIH.CA",    # October for Urban Development
+    "CCAP.CA",   # QALA For Financial Investments
+]
+
+NAMES = {
+    "COMI.CA": "Commercial International Bank",
+    "TMGH.CA": "Talaat Moustafa Group",
+    "ETEL.CA": "Telecom Egypt",
+    "EGAL.CA": "Egypt Aluminum",
+    "EAST.CA": "Eastern Company",
+    "ABUK.CA": "Abou Kir Fertilizers",
+    "ORAS.CA": "Orascom Construction",
+    "EFIH.CA": "e-finance",
+    "ADIB.CA": "Abu Dhabi Islamic Bank Egypt",
+    "FWRY.CA": "Fawry",
+    "EMFD.CA": "Emaar Misr",
+    "PHDC.CA": "Palm Hills Developments",
+    "ORHD.CA": "Orascom Development Egypt",
+    "EFID.CA": "Edita Food Industries",
+    "HRHO.CA": "EFG Holding",
+    "JUFO.CA": "Juhayna Food Industries",
+    "BTFH.CA": "Beltone Holding",
+    "RAYA.CA": "Raya Holding",
+    "GBCO.CA": "GB Corp",
+    "HELI.CA": "Heliopolis Housing",
+    "ARCC.CA": "Arabian Cement",
+    "MCQE.CA": "Misr Cement Qena",
+    "ORWE.CA": "Oriental Weavers",
+    "ISPH.CA": "Integrated Diagnostics",
+    "RMDA.CA": "Rameda Pharmaceuticals",
+    "OIH.CA":  "October for Urban Development",
+    "CCAP.CA": "QALA For Financial Investments",
+}
+
+SECTORS = {
+    "COMI.CA": "Banking",               "TMGH.CA": "Real Estate",
+    "ETEL.CA": "Telecom",               "EGAL.CA": "Non-Energy Minerals",
+    "EAST.CA": "Consumer Non-Durables", "ABUK.CA": "Fertilizers",
+    "ORAS.CA": "Industrial Services",   "EFIH.CA": "Technology Services",
+    "ADIB.CA": "Banking",               "FWRY.CA": "Technology Services",
+    "EMFD.CA": "Real Estate",           "PHDC.CA": "Real Estate",
+    "ORHD.CA": "Real Estate",           "EFID.CA": "Consumer Non-Durables",
+    "HRHO.CA": "Finance",               "JUFO.CA": "Consumer Non-Durables",
+    "BTFH.CA": "Finance",               "RAYA.CA": "Finance",
+    "GBCO.CA": "Consumer Services",     "HELI.CA": "Real Estate",
+    "ARCC.CA": "Construction Materials","MCQE.CA": "Construction Materials",
+    "ORWE.CA": "Manufacturing",         "ISPH.CA": "Healthcare",
+    "RMDA.CA": "Healthcare",            "OIH.CA":  "Real Estate",
+    "CCAP.CA": "Finance",
+}
 
 # =========================================
 # TRADINGVIEW SCANNER — single stock quote
@@ -217,13 +272,43 @@ def _oras_history(days=120):
 # DATA DOWNLOADER
 # =========================================
 
+def _patch_today_from_tv(df, symbol):
+    """
+    Patch the latest row in df with today's price from TradingView Scanner.
+    This ensures we always show today's closing price, not yesterday's.
+    """
+    ticker_code = symbol.replace(".CA", "")
+    tv_symbol   = f"EGX:{ticker_code}"
+    quote       = tv_get_quote(tv_symbol)
+
+    if not quote or not quote["close"]:
+        print(f"  [{symbol}] TradingView patch failed — using Yahoo price")
+        return df
+
+    today_ts = pd.Timestamp(most_recent_trading_day()).normalize()
+
+    new_row = pd.DataFrame([{
+        "Open":   quote["open"],
+        "High":   quote["high"],
+        "Low":    quote["low"],
+        "Close":  quote["close"],
+        "Volume": quote["volume"],
+    }], index=[today_ts])
+
+    df = df[df.index.normalize() != today_ts]
+    df = pd.concat([df, new_row]).sort_index()
+    print(f"  [{symbol}] TradingView patch: close={quote['close']:.2f} EGP")
+    return df
+
+
 def download_data(symbol, days=110):
     # ── ORAS: TradingView + local CSV ─────────────────────────────────────────
     if "ORAS" in symbol:
         return _oras_history(days)
 
-    # ── All other stocks: yfinance (.CA = EGX, works correctly) ──────────────
+    # ── All other stocks: yfinance for history + TradingView for today ────────
     yf_symbol = symbol if symbol.endswith(".CA") else f"{symbol}.CA"
+    df = pd.DataFrame()
 
     try:
         ticker = yf.Ticker(yf_symbol)
@@ -231,33 +316,36 @@ def download_data(symbol, days=110):
         if not df.empty and len(df) > 5:
             df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
             df.index = df.index.tz_localize(None)
-            return df
     except Exception as e:
         print(f"  [{symbol}] yfinance error: {e}")
 
-    # Fallback: direct Yahoo Finance chart API
-    try:
-        url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_symbol}"
-               f"?range=6mo&interval=1d&includeAdjustedClose=false")
-        r    = requests.get(url, headers=HEADERS, timeout=15)
-        data = r.json()
-        res  = data["chart"]["result"][0]
-        ind  = res["indicators"]["quote"][0]
-        df   = pd.DataFrame({
-            "Open":   ind["open"],
-            "High":   ind["high"],
-            "Low":    ind["low"],
-            "Close":  ind["close"],
-            "Volume": ind["volume"],
-        }, index=pd.to_datetime(res["timestamp"], unit="s"))
-        df = df.dropna(subset=["Close"])
-        if not df.empty:
-            df.index = df.index.tz_localize(None)
-            return df
-    except Exception as ex:
-        print(f"  [{symbol}] direct API error: {ex}")
+    if df.empty:
+        try:
+            url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_symbol}"
+                   f"?range=6mo&interval=1d&includeAdjustedClose=false")
+            r    = requests.get(url, headers=HEADERS, timeout=15)
+            data = r.json()
+            res  = data["chart"]["result"][0]
+            ind  = res["indicators"]["quote"][0]
+            df   = pd.DataFrame({
+                "Open":   ind["open"],
+                "High":   ind["high"],
+                "Low":    ind["low"],
+                "Close":  ind["close"],
+                "Volume": ind["volume"],
+            }, index=pd.to_datetime(res["timestamp"], unit="s"))
+            df = df.dropna(subset=["Close"])
+            if not df.empty:
+                df.index = df.index.tz_localize(None)
+        except Exception as ex:
+            print(f"  [{symbol}] direct API error: {ex}")
 
-    return pd.DataFrame()
+    if df.empty:
+        return pd.DataFrame()
+
+    # ── Patch today's price from TradingView (always up-to-date) ─────────────
+    df = _patch_today_from_tv(df, symbol)
+    return df
 
 
 def col(df, name):
@@ -274,39 +362,20 @@ def calc_macd(close):
     return m, s, m - s
 
 def calc_avwap(df):
-    """
-    Anchored VWAP — anchor على آخر swing low حقيقي (أدنى نقطة في آخر 60 bar).
-    بدل anchor ثابت على 1 يناير اللي بيعطي نتائج عشوائية.
-    Returns: (avwap, avwap_lower_band)
-    """
     d = pd.DataFrame({
         "H": col(df,"High"), "L": col(df,"Low"),
         "C": col(df,"Close"),"V": col(df,"Volume"),
     }).dropna()
-
+    anc = f"{today_cairo().year}-01-01"
+    d   = d[d.index >= anc]
     if len(d) < 5:
-        v = float(d["C"].iloc[-1]) if len(d) else 0.0
-        return v, v
-
-    # anchor = آخر swing low في 60 bar
-    lookback   = min(60, len(d))
-    tail_low   = d["L"].tail(lookback)
-    anchor_idx = int(tail_low.values.argmin())
-    anchor_pos = len(d) - lookback + anchor_idx
-
-    # لو الـ anchor هو آخر 3 bars → fallback لـ 20 bar قبله
-    if anchor_pos >= len(d) - 3:
-        anchor_pos = max(0, len(d) - 20)
-
-    d_anc = d.iloc[anchor_pos:].copy()
-    if len(d_anc) < 3:
-        d_anc = d.copy()
-
-    tp  = (d_anc["H"] + d_anc["L"] + d_anc["C"]) / 3
-    av  = (tp * d_anc["V"]).cumsum() / d_anc["V"].cumsum()
-    std = tp.expanding().std().fillna(0)
-    lo  = av - std
-
+        d = pd.DataFrame({
+            "H": col(df,"High"),"L": col(df,"Low"),
+            "C": col(df,"Close"),"V": col(df,"Volume"),
+        }).dropna()
+    tp  = (d["H"]+d["L"]+d["C"])/3
+    av  = (tp*d["V"]).cumsum()/d["V"].cumsum()
+    lo  = av - tp.expanding().std().fillna(0)
     return float(av.iloc[-1]), float(lo.iloc[-1])
 
 def swings(close, lb=80):
@@ -378,7 +447,7 @@ def calc_stopping_volume(df, eq, lo, lookback=30, vol_mult=1.5, range_ratio=0.5)
     return True, score, desc
 
 
-def calc_volume_profile(df, eq, lo, buy_hi, bins=20, hvn_pct=0.70):
+def calc_volume_profile(df, eq, lo, bins=20, hvn_pct=0.70):
     """
     Build volume profile over full history; find HVN inside discount zone.
     Each bar's volume is distributed proportionally across its H-L price range.
@@ -412,8 +481,7 @@ def calc_volume_profile(df, eq, lo, buy_hi, bins=20, hvn_pct=0.70):
     discount_hvns = []
     for b in range(bins):
         bin_price = (bin_edges[b] + bin_edges[b + 1]) / 2
-        # HVN لازم يكون في Buy Zone (0–15%) فقط
-        if bin_price >= buy_hi:
+        if bin_price >= eq:
             continue
         if vol_bins[b] >= threshold:
             depth = (eq - bin_price) / (eq - lo) if (eq - lo) > 0 else 0
@@ -431,7 +499,7 @@ def calc_volume_profile(df, eq, lo, buy_hi, bins=20, hvn_pct=0.70):
     return True, hvn_score, best["price"], desc
 
 
-def sc_demand_zone(df, eq, lo, buy_hi):
+def sc_demand_zone(df, eq, lo):
     """
     Demand Zone Confluence = Stopping Volume + Volume Profile HVN, both in discount.
     SV + HVN  → full W_DZ  (true institutional demand zone)
@@ -440,7 +508,7 @@ def sc_demand_zone(df, eq, lo, buy_hi):
     Neither   → 0
     """
     sv_hit, sv_score, sv_desc   = calc_stopping_volume(df, eq, lo)
-    hvn_hit, hvn_score, _, hvn_desc = calc_volume_profile(df, eq, lo, buy_hi)
+    hvn_hit, hvn_score, _, hvn_desc = calc_volume_profile(df, eq, lo)
 
     if sv_hit and hvn_hit:
         pts  = W_DZ
@@ -489,170 +557,50 @@ def sc_price(cur, lo, hi, eq, buy_hi, sell_lo):
     pct = round((cur - lo) / rng * 100, 1)
     return 0, f"Premium Zone — level {pct:.1f}% (above EQ {eq:.1f})"
 
-def sc_ob(df, cur, eq, lo, buy_hi):
+def sc_ob(close, cur, eq, lo, buy_hi):
     """
-    Order Block Quality — OB حقيقي بناءً على:
-    1. آخر bearish candle قبل move صاعد قوي (impulse ≥ 1.5x avg range)
-    2. OB لازم يكون في discount zone (تحت EQ)
-    3. السعر الحالي لازم يكون فوق الـ OB (مش اخترقه لتحت)
-
-    لو مفيش OB حقيقي → يرجع 0 بدل ما يبعت رقم مضلل.
+    Order Block Quality — aligned with custom SMC zones:
+    - OB above EQ           → 0 (useless)
+    - OB in buy zone (0–20%)→ highest quality (ratio 1.0)
+    - OB in mid-disc (20–50%)→ quality degrades linearly toward EQ (0.0)
+    Distance from current price applies an additional proximity multiplier.
     """
-    needed = ["Open", "High", "Low", "Close"]
-    if not all(c in df.columns for c in needed) or len(df) < 10:
-        return 0, "Insufficient data for OB detection"
+    ob = float(close.tail(20).min())
+    d  = abs(cur - ob) / cur
 
-    d   = df[needed].dropna()
-    rng = d["High"] - d["Low"]
-    avg_rng = float(rng.rolling(20).mean().iloc[-1]) if len(d) >= 20 else float(rng.mean())
-
-    if avg_rng <= 0:
-        return 0, "Invalid range data"
+    if ob >= eq:
+        return 0, f"OB at {ob:.1f} — above EQ {eq:.1f} (no value)"
 
     discount_range = eq - lo
     if discount_range <= 0:
-        return 0, "Invalid discount range"
+        return 0, "Invalid range"
 
-    # ── بحث عن OB حقيقي في آخر 40 bar ───────────────────────────────────────
-    ob_candidates = []
-    search = d.tail(40)
+    # quality: 1.0 at lo, 0.0 at EQ — buy zone (0–15%) always gets ≥ 0.80
+    ratio   = (ob - lo) / discount_range
+    quality = max(0.0, 1.0 - ratio)
 
-    for i in range(len(search) - 2):
-        c_open  = float(search["Open"].iloc[i])
-        c_close = float(search["Close"].iloc[i])
-        c_low   = float(search["Low"].iloc[i])
-        c_high  = float(search["High"].iloc[i])
-
-        # OB candle: bearish (close < open)
-        if c_close >= c_open:
-            continue
-
-        # الـ candle التالية لازم تكون impulse صاعد قوي (≥ 1.5x avg range)
-        next_high  = float(search["High"].iloc[i+1])
-        next_low   = float(search["Low"].iloc[i+1])
-        next_range = next_high - next_low
-        if next_range < avg_rng * 1.5:
-            continue
-
-        # OB level = top of bearish candle (c_high) as resistance turned support
-        ob_level = c_high
-
-        # OB لازم يكون في Buy Zone (0–15%) فقط
-        if ob_level >= buy_hi:
-            continue
-
-        # السعر الحالي لازم يكون فوق الـ OB (مش اخترقه)
-        if cur <= c_low:
-            continue
-
-        # quality بناءً على موقع الـ OB في الـ discount zone
-        ratio   = (ob_level - lo) / discount_range
-        quality = max(0.0, 1.0 - ratio)
-
-        dist = abs(cur - ob_level) / cur
-        ob_candidates.append({
-            "level":   ob_level,
-            "quality": quality,
-            "dist":    dist,
-            "candle":  i,
-        })
-
-    if not ob_candidates:
-        return 0, "No valid OB found in discount zone (last 40 bars)"
-
-    # أفضل OB: أعلى quality × proximity
-    best = max(ob_candidates,
-               key=lambda x: x["quality"] * max(0.1, 1 - x["dist"] * 5))
-
-    ob    = best["level"]
-    qual  = best["quality"]
-    dist  = best["dist"]
     zone_lbl = "Buy Zone (0–15%)" if ob <= buy_hi else "Mid-Discount (15–50%)"
 
-    if dist > 0.10:
-        pts = round(W_OB * qual * 0.15)
-        return pts, f"OB {ob:.1f} [{zone_lbl}] — far ({dist*100:.0f}% away) → {pts}/{W_OB}"
-    if dist < 0.02:
-        pts = round(W_OB * qual)
-        return pts, f"At OB {ob:.1f} [{zone_lbl}] — quality {qual*100:.0f}% → {pts}/{W_OB}"
-    if dist < 0.05:
-        pts = round(W_OB * qual * 0.6)
-        return pts, f"Near OB {ob:.1f} [{zone_lbl}] — quality {qual*100:.0f}% → {pts}/{W_OB}"
-    pts = round(W_OB * qual * 0.30)
+    if d > 0.10:
+        pts = round(W_OB * quality * 0.15)
+        return pts, f"OB {ob:.1f} [{zone_lbl}] — far ({d*100:.0f}% away) → {pts}/{W_OB}"
+    if d < 0.02:
+        pts = round(W_OB * quality)
+        return pts, f"At OB {ob:.1f} [{zone_lbl}] — quality {quality*100:.0f}% → {pts}/{W_OB}"
+    if d < 0.05:
+        pts = round(W_OB * quality * 0.5)
+        return pts, f"Near OB {ob:.1f} [{zone_lbl}] — quality {quality*100:.0f}% → {pts}/{W_OB}"
+    pts = round(W_OB * quality * 0.25)
     return pts, f"OB {ob:.1f} [{zone_lbl}] — moderate distance → {pts}/{W_OB}"
 
-def sc_liquidity(df, cur):
-    """
-    Liquidity Context — 3 أنواع من الـ liquidity events:
-    1. Sweep & Reverse   : السعر اخترق swing low ثم رجع فوقه (stop hunt)
-    2. Equal Lows (EQL)  : مستويات متقاربة تشير لـ liquidity pool تحت
-    3. Rejection Wick    : شمعة بـ lower wick طويل (≥ 2x body) في discount
-
-    الأعلى قيمة = Sweep & Reverse (إثبات أن السوق امتص البيع وعكس)
-    """
-    needed = ["High", "Low", "Close", "Open"]
-    close  = df["Close"].dropna() if "Close" in df.columns else pd.Series(dtype=float)
-
-    if not all(c in df.columns for c in needed) or len(df) < 10:
-        return 0, "Insufficient data for liquidity scan"
-
-    d     = df[needed].dropna()
-    score = 0
-    desc  = []
-
-    # ── 1. Sweep & Reverse (أقوى إشارة) ──────────────────────────────────────
-    if len(d) >= 10:
-        recent   = d.tail(10)
-        swing_lo = float(d["Low"].tail(20).quantile(0.10))  # أدنى 10% من الـ 20 bar
-
-        for i in range(1, len(recent) - 1):
-            c_low   = float(recent["Low"].iloc[i])
-            c_close = float(recent["Close"].iloc[i])
-            prev_lo = float(recent["Low"].iloc[i-1])
-
-            # اخترق الـ swing low ثم أقفل فوقه
-            if c_low < swing_lo and c_close > swing_lo:
-                score += W_LIQ
-                desc.append(f"Sweep & Reverse @ {c_low:.1f} — stop hunt confirmed ✓")
-                break
-
-    # ── 2. Rejection Wick في discount ─────────────────────────────────────────
-    if score == 0 and len(d) >= 5:
-        last5 = d.tail(5)
-        for i in range(len(last5)):
-            o = float(last5["Open"].iloc[i])
-            c = float(last5["Close"].iloc[i])
-            l = float(last5["Low"].iloc[i])
-            h = float(last5["High"].iloc[i])
-            body      = abs(c - o)
-            lower_wick = min(o, c) - l
-            candle_rng = h - l
-
-            if candle_rng <= 0:
-                continue
-            # lower wick ≥ 60% of candle range و close في upper 40%
-            if lower_wick >= candle_rng * 0.60 and c >= l + candle_rng * 0.40:
-                pts = round(W_LIQ * 0.6)
-                score = max(score, pts)
-                desc.append(f"Rejection wick @ {l:.1f} — lower wick {lower_wick/candle_rng*100:.0f}% of range")
-
-    # ── 3. Equal Lows (liquidity pool below) ──────────────────────────────────
-    if score == 0 and len(d) >= 15:
-        lows = d["Low"].tail(15).values
-        eql_count = 0
-        base_lo   = float(d["Low"].tail(15).min())
-        for lv in lows:
-            if abs(lv - base_lo) / base_lo < 0.005:   # within 0.5%
-                eql_count += 1
-        if eql_count >= 3:
-            pts = round(W_LIQ * 0.4)
-            score = pts
-            desc.append(f"Equal Lows x{eql_count} @ {base_lo:.1f} — liquidity pool below")
-
-    if not desc:
-        desc.append("No liquidity event detected")
-
-    return min(score, W_LIQ), " · ".join(desc)
+def sc_liquidity(close, cur):
+    score=0; desc=[]
+    if len(close)>=5:
+        pl=float(close.iloc[-5])
+        if float(close.iloc[-2])<pl and float(close.iloc[-1])>float(close.iloc[-2]):
+            score+=10; desc.append("Liquidity sweep detected")
+    if not desc: desc.append("No active liquidity event")
+    return score," · ".join(desc)
 
 def sc_htf(df):
     """
@@ -660,10 +608,6 @@ def sc_htf(df):
       1. MA200 position  : price vs 200-day MA         (40% of W_HTF)
       2. MA50 slope      : is 50-day MA rising?         (30% of W_HTF)
       3. HH/HL structure : Higher Highs & Higher Lows   (30% of W_HTF)
-    Scoring:
-      - Full score  → clear recovery signals present
-      - Partial     → mixed signals
-      - Zero        → deep downtrend, no structure yet
     """
     close = df["Close"].dropna()
     n = len(close)
@@ -687,7 +631,6 @@ def sc_htf(df):
             else:
                 desc.append(f"Below MA200 ({ma200:.1f}, -{gap}%)")
     elif n >= 50:
-        # حساب MA50 كبديل لو مفيش 200 يوم
         ma50 = float(close.rolling(50).mean().iloc[-1])
         cur  = float(close.iloc[-1])
         if cur >= ma50:
@@ -719,16 +662,12 @@ def sc_htf(df):
     w3 = W_HTF - w1 - w2
     if n >= 20:
         tail = close.tail(20).values
-        # بنقارن 4 نقاط: أول 5 / تاني 5 / تالت 5 / آخر 5
         q1 = float(np.mean(tail[0:5]))
         q2 = float(np.mean(tail[5:10]))
         q3 = float(np.mean(tail[10:15]))
         q4 = float(np.mean(tail[15:20]))
 
-        # Higher Lows: كل quarter أعلى من اللي قبله
         hl_count = sum([q2 > q1, q3 > q2, q4 > q3])
-
-        # Higher Highs: max of each half
         hh = float(np.max(tail[10:20])) > float(np.max(tail[0:10]))
 
         if hl_count >= 2 and hh:
@@ -757,19 +696,16 @@ def sc_macd(close):
     macd_prev = m.iloc[-2]
     sig_now   = sg.iloc[-1]
     sig_prev  = sg.iloc[-2]
-    # فوق الصفر → صفر دايماً
     if macd_now >= 0:
         return 0, f"MACD above zero ({macd_now:.4f}) — no score"
-    # تحت الصفر + تقاطع صاعد (crossover) → 4/4
     crossed_up = macd_prev <= sig_prev and macd_now > sig_now
     if crossed_up:
         return W_MACD, f"Bullish crossover BELOW zero ({macd_now:.4f}) — 4/4"
-    # تحت الصفر بدون تقاطع → 2/4
     half = round(W_MACD / 2)
     return half, f"MACD below zero ({macd_now:.4f}), no cross yet — 2/4"
 
 def _calc_rsi(close, period=14):
-    """RSI حقيقي بـ Wilder smoothing."""
+    """RSI with Wilder smoothing."""
     delta = close.diff()
     gain  = delta.clip(lower=0)
     loss  = (-delta).clip(lower=0)
@@ -781,39 +717,31 @@ def _calc_rsi(close, period=14):
 def sc_div(close, ml):
     """
     Bullish Divergence Detection — RSI + MACD:
-      - Price makes Lower Low (LL)  while RSI  makes Higher Low → RSI  divergence
-      - Price makes Lower Low (LL)  while MACD makes Higher Low → MACD divergence
-    Lookback: last 30 bars, comparing last 2 swing lows (simple: min of halves).
-    Scoring:
-      Both divergences  → W_DIV      (3/3)
-      RSI  only         → W_DIV * 0.7 (2/3 rounded)
-      MACD only         → W_DIV * 0.5 (1-2/3)
-      None              → 0
+      - Price makes Lower Low (LL) while RSI  makes Higher Low → RSI  divergence
+      - Price makes Lower Low (LL) while MACD makes Higher Low → MACD divergence
     """
     if len(close) < 30:
         return 0, "Insufficient data for divergence"
 
-    # تقسيم آخر 30 bar لنصين — نقارن الـ swing low في كل نص
     half = 15
     tail = close.tail(30)
 
-    price_lo1 = float(tail.iloc[:half].min())   # أول نص (قديم)
-    price_lo2 = float(tail.iloc[half:].min())   # تاني نص (حديث)
+    price_lo1 = float(tail.iloc[:half].min())
+    price_lo2 = float(tail.iloc[half:].min())
 
-    # لازم يكون في lower low في السعر عشان يبقى divergence حقيقي
     if price_lo2 >= price_lo1 * 0.998:
         return 0, f"No price LL (lo1={price_lo1:.1f}, lo2={price_lo2:.1f}) — no divergence"
 
     signals = []
 
     # ── RSI divergence ────────────────────────────────────────────────────────
-    if len(close) >= 44:   # 14 period warmup + 30 tail
+    if len(close) >= 44:
         rsi    = _calc_rsi(close).dropna()
         if len(rsi) >= 30:
             rsi_tail = rsi.tail(30)
             rsi_lo1  = float(rsi_tail.iloc[:half].min())
             rsi_lo2  = float(rsi_tail.iloc[half:].min())
-            if rsi_lo2 > rsi_lo1 * 1.01:   # RSI higher low (+1% tolerance)
+            if rsi_lo2 > rsi_lo1 * 1.01:
                 signals.append(f"RSI div (RSI {rsi_lo1:.1f}→{rsi_lo2:.1f} ↑, price ↓)")
 
     # ── MACD divergence ───────────────────────────────────────────────────────
@@ -837,9 +765,9 @@ def sc_div(close, ml):
 
 def sig_info(score):
     if score>=85: return "Institutional Buy","#155724","#d4edda","#c3e6cb"
-    if score>=70: return "Very Strong Buy",  "#155724","#c3e6cb","#b1dfbb"
-    if score>=55: return "Strong Buy",       "#0a3622","#d1e7dd","#a3cfbb"
-    if score>=35: return "Buy",              "#084298","#cfe2ff","#b6d4fe"
+    if score>=70: return "Strong Watchlist", "#856404","#fff3cd","#ffc107"
+    if score>=55: return "Watch",            "#084298","#cfe2ff","#b6d4fe"
+    if score>=35: return "Watch List",       "#5a3e8a","#ede7f6","#d1c4e9"
     return               "Ignore",           "#721c24","#f8d7da","#f5c6cb"
 
 # =========================================
@@ -850,32 +778,20 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
     """
     Calculate 3 entry zones for averaging-down strategy.
     No stop loss — zones are designed for scaled entries with renewable liquidity.
-
-    Zone 1 (Aggressive) : first confluence area just inside discount
-    Zone 2 (Add / Avg)  : deeper discount, OB + HVN level
-    Zone 3 (Deep Value) : near swing low, maximum value area
-
-    Returns dict with zone levels, confluence count, avg_entry, return_from_avg.
     """
-    levels = []  # list of (price, label, confluence_count)
+    levels = []
 
-    # ── collect all meaningful support levels inside discount ─────────────────
-    # Top of buy zone (0.15 level)
     if buy_hi < eq:
         levels.append((buy_hi, "Buy Zone Top (0.15)", 2))
 
-    # Midpoint of buy zone (0.075 level) — best entry area
     buy_mid = lo + (hi - lo) * 0.075
     levels.append((buy_mid, "Buy Zone Mid (0.075)", 3))
 
-    # AVWAP lower band
     if alo < eq:
         levels.append((alo, "AVWAP Lower Band", 1))
 
-    # HVN from volume profile
-    hvn_hit, _, hvn_price, _ = calc_volume_profile(df, eq, lo, buy_hi)
+    hvn_hit, _, hvn_price, _ = calc_volume_profile(df, eq, lo)
     if hvn_hit and hvn_price < eq:
-        # check if it's close to an existing level (within 2%) — if so, add confluence
         merged = False
         for i, (p, lbl, cnt) in enumerate(levels):
             if abs(p - hvn_price) / p < 0.02:
@@ -885,10 +801,8 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
         if not merged:
             levels.append((hvn_price, "Volume Profile HVN", 2))
 
-    # Stopping Volume candle level
     sv_hit, _, sv_desc = calc_stopping_volume(df, eq, lo)
     if sv_hit:
-        # extract price from desc string
         try:
             sv_price = float(sv_desc.split("@ ")[1].split(" ")[0])
             if sv_price < eq:
@@ -903,7 +817,6 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
         except Exception:
             pass
 
-    # Recent swing low (20-bar)
     if len(df) >= 20:
         recent_low = float(df["Low"].tail(20).min())
         if recent_low < eq:
@@ -916,7 +829,6 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
             if not merged:
                 levels.append((recent_low, "Recent Swing Low", 1))
 
-    # Absolute swing low (80-bar)
     if lo < eq:
         merged = False
         for i, (p, lbl, cnt) in enumerate(levels):
@@ -930,33 +842,22 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
     if not levels:
         return None
 
-    # ── sort by price descending (highest first = closest to current price) ──
     levels.sort(key=lambda x: x[0], reverse=True)
-
-    # ── filter: only levels BELOW current price ───────────────────────────────
     levels = [(p, lbl, cnt) for p, lbl, cnt in levels if p < cur * 0.999]
 
     if not levels:
         return None
 
-    # ── assign to 3 zones ─────────────────────────────────────────────────────
-    # Zone 1: highest confluence level (or highest price level if tie)
-    # Zone 2: middle area
-    # Zone 3: deepest / lowest level
-
-    # sort by confluence desc, then price desc for tie-breaking
     by_conf = sorted(levels, key=lambda x: (x[2], x[0]), reverse=True)
 
     z1_price = by_conf[0][0]
     z1_label = by_conf[0][1]
     z1_conf  = by_conf[0][2]
 
-    # zone 3 = lowest price level
     z3_price = levels[-1][0]
     z3_label = levels[-1][1]
     z3_conf  = levels[-1][2]
 
-    # zone 2 = middle — closest to midpoint between z1 and z3
     mid = (z1_price + z3_price) / 2
     remaining = [(p, lbl, cnt) for p, lbl, cnt in levels
                  if abs(p - z1_price) / z1_price > 0.005
@@ -970,7 +871,6 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
         z2_label = "Midpoint Estimate"
         z2_conf  = 1
 
-    # ── entry range ±1.5% around each zone center ─────────────────────────────
     def zone_range(p):
         return round(p * 0.985, 2), round(p * 1.015, 2)
 
@@ -978,11 +878,8 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
     z2_lo, z2_hi = zone_range(z2_price)
     z3_lo, z3_hi = zone_range(z3_price)
 
-    # ── weighted average entry (Zone1 × 0.5, Zone2 × 0.3, Zone3 × 0.2) ──────
     avg_entry = round(z1_price * 0.5 + z2_price * 0.3 + z3_price * 0.2, 2)
-
-    # ── target already set as cur*1.12 — recompute from hi for accuracy ───────
-    target = round(hi * 0.88, 2)   # conservative: 88% of swing high
+    target = round(hi * 0.88, 2)
     ret_from_avg = round(((target - avg_entry) / avg_entry) * 100, 1) if avg_entry > 0 else 0
 
     return {
@@ -1009,18 +906,17 @@ def analyze(symbol):
             raise Exception("API Data stream isolated or empty")
 
         hist_price = float(df["Close"].iloc[-1])
-        hist_date  = pd.to_datetime(df.index[-1]).strftime("%Y-%m-%d")
+        hist_date  = df.index[-1].strftime("%Y-%m-%d")
         cur        = hist_price
         last_dt    = hist_date
-        src        = "TradingView Scanner" if "ORAS" in symbol else "EGX yfinance"
+        src        = "TradingView Scanner"
         is_fresh   = True
 
         close            = df["Close"]
         hi,lo,eq,buy_hi,sell_lo = swings(close)
-        av,alo                  = calc_avwap(df)   # always compute for display
+        av,alo                  = calc_avwap(df)
 
         # ── GATE: Price must be strictly below EQ (< 0.50 level) ─────────────
-        # At EQ or above → SMC setup does not exist → all scores locked at zero
         if cur >= eq:
             pct_pos = round((cur - lo) / (hi - lo) * 100, 1) if hi > lo else 0
             r1 = 0; l1 = f"Premium Zone — {pct_pos:.1f}% level (above EQ {eq:.1f}) — SMC setup inactive"
@@ -1029,34 +925,21 @@ def analyze(symbol):
             r5,l5 = 0,locked; r6,l6 = 0,locked; r7,l7 = 0,locked
             r8,l8 = 0,locked
         else:
-            # ── Full SMC scoring — price confirmed in discount zone ────────────
             r1,l1  = sc_price(cur,lo,hi,eq,buy_hi,sell_lo)
-            r2,l2  = sc_ob(df,cur,eq,lo,buy_hi)
-            r3,l3  = sc_liquidity(df,cur)
+            r2,l2  = sc_ob(close,cur,eq,lo,buy_hi)
+            r3,l3  = sc_liquidity(close,cur)
             r4,l4  = sc_htf(df)
             r5,l5  = sc_avwap(cur,av,alo)
             ml,_,_ = calc_macd(close)
             r6,l6  = sc_macd(close)
             r7,l7  = sc_div(close,ml)
-            r8,l8  = sc_demand_zone(df,eq,lo,buy_hi)   # Stopping Volume + Volume Profile
+            r8,l8  = sc_demand_zone(df,eq,lo)
 
         total          = min(r1+r2+r3+r4+r5+r6+r7+r8, 100)
+        sig,tc,tbg,tbr = sig_info(total)
 
-        # ── Demand Zone Gate: score >= 35 requires confirmed demand (r8 > 0) ──
-        # Without institutional demand evidence, a cheap price is a liquidity trap
-        effective_score = total if (total < 35 or r8 > 0) else 0
-        if effective_score == 0 and total >= 35:
-            # downgrade — keep total for display but block signal
-            sig  = "Ignore"
-            tc   = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
-            # append warning to demand zone label
-            l8   = l8 + " ⚠️ No demand confirmation — liquidity trap risk"
-        else:
-            sig,tc,tbg,tbr = sig_info(total)
-
-        # ── Entry zones (only meaningful when score >= 35 AND demand confirmed) ─
         entry_zones = None
-        if total >= 35 and r8 > 0:
+        if total >= 35:
             entry_zones = calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo)
 
         return {
@@ -1193,7 +1076,6 @@ def build_report(holiday_mode=False, last_trading=None):
     dq_c   ="#155724" if not stale else "#856404"
     dq_bg  ="#d4edda" if not stale else "#fff3cd"
     dq_msg =(f"All {fresh_n} stocks — data fully verified" if not stale else f"{fresh_n}/{len(STOCKS)} fresh")
-    weights=""
 
     parts=[]
     holiday_banner=""
@@ -1211,6 +1093,7 @@ def build_report(holiday_mode=False, last_trading=None):
   <tr><td style="padding:20px 24px;">
     <div style="font-family:Arial,sans-serif;color:#fff;font-size:22px;font-weight:bold;">EGX Institutional Swing Scanner</div>
     <div style="font-family:Arial,sans-serif;color:#bdd7f5;font-size:13px;margin-top:5px;">{fmt_cairo("%A, %d %B %Y  |  %H:%M")} Cairo</div>
+    <div style="font-family:Arial,sans-serif;color:#bdd7f5;font-size:12px;margin-top:3px;">Watchlist: {len(STOCKS)} EGX30 components (live from TradingView)</div>
   </td></tr>
 </table>
 <table width="100%" cellpadding="10" cellspacing="0" border="0" style="background:{dq_bg};border-bottom:1px solid #ccc;">
@@ -1220,11 +1103,10 @@ def build_report(holiday_mode=False, last_trading=None):
 </table>""")
 
     wr=""
-    for s in STOCKS:
+    sorted_stocks = sorted(STOCKS, key=lambda s: results[s].get("score", 0) if results[s].get("ok") else 0, reverse=True)
+    for s in sorted_stocks:
         r=results[s]
         if not r["ok"] or r["score"]<35: continue
-        if not r.get("ok", False) or "score" not in r:
-            continue
         _,tc,tbg,tbr=sig_info(r["score"])
         wr+=f"""
 <tr style="border-bottom:1px solid #e0e0e0;">
@@ -1250,7 +1132,7 @@ def build_report(holiday_mode=False, last_trading=None):
   {wr or '<tr><td colspan="5" style="padding:14px;font-family:Arial,sans-serif;color:#856404;">No stocks reached Watch threshold today.</td></tr>'}
 </table>""")
 
-    for s in STOCKS:
+    for s in sorted_stocks:
         r=results[s]; nws=news[s]
         if not r["ok"]:
             parts.append(f"""
@@ -1260,8 +1142,6 @@ def build_report(holiday_mode=False, last_trading=None):
     <span style="color:#721c24;font-size:13px;">Error: {r.get("error","unknown")}</span>
   </td></tr></table>"""); continue
 
-        if not r.get("ok", False) or "score" not in r:
-            continue
         _,tc,tbg,tbr=sig_info(r["score"])
         ind_rows=""
         for nm,sc,mx,lb in r["rows"]:
@@ -1320,7 +1200,7 @@ def build_report(holiday_mode=False, last_trading=None):
 
     parts.append(f"""
 <table width="100%" cellpadding="12" cellspacing="0" border="0" style="margin-top:30px;background:#f0f0f0;border-top:1px solid #ddd;">
-  <tr><td align="center" style="font-family:Arial,sans-serif;font-size:11px;color:#999;">EGX Institutional Scanner · TradingView Data Engine</td></tr>
+  <tr><td align="center" style="font-family:Arial,sans-serif;font-size:11px;color:#999;">EGX Institutional Scanner · TradingView Data Engine · EGX30 Live Components</td></tr>
 </table>""")
 
     return f"""<!DOCTYPE html><html><body style="margin:0;padding:20px;background:#eef2f7;"><table width="680" cellpadding="0" cellspacing="0" border="0" align="center" style="background:#ffffff;border:1px solid #d0d7e2;"><tr><td style="padding:0 24px 24px 24px;">{"".join(parts)}</td></tr></table></body></html>"""
@@ -1356,6 +1236,7 @@ def send_email(html, subject_suffix=""):
 if __name__ == "__main__":
     today = today_cairo()
     print(f"EGX SMC Scanner — TradingView Engine — {fmt_cairo()} Cairo")
+    print(f"Watchlist: {len(STOCKS)} stocks loaded → {', '.join(STOCKS)}")
 
     if is_egx_trading_day(today):
         print("EGX Open Session — analyzing...")

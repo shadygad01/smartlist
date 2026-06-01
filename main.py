@@ -1328,6 +1328,8 @@ def build_report(holiday_mode=False, last_trading=None):
 </table>""")
 
     for s in sorted_stocks:
+        r=results[s]; nws=news[s]
+        if not r["ok"]:
             parts.append(f"""
 <table width="100%" cellpadding="12" cellspacing="0" border="0" style="margin:24px 0;border-top:3px solid #b02a2a;background:#fff5f5;border:1px solid #f5c6cb;">
   <tr><td style="font-family:Arial,sans-serif;">

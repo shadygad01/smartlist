@@ -1077,7 +1077,8 @@ def build_report(holiday_mode=False, last_trading=None):
 </table>""")
 
     wr=""
-    for s in STOCKS:
+    sorted_stocks = sorted(STOCKS, key=lambda s: results[s].get("score", 0) if results[s].get("ok") else 0, reverse=True)
+    for s in sorted_stocks:
         r=results[s]
         if not r["ok"] or r["score"]<35: continue
         _,tc,tbg,tbr=sig_info(r["score"])
@@ -1105,7 +1106,7 @@ def build_report(holiday_mode=False, last_trading=None):
   {wr or '<tr><td colspan="5" style="padding:14px;font-family:Arial,sans-serif;color:#856404;">No stocks reached Watch threshold today.</td></tr>'}
 </table>""")
 
-    for s in STOCKS:
+    for s in sorted_stocks:
         r=results[s]; nws=news[s]
         if not r["ok"]:
             parts.append(f"""

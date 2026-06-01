@@ -1264,6 +1264,9 @@ def build_report(holiday_mode=False, last_trading=None):
         print(f"  Analyzing: {NAMES.get(s,s)} ...")
         results[s]=analyze(s); news[s]=get_news(s); save_history(s,results[s])
 
+    # ── Sort stocks by score descending for the entire report ────────────────
+    sorted_stocks = sorted(STOCKS, key=lambda s: results[s].get("score", 0), reverse=True)
+
     fresh_n=sum(1 for s in STOCKS if results[s].get("ok") and results[s].get("is_fresh"))
     stale  =[NAMES.get(s,s) for s in STOCKS if results[s].get("ok") and not results[s].get("is_fresh")]
     dq_c   ="#155724" if not stale else "#856404"
@@ -1296,7 +1299,7 @@ def build_report(holiday_mode=False, last_trading=None):
 </table>""")
 
     wr=""
-    for s in STOCKS:
+    for s in sorted_stocks:
         r=results[s]
         if not r["ok"] or r["score"]<35: continue
         _,tc,tbg,tbr=sig_info(r["score"])
@@ -1324,9 +1327,7 @@ def build_report(holiday_mode=False, last_trading=None):
   {wr or '<tr><td colspan="5" style="padding:14px;font-family:Arial,sans-serif;color:#856404;">No stocks reached Watch threshold today.</td></tr>'}
 </table>""")
 
-    for s in STOCKS:
-        r=results[s]; nws=news[s]
-        if not r["ok"]:
+    for s in sorted_stocks:
             parts.append(f"""
 <table width="100%" cellpadding="12" cellspacing="0" border="0" style="margin:24px 0;border-top:3px solid #b02a2a;background:#fff5f5;border:1px solid #f5c6cb;">
   <tr><td style="font-family:Arial,sans-serif;">

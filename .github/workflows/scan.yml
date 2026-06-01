@@ -2,16 +2,19 @@ name: EGX SMC Scanner
 
 on:
   schedule:
-    - cron: '30 13 * * 0'
-    - cron: '30 13 * * 1'
-    - cron: '30 13 * * 2'
-    - cron: '30 13 * * 3'
-    - cron: '30 13 * * 4'
+    # 8:30 AM Cairo time (UTC+3 summer) = 05:30 UTC
+    # EGX trading days: Sunday–Thursday
+    - cron: '30 5 * * 0'   # Sunday
+    - cron: '30 5 * * 1'   # Monday
+    - cron: '30 5 * * 2'   # Tuesday
+    - cron: '30 5 * * 3'   # Wednesday
+    - cron: '30 5 * * 4'   # Thursday
   workflow_dispatch:
 
 jobs:
   scan:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

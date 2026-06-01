@@ -106,8 +106,8 @@ TV_HEADERS = {
 }
 
 W_PRICE  = 30
-W_OB     = 18
-W_LIQ    = 12
+W_OB     = 10
+W_LIQ    = 20
 W_HTF    = 10
 W_AVWAP  =  8
 W_MACD   =  4
@@ -562,8 +562,8 @@ def sc_price(cur, lo, hi, eq, buy_hi, sell_lo):
         dist_to_dd = round((cur - buy_hi) / rng * 100, 1)
         return pts, f"Mid-Discount @ {cur:.1f} — {dist_to_dd}% away from Deep Discount — {pts}/{W_PRICE}"
 
-    pct = round((cur - lo) / rng * 100, 1)
-    return 0, f"Premium Zone @ {cur:.1f} — {pct:.1f}% (above EQ {eq:.1f})"
+    pct_above_eq = round((cur - eq) / rng * 100, 1)
+    return 0, f"Premium Zone @ {cur:.1f} — {pct_above_eq}% above EQ — SMC setup inactive"
 
 def sc_ob(df, cur, eq, lo, buy_hi):
     """
@@ -1098,7 +1098,6 @@ def analyze(symbol):
         # ── GATE: Price must be strictly below EQ (< 0.50 level) ─────────────
         # At EQ or above → SMC setup does not exist → all scores locked at zero
         if cur >= eq:
-            pct_pos = round((cur - lo) / (hi - lo) * 100, 1) if hi > lo else 0
             pct_above_eq = round((cur - eq) / (hi - lo) * 100, 1) if hi > lo else 0
             r1 = 0; l1 = f"Premium Zone @ {cur:.1f} — {pct_above_eq}% above EQ — SMC setup inactive"
             locked     = "Locked — price not in discount zone (0–50%)"

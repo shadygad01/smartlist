@@ -106,8 +106,8 @@ TV_HEADERS = {
 }
 
 W_PRICE  = 30
-W_OB     = 18
-W_LIQ    = 12
+W_OB     = 10
+W_LIQ    = 20
 W_HTF    = 10
 W_AVWAP  =  8
 W_MACD   =  4

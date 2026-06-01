@@ -1196,7 +1196,7 @@ def analyze(symbol):
         #   r1 <  15               →  IGNORE (hard block)
         # ══════════════════════════════════════════════════════════════════
         PRICE_GATE = 15
-        LIQ_GATE   = W_LIQ
+        LIQ_GATE   = 12
 
         price_ok = (r1 >= PRICE_GATE)
         liq_ok   = (r3 >= LIQ_GATE)

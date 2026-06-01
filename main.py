@@ -105,6 +105,82 @@ TV_HEADERS = {
     "Referer": "https://www.tradingview.com/",
 }
 
+# =========================================
+# DOW JONES PRE-MARKET SNAPSHOT
+# =========================================
+
+def get_dow_jones_status():
+    """
+    Fetch Dow Jones last close from Yahoo Finance (^DJI).
+    Returns a dict with price, change, change_pct, direction, color info.
+    Called before Egypt market open to show US market context.
+    """
+    try:
+        ticker = yf.Ticker("^DJI")
+        hist   = ticker.history(period="5d", interval="1d", auto_adjust=False)
+        if hist.empty or len(hist) < 2:
+            return None
+
+        hist = hist.dropna(subset=["Close"])
+        prev_close  = float(hist["Close"].iloc[-2])
+        last_close  = float(hist["Close"].iloc[-1])
+        last_date   = hist.index[-1].strftime("%d %b %Y")
+        change      = last_close - prev_close
+        change_pct  = (change / prev_close) * 100
+        direction   = "up" if change >= 0 else "down"
+
+        return {
+            "price":      f"{last_close:,.2f}",
+            "change":     f"{change:+,.2f}",
+            "change_pct": f"{change_pct:+.2f}%",
+            "direction":  direction,
+            "date":       last_date,
+            "emoji":      "🟢" if direction == "up" else "🔴",
+            "arrow":      "▲" if direction == "up" else "▼",
+            "color":      "#155724" if direction == "up" else "#721c24",
+            "bg":         "#d4edda" if direction == "up" else "#f8d7da",
+            "border":     "#c3e6cb" if direction == "up" else "#f5c6cb",
+        }
+    except Exception as e:
+        print(f"  [DOW] Error fetching Dow Jones: {e}")
+        return None
+
+
+def build_dow_banner(dj):
+    """Build an HTML banner showing Dow Jones last close status."""
+    if not dj:
+        return ""
+    return f"""
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background:{dj['bg']};border-bottom:2px solid {dj['border']};">
+  <tr>
+    <td style="padding:12px 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="font-family:Arial,sans-serif;">
+            <span style="font-size:11px;font-weight:bold;letter-spacing:1px;
+                         color:{dj['color']};text-transform:uppercase;">
+              🇺🇸 Dow Jones Industrial Average — Last Close ({dj['date']})
+            </span><br>
+            <span style="font-size:20px;font-weight:bold;color:{dj['color']};">
+              {dj['emoji']} {dj['price']}
+            </span>
+            &nbsp;
+            <span style="font-size:14px;font-weight:bold;color:{dj['color']};">
+              {dj['arrow']} {dj['change']} &nbsp;({dj['change_pct']})
+            </span>
+          </td>
+          <td align="right" style="font-family:Arial,sans-serif;font-size:11px;
+                                   color:{dj['color']};padding-right:4px;">
+            US market closed<br>before EGX open
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>"""
+
+
 W_PRICE  = 30
 W_OB     = 10
 W_LIQ    = 20
@@ -1260,6 +1336,10 @@ def build_ez_html(r):
 
 def build_report(holiday_mode=False, last_trading=None):
     results={}; news={}
+    print("  Fetching Dow Jones status...")
+    dj = get_dow_jones_status()
+    dow_banner = build_dow_banner(dj)
+
     for s in STOCKS:
         print(f"  Analyzing: {NAMES.get(s,s)} ...")
         results[s]=analyze(s); news[s]=get_news(s); save_history(s,results[s])
@@ -1292,6 +1372,7 @@ def build_report(holiday_mode=False, last_trading=None):
     <div style="font-family:Arial,sans-serif;color:#bdd7f5;font-size:13px;margin-top:5px;">{fmt_cairo("%A, %d %B %Y  |  %H:%M")} Cairo</div>
   </td></tr>
 </table>
+{dow_banner}
 <table width="100%" cellpadding="10" cellspacing="0" border="0" style="background:{dq_bg};border-bottom:1px solid #ccc;">
   <tr><td style="font-family:Arial,sans-serif;font-size:12px;color:{dq_c};">
     <b>Data Status:</b> {dq_msg}

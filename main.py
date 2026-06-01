@@ -83,86 +83,89 @@ def fmt_cairo(fmt="%A, %d %B %Y  |  %H:%M"): return now_cairo().strftime(fmt)
 # DYNAMIC EGX30 COMPONENTS FROM TRADINGVIEW
 # =========================================
 
-FALLBACK_STOCKS = [
-    "COMI.CA", "PHAR.CA", "TMGH.CA", "ORWE.CA",
-    "ORHD.CA", "CSAG.CA", "EAST.CA", "ARCC.CA",
-    "ORAS.CA",
+STOCKS = [
+    "COMI.CA",  # Commercial International Bank (CIB)
+    "TMGH.CA",  # Talaat Moustafa Group
+    "ETEL.CA",  # Telecom Egypt
+    "EAST.CA",  # Eastern Company
+    "EGAL.CA",  # Egypt Aluminum
+    "ABUK.CA",  # Abou Kir Fertilizers
+    "EFIH.CA",  # e-finance
+    "FWRY.CA",  # Fawry
+    "ADIB.CA",  # Abu Dhabi Islamic Bank - Egypt
+    "ORAS.CA",  # Orascom Construction
+    "MFPC.CA",  # Misr Fertilizers MOPCO
+    "QNBE.CA",  # Qatar National Bank Egypt
+    "ALCN.CA",  # Alexandria Container & Cargo
+    "EMFD.CA",  # Emaar Misr
+    "HDBK.CA",  # Housing and Development Bank
+    "SWDY.CA",  # El Sewedy Electric
+    "HRHO.CA",  # EFG Holding
+    "EFID.CA",  # Edita Food Industries
+    "PHDC.CA",  # Palm Hills Developments
+    "OCDI.CA",  # SODIC
+    "SKPC.CA",  # Sidi Kerir Petrochemicals
+    "CLHO.CA",  # Cleopatra Hospitals
+    "JUFO.CA",  # Juhayna Food Industries
+    "MCQE.CA",  # Misr Cement Qena
+    "VALU.CA",  # U Consumer Finance
+    "ORWE.CA",  # Oriental Weavers
+    "ORHD.CA",  # Orascom Development Egypt
+    "ARCC.CA",  # Arabian Cement
+    "PHAR.CA",  # EIPICO
+    "TAQA.CA",  # TAQA Arabia
 ]
 
-FALLBACK_NAMES = {
+NAMES = {
     "COMI.CA": "Commercial International Bank",
-    "PHAR.CA": "Pharco Pharmaceuticals",
     "TMGH.CA": "Talaat Moustafa Group",
-    "ORWE.CA": "Oriental Weavers",
-    "ORHD.CA": "Orascom Development",
-    "CSAG.CA": "Canal Shipping Agencies",
+    "ETEL.CA": "Telecom Egypt",
     "EAST.CA": "Eastern Company",
-    "ARCC.CA": "Arabian Cement Company",
-    "ORAS.CA": "Orascom Construction PLC",
+    "EGAL.CA": "Egypt Aluminum",
+    "ABUK.CA": "Abou Kir Fertilizers",
+    "EFIH.CA": "e-finance",
+    "FWRY.CA": "Fawry",
+    "ADIB.CA": "Abu Dhabi Islamic Bank Egypt",
+    "ORAS.CA": "Orascom Construction",
+    "MFPC.CA": "Misr Fertilizers MOPCO",
+    "QNBE.CA": "QNB Egypt",
+    "ALCN.CA": "Alexandria Container & Cargo",
+    "EMFD.CA": "Emaar Misr",
+    "HDBK.CA": "Housing & Development Bank",
+    "SWDY.CA": "El Sewedy Electric",
+    "HRHO.CA": "EFG Holding",
+    "EFID.CA": "Edita Food Industries",
+    "PHDC.CA": "Palm Hills Developments",
+    "OCDI.CA": "SODIC",
+    "SKPC.CA": "Sidi Kerir Petrochemicals",
+    "CLHO.CA": "Cleopatra Hospitals",
+    "JUFO.CA": "Juhayna Food Industries",
+    "MCQE.CA": "Misr Cement Qena",
+    "VALU.CA": "U Consumer Finance",
+    "ORWE.CA": "Oriental Weavers",
+    "ORHD.CA": "Orascom Development Egypt",
+    "ARCC.CA": "Arabian Cement",
+    "PHAR.CA": "EIPICO",
+    "TAQA.CA": "TAQA Arabia",
 }
 
-FALLBACK_SECTORS = {
-    "COMI.CA": "Banking",         "PHAR.CA": "Healthcare",
-    "TMGH.CA": "Real Estate",     "ORWE.CA": "Manufacturing",
-    "ORHD.CA": "Real Estate",     "CSAG.CA": "Transportation",
-    "EAST.CA": "Consumer Goods",  "ARCC.CA": "Construction Materials",
-    "ORAS.CA": "Engineering & Construction",
+SECTORS = {
+    "COMI.CA": "Banking",          "TMGH.CA": "Real Estate",
+    "ETEL.CA": "Telecom",          "EAST.CA": "Consumer Non-Durables",
+    "EGAL.CA": "Non-Energy Minerals","ABUK.CA": "Fertilizers",
+    "EFIH.CA": "Technology Services","FWRY.CA": "Technology Services",
+    "ADIB.CA": "Banking",           "ORAS.CA": "Industrial Services",
+    "MFPC.CA": "Fertilizers",       "QNBE.CA": "Banking",
+    "ALCN.CA": "Transportation",    "EMFD.CA": "Real Estate",
+    "HDBK.CA": "Banking",           "SWDY.CA": "Industrial",
+    "HRHO.CA": "Finance",           "EFID.CA": "Consumer Non-Durables",
+    "PHDC.CA": "Real Estate",       "OCDI.CA": "Real Estate",
+    "SKPC.CA": "Petrochemicals",    "CLHO.CA": "Healthcare",
+    "JUFO.CA": "Consumer Non-Durables","MCQE.CA": "Construction Materials",
+    "VALU.CA": "Finance",           "ORWE.CA": "Manufacturing",
+    "ORHD.CA": "Real Estate",       "ARCC.CA": "Construction Materials",
+    "PHAR.CA": "Healthcare",        "TAQA.CA": "Energy Services",
 }
-
-
-def fetch_egx30_components():
-    """
-    Fetch live EGX30 component tickers from TradingView Scanner API.
-    Uses the same scanner.tradingview.com/egypt/scan endpoint already in the script.
-    Falls back to hardcoded list if anything fails.
-    Returns: (stocks_list, names_dict, sectors_dict)
-    """
-    try:
-        url = "https://scanner.tradingview.com/egypt/scan"
-        payload = {
-            "filter": [
-                {"left": "index", "operation": "equal", "right": "EGX:EGX30"}
-            ],
-            "columns": ["name", "description", "sector"],
-            "sort":    {"sortBy": "name", "sortOrder": "asc"},
-            "range":   [0, 50]
-        }
-        r = requests.post(url, json=payload, headers=TV_HEADERS, timeout=15)
-        if r.status_code != 200:
-            print(f"[EGX30] Scanner HTTP {r.status_code} — falling back to hardcoded list")
-            return FALLBACK_STOCKS, FALLBACK_NAMES, FALLBACK_SECTORS
-
-        rows = r.json().get("data", [])
-        if not rows:
-            print("[EGX30] Empty response — falling back to hardcoded list")
-            return FALLBACK_STOCKS, FALLBACK_NAMES, FALLBACK_SECTORS
-
-        stocks, names, sectors = [], {}, {}
-        for row in rows:
-            d = row.get("d", [])
-            if not d or not d[0]:
-                continue
-            raw = str(d[0]).strip()          # e.g. "COMI"
-            sym = f"{raw}.CA"
-            stocks.append(sym)
-            names[sym]   = str(d[1]).strip() if len(d) > 1 and d[1] else raw
-            sectors[sym] = str(d[2]).strip() if len(d) > 2 and d[2] else "EGX30"
-
-        if len(stocks) < 5:
-            print(f"[EGX30] Only {len(stocks)} tickers returned — falling back to hardcoded list")
-            return FALLBACK_STOCKS, FALLBACK_NAMES, FALLBACK_SECTORS
-
-        print(f"[EGX30] ✓ Fetched {len(stocks)} components live from TradingView")
-        return stocks, names, sectors
-
-    except Exception as e:
-        print(f"[EGX30] Error: {e} — falling back to hardcoded list")
-        return FALLBACK_STOCKS, FALLBACK_NAMES, FALLBACK_SECTORS
-
-
-# ── Load dynamically at startup ───────────────────────────────────────────────
-STOCKS, NAMES, SECTORS = fetch_egx30_components()
-
 
 # =========================================
 # TRADINGVIEW SCANNER — single stock quote

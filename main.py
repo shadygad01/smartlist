@@ -28,7 +28,7 @@ STOCKS = [
     "ORHD.CA", "EFID.CA", "HRHO.CA", "JUFO.CA",
     "BTFH.CA", "RAYA.CA", "GBCO.CA", "HELI.CA",
     "ARCC.CA", "MCQE.CA", "ORWE.CA", "ISPH.CA",
-    "RMDA.CA", "OIH.CA",  "CCAP.CA",
+    "OIH.CA",  "CCAP.CA",
 ]
 
 NAMES = {
@@ -56,7 +56,6 @@ NAMES = {
     "MCQE.CA": "Macro Group Pharmaceuticals",
     "ORWE.CA": "Oriental Weavers",
     "ISPH.CA": "Integrated Diagnostics Holdings",
-    "RMDA.CA": "Rameda Pharmaceutical",
     "OIH.CA":  "Olympic Industries Holding",
     "CCAP.CA": "Cairo Capital Holding",
 }
@@ -86,7 +85,6 @@ SECTORS = {
     "MCQE.CA": "Healthcare",
     "ORWE.CA": "Manufacturing",
     "ISPH.CA": "Healthcare",
-    "RMDA.CA": "Healthcare",
     "OIH.CA":  "Industrial",
     "CCAP.CA": "Financial Services",
 }

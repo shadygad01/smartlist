@@ -1,21 +1,19 @@
 name: EGX Daily Scanner
 on:
   schedule:
-    - cron: '30 6 * * 0-4'    # 6:30 AM UTC = 8:30 AM Cairo (UTC+2)
-  workflow_dispatch:            # تشغيل يدوي لو احتجت تختبر
+    - cron: '30 6 * * 0-4'
+  workflow_dispatch:
+
 jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: |
-          pip install pandas numpy yfinance requests beautifulsoup4
+        run: pip install -r requirements.txt
       - name: Run EGX Scanner
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}

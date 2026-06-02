@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       
-      - - name: Run EGX Scanner
+      - name: Run EGX Scanner
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}

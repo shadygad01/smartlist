@@ -1864,9 +1864,20 @@ if __name__ == "__main__":
     
     # إذا يوم تداول بس ما في ساعات السوق
     elif is_trading and not is_market_open:
-        print("⏰ Outside market hours - Monitoring paused")
-        print(f"   Market hours: 10:00 AM - 2:30 PM Cairo Time")
-        print(f"   Next market open: tomorrow at 10:00 AM")
+        # تحقق لو الوقت 8:30 صبح → Daily Morning Report بغض النظر عن الـ score
+        now = now_cairo()
+        if now.hour == 8 and 28 <= now.minute <= 32:
+            print("📊 Daily morning report (8:30 AM) — sending regardless of score...\n")
+            html, _results = build_report(holiday_mode=False)
+            print(f"📧 Sending email...")
+            send_email(html, subject_suffix=" — Daily Morning Report")
+            print(f"📱 Sending telegram...")
+            send_telegram_alerts(_results)
+            print(f"\n✅ Morning report sent!")
+        else:
+            print("⏰ Outside market hours - Monitoring paused")
+            print(f"   Market hours: 10:00 AM - 2:30 PM Cairo Time")
+            print(f"   Next market open: tomorrow at 10:00 AM")
     
     # إذا ما يوم تداول
     else:

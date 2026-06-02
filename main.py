@@ -1775,36 +1775,101 @@ def manual_scan():
 # RUN
 # =========================================
 
+# =========================================
+# HELPER FUNCTIONS FOR TIME CHECKS
+# =========================================
+
+def is_market_hours():
+    """
+    تحقق إذا الساعة الحالية بين 10 صباحاً و 2:30 مساءً (Cairo Time)
+    """
+    now = now_cairo()
+    hour = now.hour
+    minute = now.minute
+    
+    # 10:00 AM to 14:30 (2:30 PM)
+    start_time = 10 * 60  # 600 minutes
+    end_time = 14 * 60 + 30  # 870 minutes
+    current_time = hour * 60 + minute
+    
+    return start_time <= current_time <= end_time
+
+def is_trading_day_today():
+    """
+    تحقق إذا اليوم يوم تداول (أحد لخميس + ليس عطلة)
+    """
+    today = today_cairo()
+    
+    # 0=Monday, 1=Tuesday, ..., 6=Sunday
+    # Cairo market: Sunday-Thursday
+    if today.weekday() >= 4:  # Friday(4) or Saturday(5)
+        return False
+    
+    if today in EGX_HOLIDAYS:
+        return False
+    
+    return True
+
+# =========================================
+# RUN
+# =========================================
+
 if __name__ == "__main__":
     print(f"\n{'='*60}")
     print(f"EGX SMC Scanner — TradingView Engine")
     print(f"Start Time: {fmt_cairo()}")
     print(f"{'='*60}\n")
     
-    # إنشاء Scheduler
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(daily_scan, CronTrigger(hour=8, minute=30, timezone=CAIRO))
+    # تحقق من نوع التشغيل
+    import os
+    manual_run = os.getenv("MANUAL_RUN", "False") == "True"
     
-    print("✅ Scheduler configured:")
-    print(f"   ⏰ Daily scan at 08:30 Cairo Time")
-    print(f"   📱 Real-time monitoring active")
-    print(f"   🚨 Instant alerts when score >= 35\n")
+    # التحقق من الأيام والأوقات
+    is_trading = is_trading_day_today()
+    is_market_open = is_market_hours()
     
-    # بدء الـ Scheduler
-    scheduler.start()
+    print(f"📅 Today: {today_cairo()}")
+    print(f"⏰ Current Time: {fmt_cairo()}")
+    print(f"📊 Is Trading Day: {is_trading}")
+    print(f"🕐 Is Market Hours (10:00 AM - 2:30 PM): {is_market_open}")
+    print(f"🔧 Manual Run: {manual_run}\n")
     
-    # بدء المراقبة في thread منفصل
-    monitor_thread = threading.Thread(target=monitor_scores, daemon=True)
-    monitor_thread.start()
+    # إذا تشغيل يدوي → شغّل بدون شروط
+    if manual_run:
+        print("🔄 Manual run detected - Running scan regardless of time/day\n")
+        html, _results = build_report(holiday_mode=False)
+        print(f"\n📧 Sending email...")
+        send_email(html, subject_suffix=" — Manual Run")
+        print(f"📱 Sending telegram...")
+        send_telegram_alerts(_results)
+        print(f"\n✅ Manual scan completed!")
+        
+    # إذا يوم تداول وساعات السوق
+    elif is_trading and is_market_open:
+        print("✅ Trading day & market hours - Running scan\n")
+        html, _results = build_report(holiday_mode=False)
+        
+        # بعت Email + Telegram إذا في stocks >= 35
+        if any(
+            _results[s].get("ok") and _results[s].get("score", 0) >= 35
+            for s in STOCKS
+        ):
+            print(f"🎯 Found stocks with score >= 35")
+            print(f"📧 Sending email alert...")
+            send_email(html, subject_suffix=" — Alert (Score >= 35)")
+            print(f"📱 Sending telegram alert...")
+            send_telegram_alerts(_results)
+        else:
+            print(f"ℹ️ No stocks reached threshold (35+)")
     
-    print("🟢 System running... Press Ctrl+C to stop\n")
+    # إذا يوم تداول بس ما في ساعات السوق
+    elif is_trading and not is_market_open:
+        print("⏰ Outside market hours - Monitoring paused")
+        print(f"   Market hours: 10:00 AM - 2:30 PM Cairo Time")
+        print(f"   Next market open: tomorrow at 10:00 AM")
     
-    try:
-        # Keep the program running
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\n\n⛔ Shutting down...")
-        monitoring_active = False
-        scheduler.shutdown()
-        print("✅ System stopped.")
+    # إذا ما يوم تداول
+    else:
+        print("🔴 Not a trading day (Weekend or Holiday)")
+        last_td = most_recent_trading_day(today_cairo())
+        print(f"   Last trading day: {last_td}")

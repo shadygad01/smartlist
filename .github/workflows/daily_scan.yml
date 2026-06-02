@@ -2,23 +2,26 @@ name: EGX Daily Scanner
 
 on:
   schedule:
-    # كل 5 دقائق طول اليوم (الـ script سيتحقق من الأوقات)
-    - cron: '*/5 7-12,13-16 * * 0-4'  # 07:00-12:59 و 13:00-16:59 UTC = 09:00-14:59 و 15:00-18:59 Cairo
-  workflow_dispatch:  # تشغيل يدوي
+    # كل 5 دقائق من 08:00 لـ 11:55 UTC (= 10:00–13:55 Cairo)
+    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 8-11 * * 0-4'
+    # كل 5 دقائق من 12:00 لـ 12:30 UTC (= 14:00–14:30 Cairo)
+    - cron: '0,5,10,15,20,25,30 12 * * 0-4'
+
+  workflow_dispatch:
 
 jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install dependencies
         run: pip install -r requirements.txt
-      
+
       - name: Run EGX Scanner
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
@@ -26,4 +29,4 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' && 'True' || 'False' }}
-        run: python main.py
+        run: python main-auto.py

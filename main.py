@@ -8,6 +8,10 @@ import numpy as np
 import yfinance as yf
 import requests
 import traceback
+import threading
+import time
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta, date
@@ -16,6 +20,14 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 CAIRO = ZoneInfo("Africa/Cairo")
+
+# =========================================
+# GLOBAL STATE FOR MONITORING
+# =========================================
+
+last_alerted_stocks = set()  # لتجنب إرسال تنبيهات متكررة
+monitoring_active = True
+last_score_data = {}
 
 # =========================================
 # CONFIG
@@ -1630,21 +1642,169 @@ def send_telegram_alerts(results):
 
 
 # =========================================
-# RUN
+# ALERT FOR HIGH SCORE (REAL-TIME)
 # =========================================
 
-if __name__ == "__main__":
-    today = today_cairo()
-    print(f"EGX SMC Scanner — TradingView Engine — {fmt_cairo()} Cairo")
+def send_alert_for_high_score(stock, score, result):
+    """
+    إرسال تنبيه فوري عندما يصل score إلى 35+
+    """
+    print(f"\n🚨 ALERT: {NAMES.get(stock, stock)} ({stock}) وصل score {score}/100!")
+    
+    # إرسال Telegram
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    
+    if token and chat_id:
+        signal = result.get("signal", "WATCH").upper()
+        emoji_map = {
+            "STRONG BUY": "🟢",
+            "BUY": "🟩",
+            "WATCH": "🟡",
+        }
+        emoji = emoji_map.get(signal, "🔵")
+        
+        try:
+            upside = ""
+            try:
+                pct = (float(result["target"]) - float(result["price"])) / float(result["price"]) * 100
+                upside = f" (+{pct:.1f}%)"
+            except:
+                pass
+            
+            msg = (
+                f"🚨 *ALERT* — {emoji} {NAMES.get(stock, stock)}\n"
+                f"Score: *{score}/100*  |  Signal: *{signal}*\n"
+                f"Price: *{result['price']} EGP*\n"
+                f"Target: *{result['target']} EGP*{upside}\n"
+                f"Time: {now_cairo().strftime('%H:%M:%S')}"
+            )
+            
+            requests.post(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                json={"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"},
+                timeout=10,
+            )
+            print(f"✅ Telegram alert sent for {stock}")
+        except Exception as e:
+            print(f"❌ Telegram alert error: {e}")
 
-    if is_egx_trading_day(today):
-        print("EGX Open Session — analyzing...")
+
+# =========================================
+# MONITORING FUNCTION
+# =========================================
+
+def monitor_scores():
+    """
+    مراقبة الـ scores بشكل مستمر وإرسال تنبيهات فوراً عند الوصول إلى 35+
+    """
+    global last_alerted_stocks
+    
+    print(f"\n▶️ بدء المراقبة المستمرة في {fmt_cairo()}")
+    
+    while monitoring_active:
+        try:
+            # تنفيذ التحليل
+            html, results = build_report(holiday_mode=False)
+            
+            # البحث عن stocks وصلت 35+
+            current_qualified = {
+                s for s in STOCKS
+                if results[s].get("ok") and results[s].get("score", 0) >= 35
+            }
+            
+            # إرسال تنبيهات للـ stocks الجديدة
+            new_alerts = current_qualified - last_alerted_stocks
+            for stock in new_alerts:
+                score = results[stock].get("score", 0)
+                send_alert_for_high_score(stock, score, results[stock])
+                last_alerted_stocks.add(stock)
+            
+            # حفظ البيانات الحالية
+            global last_score_data
+            last_score_data = results
+            
+            # انتظر 5 دقائق قبل التحديث التالي
+            time.sleep(300)
+            
+        except Exception as e:
+            print(f"❌ Monitor error: {e}")
+            traceback.print_exc()
+            time.sleep(60)
+
+
+# =========================================
+# SCHEDULED TASKS
+# =========================================
+
+def daily_scan():
+    """
+    المسح اليومي في تمام الساعة 8:30 صباحاً
+    """
+    print(f"\n📅 Daily scan started at {fmt_cairo()}")
+    
+    if is_egx_trading_day(today_cairo()):
         html, _results = build_report(holiday_mode=False)
         send_email(html)
         send_telegram_alerts(_results)
     else:
-        last_td = most_recent_trading_day(today)
-        print(f"Today ({today}) is NOT a trading day. Last active session: {last_td}")
+        last_td = most_recent_trading_day(today_cairo())
         html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
-        send_email(html, subject_suffix=f" (Holiday — Active Session: {last_td})")
+        send_email(html, subject_suffix=f" (Holiday — Last Session: {last_td})")
         send_telegram_alerts(_results)
+
+
+def manual_scan():
+    """
+    مسح يدوي عند الطلب
+    """
+    print(f"\n🔄 Manual scan at {fmt_cairo()}")
+    
+    if is_egx_trading_day(today_cairo()):
+        html, _results = build_report(holiday_mode=False)
+        send_email(html, subject_suffix=" — Manual Scan")
+        send_telegram_alerts(_results)
+    else:
+        last_td = most_recent_trading_day(today_cairo())
+        html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
+        send_email(html, subject_suffix=f" — Manual Scan (Holiday)")
+        send_telegram_alerts(_results)
+
+
+# =========================================
+# RUN
+# =========================================
+
+if __name__ == "__main__":
+    print(f"\n{'='*60}")
+    print(f"EGX SMC Scanner — TradingView Engine")
+    print(f"Start Time: {fmt_cairo()}")
+    print(f"{'='*60}\n")
+    
+    # إنشاء Scheduler
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(daily_scan, CronTrigger(hour=8, minute=30, timezone=CAIRO))
+    
+    print("✅ Scheduler configured:")
+    print(f"   ⏰ Daily scan at 08:30 Cairo Time")
+    print(f"   📱 Real-time monitoring active")
+    print(f"   🚨 Instant alerts when score >= 35\n")
+    
+    # بدء الـ Scheduler
+    scheduler.start()
+    
+    # بدء المراقبة في thread منفصل
+    monitor_thread = threading.Thread(target=monitor_scores, daemon=True)
+    monitor_thread.start()
+    
+    print("🟢 System running... Press Ctrl+C to stop\n")
+    
+    try:
+        # Keep the program running
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n\n⛔ Shutting down...")
+        monitoring_active = False
+        scheduler.shutdown()
+        print("✅ System stopped.")

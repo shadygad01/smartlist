@@ -28,7 +28,7 @@ STOCKS = [
     "ORHD.CA", "EFID.CA", "HRHO.CA", "JUFO.CA",
     "BTFH.CA", "RAYA.CA", "GBCO.CA", "HELI.CA",
     "ARCC.CA", "MCQE.CA", "ORWE.CA", "ISPH.CA",
-    "OIH.CA",  "CCAP.CA",
+    "RMDA.CA", "OIH.CA",  "CCAP.CA",
 ]
 
 NAMES = {
@@ -56,6 +56,7 @@ NAMES = {
     "MCQE.CA": "Macro Group Pharmaceuticals",
     "ORWE.CA": "Oriental Weavers",
     "ISPH.CA": "Integrated Diagnostics Holdings",
+    "RMDA.CA": "Rameda Pharmaceutical",
     "OIH.CA":  "Olympic Industries Holding",
     "CCAP.CA": "Cairo Capital Holding",
 }
@@ -85,6 +86,7 @@ SECTORS = {
     "MCQE.CA": "Healthcare",
     "ORWE.CA": "Manufacturing",
     "ISPH.CA": "Healthcare",
+    "RMDA.CA": "Healthcare",
     "OIH.CA":  "Industrial",
     "CCAP.CA": "Financial Services",
 }
@@ -1569,21 +1571,33 @@ def send_telegram_alerts(results):
     }
 
     for s, r in alerts:
-        emoji  = SIGNAL_EMOJI.get(r.get("signal", "").upper(), "🔵")
-        upside = ""
-        try:
-            pct = (float(r["target"]) - float(r["price"])) / float(r["price"]) * 100
-            upside = f" (+{pct:.1f}%)"
-        except Exception:
-            pass
+        signal_upper = r.get("signal", "").upper()
+        emoji        = SIGNAL_EMOJI.get(signal_upper, "🔵")
+        fresh_flag   = "✅" if r.get("is_fresh") else "⚠️"
+        is_buy       = signal_upper in ("BUY", "STRONG BUY")
 
-        fresh_flag = "✅" if r.get("is_fresh") else "⚠️"
-        lines.append(
-            f"{emoji} *{NAMES.get(s, s)}* `{s}`\n"
-            f"   Signal: *{r['signal']}*  |  Score: *{r['score']}/100*\n"
-            f"   Price: *{r['price']} EGP*  →  Target: *{r['target']} EGP*{upside}\n"
-            f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
-        )
+        if is_buy:
+            # Full details for BUY / STRONG BUY
+            upside = ""
+            try:
+                pct    = (float(r["target"]) - float(r["price"])) / float(r["price"]) * 100
+                upside = f" (+{pct:.1f}%)"
+            except Exception:
+                pass
+            lines.append(
+                f"{emoji} *{NAMES.get(s, s)}* `{s}`\n"
+                f"   Signal: *{r['signal']}*  |  Score: *{r['score']}/100*\n"
+                f"   Price: *{r['price']} EGP*  →  Target: *{r['target']} EGP*{upside}\n"
+                f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
+            )
+        else:
+            # WATCH only — no target, no buy mention
+            lines.append(
+                f"{emoji} *{NAMES.get(s, s)}* `{s}`\n"
+                f"   👀 Watch  |  Score: *{r['score']}/100*\n"
+                f"   Price: *{r['price']} EGP*\n"
+                f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
+            )
 
     full_msg = "\n".join(lines)
 

@@ -43,6 +43,24 @@ STOCKS = [
     "RMDA.CA", "OIH.CA",  "CCAP.CA",
 ]
 
+# =========================================
+# WHITELIST - Price Gate Threshold >= 12
+# =========================================
+WHITELIST = [
+    "FWRY.CA",  # Fawry for Banking Technology
+    "EAST.CA",  # Eastern Company
+    "ETEL.CA",  # Telecom Egypt
+    "EMFD.CA",  # Egypt Foods Group
+    "PHDC.CA",  # Palm Hills Developments
+    "HRHO.CA",  # Hermes Financial Group
+    "MCQE.CA",  # Macro Group Pharmaceuticals
+    "OIH.CA",   # Olympic Industries Holding
+    "GBCO.CA",  # GB Auto
+]
+
+PRICE_GATE_NORMAL = 18      # For stocks NOT in whitelist
+PRICE_GATE_WHITELIST = 12   # For stocks IN whitelist ONLY
+
 NAMES = {
     "COMI.CA": "Commercial International Bank",
     "TMGH.CA": "Talaat Moustafa Group",
@@ -1207,7 +1225,8 @@ def analyze(symbol):
         #   r1 >= 15 AND r3 <  20  →  WATCH (price ok, waiting for sweep)
         #   r1 <  15               →  IGNORE (hard block)
         # ══════════════════════════════════════════════════════════════════
-        PRICE_GATE = 18
+        # ✅ DYNAMIC PRICE GATE - استخدم 12 للـ whitelist، 18 للأسهم العادية
+        PRICE_GATE = PRICE_GATE_WHITELIST if symbol in WHITELIST else PRICE_GATE_NORMAL
         LIQ_GATE   = 12
 
         price_ok = (r1 >= PRICE_GATE)
@@ -1217,7 +1236,7 @@ def analyze(symbol):
             sig = "Ignore"
             tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
             if cur < eq:
-                l1  = l1 + " ⛔ Price gate failed — not in Deep Discount (need >= 18/30)"
+                l1  = l1 + f" ⛔ Price gate failed — not in Deep Discount (need >= {PRICE_GATE}/{W_PRICE})"
         elif price_ok and not liq_ok:
             sig = "Watch"
             tc  = "#856404"; tbg = "#fff3cd"; tbr = "#ffc107"

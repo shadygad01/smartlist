@@ -1940,10 +1940,117 @@ def detect_signal_changes(current_results, previous_results):
     return changed_stocks
 
 
+def send_change_email(changed_stocks):
+    """
+    إرسال Email فوري عند تغيير أي سهم (whitelist أو عادي) إلى BUY
+    مع تمييز الـ whitelist بـ ⭐
+    """
+    if not changed_stocks:
+        return
+    
+    sender = os.getenv("EMAIL_USER")
+    password = os.getenv("EMAIL_PASS")
+    
+    if not sender or not password:
+        print("⚠️ Email config missing for change alert")
+        return
+    
+    # بناء HTML للإيميل
+    html_body = f"""
+    <html style="font-family: Arial, sans-serif; direction: rtl;">
+    <body style="background-color: #f5f5f5; padding: 20px;">
+        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h2 style="color: #d32f2f; text-align: center;">🚨 تنبيه: إشارة شراء جديدة</h2>
+            <hr style="border: none; border-top: 2px solid #d32f2f;">
+            
+            <p style="color: #333; font-size: 14px;">
+                <strong>الوقت:</strong> {fmt_cairo()}
+            </p>
+    """
+    
+    # فصل الأسهم إلى whitelist وعادي
+    whitelist_stocks = [s for s in changed_stocks if s['stock'] in WHITELIST]
+    normal_stocks = [s for s in changed_stocks if s['stock'] not in WHITELIST]
+    
+    # أسهم Whitelist أولاً (مع تمييز)
+    if whitelist_stocks:
+        html_body += "<h3 style='color: #f57c00; margin-top: 20px; border-bottom: 2px solid #ff9800; padding-bottom: 10px;'>⭐ أسهم قائمة البيضاء (Whitelist)</h3>"
+        
+        for item in whitelist_stocks:
+            html_body += f"""
+            <div style="background-color: #fff3e0; border-right: 4px solid #ff9800; padding: 15px; margin: 10px 0; border-radius: 4px;">
+                <h3 style="color: #f57c00; margin: 0 0 10px 0;">⭐ {item['stock']} - WHITELIST ⭐</h3>
+                <table style="width: 100%; color: #333; font-size: 13px;">
+                    <tr>
+                        <td style="padding: 5px;"><strong>الإشارة:</strong></td>
+                        <td style="padding: 5px;">{item['from']} → <strong style="color: #2e7d32;">{item['to']}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px;"><strong>الـ Score:</strong></td>
+                        <td style="padding: 5px;">{item['score']:.1f}</td>
+                    </tr>
+                </table>
+            </div>
+            """
+    
+    # أسهم عادية (بدون تمييز)
+    if normal_stocks:
+        html_body += "<h3 style='color: #1976d2; margin-top: 20px; border-bottom: 2px solid #2196f3; padding-bottom: 10px;'>📈 أسهم عادية</h3>"
+        
+        for item in normal_stocks:
+            html_body += f"""
+            <div style="background-color: #e3f2fd; border-right: 4px solid #2196f3; padding: 15px; margin: 10px 0; border-radius: 4px;">
+                <h3 style="color: #1565c0; margin: 0 0 10px 0;">📈 {item['stock']}</h3>
+                <table style="width: 100%; color: #333; font-size: 13px;">
+                    <tr>
+                        <td style="padding: 5px;"><strong>الإشارة:</strong></td>
+                        <td style="padding: 5px;">{item['from']} → <strong style="color: #2e7d32;">{item['to']}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px;"><strong>الـ Score:</strong></td>
+                        <td style="padding: 5px;">{item['score']:.1f}</td>
+                    </tr>
+                </table>
+            </div>
+            """
+    
+    html_body += """
+            <hr style="border: none; border-top: 2px solid #ddd; margin-top: 20px;">
+            <p style="color: #666; font-size: 12px; text-align: center;">
+                EGX SMC Scanner © 2026
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    msg = MIMEMultipart("alternative")
+    date_str = now_cairo().strftime("%Y-%m-%d %H:%M")
+    total_count = len(changed_stocks)
+    msg["Subject"] = f"🚨 تنبيه: {total_count} أسهم تغيرت إلى BUY — {date_str}"
+    msg["From"] = sender
+    msg["To"] = EMAIL
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
+    
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as srv:
+            srv.ehlo()
+            srv.starttls()
+            srv.ehlo()
+            srv.login(sender, password)
+            srv.sendmail(sender, EMAIL, msg.as_string())
+        print(f"📧 Email alert sent for {total_count} stock(s) ({len(whitelist_stocks)} whitelist, {len(normal_stocks)} normal)")
+        return True
+    except Exception as e:
+        print(f"❌ Email error: {e}")
+        return False
+
+
 def send_change_alert(changed_stocks):
     """
     إرسال تنبيه Telegram فوري عند تغيير الإشارة
     مع علامة مميزة ⭐ للأسهم من قائمة الـ whitelist
+    + Email للـ whitelist فقط
     """
     if not changed_stocks:
         return
@@ -1971,6 +2078,7 @@ def send_change_alert(changed_stocks):
         message += f"  └─ {item['from']} → {item['to']}\n"
         message += f"  └─ Score: {item['score']:.1f}\n\n"
     
+    # إرسال Telegram
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
     
@@ -1982,6 +2090,9 @@ def send_change_alert(changed_stocks):
             print(f"❌ Telegram error: {response.text}")
     except Exception as e:
         print(f"❌ Error sending Telegram alert: {e}")
+    
+    # إرسال Email للـ whitelist فقط
+    send_change_email(changed_stocks)
 
 # =========================================
 # RUN

@@ -1926,6 +1926,8 @@ def detect_signal_changes(current_results, previous_results):
         current_sig = current.get("sig", "Ignore")
         previous_sig = previous.get("sig", "Ignore")
         current_score = current.get("score", 0)
+        current_price = current.get("price", "N/A")
+        current_target = current.get("target", "N/A")
         
         # إذا تغيرت الإشارة من Ignore إلى BUY أو STRONG BUY
         if (previous_sig in ["Ignore", "Watch"] and current_sig in ["Buy", "Strong Buy"]):
@@ -1934,7 +1936,8 @@ def detect_signal_changes(current_results, previous_results):
                 "from": previous_sig,
                 "to": current_sig,
                 "score": current_score,
-                "price_gate": current.get("price_gate", "N/A")
+                "price": current_price,
+                "target": current_target
             })
     
     return changed_stocks
@@ -1989,6 +1992,14 @@ def send_change_email(changed_stocks):
                         <td style="padding: 5px;"><strong>الـ Score:</strong></td>
                         <td style="padding: 5px;">{item['score']:.1f}</td>
                     </tr>
+                    <tr>
+                        <td style="padding: 5px;"><strong>سعر الشراء:</strong></td>
+                        <td style="padding: 5px;"><strong style="color: #d32f2f;">{item.get('price', 'N/A')} EGP</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px;"><strong>السعر المستهدف:</strong></td>
+                        <td style="padding: 5px;"><strong style="color: #2e7d32;">{item.get('target', 'N/A')} EGP</strong></td>
+                    </tr>
                 </table>
             </div>
             """
@@ -2009,6 +2020,14 @@ def send_change_email(changed_stocks):
                     <tr>
                         <td style="padding: 5px;"><strong>الـ Score:</strong></td>
                         <td style="padding: 5px;">{item['score']:.1f}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px;"><strong>سعر الشراء:</strong></td>
+                        <td style="padding: 5px;"><strong style="color: #d32f2f;">{item.get('price', 'N/A')} EGP</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px;"><strong>السعر المستهدف:</strong></td>
+                        <td style="padding: 5px;"><strong style="color: #2e7d32;">{item.get('target', 'N/A')} EGP</strong></td>
                     </tr>
                 </table>
             </div>
@@ -2050,7 +2069,7 @@ def send_change_alert(changed_stocks):
     """
     إرسال تنبيه Telegram فوري عند تغيير الإشارة
     مع علامة مميزة ⭐ للأسهم من قائمة الـ whitelist
-    + Email للـ whitelist فقط
+    + Email للجميع مع التمييز
     """
     if not changed_stocks:
         return
@@ -2065,6 +2084,8 @@ def send_change_alert(changed_stocks):
     message = "🚨 **إشارة تغير إلى BUY!**\n\n"
     for item in changed_stocks:
         stock = item['stock']
+        price = item.get('price', 'N/A')
+        target = item.get('target', 'N/A')
         
         # ⭐ علامة مميزة للأسهم من الـ whitelist
         whitelist_badge = "⭐ **WHITELIST** ⭐" if stock in WHITELIST else ""
@@ -2076,7 +2097,9 @@ def send_change_alert(changed_stocks):
             message += "\n"
         
         message += f"  └─ {item['from']} → {item['to']}\n"
-        message += f"  └─ Score: {item['score']:.1f}\n\n"
+        message += f"  └─ Score: {item['score']:.1f}\n"
+        message += f"  └─ السعر الحالي: {price} EGP\n"
+        message += f"  └─ السعر المستهدف: {target} EGP\n\n"
     
     # إرسال Telegram
     url = f"https://api.telegram.org/bot{token}/sendMessage"
@@ -2091,7 +2114,7 @@ def send_change_alert(changed_stocks):
     except Exception as e:
         print(f"❌ Error sending Telegram alert: {e}")
     
-    # إرسال Email للـ whitelist فقط
+    # إرسال Email للجميع مع التمييز
     send_change_email(changed_stocks)
 
 # =========================================

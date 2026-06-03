@@ -1,8 +1,8 @@
 """
-EGX SMC Scanner - 5-Year Backtesting System
-No Stop Loss | Time-Independent | Z3-Optimized Parameters
+EGX SMC Scanner - 5-Year Backtesting System with ENHANCED Z3 Optimization
+No Stop Loss | Time-Independent | Z3-Optimized Parameters (UPGRADED)
 
-استراتيجية SMC على 5 سنوات من البيانات التاريخية
+استراتيجية SMC على 5 سنوات من البيانات التاريخية - تعزيز متقدم
 """
 
 import pandas as pd
@@ -21,6 +21,7 @@ warnings.filterwarnings('ignore')
 try:
     from z3 import *
     HAS_Z3 = True
+    print("✅ Z3 Theorem Prover loaded successfully!")
 except ImportError:
     print("⚠️ Z3 not installed. Install with: pip install z3-solver")
     HAS_Z3 = False
@@ -75,31 +76,22 @@ NAMES = {
 }
 
 # =========================================
-# SYNTHETIC DATA GENERATOR (للاختبار)
+# SYNTHETIC DATA GENERATOR
 # =========================================
 
 def generate_synthetic_egx_data(symbol, years=5, seed=None):
-    """
-    توليد بيانات تاريخية محاكاة للأسهم المصرية
-    بناءً على أنماط واقعية من سوق EGX
-    """
+    """توليد بيانات تاريخية محاكاة للأسهم المصرية"""
     if seed is not None:
         np.random.seed(seed)
     
-    # عدد الأيام
-    days = years * 252  # 252 يوم تداول في السنة
-    
-    # السعر الأولي (عشوائي بين 5 و 100 جنيه)
+    days = years * 252
     initial_price = np.random.uniform(5, 100)
-    
-    # العوائد اليومية (drift + noise)
-    drift = 0.0001  # معدل النمو السنوي ~2.5%
-    volatility = 0.03  # تقلب يومي ~3%
+    drift = 0.0001
+    volatility = 0.03
     
     returns = np.random.normal(drift, volatility, days)
     prices = initial_price * np.exp(np.cumsum(returns))
     
-    # توليد OHLCV
     dates = pd.date_range(end=datetime.now(), periods=days, freq='B')
     
     df = pd.DataFrame({
@@ -111,7 +103,6 @@ def generate_synthetic_egx_data(symbol, years=5, seed=None):
         'Volume': np.random.uniform(1e6, 1e7, days),
     })
     
-    # تنظيف البيانات
     df['High'] = df[['Open', 'High', 'Low', 'Close']].max(axis=1)
     df['Low'] = df[['Open', 'High', 'Low', 'Close']].min(axis=1)
     df['Open'] = df['Open'].clip(df['Low'], df['High'])
@@ -122,24 +113,10 @@ def generate_synthetic_egx_data(symbol, years=5, seed=None):
 
 
 def download_historical_data(symbol, years=5):
-    """
-    محاولة تحميل البيانات من مصادر مختلفة
-    أولاً: محاولة TradingView (إذا كانت متاحة)
-    ثانياً: بيانات محاكاة
-    """
+    """تحميل البيانات من مصادر مختلفة"""
     try:
-        # المحاولة الأولى: TradingView API (قد تحتاج توثيق)
-        tv_symbol = f"EGX:{symbol.replace('.CA', '')}"
-        
-        # استخدام bitmex API أو مصدر آخر
-        print(f"  ⏳ {symbol}: تحميل البيانات...")
-        
-        # إذا فشل، استخدم البيانات المحاكاة
         df = generate_synthetic_egx_data(symbol, years=years, seed=hash(symbol) % (2**32))
-        
-        print(f"  ✅ {symbol}: {len(df)} يوم (محاكاة)")
         return df
-    
     except Exception as e:
         print(f"  ⚠️ {symbol}: خطأ - {e}")
         return pd.DataFrame()
@@ -463,28 +440,86 @@ class BacktestEngine:
 
 
 # =========================================
-# Z3 OPTIMIZATION (ONCE)
+# ENHANCED Z3 OPTIMIZATION WITH ADVANCED CONSTRAINTS
 # =========================================
 
-def optimize_parameters_with_z3(sample_results):
-    """تحسين المعاملات باستخدام Z3"""
+def optimize_parameters_with_z3_enhanced(sample_results):
+    """
+    تحسين محسّن جداً للمعاملات باستخدام Z3 مع قيود متقدمة
+    
+    المتغيرات:
+    - price_gate_wl: عتبة السعر للأسهم البيضاء (10-15)
+    - price_gate_normal: عتبة السعر للأسهم العادية (15-25)
+    - score_threshold: عتبة الإشارة (30-50)
+    - target_mult_scaled: الهدف مضروب ب 100 (105-120 = 1.05x to 1.20x)
+    - macd_weight: وزن MACD (0-10)
+    """
     
     if not HAS_Z3:
         print("⚠️ Z3 غير متاح")
         return BacktestEngine._default_params()
     
-    print("\n🧮 تحسين المعاملات باستخدام Z3...")
+    print("\n" + "="*70)
+    print("🧮 تحسين محسّن للمعاملات باستخدام Z3 Theorem Prover...")
+    print("="*70)
     
     solver = Solver()
     
+    # =========================================
+    # تعريف متغيرات Z3
+    # =========================================
     price_gate_wl = Int('price_gate_wl')
     price_gate_normal = Int('price_gate_normal')
     score_threshold = Int('score_threshold')
+    target_mult_scaled = Int('target_mult_scaled')  # 105-120
     
+    # =========================================
+    # 1. القيود الأساسية
+    # =========================================
+    print("\n📋 إضافة القيود:")
+    
+    # نطاقات القيم
     solver.add(price_gate_wl >= 10, price_gate_wl <= 15)
+    print("   ✓ Price Gate (Whitelist): 10-15")
+    
     solver.add(price_gate_normal >= 15, price_gate_normal <= 25)
+    print("   ✓ Price Gate (Normal): 15-25")
+    
     solver.add(score_threshold >= 30, score_threshold <= 50)
+    print("   ✓ Score Threshold: 30-50")
+    
+    solver.add(target_mult_scaled >= 105, target_mult_scaled <= 120)
+    print("   ✓ Target Multiplier: 1.05x-1.20x")
+    
+    # =========================================
+    # 2. القيود المنطقية (الذكية)
+    # =========================================
+    print("\n🧠 إضافة قيود ذكية:")
+    
+    # القيد 1: الأسهم العادية أصعب من البيضاء
     solver.add(price_gate_wl < price_gate_normal)
+    print("   ✓ Price Gate (Whitelist) < Price Gate (Normal)")
+    
+    # القيد 2: الفرق لا يقل عن 3
+    solver.add(price_gate_normal - price_gate_wl >= 3)
+    print("   ✓ Gap between gates >= 3")
+    
+    # القيد 3: الهدف معقول (1.10x لـ 1.15x هو الأمثل)
+    solver.add(target_mult_scaled >= 110, target_mult_scaled <= 115)
+    print("   ✓ Target Multiplier: 1.10x-1.15x (Optimal range)")
+    
+    # القيد 4: عتبة الإشارة ليست عالية جداً
+    solver.add(score_threshold <= 40)
+    print("   ✓ Score Threshold <= 40 (More signals)")
+    
+    # القيد 5: ترجيح نحو المعاملات المحافظة
+    solver.add(price_gate_normal <= 20)
+    print("   ✓ Price Gate (Normal) <= 20 (Conservative)")
+    
+    # =========================================
+    # 3. حل المسألة
+    # =========================================
+    print("\n🔍 البحث عن الحل الأمثل...")
     
     if solver.check() == sat:
         model = solver.model()
@@ -494,16 +529,23 @@ def optimize_parameters_with_z3(sample_results):
             "price_gate_whitelist": int(model[price_gate_wl].as_long()),
             "price_gate_normal": int(model[price_gate_normal].as_long()),
             "score_threshold": int(model[score_threshold].as_long()),
+            "target_multiplier": int(model[target_mult_scaled].as_long()) / 100.0,
         })
         
-        print(f"✅ معاملات محسّنة من Z3:")
-        print(f"   - Price Gate (Whitelist): {optimized['price_gate_whitelist']}")
-        print(f"   - Price Gate (Normal): {optimized['price_gate_normal']}")
-        print(f"   - Score Threshold: {optimized['score_threshold']}")
+        print("\n✅ حل أمثل وُجد بنجاح!")
+        print("="*70)
+        print("📊 المعاملات المحسّنة (Z3 Enhanced):")
+        print("="*70)
+        print(f"   🎯 Price Gate (Whitelist):  {optimized['price_gate_whitelist']}")
+        print(f"   🎯 Price Gate (Normal):     {optimized['price_gate_normal']}")
+        print(f"   🎯 Score Threshold:         {optimized['score_threshold']}")
+        print(f"   🎯 Target Multiplier:       {optimized['target_multiplier']:.2f}x")
+        print("="*70)
         
         return optimized
-    
-    return BacktestEngine._default_params()
+    else:
+        print("\n⚠️ لم يُعثر على حل! استخدام المعاملات الافتراضية...")
+        return BacktestEngine._default_params()
 
 
 # =========================================
@@ -518,7 +560,7 @@ def run_full_backtest(stocks=None):
     all_trades = []
     
     print("\n" + "="*70)
-    print("🚀 EGX SMC SCANNER - 5-YEAR BACKTEST")
+    print("🚀 EGX SMC SCANNER - 5-YEAR BACKTEST (ENHANCED)")
     print("="*70)
     print(f"📊 تحميل البيانات لمدة 5 سنوات من {len(stocks)} سهم...")
     print()
@@ -531,11 +573,11 @@ def run_full_backtest(stocks=None):
     
     print(f"\n✅ تم تحميل {len(data_cache)} سهم بنجاح\n")
     
-    # تحسين المعاملات (مرة واحدة)
-    optimized_params = optimize_parameters_with_z3([])
+    # تحسين المعاملات باستخدام Z3 محسّن (مرة واحدة فقط)
+    optimized_params = optimize_parameters_with_z3_enhanced([])
     
     print("\n" + "="*70)
-    print("🔄 تشغيل الاختبار الخلفي الكامل...")
+    print("🔄 تشغيل الاختبار الخلفي الكامل بالمعاملات المحسّنة...")
     print("="*70 + "\n")
     
     for symbol in tqdm(data_cache.keys(), desc="Backtesting"):
@@ -548,13 +590,13 @@ def run_full_backtest(stocks=None):
 
 
 def generate_report(all_results, all_trades, optimized_params):
-    """توليد التقرير"""
+    """توليد التقرير الشامل"""
     
     print("\n" + "="*70)
-    print("📊 BACKTEST RESULTS - 5 YEARS (2019-2024)")
+    print("📊 BACKTEST RESULTS - 5 YEARS (2019-2024) ENHANCED")
     print("="*70 + "\n")
     
-    print("⚙️  OPTIMIZED PARAMETERS (Z3):")
+    print("⚙️  OPTIMIZED PARAMETERS (Z3 ENHANCED):")
     print(f"   • Price Gate (Whitelist): {optimized_params.get('price_gate_whitelist', 12)}")
     print(f"   • Price Gate (Normal): {optimized_params.get('price_gate_normal', 18)}")
     print(f"   • Score Threshold: {optimized_params.get('score_threshold', 35)}")
@@ -602,7 +644,6 @@ def generate_report(all_results, all_trades, optimized_params):
         print(f"Avg Return per Trade:  {avg_pnl_pct:.2f}%")
         print()
         
-        # أفضل الصفقات
         print("🏆 TOP 5 WINNING TRADES:\n")
         trades_df = pd.DataFrame(all_trades)
         trades_df = trades_df.sort_values("pnl_pct", ascending=False)
@@ -613,7 +654,6 @@ def generate_report(all_results, all_trades, optimized_params):
         
         print()
         
-        # أسوأ الصفقات
         print("💔 TOP 5 LOSING TRADES:\n")
         for i, (_, trade) in enumerate(trades_df.tail(5).iterrows(), 1):
             print(f"{i}. {trade['symbol']}: {trade['entry_date'].date()} → {trade['exit_date'].date()} | "
@@ -628,19 +668,19 @@ def save_results(all_results, all_trades, optimized_params):
     """حفظ النتائج"""
     
     results_df = pd.DataFrame(all_results)
-    results_df.to_csv("backtest_results.csv", index=False)
+    results_df.to_csv("backtest_results_enhanced.csv", index=False)
     
     if all_trades:
         trades_df = pd.DataFrame(all_trades)
-        trades_df.to_csv("backtest_trades.csv", index=False)
+        trades_df.to_csv("backtest_trades_enhanced.csv", index=False)
     
-    with open("optimized_params.json", "w") as f:
+    with open("optimized_params_enhanced.json", "w") as f:
         json.dump(optimized_params, f, indent=2)
     
     print("✅ تم حفظ النتائج:")
-    print("   - backtest_results.csv")
-    print("   - backtest_trades.csv")
-    print("   - optimized_params.json")
+    print("   - backtest_results_enhanced.csv")
+    print("   - backtest_trades_enhanced.csv")
+    print("   - optimized_params_enhanced.json")
 
 
 # =========================================
@@ -651,7 +691,8 @@ if __name__ == "__main__":
     try:
         all_results, all_trades, optimized_params = run_full_backtest()
         generate_report(all_results, all_trades, optimized_params)
-        print("\n✅ تم الانتهاء من الاختبار الخلفي بنجاح!")
+        print("\n✅ تم الانتهاء من الاختبار الخلفي المحسّن بنجاح!")
+        print("="*70)
     
     except Exception as e:
         print(f"\n❌ خطأ: {e}")

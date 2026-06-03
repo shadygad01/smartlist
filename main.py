@@ -2031,6 +2031,22 @@ if __name__ == "__main__":
     print("✅ Scheduler initialized successfully!")
     print("="*60 + "\n")
     
+    # =========================================
+    # CHECK FOR MANUAL RUN
+    # =========================================
+    manual_run = os.getenv("MANUAL_RUN", "False") == "True"
+    
+    if manual_run:
+        print("🔧 MANUAL RUN MODE DETECTED")
+        print("="*60 + "\n")
+        print("🚀 Running manual scan now...\n")
+        manual_scan()
+        print("\n✅ Manual scan completed!")
+        print("="*60 + "\n")
+        sys.exit(0)
+    
+    print("🚀 SCHEDULER MODE - Starting automatic jobs...\n")
+    
     try:
         print(f"🚀 Starting scheduler... Current time: {fmt_cairo()}\n")
         scheduler.start()

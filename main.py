@@ -1794,19 +1794,10 @@ def daily_scan():
 
 def continuous_scan():
     """
-    المسح المستمر كل 5 دقائق أثناء ساعات السوق (10:00 - 2:30 PM)
+    المسح المستمر كل 5 دقائق (10:00 AM - 2:30 PM فقط)
+    الـ Scheduler يتحكم في أوقات التشغيل
     يكتشف أي تغيير في الإشارات ويرسل تنبيهات فورية
     """
-    now = now_cairo()
-    
-    # تحقق إذا كنا في ساعات السوق
-    if not (10 * 60 <= now.hour * 60 + now.minute < 14 * 60 + 30):
-        return
-    
-    # تحقق إذا كان يوم تداول
-    if not is_egx_trading_day(today_cairo()):
-        return
-    
     print(f"\n🔄 Continuous scan at {fmt_cairo()}")
     
     # تحميل النتائج السابقة
@@ -1978,7 +1969,7 @@ def send_change_alert(changed_stocks):
             message += "\n"
         
         message += f"  └─ {item['from']} → {item['to']}\n"
-        message += f"  └─ Score: {item['score']:.1f} | Gate: {item['price_gate']}\n\n"
+        message += f"  └─ Score: {item['score']:.1f}\n\n"
     
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
@@ -2019,15 +2010,21 @@ if __name__ == "__main__":
     
     # =========================================
     # JOB 2: Continuous Scan Every 5 Minutes
-    # (During market hours: 10:00 AM - 2:30 PM)
+    # (فقط من 10:00 AM إلى 2:30 PM بتوقيت القاهرة)
+    # (فقط أيام التداول: الأحد - الخميس)
     # =========================================
-    print("  ✓ Job 2: Continuous scan every 5 minutes (10:00 AM - 2:30 PM)")
+    print("  ✓ Job 2: Continuous scan every 5 minutes")
+    print("           (10:00 AM - 2:30 PM Cairo Time, Sun-Thu)")
     scheduler.add_job(
         continuous_scan,
-        'interval',
-        minutes=5,
+        CronTrigger(
+            minute='*/5',           # كل 5 دقائق
+            hour='10-14',           # من الساعة 10 إلى 14 (2:30 PM)
+            day_of_week='0-4',      # الأحد(6)=0, الاثنين(0)=1, الثلاثاء=2, الأربعاء=3, الخميس=4
+            timezone=CAIRO
+        ),
         id="continuous_scan_5min",
-        name="Continuous Scan Every 5 Minutes"
+        name="Continuous Scan Every 5 Minutes (Market Hours)"
     )
     
     print("\n" + "="*60)

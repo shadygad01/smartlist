@@ -1762,15 +1762,69 @@ def daily_scan():
     """
     print(f"\n📅 Daily scan started at {fmt_cairo()}")
     
+    # تحميل النتائج السابقة
+    previous_results = load_previous_results()
+    
     if is_egx_trading_day(today_cairo()):
         html, _results = build_report(holiday_mode=False)
         send_email(html)
         send_telegram_alerts(_results)
+        
+        # حفظ النتائج الحالية
+        save_scan_results(_results)
+        
+        # كشف التغييرات وإرسال تنبيهات
+        changes = detect_signal_changes(_results, previous_results)
+        if changes:
+            send_change_alert(changes)
     else:
         last_td = most_recent_trading_day(today_cairo())
         html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
         send_email(html, subject_suffix=f" (Holiday — Last Session: {last_td})")
         send_telegram_alerts(_results)
+        
+        # حفظ النتائج الحالية
+        save_scan_results(_results)
+        
+        # كشف التغييرات وإرسال تنبيهات
+        changes = detect_signal_changes(_results, previous_results)
+        if changes:
+            send_change_alert(changes)
+
+
+def continuous_scan():
+    """
+    المسح المستمر كل 5 دقائق أثناء ساعات السوق (10:00 - 2:30 PM)
+    يكتشف أي تغيير في الإشارات ويرسل تنبيهات فورية
+    """
+    now = now_cairo()
+    
+    # تحقق إذا كنا في ساعات السوق
+    if not (10 * 60 <= now.hour * 60 + now.minute < 14 * 60 + 30):
+        return
+    
+    # تحقق إذا كان يوم تداول
+    if not is_egx_trading_day(today_cairo()):
+        return
+    
+    print(f"\n🔄 Continuous scan at {fmt_cairo()}")
+    
+    # تحميل النتائج السابقة
+    previous_results = load_previous_results()
+    
+    # إجراء المسح الحالي
+    html, current_results = build_report(holiday_mode=False)
+    
+    # حفظ النتائج الحالية
+    save_scan_results(current_results)
+    
+    # كشف التغييرات وإرسال تنبيهات فورية
+    changes = detect_signal_changes(current_results, previous_results)
+    if changes:
+        print(f"🚨 Found {len(changes)} signal change(s)!")
+        send_change_alert(changes)
+    else:
+        print(f"ℹ️ No signal changes detected")
 
 
 def manual_scan():
@@ -1779,15 +1833,25 @@ def manual_scan():
     """
     print(f"\n🔄 Manual scan at {fmt_cairo()}")
     
+    previous_results = load_previous_results()
+    
     if is_egx_trading_day(today_cairo()):
         html, _results = build_report(holiday_mode=False)
         send_email(html, subject_suffix=" — Manual Scan")
         send_telegram_alerts(_results)
+        save_scan_results(_results)
+        changes = detect_signal_changes(_results, previous_results)
+        if changes:
+            send_change_alert(changes)
     else:
         last_td = most_recent_trading_day(today_cairo())
         html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
         send_email(html, subject_suffix=f" — Manual Scan (Holiday)")
         send_telegram_alerts(_results)
+        save_scan_results(_results)
+        changes = detect_signal_changes(_results, previous_results)
+        if changes:
+            send_change_alert(changes)
 
 
 # =========================================
@@ -1830,76 +1894,167 @@ def is_trading_day_today():
     return True
 
 # =========================================
+# PERSISTENT STATE MANAGEMENT
+# =========================================
+
+def save_scan_results(results):
+    """
+    حفظ نتائج المسح في ملف JSON
+    """
+    try:
+        with open("scan_results.json", "w", encoding="utf-8") as f:
+            json.dump(results, f, ensure_ascii=False, indent=2, default=str)
+        print(f"✅ Results saved to scan_results.json")
+    except Exception as e:
+        print(f"❌ Error saving results: {e}")
+
+
+def load_previous_results():
+    """
+    تحميل نتائج المسح السابق من JSON
+    """
+    try:
+        if os.path.exists("scan_results.json"):
+            with open("scan_results.json", "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"⚠️ Error loading previous results: {e}")
+    return {}
+
+
+def detect_signal_changes(current_results, previous_results):
+    """
+    كشف التغييرات في الإشارات (من Ignore إلى BUY/STRONG BUY)
+    """
+    changed_stocks = []
+    
+    for stock in STOCKS:
+        current = current_results.get(stock, {})
+        previous = previous_results.get(stock, {})
+        
+        current_sig = current.get("sig", "Ignore")
+        previous_sig = previous.get("sig", "Ignore")
+        current_score = current.get("score", 0)
+        
+        # إذا تغيرت الإشارة من Ignore إلى BUY أو STRONG BUY
+        if (previous_sig in ["Ignore", "Watch"] and current_sig in ["Buy", "Strong Buy"]):
+            changed_stocks.append({
+                "stock": stock,
+                "from": previous_sig,
+                "to": current_sig,
+                "score": current_score,
+                "price_gate": current.get("price_gate", "N/A")
+            })
+    
+    return changed_stocks
+
+
+def send_change_alert(changed_stocks):
+    """
+    إرسال تنبيه Telegram فوري عند تغيير الإشارة
+    مع علامة مميزة ⭐ للأسهم من قائمة الـ whitelist
+    """
+    if not changed_stocks:
+        return
+    
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    
+    if not token or not chat_id:
+        print("⚠️ Telegram config missing")
+        return
+    
+    message = "🚨 **إشارة تغير إلى BUY!**\n\n"
+    for item in changed_stocks:
+        stock = item['stock']
+        
+        # ⭐ علامة مميزة للأسهم من الـ whitelist
+        whitelist_badge = "⭐ **WHITELIST** ⭐" if stock in WHITELIST else ""
+        
+        message += f"📈 {stock}"
+        if whitelist_badge:
+            message += f" {whitelist_badge}\n"
+        else:
+            message += "\n"
+        
+        message += f"  └─ {item['from']} → {item['to']}\n"
+        message += f"  └─ Score: {item['score']:.1f} | Gate: {item['price_gate']}\n\n"
+    
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
+    
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        if response.status_code == 200:
+            print(f"✅ Signal change alert sent to Telegram")
+        else:
+            print(f"❌ Telegram error: {response.text}")
+    except Exception as e:
+        print(f"❌ Error sending Telegram alert: {e}")
+
+# =========================================
 # RUN
 # =========================================
 
 if __name__ == "__main__":
     print(f"\n{'='*60}")
-    print(f"EGX SMC Scanner — TradingView Engine")
+    print(f"EGX SMC Scanner — Automated Scheduler")
     print(f"Start Time: {fmt_cairo()}")
     print(f"{'='*60}\n")
     
-    # تحقق من نوع التشغيل
-    import os
-    manual_run = os.getenv("MANUAL_RUN", "False") == "True"
+    # إنشاء Scheduler
+    scheduler = BackgroundScheduler()
     
-    # التحقق من الأيام والأوقات
-    is_trading = is_trading_day_today()
-    is_market_open = is_market_hours()
+    # =========================================
+    # JOB 1: 8:30 AM Daily Report
+    # =========================================
+    print("📋 Configuring scheduler...")
+    print("  ✓ Job 1: Daily report at 08:30 AM (Cairo Time)")
+    scheduler.add_job(
+        daily_scan,
+        CronTrigger(hour=8, minute=30, timezone=CAIRO),
+        id="daily_scan_830am",
+        name="Daily Scan at 8:30 AM"
+    )
     
-    print(f"📅 Today: {today_cairo()}")
-    print(f"⏰ Current Time: {fmt_cairo()}")
-    print(f"📊 Is Trading Day: {is_trading}")
-    print(f"🕐 Is Market Hours (10:00 AM - 2:30 PM): {is_market_open}")
-    print(f"🔧 Manual Run: {manual_run}\n")
+    # =========================================
+    # JOB 2: Continuous Scan Every 5 Minutes
+    # (During market hours: 10:00 AM - 2:30 PM)
+    # =========================================
+    print("  ✓ Job 2: Continuous scan every 5 minutes (10:00 AM - 2:30 PM)")
+    scheduler.add_job(
+        continuous_scan,
+        'interval',
+        minutes=5,
+        id="continuous_scan_5min",
+        name="Continuous Scan Every 5 Minutes"
+    )
     
-    # إذا تشغيل يدوي → شغّل بدون شروط
-    if manual_run:
-        print("🔄 Manual run detected - Running scan regardless of time/day\n")
-        html, _results = build_report(holiday_mode=False)
-        print(f"\n📧 Sending email...")
-        send_email(html, subject_suffix=" — Manual Run")
-        print(f"📱 Sending telegram...")
-        send_telegram_alerts(_results)
-        print(f"\n✅ Manual scan completed!")
+    print("\n" + "="*60)
+    print("✅ Scheduler initialized successfully!")
+    print("="*60 + "\n")
+    
+    try:
+        print(f"🚀 Starting scheduler... Current time: {fmt_cairo()}\n")
+        scheduler.start()
         
-    # إذا يوم تداول وساعات السوق
-    elif is_trading and is_market_open:
-        print("✅ Trading day & market hours - Running scan\n")
-        html, _results = build_report(holiday_mode=False)
+        # Keep the script running
+        import signal
+        import sys
         
-        # بعت Email + Telegram إذا في stocks >= 35
-        if any(
-            _results[s].get("ok") and _results[s].get("score", 0) >= 35
-            for s in STOCKS
-        ):
-            print(f"🎯 Found stocks with score >= 35")
-            print(f"📧 Sending email alert...")
-            send_email(html, subject_suffix=" — Alert (Score >= 35)")
-            print(f"📱 Sending telegram alert...")
-            send_telegram_alerts(_results)
-        else:
-            print(f"ℹ️ No stocks reached threshold (35+)")
+        def signal_handler(sig, frame):
+            print("\n⛔ Shutting down scheduler...")
+            scheduler.shutdown()
+            sys.exit(0)
+        
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+        
+        # Blocking call
+        while True:
+            time.sleep(1)
     
-    # إذا يوم تداول بس ما في ساعات السوق
-    elif is_trading and not is_market_open:
-        # تحقق لو الوقت 8:30 صبح → Daily Morning Report بغض النظر عن الـ score
-        now = now_cairo()
-        if now.hour == 8 and 28 <= now.minute <= 32:
-            print("📊 Daily morning report (8:30 AM) — sending regardless of score...\n")
-            html, _results = build_report(holiday_mode=False)
-            print(f"📧 Sending email...")
-            send_email(html, subject_suffix=" — Daily Morning Report")
-            print(f"📱 Sending telegram...")
-            send_telegram_alerts(_results)
-            print(f"\n✅ Morning report sent!")
-        else:
-            print("⏰ Outside market hours - Monitoring paused")
-            print(f"   Market hours: 10:00 AM - 2:30 PM Cairo Time")
-            print(f"   Next market open: tomorrow at 10:00 AM")
-    
-    # إذا ما يوم تداول
-    else:
-        print("🔴 Not a trading day (Weekend or Holiday)")
-        last_td = most_recent_trading_day(today_cairo())
-        print(f"   Last trading day: {last_td}")
+    except (KeyboardInterrupt, SystemExit):
+        print("\n⛔ Scheduler stopped.")
+        scheduler.shutdown()
+

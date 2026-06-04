@@ -1014,7 +1014,7 @@ def sig_info(score):
     if score>=70: return "Very Strong Buy",  "#155724","#c3e6cb","#b1dfbb"
     if score>=55: return "Strong Buy",       "#0a3622","#d1e7dd","#a3cfbb"
     if score>=35: return "Buy",              "#084298","#cfe2ff","#b6d4fe"
-    return               "Ignore",           "#721c24","#f8d7da","#f5c6cb"
+    return               "Wait",             "#721c24","#f8d7da","#f5c6cb"
 
 # =========================================
 # ENTRY ZONES (Averaging Strategy)
@@ -1233,7 +1233,7 @@ def analyze(symbol):
         liq_ok   = (r3 >= LIQ_GATE)
 
         if not price_ok:
-            sig = "Ignore"
+            sig = "Wait"
             tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
             if cur < eq:
                 l1  = l1 + f" ⛔ Price gate failed — not in Deep Discount (need >= {PRICE_GATE}/{W_PRICE})"
@@ -1243,7 +1243,7 @@ def analyze(symbol):
             l3  = l3 + " ⏳ Liquidity gate pending — waiting for Sweep & Reverse (need 20/20)"
         else:
             if total >= 35 and r8 == 0:
-                sig = "Ignore"
+                sig = "Wait"
                 tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
                 l8  = l8 + " ⚠️ No demand confirmation — liquidity trap risk"
             else:
@@ -1915,7 +1915,7 @@ def load_previous_results():
 
 def detect_signal_changes(current_results, previous_results):
     """
-    كشف التغييرات في الإشارات (من Ignore إلى BUY/STRONG BUY)
+    كشف التغييرات في الإشارات (من Wait إلى BUY/STRONG BUY)
     """
     changed_stocks = []
     
@@ -1923,14 +1923,14 @@ def detect_signal_changes(current_results, previous_results):
         current = current_results.get(stock, {})
         previous = previous_results.get(stock, {})
         
-        current_sig = current.get("sig", "Ignore")
-        previous_sig = previous.get("sig", "Ignore")
+        current_sig = current.get("sig", "Wait")
+        previous_sig = previous.get("sig", "Wait")
         current_score = current.get("score", 0)
         current_price = current.get("price", "N/A")
         current_target = current.get("target", "N/A")
-        
-        # إذا تغيرت الإشارة من Ignore إلى BUY أو STRONG BUY
-        if (previous_sig in ["Ignore", "Watch"] and current_sig in ["Buy", "Strong Buy"]):
+
+        # إذا تغيرت الإشارة من Wait إلى BUY أو STRONG BUY
+        if (previous_sig in ["Wait", "Watch"] and current_sig in ["Buy", "Strong Buy"]):
             changed_stocks.append({
                 "stock": stock,
                 "from": previous_sig,

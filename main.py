@@ -50,11 +50,11 @@ WHITELIST = [
     "FWRY.CA",  # Fawry for Banking Technology
     "EAST.CA",  # Eastern Company
     "ETEL.CA",  # Telecom Egypt
-    "EMFD.CA",  # Egypt Foods Group
+    "EMFD.CA",  # Emaar Misr for Development
     "PHDC.CA",  # Palm Hills Developments
-    "HRHO.CA",  # Hermes Financial Group
-    "MCQE.CA",  # Macro Group Pharmaceuticals
-    "OIH.CA",   # Olympic Industries Holding
+    "HRHO.CA",  # EFG Holding
+    "MCQE.CA",  # Misr Cement (Qena)
+    "OIH.CA",   # Orascom Investment Holding
     "GBCO.CA",  # GB Auto
 ]
 
@@ -65,30 +65,30 @@ NAMES = {
     "COMI.CA": "Commercial International Bank",
     "TMGH.CA": "Talaat Moustafa Group",
     "ETEL.CA": "Telecom Egypt",
-    "EGAL.CA": "Egyptian Gulf Bank",
+    "EGAL.CA": "Egypt Aluminum",
     "EAST.CA": "Eastern Company",
     "ABUK.CA": "Abu Qir Fertilizers",
     "ORAS.CA": "Orascom Construction PLC",
-    "EFIH.CA": "EFG Hermes Holding",
+    "EFIH.CA": "e-Finance for Digital and Financial Investments",
     "ADIB.CA": "Abu Dhabi Islamic Bank Egypt",
     "FWRY.CA": "Fawry for Banking Technology",
-    "EMFD.CA": "Egypt Foods Group",
+    "EMFD.CA": "Emaar Misr for Development",
     "PHDC.CA": "Palm Hills Developments",
     "ORHD.CA": "Orascom Development Egypt",
-    "EFID.CA": "EFG Finance",
-    "HRHO.CA": "Hermes Financial Group",
+    "EFID.CA": "Edita Food Industries",
+    "HRHO.CA": "EFG Holding",
     "JUFO.CA": "Juhayna Food Industries",
     "BTFH.CA": "Beltone Financial Holding",
     "RAYA.CA": "Raya Holding",
     "GBCO.CA": "GB Auto",
     "HELI.CA": "Heliopolis Housing",
     "ARCC.CA": "Arabian Cement Company",
-    "MCQE.CA": "Macro Group Pharmaceuticals",
+    "MCQE.CA": "Misr Cement (Qena)",
     "ORWE.CA": "Oriental Weavers",
     "ISPH.CA": "Integrated Diagnostics Holdings",
     "RMDA.CA": "Rameda Pharmaceutical",
-    "OIH.CA":  "Olympic Industries Holding",
-    "CCAP.CA": "Cairo Capital Holding",
+    "OIH.CA":  "Orascom Investment Holding",
+    "CCAP.CA": "Qalaa Holdings",
 }
 
 SECTORS = {

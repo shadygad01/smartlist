@@ -1014,7 +1014,7 @@ def sig_info(score):
     if score>=70: return "Very Strong Buy",  "#155724","#c3e6cb","#b1dfbb"
     if score>=55: return "Strong Buy",       "#0a3622","#d1e7dd","#a3cfbb"
     if score>=35: return "Buy",              "#084298","#cfe2ff","#b6d4fe"
-    return               "Wait",             "#721c24","#f8d7da","#f5c6cb"
+    return               "Skip",             "#721c24","#f8d7da","#f5c6cb"
 
 # =========================================
 # ENTRY ZONES (Averaging Strategy)
@@ -1923,14 +1923,14 @@ def detect_signal_changes(current_results, previous_results):
         current = current_results.get(stock, {})
         previous = previous_results.get(stock, {})
         
-        current_sig = current.get("sig", "Wait")
-        previous_sig = previous.get("sig", "Wait")
+        current_sig = current.get("sig", "Skip")
+        previous_sig = previous.get("sig", "Skip")
         current_score = current.get("score", 0)
         current_price = current.get("price", "N/A")
         current_target = current.get("target", "N/A")
 
-        # إذا تغيرت الإشارة من Wait إلى BUY أو STRONG BUY
-        if (previous_sig in ["Wait", "Watch"] and current_sig in ["Buy", "Strong Buy"]):
+        # إذا تغيرت الإشارة من Skip/Wait إلى BUY أو STRONG BUY
+        if (previous_sig in ["Skip", "Wait", "Watch"] and current_sig in ["Buy", "Strong Buy"]):
             changed_stocks.append({
                 "stock": stock,
                 "from": previous_sig,

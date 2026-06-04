@@ -501,50 +501,25 @@ def swings(close, lb=80):
     return hi, lo, eq, buy_hi, sell_lo
 
 
-def swings_luxalgo(df, size=50):
+def swings_luxalgo(df, lookback=252):
     """
-    LuxAlgo trailing extremes + structural pivot resets.
-    trailing_top    = running max of High, resets down when a structural HIGH is confirmed.
-    trailing_bottom = running min of Low,  resets up   when a structural LOW  is confirmed.
-    Result: hi = highest High since last structural LOW, lo = lowest Low since last structural HIGH.
+    LuxAlgo Premium/Discount zones.
+    hi = max High over the last `lookback` trading days (~1 year) = Weak High
+    lo = min Low  over the last `lookback` trading days (~1 year) = Strong Low
     EQ = midpoint (50% equilibrium level).
+
+    Matches LuxAlgo chart values: EAST hi≈44.31, lo≈33.28, EQ≈38.79.
+    The 1-year window naturally excludes old unadjusted EGX capital-action bars.
     """
-    if not all(c in df.columns for c in ["High", "Low"]) or len(df) < size + 2:
+    if not all(c in df.columns for c in ["High", "Low"]) or len(df) < 10:
         return swings(df["Close"] if "Close" in df.columns else pd.Series(), lb=80)
 
-    highs = df["High"].values.astype(float)
-    lows  = df["Low"].values.astype(float)
-    n     = len(highs)
+    window = df.tail(min(lookback, len(df)))
+    hi     = float(window["High"].max())
+    lo     = float(window["Low"].min())
 
-    leg             = 0
-    trailing_top    = highs[0]
-    trailing_bottom = lows[0]
-
-    for i in range(1, n):
-        trailing_top    = max(highs[i], trailing_top)
-        trailing_bottom = min(lows[i],  trailing_bottom)
-
-        if i >= size:
-            p  = i - size
-            wh = highs[p + 1 : i + 1]
-            wl = lows [p + 1 : i + 1]
-            new_h = bool(highs[p] > wh.max())
-            new_l = bool(lows[p]  < wl.min())
-
-            prev_leg = leg
-            if new_h:   leg = 0
-            elif new_l: leg = 1
-
-            if leg != prev_leg:
-                if leg == 1:  trailing_bottom = lows[p]   # structural LOW confirmed
-                else:         trailing_top    = highs[p]  # structural HIGH confirmed
-
-    hi  = float(trailing_top)
-    lo  = float(trailing_bottom)
-
-    # Cap hi for EGX stocks with unadjusted capital-action data (rights issues).
-    # If trailing_top is >1.3× the recent 3-month high, the old unadjusted bar
-    # is inflating hi.  Cap it to the recent max so zones match TradingView.
+    # Safety cap: if hi is still > 1.3× the recent 3-month high, an unadjusted
+    # capital-action bar slipped into the 1-year window.  Cap to recent high.
     recent_hi = float(df["High"].tail(63).max())
     if hi > recent_hi * 1.3:
         hi = recent_hi

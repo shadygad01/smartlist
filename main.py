@@ -503,10 +503,10 @@ def swings(close, lb=80):
 
 def swings_luxalgo(df, size=50):
     """
-    Last confirmed structural HIGH and LOW pivot.
-    Pivot HIGH = bar whose High exceeds ALL of the next `size` bars' highs.
-    Pivot LOW  = bar whose Low  is below ALL of the next `size` bars' lows.
-    Most recently confirmed pivot wins (last-in-time).
+    LuxAlgo trailing extremes + structural pivot resets.
+    trailing_top  = running max of High (resets down on confirmed swing HIGH)
+    trailing_bottom = running min of Low  (resets up  on confirmed swing LOW)
+    Result: hi = ATH since last structural low, lo = lowest since last structural high.
     """
     if not all(c in df.columns for c in ["High", "Low"]) or len(df) < size + 2:
         return swings(df["Close"] if "Close" in df.columns else pd.Series(), lb=80)
@@ -515,20 +515,31 @@ def swings_luxalgo(df, size=50):
     lows  = df["Low"].values.astype(float)
     n     = len(highs)
 
-    swing_hi = float(highs[:size + 1].max())
-    swing_lo = float(lows [:size + 1].min())
+    leg             = 0
+    trailing_top    = highs[0]
+    trailing_bottom = lows[0]
 
-    for i in range(size, n):
-        p  = i - size
-        wh = highs[p + 1 : i + 1]
-        wl = lows [p + 1 : i + 1]
-        if highs[p] > wh.max():
-            swing_hi = highs[p]
-        if lows[p] < wl.min():
-            swing_lo = lows[p]
+    for i in range(1, n):
+        trailing_top    = max(highs[i], trailing_top)
+        trailing_bottom = min(lows[i],  trailing_bottom)
 
-    hi  = float(swing_hi)
-    lo  = float(swing_lo)
+        if i >= size:
+            p  = i - size
+            wh = highs[p + 1 : i + 1]
+            wl = lows [p + 1 : i + 1]
+            new_h = bool(highs[p] > wh.max())
+            new_l = bool(lows[p]  < wl.min())
+
+            prev_leg = leg
+            if new_h:   leg = 0
+            elif new_l: leg = 1
+
+            if leg != prev_leg:
+                if leg == 1:  trailing_bottom = lows[p]   # structural LOW confirmed
+                else:         trailing_top    = highs[p]  # structural HIGH confirmed
+
+    hi  = float(trailing_top)
+    lo  = float(trailing_bottom)
     rng = hi - lo
     if rng <= 0:
         hi  = float(df["High"].max())

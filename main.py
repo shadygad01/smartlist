@@ -397,7 +397,7 @@ def download_data(symbol, days=110):
 
     try:
         ticker = yf.Ticker(yf_symbol)
-        df = ticker.history(period="6mo", interval="1d", auto_adjust=False, repair=True)
+        df = ticker.history(period="2y", interval="1d", auto_adjust=False, repair=True)
         if not df.empty and len(df) > 5:
             df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
             df.index = df.index.tz_localize(None)
@@ -408,7 +408,7 @@ def download_data(symbol, days=110):
         # Fallback: direct Yahoo Finance chart API
         try:
             url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_symbol}"
-                   f"?range=6mo&interval=1d&includeAdjustedClose=false")
+                   f"?range=2y&interval=1d&includeAdjustedClose=false")
             r    = requests.get(url, headers=HEADERS, timeout=15)
             data = r.json()
             res  = data["chart"]["result"][0]
@@ -499,6 +499,49 @@ def swings(close, lb=80):
     buy_hi  = lo + rng * 0.15   # top of buy zone  (0.15)
     sell_lo = lo + rng * 0.85   # bottom of sell zone (0.85)
     return hi, lo, eq, buy_hi, sell_lo
+
+
+def swings_luxalgo(df, size=50):
+    """
+    LuxAlgo SMC: last confirmed structural HIGH and LOW pivot.
+    A bar is a confirmed pivot HIGH if its High > ALL subsequent `size` bars.
+    A bar is a confirmed pivot LOW  if its Low  < ALL subsequent `size` bars.
+    Last-in-time confirmed pivot wins for each direction.
+    """
+    needed = ["High", "Low"]
+    if not all(c in df.columns for c in needed) or len(df) < size + 2:
+        return swings(df["Close"] if "Close" in df.columns else pd.Series(), lb=80)
+
+    highs = df["High"].values.astype(float)
+    lows  = df["Low"].values.astype(float)
+    n     = len(highs)
+
+    swing_hi = float(highs[:size + 1].max())
+    swing_lo = float(lows [:size + 1].min())
+
+    for i in range(size, n):
+        p  = i - size
+        wh = highs[p + 1 : i + 1]
+        wl = lows [p + 1 : i + 1]
+        if highs[p] > wh.max():
+            swing_hi = highs[p]
+        if lows[p] < wl.min():
+            swing_lo = lows[p]
+
+    hi  = float(swing_hi)
+    lo  = float(swing_lo)
+    rng = hi - lo
+
+    if rng <= 0:
+        hi  = float(df["High"].max())
+        lo  = float(df["Low"].min())
+        rng = hi - lo
+
+    eq      = lo + rng * 0.50
+    buy_hi  = lo + rng * 0.15
+    sell_lo = lo + rng * 0.85
+    return hi, lo, eq, buy_hi, sell_lo
+
 
 # =========================================
 # STOPPING VOLUME & VOLUME PROFILE
@@ -1190,7 +1233,7 @@ def analyze(symbol):
         is_fresh   = True
 
         close            = df["Close"]
-        hi,lo,eq,buy_hi,sell_lo = swings(close)
+        hi,lo,eq,buy_hi,sell_lo = swings_luxalgo(df)
         av,alo                  = calc_avwap(df)   # always compute for display
 
         # ── GATE: Price must be strictly below EQ (< 0.50 level) ─────────────

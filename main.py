@@ -1232,17 +1232,20 @@ def analyze(symbol):
         price_ok = (r1 >= PRICE_GATE)
         liq_ok   = (r3 >= LIQ_GATE)
 
-        if not price_ok:
+        if total < 35:
+            sig = "Skip"
+            tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
+        elif not price_ok:
             sig = "Wait"
             tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
             if cur < eq:
                 l1  = l1 + f" ⛔ Price gate failed — not in Deep Discount (need >= {PRICE_GATE}/{W_PRICE})"
-        elif price_ok and not liq_ok:
+        elif not liq_ok:
             sig = "Watch"
             tc  = "#856404"; tbg = "#fff3cd"; tbr = "#ffc107"
             l3  = l3 + " ⏳ Liquidity gate pending — waiting for Sweep & Reverse (need 20/20)"
         else:
-            if total >= 35 and r8 == 0:
+            if r8 == 0:
                 sig = "Wait"
                 tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
                 l8  = l8 + " ⚠️ No demand confirmation — liquidity trap risk"

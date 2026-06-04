@@ -503,48 +503,55 @@ def swings(close, lb=80):
 
 def swings_luxalgo(df, size=50):
     """
-    LuxAlgo trailing extremes + structural pivot resets.
-    trailing_top  = running max of High (resets down on confirmed swing HIGH)
-    trailing_bottom = running min of Low  (resets up  on confirmed swing LOW)
-    Result: hi = ATH since last structural low, lo = lowest since last structural high.
+    LuxAlgo SMC structural pivot detection — matches ta.pivothigh / ta.pivotlow.
+
+    A confirmed structural HIGH at bar p:
+        high[p] > max of `size` bars BEFORE  (left side)
+        high[p] > max of `size` bars AFTER   (right side)
+    A confirmed structural LOW at bar p:
+        low[p]  < min of `size` bars BEFORE  (left side)
+        low[p]  < min of `size` bars AFTER   (right side)
+
+    hi/lo = last confirmed structural HIGH / LOW (most recent in time).
+    EQ    = midpoint of hi–lo range (LuxAlgo equilibrium level).
     """
-    if not all(c in df.columns for c in ["High", "Low"]) or len(df) < size + 2:
+    if not all(c in df.columns for c in ["High", "Low"]) or len(df) < size * 2 + 2:
         return swings(df["Close"] if "Close" in df.columns else pd.Series(), lb=80)
 
     highs = df["High"].values.astype(float)
     lows  = df["Low"].values.astype(float)
     n     = len(highs)
 
-    leg             = 0
-    trailing_top    = highs[0]
-    trailing_bottom = lows[0]
+    swing_hi = None
+    swing_lo = None
 
-    for i in range(1, n):
-        trailing_top    = max(highs[i], trailing_top)
-        trailing_bottom = min(lows[i],  trailing_bottom)
+    # p = pivot candidate; confirmed once `size` right-side bars have been seen.
+    # Requires p >= size for full left window.
+    for p in range(size, n - size):
+        left_h  = highs[p - size : p]
+        right_h = highs[p + 1   : p + size + 1]
+        left_l  = lows [p - size : p]
+        right_l = lows [p + 1   : p + size + 1]
 
-        if i >= size:
-            p  = i - size
-            wh = highs[p + 1 : i + 1]
-            wl = lows [p + 1 : i + 1]
-            new_h = bool(highs[p] > wh.max())
-            new_l = bool(lows[p]  < wl.min())
+        if highs[p] > left_h.max() and highs[p] > right_h.max():
+            swing_hi = highs[p]
 
-            prev_leg = leg
-            if new_h:   leg = 0
-            elif new_l: leg = 1
+        if lows[p] < left_l.min() and lows[p] < right_l.min():
+            swing_lo = lows[p]
 
-            if leg != prev_leg:
-                if leg == 1:  trailing_bottom = lows[p]   # structural LOW confirmed
-                else:         trailing_top    = highs[p]  # structural HIGH confirmed
+    # Fallback when no structural pivot confirmed (thin / monotonic data)
+    if swing_hi is None:
+        swing_hi = float(df["High"].tail(size).max())
+    if swing_lo is None:
+        swing_lo = float(df["Low"].tail(size).min())
 
-    hi  = float(trailing_top)
-    lo  = float(trailing_bottom)
+    hi = float(swing_hi)
+    lo = float(swing_lo)
 
-    # Cap hi when it reflects unadjusted pre-capital-action prices.
-    # If trailing_top is >1.3× the recent 3-month high, the data contains
-    # an unadjusted corporate action spike (e.g. EGX rights issue). Use
-    # the recent high instead so zones match adjusted TradingView charts.
+    # Safety cap for unadjusted EGX capital-action data: if the confirmed
+    # structural high is more than 1.3× the recent 3-month high, the pivot
+    # came from a pre-rights-issue unadjusted bar.  Cap it to the recent high
+    # so zones align with the adjusted TradingView chart.
     recent_hi = float(df["High"].tail(63).max())
     if hi > recent_hi * 1.3:
         hi = recent_hi

@@ -126,18 +126,35 @@ def download_historical_data(symbol, years=5):
 # SMC INDICATORS
 # =========================================
 
-def swings(close, lb=80):
-    """الدعم والمقاومة - إطار 80 يوم"""
-    if len(close) < lb:
-        return close.max(), close.min(), close.mean(), close.min(), close.max()
-    
-    hi = float(close.tail(lb).max())
-    lo = float(close.tail(lb).min())
+def swings_luxalgo(df, size=50):
+    """LuxAlgo SMC: track most recently confirmed structural HIGH and LOW pivots."""
+    needed = ["High", "Low"]
+    if not all(c in df.columns for c in needed) or len(df) < size + 2:
+        c = df["Close"] if "Close" in df.columns else pd.Series()
+        hi = float(c.max()); lo = float(c.min()); rng = hi - lo
+        return hi, lo, lo+rng*0.50, lo+rng*0.15, lo+rng*0.85
+    highs = df["High"].values.astype(float)
+    lows  = df["Low"].values.astype(float)
+    n     = len(highs)
+    swing_hi = float(highs[:size+1].max())
+    swing_lo = float(lows[:size+1].min())
+    for i in range(size, n):
+        p = i - size
+        wh = highs[p+1:i+1]; wl = lows[p+1:i+1]
+        if highs[p] > wh.max(): swing_hi = highs[p]
+        if lows[p]  < wl.min(): swing_lo = lows[p]
+    hi  = float(swing_hi);  lo = float(swing_lo)
     rng = hi - lo
-    eq = lo + rng * 0.50
-    buy_hi = lo + rng * 0.15
-    sell_lo = lo + rng * 0.85
-    return hi, lo, eq, buy_hi, sell_lo
+    if rng <= 0:
+        hi = float(df["High"].max()); lo = float(df["Low"].min()); rng = hi - lo
+    return hi, lo, lo+rng*0.50, lo+rng*0.15, lo+rng*0.85
+
+
+def swings(close, lb=80):
+    """Legacy — use swings_luxalgo instead."""
+    hi = float(close.tail(lb).max()); lo = float(close.tail(lb).min())
+    rng = hi - lo
+    return hi, lo, lo+rng*0.50, lo+rng*0.15, lo+rng*0.85
 
 def calc_avwap(df):
     """Anchored VWAP مع Lower Band"""
@@ -297,7 +314,7 @@ class BacktestEngine:
         close = hist_df["Close"]
         
         cur = float(close.iloc[-1])
-        hi, lo, eq, buy_hi, sell_lo = swings(close)
+        hi, lo, eq, buy_hi, sell_lo = swings_luxalgo(hist_df)
         
         r1 = self._score_price(cur, lo, hi, eq, buy_hi)
         r6 = self._score_macd(close)

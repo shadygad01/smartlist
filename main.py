@@ -2123,84 +2123,70 @@ def send_change_alert(changed_stocks):
 
 if __name__ == "__main__":
     print(f"\n{'='*60}")
-    print(f"EGX SMC Scanner — Automated Scheduler")
+    print(f"EGX SMC Scanner — GitHub Actions Mode")
     print(f"Start Time: {fmt_cairo()}")
     print(f"{'='*60}\n")
     
-    # إنشاء Scheduler
-    scheduler = BackgroundScheduler()
+    # =========================================
+    # DETERMINE RUN MODE BASED ON TIME
+    # =========================================
     
-    # =========================================
-    # JOB 1: 8:30 AM Daily Report
-    # =========================================
-    print("📋 Configuring scheduler...")
-    print("  ✓ Job 1: Daily report at 08:30 AM (Cairo Time)")
-    scheduler.add_job(
-        daily_scan,
-        CronTrigger(hour=8, minute=30, timezone=CAIRO),
-        id="daily_scan_830am",
-        name="Daily Scan at 8:30 AM"
-    )
-    
-    # =========================================
-    # JOB 2: Continuous Scan Every 5 Minutes
-    # (فقط من 10:00 AM إلى 2:30 PM بتوقيت القاهرة)
-    # (فقط أيام التداول: الأحد - الخميس)
-    # =========================================
-    print("  ✓ Job 2: Continuous scan every 5 minutes")
-    print("           (10:00 AM - 2:30 PM Cairo Time, Sun-Thu)")
-    scheduler.add_job(
-        continuous_scan,
-        CronTrigger(
-            minute='*/5',           # كل 5 دقائق
-            hour='10-14',           # من الساعة 10 إلى 14 (2:30 PM)
-            day_of_week='0-4',      # الأحد(6)=0, الاثنين(0)=1, الثلاثاء=2, الأربعاء=3, الخميس=4
-            timezone=CAIRO
-        ),
-        id="continuous_scan_5min",
-        name="Continuous Scan Every 5 Minutes (Market Hours)"
-    )
-    
-    print("\n" + "="*60)
-    print("✅ Scheduler initialized successfully!")
-    print("="*60 + "\n")
-    
-    # =========================================
-    # CHECK FOR MANUAL RUN
-    # =========================================
     manual_run = os.getenv("MANUAL_RUN", "False") == "True"
+    hour = now_cairo().hour
+    minute = now_cairo().minute
     
-    if manual_run:
-        print("🔧 MANUAL RUN MODE DETECTED")
-        print("="*60 + "\n")
-        print("🚀 Running manual scan now...\n")
-        manual_scan()
-        print("\n✅ Manual scan completed!")
-        print("="*60 + "\n")
-        sys.exit(0)
-    
-    print("🚀 SCHEDULER MODE - Starting automatic jobs...\n")
+    print(f"Current time: {hour:02d}:{minute:02d}")
+    print(f"Manual run: {manual_run}\n")
     
     try:
-        print(f"🚀 Starting scheduler... Current time: {fmt_cairo()}\n")
-        scheduler.start()
-        
-        # Keep the script running
-        import signal
-        import sys
-        
-        def signal_handler(sig, frame):
-            print("\n⛔ Shutting down scheduler...")
-            scheduler.shutdown()
+        # =========================================
+        # MODE 1: MANUAL RUN (Any time)
+        # =========================================
+        if manual_run:
+            print("🔧 MANUAL RUN MODE")
+            print("="*60 + "\n")
+            print("🚀 Running manual scan now...\n")
+            manual_scan()
+            print("\n✅ Manual scan completed!")
+            print("="*60 + "\n")
             sys.exit(0)
         
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
+        # =========================================
+        # MODE 2: DAILY SCAN (8:30 AM exactly)
+        # =========================================
+        elif hour == 8 and 25 <= minute <= 35:
+            print("📅 DAILY SCAN MODE (8:30 AM)")
+            print("="*60 + "\n")
+            daily_scan()
+            print("\n✅ Daily scan completed!")
+            print("="*60 + "\n")
+            sys.exit(0)
         
-        # Blocking call
-        while True:
-            time.sleep(1)
+        # =========================================
+        # MODE 3: CONTINUOUS SCAN (10:00 AM - 2:30 PM)
+        # =========================================
+        elif 10 <= hour <= 14:
+            print("🔄 CONTINUOUS SCAN MODE (Market Hours)")
+            print("="*60 + "\n")
+            continuous_scan()
+            print("\n✅ Continuous scan completed!")
+            print("="*60 + "\n")
+            sys.exit(0)
+        
+        # =========================================
+        # NO ACTION (Outside configured times)
+        # =========================================
+        else:
+            print(f"⏳ No action scheduled for {hour:02d}:{minute:02d}")
+            print("   Configured times:")
+            print("   - 08:30 (Daily Report)")
+            print("   - 10:00-14:30 (Continuous Scan)")
+            print("   - Any time (Manual Run)")
+            print("="*60 + "\n")
+            sys.exit(0)
     
-    except (KeyboardInterrupt, SystemExit):
-        print("\n⛔ Scheduler stopped.")
-        scheduler.shutdown()
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+        traceback.print_exc()
+        sys.exit(1)
+

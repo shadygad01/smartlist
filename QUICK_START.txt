@@ -1,146 +1,62 @@
-╔════════════════════════════════════════════════════════════════════╗
-║                    🚀 QUICK SETUP GUIDE                           ║
-╚════════════════════════════════════════════════════════════════════╝
+QUICK START - 4 FILES ONLY
 
-📦 Step 1: Install Required Package
-═══════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════
 
-    pip install apscheduler
+FILES TO DOWNLOAD:
 
-═══════════════════════════════════════════════════════════════════════
+1. workflow.yml
+2. main.py  
+3. requirements.txt
+4. .gitignore
 
-⚙️ Step 2: Use the New File
-═══════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════
 
-Replace your current main.py with: main_with_scheduler.py
+COPY TO YOUR REPO:
 
-═══════════════════════════════════════════════════════════════════════
+workflow.yml → .github/workflows/daily_scan.yml
+main.py → main.py
+requirements.txt → requirements.txt
+.gitignore → .gitignore
 
-🎯 What's New?
-═══════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════
 
-✅ DAILY SCAN (8:30 AM Cairo Time)
-   └─ Automatic email with full report
-   └─ Telegram message with stocks >= 35
+ADD GITHUB SECRETS:
 
-✅ REAL-TIME MONITORING (Every 5 minutes)
-   └─ Checks scores continuously
-   └─ When score reaches 35+ → INSTANT alerts:
-      • Email notification
-      • Telegram message with details
+EMAIL_USER = shady.gad@live.com
+EMAIL_PASS = [Gmail App Password]
 
-✅ MANUAL TRIGGER
-   └─ Call manual_scan() anytime for immediate report
+Settings → Secrets and variables → Actions
 
-═══════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════
 
-🔧 Environment Variables Needed
-═══════════════════════════════════════════════════════════════════════
+PUSH:
 
-    EMAIL_USER=your_email@gmail.com
-    EMAIL_PASS=your_gmail_app_password
-    TELEGRAM_TOKEN=your_bot_token
-    TELEGRAM_CHAT_ID=your_chat_id
+git add .
+git commit -m "update: three-mode email system"
+git push origin main
 
-═══════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════
 
-🚀 How to Run
-═══════════════════════════════════════════════════════════════════════
+TEST:
 
-    python main_with_scheduler.py
+In GitHub Actions:
+- Click "Run workflow" (Manual)
+- Wait 2-3 minutes
+- Check email ✓
 
-    ✓ System starts
-    ✓ Scheduler is active
-    ✓ Monitoring begins
-    ✓ Stays running 24/7
+════════════════════════════════════════════════════
 
-    Press Ctrl+C to stop safely
+DONE!
 
-═══════════════════════════════════════════════════════════════════════
+Tomorrow 8:30 AM → Email ✓
+Every 5 min (9-2:30 PM) → Email (if BUY) ⚠️
+Manual button → Email now 🔧
 
-📊 Alert Timeline Example
-═══════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════
 
-    09:45 AM → COMI.CA score = 35 
-              → 🚨 INSTANT Email + Telegram Alert!
-    
-    10:15 AM → TMGH.CA score = 38 
-              → 🚨 INSTANT Email + Telegram Alert!
-    
-    08:30 AM (Next Day) → Daily scan runs
-                         → Full report email
-                         → Telegram summary
+IMPORTANT:
 
-═══════════════════════════════════════════════════════════════════════
+Add your SMC logic to scan_stocks() in main.py!
+The code has placeholders you must replace.
 
-🎯 Key Features
-═══════════════════════════════════════════════════════════════════════
-
-1️⃣ No Duplicate Alerts
-   └─ Same stock won't trigger alert twice same day
-
-2️⃣ Background Processing
-   └─ Scheduler runs in background thread
-   └─ Monitoring runs in separate thread
-
-3️⃣ Safe Shutdown
-   └─ Graceful shutdown with Ctrl+C
-   └─ No data loss or errors
-
-4️⃣ Flexible Timing
-   └─ Daily scan: 08:30 Cairo Time
-   └─ Monitor check: Every 5 minutes
-   └─ Both configurable in code
-
-═══════════════════════════════════════════════════════════════════════
-
-⚠️ Important Notes
-═══════════════════════════════════════════════════════════════════════
-
-• Make sure `build_report()` works properly
-• Email credentials must be valid
-• Telegram bot token & chat ID must be correct
-• Keep the script running 24/7 for continuous monitoring
-• Monitor checks happen only during EGX trading days
-
-═══════════════════════════════════════════════════════════════════════
-
-📝 Optional: Customize Timing
-═══════════════════════════════════════════════════════════════════════
-
-In the scheduler setup, change:
-
-    # Current: 08:30 Cairo Time
-    scheduler.add_job(daily_scan, CronTrigger(hour=8, minute=30, timezone=CAIRO))
-    
-    # To change time:
-    scheduler.add_job(daily_scan, CronTrigger(hour=10, minute=15, timezone=CAIRO))
-    
-    # For monitoring interval:
-    time.sleep(300)  # Change 300 seconds (5 min) to anything else
-
-═══════════════════════════════════════════════════════════════════════
-
-❓ Troubleshooting
-═══════════════════════════════════════════════════════════════════════
-
-Issue: "No module named 'apscheduler'"
-  → Run: pip install apscheduler
-
-Issue: Emails not sending
-  → Check EMAIL_USER and EMAIL_PASS env vars
-  → Gmail requires App Password (not regular password)
-
-Issue: Telegram alerts not working
-  → Verify TELEGRAM_TOKEN and TELEGRAM_CHAT_ID are correct
-  → Check internet connection
-
-Issue: Monitor runs but no alerts
-  → Check if score actually reaches 35+
-  → Check logs for any error messages
-
-═══════════════════════════════════════════════════════════════════════
-
-✨ That's it! Your system is ready to go! ✨
-
-═══════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════

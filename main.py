@@ -496,62 +496,40 @@ def swings(close, lb=80):
 
 def swings_luxalgo(df, size=50):
     """
-    LuxAlgo SMC swing detection — replicates the Pine Script algorithm exactly.
+    LuxAlgo SMC swing detection.
 
-    Logic (per bar i, starting from i=1):
-      1. updateTrailingExtremes: trailing_top = max(high[i], prev), trailing_bottom = min(low[i], prev)
-      2. getCurrentStructure(size):
-           pivot_idx = i - size
-           new_leg_high = high[pivot_idx] > max(high[pivot_idx+1 .. i])   → swing HIGH confirmed
-           new_leg_low  = low[pivot_idx]  < min(low[pivot_idx+1  .. i])   → swing LOW  confirmed
-           On new HIGH pivot: trailing_top    = high[pivot_idx]
-           On new LOW  pivot: trailing_bottom = low[pivot_idx]
+    A bar is a structural HIGH pivot if its High is greater than ALL subsequent `size` bars.
+    A bar is a structural LOW  pivot if its Low  is less    than ALL subsequent `size` bars.
+    We track the MOST RECENTLY CONFIRMED pivot for each direction (last-in-time wins).
 
     Returns (hi, lo, eq, buy_hi, sell_lo) — same interface as swings().
     """
     needed = ["High", "Low"]
-    if not all(c in df.columns for c in needed) or len(df) < 2:
+    if not all(c in df.columns for c in needed) or len(df) < size + 2:
         return swings(df["Close"] if "Close" in df.columns else pd.Series(), lb=80)
 
     highs = df["High"].values.astype(float)
     lows  = df["Low"].values.astype(float)
     n     = len(highs)
 
-    leg              = 0          # BEARISH_LEG=0, BULLISH_LEG=1
-    trailing_top     = highs[0]
-    trailing_bottom  = lows[0]
+    swing_hi = float(highs[:size + 1].max())   # seed from first window
+    swing_lo = float(lows [:size + 1].min())
 
-    for i in range(1, n):
-        # Step 1 — updateTrailingExtremes
-        trailing_top    = max(highs[i], trailing_top)
-        trailing_bottom = min(lows[i],  trailing_bottom)
+    for i in range(size, n):
+        pivot_idx = i - size                        # candidate bar (confirmed `size` bars later)
+        win_h = highs[pivot_idx + 1 : i + 1]        # `size` bars AFTER the candidate
+        win_l = lows [pivot_idx + 1 : i + 1]
 
-        # Step 2 — getCurrentStructure(size)
-        if i >= size:
-            pivot_idx    = i - size
-            win_h = highs[pivot_idx + 1 : i + 1]
-            win_l = lows [pivot_idx + 1 : i + 1]
+        if highs[pivot_idx] > win_h.max():           # right-side pivot HIGH confirmed
+            swing_hi = highs[pivot_idx]
+        if lows[pivot_idx] < win_l.min():            # right-side pivot LOW confirmed
+            swing_lo = lows[pivot_idx]
 
-            new_leg_high = bool(highs[pivot_idx] > win_h.max())
-            new_leg_low  = bool(lows [pivot_idx] < win_l.min())
-
-            prev_leg = leg
-            if new_leg_high:
-                leg = 0
-            elif new_leg_low:
-                leg = 1
-
-            if leg != prev_leg:
-                if leg == 1:                        # startOfBullishLeg → new SWING LOW
-                    trailing_bottom = lows[pivot_idx]
-                else:                               # startOfBearishLeg → new SWING HIGH
-                    trailing_top    = highs[pivot_idx]
-
-    hi  = float(trailing_top)
-    lo  = float(trailing_bottom)
+    hi  = float(swing_hi)
+    lo  = float(swing_lo)
     rng = hi - lo
 
-    if rng <= 0:                                    # fallback: full-history max/min
+    if rng <= 0:
         hi  = float(df["High"].max())
         lo  = float(df["Low"].min())
         rng = hi - lo

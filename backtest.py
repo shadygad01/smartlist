@@ -127,33 +127,23 @@ def download_historical_data(symbol, years=5):
 # =========================================
 
 def swings_luxalgo(df, size=50):
-    """LuxAlgo SMC 50-bar structural pivot detection."""
+    """LuxAlgo SMC: track most recently confirmed structural HIGH and LOW pivots."""
     needed = ["High", "Low"]
-    if not all(c in df.columns for c in needed) or len(df) < 2:
+    if not all(c in df.columns for c in needed) or len(df) < size + 2:
         c = df["Close"] if "Close" in df.columns else pd.Series()
         hi = float(c.max()); lo = float(c.min()); rng = hi - lo
         return hi, lo, lo+rng*0.50, lo+rng*0.15, lo+rng*0.85
     highs = df["High"].values.astype(float)
     lows  = df["Low"].values.astype(float)
     n     = len(highs)
-    leg = 0
-    trailing_top    = highs[0]
-    trailing_bottom = lows[0]
-    for i in range(1, n):
-        trailing_top    = max(highs[i], trailing_top)
-        trailing_bottom = min(lows[i],  trailing_bottom)
-        if i >= size:
-            p = i - size
-            wh = highs[p+1:i+1]; wl = lows[p+1:i+1]
-            new_h = bool(highs[p] > wh.max())
-            new_l = bool(lows[p]  < wl.min())
-            prev = leg
-            if new_h:        leg = 0
-            elif new_l:      leg = 1
-            if leg != prev:
-                if leg == 1: trailing_bottom = lows[p]
-                else:        trailing_top    = highs[p]
-    hi  = float(trailing_top);  lo = float(trailing_bottom)
+    swing_hi = float(highs[:size+1].max())
+    swing_lo = float(lows[:size+1].min())
+    for i in range(size, n):
+        p = i - size
+        wh = highs[p+1:i+1]; wl = lows[p+1:i+1]
+        if highs[p] > wh.max(): swing_hi = highs[p]
+        if lows[p]  < wl.min(): swing_lo = lows[p]
+    hi  = float(swing_hi);  lo = float(swing_lo)
     rng = hi - lo
     if rng <= 0:
         hi = float(df["High"].max()); lo = float(df["Low"].min()); rng = hi - lo

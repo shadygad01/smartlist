@@ -2,18 +2,21 @@ name: EGX Daily Scanner
 
 on:
   schedule:
-    # Daily report الساعة 8:30 صبح Cairo (6:30 UTC) — أيام عمل البورصة
+    # Daily report at 8:30 AM Cairo (6:30 UTC summer, 5:30 UTC winter)
     - cron: '30 6 * * 0-4'
-    # كل 5 دقائق من 08:00 لـ 11:55 UTC (= 10:00–13:55 Cairo)
-    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 8-11 * * 0-4'
-    # كل 5 دقائق من 12:00 لـ 12:30 UTC (= 14:00–14:30 Cairo)
-    - cron: '0,5,10,15,20,25,30 12 * * 0-4'
-
+    
+    # Intraday alerts every 5 minutes from 9:00 AM to 2:30 PM Cairo
+    # (7:00 AM to 12:59 PM UTC summer)
+    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 7-12 * * 0-4'
+  
+  # Manual run anytime
   workflow_dispatch:
 
 jobs:
   scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
     steps:
       - uses: actions/checkout@v4
 
@@ -30,5 +33,4 @@ jobs:
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' && 'True' || 'False' }}
         run: python main.py

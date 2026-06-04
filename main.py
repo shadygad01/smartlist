@@ -2204,4 +2204,3 @@ if __name__ == "__main__":
     except (KeyboardInterrupt, SystemExit):
         print("\n⛔ Scheduler stopped.")
         scheduler.shutdown()
-

@@ -540,6 +540,15 @@ def swings_luxalgo(df, size=50):
 
     hi  = float(trailing_top)
     lo  = float(trailing_bottom)
+
+    # Cap hi when it reflects unadjusted pre-capital-action prices.
+    # If trailing_top is >1.5× the recent 3-month high, the data contains
+    # an unadjusted corporate action spike (e.g. EGX rights issue). Use
+    # the recent high instead so zones match adjusted TradingView charts.
+    recent_hi = float(df["High"].tail(63).max())
+    if hi > recent_hi * 1.5:
+        hi = recent_hi
+
     rng = hi - lo
     if rng <= 0:
         hi  = float(df["High"].max())

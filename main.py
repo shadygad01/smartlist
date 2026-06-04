@@ -501,60 +501,26 @@ def swings(close, lb=80):
     return hi, lo, eq, buy_hi, sell_lo
 
 
-def swings_luxalgo(df, size=50):
+def swings_luxalgo(df, lookback=252):
     """
-    LuxAlgo SMC structural pivot detection — matches ta.pivothigh / ta.pivotlow.
+    LuxAlgo Premium/Discount zones — matches the chart labels exactly.
 
-    A confirmed structural HIGH at bar p:
-        high[p] > max of `size` bars BEFORE  (left side)
-        high[p] > max of `size` bars AFTER   (right side)
-    A confirmed structural LOW at bar p:
-        low[p]  < min of `size` bars BEFORE  (left side)
-        low[p]  < min of `size` bars AFTER   (right side)
+    LuxAlgo defines the structural range as:
+      Strong Low  = the absolute lowest Low in the recent `lookback` bars (≈1 year).
+      Weak High   = the highest High from the Strong Low date up to now.
+      EQ          = midpoint of Weak High and Strong Low (50% equilibrium level).
 
-    hi/lo = last confirmed structural HIGH / LOW (most recent in time).
-    EQ    = midpoint of hi–lo range (LuxAlgo equilibrium level).
+    This mirrors how LuxAlgo draws the shaded Premium / Discount zones and
+    why EAST shows EQ≈37.93 with hi≈43 (Weak High) and lo≈32.86 (Strong Low).
     """
-    if not all(c in df.columns for c in ["High", "Low"]) or len(df) < size * 2 + 2:
+    if not all(c in df.columns for c in ["High", "Low"]) or len(df) < 10:
         return swings(df["Close"] if "Close" in df.columns else pd.Series(), lb=80)
 
-    highs = df["High"].values.astype(float)
-    lows  = df["Low"].values.astype(float)
-    n     = len(highs)
-
-    swing_hi = None
-    swing_lo = None
-
-    # p = pivot candidate; confirmed once `size` right-side bars have been seen.
-    # Requires p >= size for full left window.
-    for p in range(size, n - size):
-        left_h  = highs[p - size : p]
-        right_h = highs[p + 1   : p + size + 1]
-        left_l  = lows [p - size : p]
-        right_l = lows [p + 1   : p + size + 1]
-
-        if highs[p] > left_h.max() and highs[p] > right_h.max():
-            swing_hi = highs[p]
-
-        if lows[p] < left_l.min() and lows[p] < right_l.min():
-            swing_lo = lows[p]
-
-    # Fallback when no structural pivot confirmed (thin / monotonic data)
-    if swing_hi is None:
-        swing_hi = float(df["High"].tail(size).max())
-    if swing_lo is None:
-        swing_lo = float(df["Low"].tail(size).min())
-
-    hi = float(swing_hi)
-    lo = float(swing_lo)
-
-    # Safety cap for unadjusted EGX capital-action data: if the confirmed
-    # structural high is more than 1.3× the recent 3-month high, the pivot
-    # came from a pre-rights-issue unadjusted bar.  Cap it to the recent high
-    # so zones align with the adjusted TradingView chart.
-    recent_hi = float(df["High"].tail(63).max())
-    if hi > recent_hi * 1.3:
-        hi = recent_hi
+    window      = df.tail(min(lookback, len(df)))
+    lo_pos_win  = int(window["Low"].values.argmin())          # position within window
+    lo          = float(window["Low"].iloc[lo_pos_win])
+    global_pos  = len(df) - len(window) + lo_pos_win          # position within full df
+    hi          = float(df["High"].iloc[global_pos:].max())   # max High since Strong Low
 
     rng = hi - lo
     if rng <= 0:

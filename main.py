@@ -397,7 +397,7 @@ def download_data(symbol, days=110):
 
     try:
         ticker = yf.Ticker(yf_symbol)
-        df = ticker.history(period="6mo", interval="1d", auto_adjust=False, repair=True)
+        df = ticker.history(period="2y", interval="1d", auto_adjust=False, repair=True)
         if not df.empty and len(df) > 5:
             df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
             df.index = df.index.tz_localize(None)
@@ -408,7 +408,7 @@ def download_data(symbol, days=110):
         # Fallback: direct Yahoo Finance chart API
         try:
             url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_symbol}"
-                   f"?range=6mo&interval=1d&includeAdjustedClose=false")
+                   f"?range=2y&interval=1d&includeAdjustedClose=false")
             r    = requests.get(url, headers=HEADERS, timeout=15)
             data = r.json()
             res  = data["chart"]["result"][0]

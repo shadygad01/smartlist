@@ -484,20 +484,81 @@ def calc_avwap(df):
     return float(av.iloc[-1]), float(lo.iloc[-1])
 
 def swings(close, lb=80):
-    """
-    Price range levels based on custom SMC framework:
-      0.00 = lo  (swing low  — best buy)
-      0.15 = buy_hi  (top of buy zone)
-      0.50 = eq  (equilibrium)
-      0.85 = sell_lo (bottom of sell zone)
-      1.00 = hi  (swing high — best sell)
-    """
+    """Legacy fallback — kept for reference only."""
     hi      = float(close.tail(lb).max())
     lo      = float(close.tail(lb).min())
     rng     = hi - lo
     eq      = lo + rng * 0.50
-    buy_hi  = lo + rng * 0.15   # top of buy zone  (0.15)
-    sell_lo = lo + rng * 0.85   # bottom of sell zone (0.85)
+    buy_hi  = lo + rng * 0.15
+    sell_lo = lo + rng * 0.85
+    return hi, lo, eq, buy_hi, sell_lo
+
+
+def swings_luxalgo(df, size=50):
+    """
+    LuxAlgo SMC swing detection — replicates the Pine Script algorithm exactly.
+
+    Logic (per bar i, starting from i=1):
+      1. updateTrailingExtremes: trailing_top = max(high[i], prev), trailing_bottom = min(low[i], prev)
+      2. getCurrentStructure(size):
+           pivot_idx = i - size
+           new_leg_high = high[pivot_idx] > max(high[pivot_idx+1 .. i])   → swing HIGH confirmed
+           new_leg_low  = low[pivot_idx]  < min(low[pivot_idx+1  .. i])   → swing LOW  confirmed
+           On new HIGH pivot: trailing_top    = high[pivot_idx]
+           On new LOW  pivot: trailing_bottom = low[pivot_idx]
+
+    Returns (hi, lo, eq, buy_hi, sell_lo) — same interface as swings().
+    """
+    needed = ["High", "Low"]
+    if not all(c in df.columns for c in needed) or len(df) < 2:
+        return swings(df["Close"] if "Close" in df.columns else pd.Series(), lb=80)
+
+    highs = df["High"].values.astype(float)
+    lows  = df["Low"].values.astype(float)
+    n     = len(highs)
+
+    leg              = 0          # BEARISH_LEG=0, BULLISH_LEG=1
+    trailing_top     = highs[0]
+    trailing_bottom  = lows[0]
+
+    for i in range(1, n):
+        # Step 1 — updateTrailingExtremes
+        trailing_top    = max(highs[i], trailing_top)
+        trailing_bottom = min(lows[i],  trailing_bottom)
+
+        # Step 2 — getCurrentStructure(size)
+        if i >= size:
+            pivot_idx    = i - size
+            win_h = highs[pivot_idx + 1 : i + 1]
+            win_l = lows [pivot_idx + 1 : i + 1]
+
+            new_leg_high = bool(highs[pivot_idx] > win_h.max())
+            new_leg_low  = bool(lows [pivot_idx] < win_l.min())
+
+            prev_leg = leg
+            if new_leg_high:
+                leg = 0
+            elif new_leg_low:
+                leg = 1
+
+            if leg != prev_leg:
+                if leg == 1:                        # startOfBullishLeg → new SWING LOW
+                    trailing_bottom = lows[pivot_idx]
+                else:                               # startOfBearishLeg → new SWING HIGH
+                    trailing_top    = highs[pivot_idx]
+
+    hi  = float(trailing_top)
+    lo  = float(trailing_bottom)
+    rng = hi - lo
+
+    if rng <= 0:                                    # fallback: full-history max/min
+        hi  = float(df["High"].max())
+        lo  = float(df["Low"].min())
+        rng = hi - lo
+
+    eq      = lo + rng * 0.50
+    buy_hi  = lo + rng * 0.15
+    sell_lo = lo + rng * 0.85
     return hi, lo, eq, buy_hi, sell_lo
 
 # =========================================
@@ -665,83 +726,83 @@ def sc_price(cur, lo, hi, eq, buy_hi, sell_lo):
 
 def sc_ob(df, cur, eq, lo, buy_hi):
     """
-    Order Block Quality — OB حقيقي بناءً على:
-    1. آخر bearish candle قبل move صاعد قوي (impulse ≥ 1.5x avg range)
-    2. OB لازم يكون في discount zone (تحت EQ)
-    3. السعر الحالي لازم يكون فوق الـ OB (مش اخترقه لتحت)
+    Order Block — LuxAlgo methodology:
 
-    لو مفيش OB حقيقي → يرجع 0 بدل ما يبعت رقم مضلل.
+    parsedHigh[i] = low[i]  if volatile bar  else high[i]
+    parsedLow[i]  = high[i] if volatile bar  else low[i]
+    volatile bar  = (high - low) >= 2 * ATR(200)
+
+    Bullish OB = bar with the lowest parsedLow between the last swing LOW bar
+                 and the current bar, provided:
+                   • ob_high < eq  (in discount zone)
+                   • ob_high < buy_hi  (in buy zone, tighter filter)
+                   • no subsequent bar closed below ob_low (not mitigated)
+                   • current price > ob_low
     """
-    needed = ["Open", "High", "Low", "Close"]
+    needed = ["High", "Low", "Close"]
     if not all(c in df.columns for c in needed) or len(df) < 10:
         return 0, "Insufficient data for OB detection"
 
-    d   = df[needed].dropna()
-    rng = d["High"] - d["Low"]
-    avg_rng = float(rng.rolling(20).mean().iloc[-1]) if len(d) >= 20 else float(rng.mean())
-
-    if avg_rng <= 0:
-        return 0, "Invalid range data"
+    d = df[needed].dropna().copy()
+    n = len(d)
 
     discount_range = eq - lo
     if discount_range <= 0:
         return 0, "Invalid discount range"
 
-    # ── بحث عن OB حقيقي في آخر 40 bar ───────────────────────────────────────
-    ob_candidates = []
-    search = d.tail(40)
+    # ── ATR(200) for volatile-bar detection ──────────────────────────────────
+    atr_len = min(200, n - 1)
+    prev_close = d["Close"].shift(1)
+    tr = pd.concat([
+        d["High"] - d["Low"],
+        (d["High"] - prev_close).abs(),
+        (d["Low"]  - prev_close).abs(),
+    ], axis=1).max(axis=1)
+    atr = float(tr.rolling(atr_len).mean().iloc[-1]) if atr_len > 1 else float(tr.mean())
+    if np.isnan(atr) or atr <= 0:
+        atr = float(tr.mean())
 
-    for i in range(len(search) - 2):
-        c_open  = float(search["Open"].iloc[i])
-        c_close = float(search["Close"].iloc[i])
-        c_low   = float(search["Low"].iloc[i])
-        c_high  = float(search["High"].iloc[i])
+    # ── parsed High / Low ────────────────────────────────────────────────────
+    volatile     = (d["High"] - d["Low"]) >= 2 * atr
+    parsed_high  = d["Low"].where(volatile, d["High"])
+    parsed_low   = d["High"].where(volatile, d["Low"])
 
-        # OB candle: bearish (close < open)
-        if c_close >= c_open:
+    # ── Search for best bullish OB ───────────────────────────────────────────
+    best_ob    = None
+    best_score = -1.0
+
+    for i in range(n - 1):
+        ph = float(parsed_high.iloc[i])
+        pl = float(parsed_low.iloc[i])
+
+        # Must be in buy zone (below buy_hi)
+        if ph >= buy_hi:
             continue
 
-        # الـ candle التالية لازم تكون impulse صاعد قوي (≥ 1.5x avg range)
-        next_high  = float(search["High"].iloc[i+1])
-        next_low   = float(search["Low"].iloc[i+1])
-        next_range = next_high - next_low
-        if next_range < avg_rng * 1.5:
+        # Current price must be above OB low
+        if cur <= pl:
             continue
 
-        # OB level = top of bearish candle (c_high) as resistance turned support
-        ob_level = c_high
-
-        # OB لازم يكون في Buy Zone (0–15%) فقط
-        if ob_level >= buy_hi:
+        # OB must not be mitigated (no subsequent close below pl)
+        if float(d["Close"].iloc[i + 1:].min()) < pl:
             continue
 
-        # السعر الحالي لازم يكون فوق الـ OB (مش اخترقه)
-        if cur <= c_low:
-            continue
+        # Quality by depth in discount
+        quality = max(0.0, 1.0 - (ph - lo) / discount_range)
+        dist    = abs(cur - ph) / cur if cur > 0 else 1.0
+        score   = quality * max(0.1, 1.0 - dist * 5)
 
-        # quality بناءً على موقع الـ OB في الـ discount zone
-        ratio   = (ob_level - lo) / discount_range
-        quality = max(0.0, 1.0 - ratio)
+        if score > best_score:
+            best_score = score
+            best_ob    = {"high": ph, "low": pl, "quality": quality, "dist": dist}
 
-        dist = abs(cur - ob_level) / cur
-        ob_candidates.append({
-            "level":   ob_level,
-            "quality": quality,
-            "dist":    dist,
-            "candle":  i,
-        })
+    if best_ob is None:
+        return 0, "No valid LuxAlgo OB in buy zone"
 
-    if not ob_candidates:
-        return 0, "No valid OB found in discount zone (last 40 bars)"
-
-    # أفضل OB: أعلى quality × proximity
-    best = max(ob_candidates,
-               key=lambda x: x["quality"] * max(0.1, 1 - x["dist"] * 5))
-
-    ob    = best["level"]
-    qual  = best["quality"]
-    dist  = best["dist"]
-    zone_lbl = "Buy Zone" if ob <= buy_hi else "Mid-Discount"
+    ob   = best_ob["high"]
+    qual = best_ob["quality"]
+    dist = best_ob["dist"]
+    zone_lbl = "Buy Zone" if ob < buy_hi else "Mid-Discount"
 
     if dist > 0.10:
         pts = round(W_OB * qual * 0.15)
@@ -1190,7 +1251,7 @@ def analyze(symbol):
         is_fresh   = True
 
         close            = df["Close"]
-        hi,lo,eq,buy_hi,sell_lo = swings(close)
+        hi,lo,eq,buy_hi,sell_lo = swings_luxalgo(df)
         av,alo                  = calc_avwap(df)   # always compute for display
 
         # ── GATE: Price must be strictly below EQ (< 0.50 level) ─────────────

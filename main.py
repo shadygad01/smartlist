@@ -1245,12 +1245,7 @@ def analyze(symbol):
             tc  = "#856404"; tbg = "#fff3cd"; tbr = "#ffc107"
             l3  = l3 + " ⏳ Liquidity gate pending — waiting for Sweep & Reverse (need 20/20)"
         else:
-            if r8 == 0:
-                sig = "Wait"
-                tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
-                l8  = l8 + " ⚠️ No demand confirmation — liquidity trap risk"
-            else:
-                sig,tc,tbg,tbr = sig_info(total)
+            sig,tc,tbg,tbr = sig_info(total)
 
         entry_zones = None
         if price_ok and liq_ok and r8 > 0 and total >= 35:

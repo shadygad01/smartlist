@@ -1241,8 +1241,8 @@ def analyze(symbol):
             if cur < eq:
                 l1  = l1 + f" ⛔ Price gate failed — not in Deep Discount (need >= {PRICE_GATE}/{W_PRICE})"
         elif not liq_ok:
-            sig = "Watch"
-            tc  = "#856404"; tbg = "#fff3cd"; tbr = "#ffc107"
+            sig = "Wait"
+            tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
             l3  = l3 + " ⏳ Liquidity gate pending — waiting for Sweep & Reverse (need 20/20)"
         else:
             sig,tc,tbg,tbr = sig_info(total)
@@ -1928,7 +1928,7 @@ def detect_signal_changes(current_results, previous_results):
         current_target = current.get("target", "N/A")
 
         # إذا تغيرت الإشارة من Skip/Wait إلى BUY أو STRONG BUY
-        if (previous_sig in ["Skip", "Wait", "Watch"] and current_sig in ["Buy", "Strong Buy"]):
+        if (previous_sig in ["Skip", "Wait"] and current_sig in ["Buy", "Strong Buy"]):
             changed_stocks.append({
                 "stock": stock,
                 "from": previous_sig,

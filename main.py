@@ -501,24 +501,25 @@ def swings(close, lb=80):
     return hi, lo, eq, buy_hi, sell_lo
 
 
-def swings_luxalgo(df):
+def swings_luxalgo(df, lookback=252):
     """
     LuxAlgo Premium/Discount zones.
-    hi = max High over last 252 bars (~1 year)  = Weak High
-    lo = min Low  over last 504 bars (~2 years) = Strong Low
+    hi = max High over the last `lookback` trading days (~1 year) = Weak High
+    lo = min Low  over the last `lookback` trading days (~1 year) = Strong Low
     EQ = midpoint (50% equilibrium level).
 
-    Asymmetric windows: 1-year hi excludes old peaks (e.g. EAST pre-decline 50 EGP),
-    2-year lo captures older structural lows (e.g. BTFH 2.50 strong low > 1 year ago).
+    Matches LuxAlgo chart values: EAST hi≈44.31, lo≈33.28, EQ≈38.79.
+    The 1-year window naturally excludes old unadjusted EGX capital-action bars.
     """
     if not all(c in df.columns for c in ["High", "Low"]) or len(df) < 10:
         return swings(df["Close"] if "Close" in df.columns else pd.Series(), lb=80)
 
-    hi = float(df["High"].tail(min(252, len(df))).max())
-    lo = float(df["Low"].tail(min(504, len(df))).min())
+    window = df.tail(min(lookback, len(df)))
+    hi     = float(window["High"].max())
+    lo     = float(window["Low"].min())
 
-    # Safety cap: if hi > 1.3× the recent 3-month high, an unadjusted EGX
-    # capital-action bar is in the window.  Cap to the recent high.
+    # Safety cap: if hi is still > 1.3× the recent 3-month high, an unadjusted
+    # capital-action bar slipped into the 1-year window.  Cap to recent high.
     recent_hi = float(df["High"].tail(63).max())
     if hi > recent_hi * 1.3:
         hi = recent_hi

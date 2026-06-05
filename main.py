@@ -397,7 +397,7 @@ def download_data(symbol, days=110):
 
     try:
         ticker = yf.Ticker(yf_symbol)
-        df = ticker.history(period="2y", interval="1d", auto_adjust=True, repair=True)
+        df = ticker.history(period="6mo", interval="1d", auto_adjust=False, repair=True)
         if not df.empty and len(df) > 5:
             df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
             df.index = df.index.tz_localize(None)
@@ -408,7 +408,7 @@ def download_data(symbol, days=110):
         # Fallback: direct Yahoo Finance chart API
         try:
             url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_symbol}"
-                   f"?range=2y&interval=1d&includeAdjustedClose=true")
+                   f"?range=6mo&interval=1d&includeAdjustedClose=false")
             r    = requests.get(url, headers=HEADERS, timeout=15)
             data = r.json()
             res  = data["chart"]["result"][0]
@@ -501,39 +501,6 @@ def swings(close, lb=80):
     return hi, lo, eq, buy_hi, sell_lo
 
 
-def swings_luxalgo(df, lookback=252):
-    """
-    LuxAlgo Premium/Discount zones.
-    hi = max High over the last `lookback` trading days (~1 year) = Weak High
-    lo = min Low  over the last `lookback` trading days (~1 year) = Strong Low
-    EQ = midpoint (50% equilibrium level).
-
-    Matches LuxAlgo chart values: EAST hi≈44.31, lo≈33.28, EQ≈38.79.
-    The 1-year window naturally excludes old unadjusted EGX capital-action bars.
-    """
-    if not all(c in df.columns for c in ["High", "Low"]) or len(df) < 10:
-        return swings(df["Close"] if "Close" in df.columns else pd.Series(), lb=80)
-
-    window = df.tail(min(lookback, len(df)))
-    hi     = float(window["High"].max())
-    lo     = float(window["Low"].min())
-
-    # Safety cap: if hi is still > 1.3× the recent 3-month high, an unadjusted
-    # capital-action bar slipped into the 1-year window.  Cap to recent high.
-    recent_hi = float(df["High"].tail(63).max())
-    if hi > recent_hi * 1.3:
-        hi = recent_hi
-
-    rng = hi - lo
-    if rng <= 0:
-        hi  = float(df["High"].max())
-        lo  = float(df["Low"].min())
-        rng = hi - lo
-
-    eq      = lo + rng * 0.50
-    buy_hi  = lo + rng * 0.15
-    sell_lo = lo + rng * 0.85
-    return hi, lo, eq, buy_hi, sell_lo
 
 
 # =========================================
@@ -1226,7 +1193,7 @@ def analyze(symbol):
         is_fresh   = True
 
         close            = df["Close"]
-        hi,lo,eq,buy_hi,sell_lo = swings_luxalgo(df)
+        hi,lo,eq,buy_hi,sell_lo = swings(close)
         av,alo                  = calc_avwap(df)   # always compute for display
 
         # ── GATE: Price must be strictly below EQ (< 0.50 level) ─────────────

@@ -161,16 +161,24 @@ def run_engine_fast(symbol, df, params, dynamic):
 
         # Exit conditions
         if price >= position["target"]:
-            record(price, "target_hit")
-            position = None
+            # Price reached target
+            if dynamic and macd_crossdown(i):
+                # Weakness at target — exit at current level
+                record(tgts[lvl], "weakness_at_target")
+                position = None
+            elif dynamic and lvl < len(tgts) - 1:
+                # No weakness — raise target to next Fibonacci level
+                position["current_level"] = lvl + 1
+                position["target"] = tgts[position["current_level"]]
+                # Position stays open, wait for next target
+            else:
+                # Static or no more targets — exit at target
+                record(price, "target_hit")
+                position = None
 
         elif lvl > 0 and dynamic and macd_crossdown(i):
-            record(tgts[lvl], "downtrend_exit")
-            position = None
-
-        elif lvl == 0 and dynamic and macd_crossdown(i):
-            # Exit at current market price (haven't reached 12% target yet)
-            record(price, "weakness_at_min_target")
+            # Weakness below target (downtrend protection) — exit at current level
+            record(tgts[lvl], "downtrend_protection")
             position = None
 
     # Close open position

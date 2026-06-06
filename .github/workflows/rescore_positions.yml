@@ -1,0 +1,33 @@
+name: Rescore Open Positions
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rescore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run rescore
+        run: python rescore_positions.py
+
+      - name: Commit updated scores
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add open_positions.json
+          git diff --staged --quiet || git commit -m "Rescore: update entry_score from real historical data [skip ci]"
+          git push || true

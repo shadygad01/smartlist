@@ -87,7 +87,7 @@ def precompute_signals(df, symbol, params):
     return scores, price_ok, close, lo_arr
 
 
-def run_engine_fast(symbol, df, params, dynamic):
+def run_engine_fast(symbol, df, params, dynamic, min_target_pct=0.12):
     """Streamlined backtest loop using precomputed signals."""
     scores, price_ok_arr, close, lo_arr = precompute_signals(df, symbol, params)
 
@@ -101,15 +101,16 @@ def run_engine_fast(symbol, df, params, dynamic):
     trades    = []
 
     def fib_targets(entry):
-        tgts = [entry * 1.12]
+        min_tgt = entry * (1 + min_target_pct)
+        tgts = [min_tgt]
         for lv in fib_levels:
             p = entry * (1 + lv)
-            if p >= tgts[0]:
+            if p >= min_tgt:
                 tgts.append(p)
         return tgts
 
     def nearest_lower(entry, price, tgts):
-        best = entry * 1.12
+        best = entry * (1 + min_target_pct)
         for t in tgts:
             if t < price and t >= best:
                 best = t
@@ -204,6 +205,85 @@ def run_engine_fast(symbol, df, params, dynamic):
             exit_position(pos, exit_p, "end_of_period", dates[-1])
 
     return trades
+
+
+def compare_min_targets(years=5):
+    """اختبر 3 مستويات حد أدنى: 12%, 15%, 20%"""
+    levels = [0.12, 0.15, 0.20]
+    results_by_level = {}
+
+    for min_pct in levels:
+        pct_display = f"{int(min_pct*100)}%"
+        print(f"\n{'='*110}")
+        print(f"🧪 اختبار الحد الأدنى: {pct_display}")
+        print(f"{'='*110}\n")
+
+        s_trades, d_trades = [], []
+        s_results, d_results = [], []
+
+        for symbol in STOCKS:
+            df = generate_synthetic_egx_data(symbol, years=years, seed=hash(symbol) % (2**32))
+            if df.empty:
+                continue
+
+            st = run_engine_fast(symbol, df, BASE_PARAMS, dynamic=False, min_target_pct=min_pct)
+            dt = run_engine_fast(symbol, df, BASE_PARAMS, dynamic=True, min_target_pct=min_pct)
+            s_trades.extend(st); d_trades.extend(dt)
+
+            def sym_metrics(tlist):
+                if not tlist:
+                    return dict(symbol=symbol, total_trades=0, winning_trades=0,
+                                losing_trades=0, win_rate=0, avg_win=0, avg_loss=0,
+                                total_pnl=0, total_pnl_pct=0, profit_factor=0)
+                tdf = pd.DataFrame(tlist)
+                wins  = tdf[tdf["pnl"] > 0]
+                loss  = tdf[tdf["pnl"] <= 0]
+                gp    = wins["pnl"].sum()
+                gl    = abs(loss["pnl"].sum())
+                return dict(symbol=symbol,
+                            total_trades=len(tdf),
+                            winning_trades=len(wins), losing_trades=len(loss),
+                            win_rate=len(wins)/len(tdf)*100,
+                            avg_win=wins["pnl_pct"].mean() if len(wins) else 0,
+                            avg_loss=loss["pnl_pct"].mean() if len(loss) else 0,
+                            total_pnl=tdf["pnl"].sum(),
+                            total_pnl_pct=tdf["pnl_pct"].mean(),
+                            profit_factor=gp/gl if gl else 0)
+
+            s_results.append(sym_metrics(st))
+            d_results.append(sym_metrics(dt))
+
+        s_agg = aggregate(s_results, s_trades)
+        d_agg = aggregate(d_results, d_trades)
+        results_by_level[pct_display] = {"static": s_agg, "dynamic": d_agg}
+
+    # طباعة المقارنة
+    print(f"\n\n{'='*110}")
+    print("📊 مقارنة الحدود الدنيا (12% vs 15% vs 20%)")
+    print(f"{'='*110}\n")
+
+    print(f"{'المقياس':30} {'12%':>20} {'15%':>20} {'20%':>20}")
+    print(f"{'-'*90}")
+
+    metrics = [
+        ("إجمالي الأرباح (Dynamic)", lambda x: x["dynamic"]["total_pnl_sum"]),
+        ("Profit Factor (Dynamic)", lambda x: x["dynamic"]["profit_factor"]),
+        ("نسبة الفوز (Dynamic)", lambda x: x["dynamic"]["win_rate"]),
+        ("متوسط الصفقة (Dynamic)", lambda x: x["dynamic"]["avg_pnl_pct"]),
+        ("إجمالي الصفقات", lambda x: x["dynamic"]["total_trades"]),
+    ]
+
+    for label, getter in metrics:
+        vals = [results_by_level[f"{int(lv*100)}%"] for lv in levels]
+        try:
+            v12 = f"{getter(vals[0]):.2f}"
+            v15 = f"{getter(vals[1]):.2f}"
+            v20 = f"{getter(vals[2]):.2f}"
+            print(f"{label:30} {v12:>20} {v15:>20} {v20:>20}")
+        except:
+            pass
+
+    print(f"\n{'='*110}\n")
 
 
 def run_comparison(years=5):
@@ -488,6 +568,8 @@ def print_report(s, d, sr, dr):
 if __name__ == "__main__":
     import time
     t0 = time.time()
+    compare_min_targets(years=5)
+    print("\n\n")
     sr, st, dr, dt = run_comparison(years=5)
     s_agg = aggregate(sr, st)
     d_agg = aggregate(dr, dt)

@@ -28,6 +28,8 @@ CAIRO = ZoneInfo("Africa/Cairo")
 last_alerted_stocks = set()  # لتجنب إرسال تنبيهات متكررة
 monitoring_active = True
 last_score_data = {}
+open_positions = {}  # تتبع المراكز المفتوحة: {symbol: {entry_price, fib_targets, current_level, ...}}
+POSITIONS_FILE = "open_positions.json"
 
 # =========================================
 # CONFIG
@@ -1639,6 +1641,132 @@ def send_telegram_target_update(symbol, entry_price, old_target, new_target, cur
         print(f"❌ Telegram error: {e}")
         return False
 
+# =========================================
+# POSITION TRACKING & MANAGEMENT
+# =========================================
+
+def load_open_positions():
+    """Load open positions from JSON file"""
+    global open_positions
+    if os.path.exists(POSITIONS_FILE):
+        try:
+            with open(POSITIONS_FILE, 'r') as f:
+                open_positions = json.load(f)
+        except Exception as e:
+            print(f"⚠️ Error loading positions: {e}")
+            open_positions = {}
+    return open_positions
+
+def save_open_positions():
+    """Save open positions to JSON file"""
+    try:
+        with open(POSITIONS_FILE, 'w') as f:
+            json.dump(open_positions, f, indent=2)
+    except Exception as e:
+        print(f"❌ Error saving positions: {e}")
+
+def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12):
+    """Add new position when entry signal is triggered"""
+    global open_positions
+
+    # حساب أهداف Fibonacci
+    fib_levels = [0.236, 0.382, 0.50, 0.618, 1.0, 1.5, 2.0]
+    min_tgt = entry_price * (1 + volatility_min_target)
+    fib_targets = [min_tgt]
+    for lv in fib_levels:
+        p = entry_price * (1 + lv)
+        if p >= min_tgt:
+            fib_targets.append(p)
+
+    open_positions[symbol] = {
+        "entry_date": entry_date,
+        "entry_price": entry_price,
+        "fib_targets": fib_targets,
+        "current_level": 0,
+        "target": fib_targets[0],
+        "status": "open"
+    }
+    save_open_positions()
+    print(f"✅ Position added: {symbol} @ {entry_price:.2f} EGP")
+
+def update_position_target(symbol, new_level, current_price):
+    """Update position target and send notification"""
+    global open_positions
+
+    if symbol not in open_positions:
+        return False
+
+    pos = open_positions[symbol]
+    old_target = pos["target"]
+    old_level = pos["current_level"]
+
+    if new_level >= len(pos["fib_targets"]):
+        return False
+
+    pos["current_level"] = new_level
+    pos["target"] = pos["fib_targets"][new_level]
+    save_open_positions()
+
+    # إرسال تنبيه
+    fib_pct = ((pos["target"] - pos["entry_price"]) / pos["entry_price"]) * 100
+    send_telegram_target_update(
+        symbol,
+        pos["entry_price"],
+        old_target,
+        pos["target"],
+        current_price,
+        fib_pct
+    )
+
+    print(f"🚀 {symbol}: Target raised from {old_target:.2f} to {pos['target']:.2f}")
+    return True
+
+def close_position(symbol, exit_price, reason="manual"):
+    """Close position and record the trade"""
+    global open_positions
+
+    if symbol not in open_positions:
+        return False
+
+    pos = open_positions[symbol]
+    pnl = exit_price - pos["entry_price"]
+    pnl_pct = (pnl / pos["entry_price"]) * 100
+
+    pos["status"] = "closed"
+    pos["exit_price"] = exit_price
+    pos["exit_reason"] = reason
+    pos["pnl"] = pnl
+    pos["pnl_pct"] = pnl_pct
+    save_open_positions()
+
+    print(f"❌ Position closed: {symbol} | PnL: {pnl_pct:.2f}%")
+    return True
+
+def monitor_positions(current_prices):
+    """Monitor open positions and update targets"""
+    global open_positions
+
+    for symbol in list(open_positions.keys()):
+        if open_positions[symbol]["status"] != "open":
+            continue
+
+        if symbol not in current_prices:
+            continue
+
+        price = current_prices[symbol]
+        pos = open_positions[symbol]
+        current_level = pos["current_level"]
+        fib_targets = pos["fib_targets"]
+
+        # تحديث المستوى الحالي
+        for i, target in enumerate(fib_targets):
+            if price >= target:
+                current_level = max(current_level, i)
+
+        # إذا وصلنا لمستوى جديد، حدّث وأرسل تنبيه
+        if current_level > pos["current_level"]:
+            update_position_target(symbol, current_level, price)
+
 def send_telegram_alerts(results):
     """
     Send a Telegram message for every stock with score >= 35.
@@ -1801,37 +1929,47 @@ def send_alert_for_high_score(stock, score, result):
 
 def monitor_scores():
     """
-    مراقبة الـ scores بشكل مستمر وإرسال تنبيهات فوراً عند الوصول إلى 35+
+    مراقبة الـ scores وتتبع المراكز المفتوحة
     """
-    global last_alerted_stocks
-    
+    global last_alerted_stocks, open_positions
+
+    load_open_positions()
     print(f"\n▶️ بدء المراقبة المستمرة في {fmt_cairo()}")
-    
+    print(f"📊 المراكز المفتوحة: {len(open_positions)}")
+
     while monitoring_active:
         try:
             # تنفيذ التحليل
             html, results = build_report(holiday_mode=False)
-            
+
             # البحث عن stocks وصلت 35+
             current_qualified = {
                 s for s in STOCKS
                 if results[s].get("ok") and results[s].get("score", 0) >= 35
             }
-            
+
             # إرسال تنبيهات للـ stocks الجديدة
             new_alerts = current_qualified - last_alerted_stocks
             for stock in new_alerts:
                 score = results[stock].get("score", 0)
                 send_alert_for_high_score(stock, score, results[stock])
                 last_alerted_stocks.add(stock)
-            
+                # تسجيل المركز الجديد
+                current_price = results[stock].get("cur", 0)
+                if current_price > 0:
+                    add_position(stock, current_price, datetime.now(CAIRO).isoformat())
+
             # حفظ البيانات الحالية
             global last_score_data
             last_score_data = results
-            
+
+            # مراقبة المراكز المفتوحة
+            current_prices = {s: results[s].get("cur", 0) for s in STOCKS if results[s].get("cur")}
+            monitor_positions(current_prices)
+
             # انتظر 5 دقائق قبل التحديث التالي
             time.sleep(300)
-            
+
         except Exception as e:
             print(f"❌ Monitor error: {e}")
             traceback.print_exc()

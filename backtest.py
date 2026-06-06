@@ -270,13 +270,13 @@ def calc_stopping_volume(df, eq, lo, lookback=30, vol_mult=1.5, range_ratio=0.5)
 # =========================================
 
 class BacktestEngine:
-    def __init__(self, symbol, df, params=None, send_notifications=False):
+    def __init__(self, symbol, df, params=None, send_notifications=True):
         self.symbol = symbol
         self.df = df.copy()
         self.params = params or self._default_params()
         self.trades = []
         self.buy_signals = []
-        self.send_notifications = send_notifications
+        self.send_notifications = send_notifications  # ✅ تفعيل التنبيهات بشكل افتراضي
     
     @staticmethod
     def _default_params():

@@ -1858,24 +1858,28 @@ def send_telegram_alerts(results):
             f"📊 *EGX Daily Scan — {now_cairo().strftime('%d %b %Y')}*\n"
             f"No stocks reached the Watch threshold (≥35) today."
         )
-        if positions:
-            msg += f"\n\n📊 *المراكز المفتوحة: {len(positions)}*"
-            for sym, pos in positions.items():
-                if pos.get("status") == "open":
-                    entry = pos["entry_price"]
-                    tgt = pos["target"]
-                    # حاول الحصول على السعر من النتائج الحالية، وإلا استخدم current_price المحفوظ
-                    if sym in results and results[sym].get("ok"):
-                        cur_price = results[sym].get("price", "—")
-                    elif "current_price" in pos:
-                        cur_price = pos["current_price"]
-                    else:
-                        cur_price = "—"
-                    pnl = "—"
-                    if cur_price != "—":
-                        pnl_pct = ((float(cur_price) - entry) / entry * 100)
-                        pnl = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
-                    msg += f"\n   • {NAMES.get(sym, sym)}: {entry:.2f} → {tgt:.2f} EGP ({pnl})"
+        open_pos = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
+        if open_pos:
+            msg += f"\n\n━━━━━━━━━━━━━━━━━━━━━"
+            msg += f"\n📂 *Open Positions ({len(open_pos)})*\n"
+            for sym, pos in open_pos:
+                entry = pos["entry_price"]
+                tgt   = pos["target"]
+                if sym in results and results[sym].get("ok"):
+                    cur_price = results[sym].get("price", "—")
+                elif "current_price" in pos:
+                    cur_price = pos["current_price"]
+                else:
+                    cur_price = "—"
+                if cur_price != "—":
+                    pnl_pct = ((float(cur_price) - entry) / entry * 100)
+                    pnl = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
+                    cur_str = f"{cur_price} EGP ({pnl})"
+                else:
+                    cur_str = "—"
+                msg += f"\n📌 *{sym}* — {NAMES.get(sym, sym)}"
+                msg += f"\n   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*\n"
+            msg += "━━━━━━━━━━━━━━━━━━━━━"
         try:
             requests.post(
                 f"https://api.telegram.org/bot{token}/sendMessage",
@@ -1894,12 +1898,10 @@ def send_telegram_alerts(results):
     open_positions_list = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
     if open_positions_list:
         lines.append("\n━━━━━━━━━━━━━━━━━━━━━")
-        lines.append("📊 *المراكز المفتوحة*")
+        lines.append(f"📂 *Open Positions ({len(open_positions_list)})*\n")
         for sym, pos in open_positions_list:
             entry = pos["entry_price"]
-            tgt = pos["target"]
-            lvl = FIB_LABELS.get(pos.get("current_level", 0), "")
-            # حاول الحصول على السعر من النتائج الحالية، وإلا استخدم current_price المحفوظ
+            tgt   = pos["target"]
             if sym in results and results[sym].get("ok"):
                 cur_price = results[sym].get("price", "—")
             elif "current_price" in pos:
@@ -1909,9 +1911,11 @@ def send_telegram_alerts(results):
             if cur_price != "—":
                 pnl_pct = ((float(cur_price) - entry) / entry * 100)
                 pnl = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
+                cur_str = f"{cur_price} EGP ({pnl})"
             else:
-                pnl = "—"
-            lines.append(f"   {NAMES.get(sym, sym)}: {entry:.2f} → *{tgt:.2f}* EGP ({pnl}) {lvl}")
+                cur_str = "—"
+            lines.append(f"📌 *{sym}* — {NAMES.get(sym, sym)}")
+            lines.append(f"   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*\n")
         lines.append("━━━━━━━━━━━━━━━━━━━━━\n")
 
     SIGNAL_EMOJI = {

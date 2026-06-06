@@ -2057,10 +2057,12 @@ def monitor_scores():
             # تنفيذ التحليل
             html, results = build_report(holiday_mode=False)
 
-            # البحث عن stocks وصلت 35+
+            # البحث عن stocks وصلت شروط الشراء (score>=35 AND r1>=18)
             current_qualified = {
                 s for s in STOCKS
-                if results[s].get("ok") and results[s].get("score", 0) >= 35
+                if results[s].get("ok")
+                and results[s].get("score", 0) >= 35
+                and results[s].get("r1", 0) >= 18
             }
 
             # إرسال تنبيهات للـ stocks الجديدة
@@ -2109,10 +2111,12 @@ def daily_scan():
         # الخطوة 1: تحليل الأسهم أولاً
         html, _results = build_report(holiday_mode=False)
 
-        # الخطوة 2: تسجيل صفقات جديدة من الـ qualifying stocks (قبل الإرسال!)
+        # الخطوة 2: تسجيل صفقات جديدة — نفس شروط العرض في الإيميل (score>=35 AND r1>=18)
         qualifying_stocks = {
             s for s in STOCKS
-            if _results[s].get("ok") and _results[s].get("score", 0) >= 35
+            if _results[s].get("ok")
+            and _results[s].get("score", 0) >= 35
+            and _results[s].get("r1", 0) >= 18
         }
         for stock in qualifying_stocks:
             # أعد تحميل البيانات من الملف قبل كل فحص
@@ -2143,10 +2147,12 @@ def daily_scan():
         # الخطوة 1: تحليل الأسهم أولاً
         html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
 
-        # الخطوة 2: تسجيل صفقات جديدة من الـ qualifying stocks (قبل الإرسال!)
+        # الخطوة 2: تسجيل صفقات جديدة — نفس شروط العرض في الإيميل (score>=35 AND r1>=18)
         qualifying_stocks = {
             s for s in STOCKS
-            if _results[s].get("ok") and _results[s].get("score", 0) >= 35
+            if _results[s].get("ok")
+            and _results[s].get("score", 0) >= 35
+            and _results[s].get("r1", 0) >= 18
         }
         for stock in qualifying_stocks:
             # أعد تحميل البيانات من الملف قبل كل فحص
@@ -2212,10 +2218,12 @@ def manual_scan():
     # الخطوة 1: تحليل الأسهم
     html, _results = build_report(holiday_mode=holiday, last_trading=str(last_td) if last_td else None)
 
-    # الخطوة 2: تسجيل صفقات جديدة بأسعار حقيقية
+    # الخطوة 2: تسجيل صفقات جديدة — نفس شروط العرض في الإيميل (score>=35 AND r1>=18)
     qualifying_stocks = {
         s for s in STOCKS
-        if _results[s].get("ok") and _results[s].get("score", 0) >= 35
+        if _results[s].get("ok")
+        and _results[s].get("score", 0) >= 35
+        and _results[s].get("r1", 0) >= 18
     }
     new_positions = []
     for stock in qualifying_stocks:

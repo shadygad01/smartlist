@@ -4,12 +4,16 @@ Backfill open positions from historical data.
 Simulates what the daily scanner would have registered since START_DATE
 by replaying the SMC scoring day-by-day on each stock.
 Registers the FIRST day each stock met: score >= 35 AND r1 >= 18.
+
+Set env var DRY_RUN=true to preview results without saving anything.
 """
 
-import json, sys
+import json, os, sys
 from datetime import datetime, date, timedelta
 import pandas as pd
 import pytz
+
+DRY_RUN = os.getenv("DRY_RUN", "false").lower() == "true"
 
 # ── import scoring logic from main ───────────────────────────────────────────
 sys.path.insert(0, ".")
@@ -127,13 +131,26 @@ def main():
         else:
             print(f"    — No qualifying day found since {START_DATE}")
 
-    print(f"\nRegistering {len(registered)} new positions...")
-    for symbol, (entry_date, entry_price) in registered.items():
-        add_position(symbol, entry_price, entry_date)
-        print(f"  📌 {NAMES.get(symbol, symbol)} ({symbol}) @ {entry_price} EGP on {entry_date[:10]}")
+    print(f"\n{'[DRY RUN] ' if DRY_RUN else ''}Found {len(registered)} position(s) to register:\n")
+    print(f"{'Symbol':<12} {'Entry Date':<14} {'Entry Price':>12}  {'Score':>6}  {'R1':>4}")
+    print("-" * 55)
 
-    final = load_open_positions()
-    print(f"\nDone. open_positions.json now has {len(final)} position(s).")
+    # Re-run to get score/r1 for display
+    for symbol, (entry_date, entry_price) in sorted(registered.items()):
+        entry_day = date.fromisoformat(entry_date[:10])
+        df_full = fetch_history(symbol)
+        _, score, r1 = score_on_day(df_full, entry_day) if not df_full.empty else (0, 0, 0)
+        print(f"  {symbol:<12} {entry_date[:10]:<14} {entry_price:>10.2f} EGP  {score:>5}  {r1:>4}")
+
+    if DRY_RUN:
+        print("\n⚠️  DRY RUN — nothing was saved. Re-run with DRY_RUN=false to apply.")
+    else:
+        print("\nSaving positions...")
+        for symbol, (entry_date, entry_price) in registered.items():
+            add_position(symbol, entry_price, entry_date)
+            print(f"  ✅ Saved: {NAMES.get(symbol, symbol)} ({symbol}) @ {entry_price} EGP")
+        final = load_open_positions()
+        print(f"\nDone. open_positions.json now has {len(final)} position(s).")
 
 
 if __name__ == "__main__":

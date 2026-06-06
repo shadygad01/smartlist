@@ -2,6 +2,15 @@ name: Backfill Historical Positions
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (true = preview only, false = save to file)'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 permissions:
   contents: write
@@ -24,9 +33,12 @@ jobs:
           pip install APScheduler --upgrade
 
       - name: Run backfill
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: python backfill_positions.py
 
       - name: Commit updated positions
+        if: ${{ github.event.inputs.dry_run == 'false' }}
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"

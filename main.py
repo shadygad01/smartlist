@@ -2204,26 +2204,42 @@ def manual_scan():
     مسح يدوي عند الطلب
     """
     print(f"\n🔄 Manual scan at {fmt_cairo()}")
-    
+
     previous_results = load_previous_results()
-    
-    if is_egx_trading_day(today_cairo()):
-        html, _results = build_report(holiday_mode=False)
-        send_email(html, subject_suffix=" — Manual Scan")
-        send_telegram_alerts(_results)
-        save_scan_results(_results)
-        changes = detect_signal_changes(_results, previous_results)
-        if changes:
-            send_change_alert(changes)
-    else:
-        last_td = most_recent_trading_day(today_cairo())
-        html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
-        send_email(html, subject_suffix=f" — Manual Scan (Holiday)")
-        send_telegram_alerts(_results)
-        save_scan_results(_results)
-        changes = detect_signal_changes(_results, previous_results)
-        if changes:
-            send_change_alert(changes)
+    holiday = not is_egx_trading_day(today_cairo())
+    last_td = most_recent_trading_day(today_cairo()) if holiday else None
+
+    # الخطوة 1: تحليل الأسهم
+    html, _results = build_report(holiday_mode=holiday, last_trading=str(last_td) if last_td else None)
+
+    # الخطوة 2: تسجيل صفقات جديدة بأسعار حقيقية
+    qualifying_stocks = {
+        s for s in STOCKS
+        if _results[s].get("ok") and _results[s].get("score", 0) >= 35
+    }
+    new_positions = []
+    for stock in qualifying_stocks:
+        positions = load_open_positions()
+        if stock not in positions:
+            current_price = _results[stock].get("price", 0)
+            if current_price > 0:
+                add_position(stock, current_price, datetime.now(CAIRO).isoformat())
+                new_positions.append(f"{NAMES.get(stock, stock)} @ {current_price}")
+                print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
+
+    # الخطوة 3: إعادة بناء التقرير مع المراكز الجديدة إن وُجدت
+    if new_positions:
+        html, _results = build_report(holiday_mode=holiday, last_trading=str(last_td) if last_td else None)
+
+    # الخطوة 4: الإرسال
+    suffix = " (Holiday)" if holiday else ""
+    send_email(html, subject_suffix=f" — Manual Scan{suffix}")
+    send_telegram_alerts(_results)
+    save_scan_results(_results)
+
+    changes = detect_signal_changes(_results, previous_results)
+    if changes:
+        send_change_alert(changes)
 
 
 # =========================================

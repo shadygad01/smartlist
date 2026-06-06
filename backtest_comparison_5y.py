@@ -84,12 +84,12 @@ def precompute_signals(df, symbol, params):
     scores   = np.minimum((r1_arr + r6_arr).astype(int), 100)
     price_ok = r1_arr >= price_gate
 
-    return scores, price_ok, close
+    return scores, price_ok, close, lo_arr
 
 
 def run_engine_fast(symbol, df, params, dynamic):
     """Streamlined backtest loop using precomputed signals."""
-    scores, price_ok_arr, close = precompute_signals(df, symbol, params)
+    scores, price_ok_arr, close, lo_arr = precompute_signals(df, symbol, params)
 
     threshold   = params["score_threshold"]
     min_dp      = params["min_data_points"]
@@ -128,19 +128,34 @@ def run_engine_fast(symbol, df, params, dynamic):
     for i in range(min_dp, n):
         price = float(close[i])
         date  = dates[i]
+        # Zone 3 = swing low of current 80-bar window
+        zone3 = float(lo_arr[i]) if not np.isnan(lo_arr[i]) else None
 
         # BUY
         if position is None and price_ok_arr[i] and scores[i] >= threshold:
             tgts  = fib_targets(price) if dynamic else [price * 1.12]
             position = dict(entry_date=date, entry_price=price,
                             fib_targets=tgts, current_level=0,
-                            target=tgts[0])
+                            target=tgts[0],
+                            reinforced=False,   # تم التعزيز؟
+                            qty=1)              # عدد الوحدات
 
         if position is None:
             continue
 
+        # ── Zone 3 Reinforcement (مرة واحدة فقط) ────────────────────────────
+        if dynamic and not position["reinforced"] and zone3 is not None:
+            if price <= zone3 * 1.015:  # السعر وصل Zone 3 (±1.5%)
+                # تعزيز: شراء وحدة ثانية
+                avg_entry = (position["entry_price"] + price) / 2
+                position["entry_price"] = avg_entry
+                position["fib_targets"] = fib_targets(avg_entry)
+                position["current_level"] = 0
+                position["target"] = position["fib_targets"][0]
+                position["reinforced"] = True
+                position["qty"] = 2
+
         # Update ratchet
-        old_level = position["current_level"]
         for j, t in enumerate(position["fib_targets"]):
             if price >= t:
                 position["current_level"] = max(position["current_level"], j)
@@ -157,27 +172,22 @@ def run_engine_fast(symbol, df, params, dynamic):
                                exit_date=date, exit_price=exit_p,
                                pnl=pnl, pnl_pct=pnl_pct,
                                days_held=(date - position["entry_date"]).days,
-                               reason=reason, score=scores[i]))
+                               reason=reason, score=scores[i],
+                               reinforced=position["reinforced"]))
 
         # Exit conditions
         if price >= position["target"]:
-            # Price reached target
             if dynamic and macd_crossdown(i):
-                # Weakness at target — exit at current level
                 record(tgts[lvl], "weakness_at_target")
                 position = None
             elif dynamic and lvl < len(tgts) - 1:
-                # No weakness — raise target to next Fibonacci level
                 position["current_level"] = lvl + 1
                 position["target"] = tgts[position["current_level"]]
-                # Position stays open, wait for next target
             else:
-                # Static or no more targets — exit at target
                 record(price, "target_hit")
                 position = None
 
         elif lvl > 0 and dynamic and macd_crossdown(i):
-            # Weakness below target (downtrend protection) — exit at current level
             record(tgts[lvl], "downtrend_protection")
             position = None
 
@@ -191,7 +201,8 @@ def run_engine_fast(symbol, df, params, dynamic):
                            exit_date=dates[-1], exit_price=exit_p,
                            pnl=pnl, pnl_pct=pnl / position["entry_price"] * 100,
                            days_held=(dates[-1] - position["entry_date"]).days,
-                           reason="end_of_period", score=0))
+                           reason="end_of_period", score=0,
+                           reinforced=position["reinforced"]))
 
     return trades
 
@@ -331,6 +342,28 @@ def print_report(s, d, sr, dr):
         ps = sv / s["total_trades"] * 100 if s["total_trades"] else 0
         pd_ = dv / d["total_trades"] * 100 if d["total_trades"] else 0
         print(f"  {lbl:32} {sv:>8} ({ps:5.1f}%)       {dv:>8} ({pd_:5.1f}%)")
+
+    # ── 2b. REINFORCEMENT STATS ──────────────────────────────────────────────
+    if "reinforced" in d["trades_df"].columns:
+        dr_df_all = d["trades_df"]
+        reinforced   = dr_df_all[dr_df_all["reinforced"] == True]
+        unreinforced = dr_df_all[dr_df_all["reinforced"] == False]
+        sec("SECTION 2b — إحصائيات التعزيز (Zone 3)")
+        print(f"\n  إجمالي الصفقات الديناميكية : {len(dr_df_all)}")
+        print(f"  صفقات بتعزيز (Zone 3)       : {len(reinforced)} ({len(reinforced)/len(dr_df_all)*100:.1f}%)")
+        print(f"  صفقات بدون تعزيز            : {len(unreinforced)} ({len(unreinforced)/len(dr_df_all)*100:.1f}%)")
+        if len(reinforced):
+            rw = reinforced[reinforced["pnl"] > 0]
+            rl = reinforced[reinforced["pnl"] <= 0]
+            print(f"\n  أداء الصفقات المعززة:")
+            print(f"    نسبة الفوز   : {len(rw)/len(reinforced)*100:.1f}%")
+            print(f"    متوسط الربح  : {reinforced['pnl_pct'].mean():.2f}%")
+            print(f"    أفضل صفقة    : {reinforced['pnl_pct'].max():.2f}%")
+            print(f"    أسوأ صفقة    : {reinforced['pnl_pct'].min():.2f}%")
+        if len(unreinforced):
+            print(f"\n  أداء الصفقات غير المعززة:")
+            print(f"    نسبة الفوز   : {len(unreinforced[unreinforced['pnl']>0])/len(unreinforced)*100:.1f}%")
+            print(f"    متوسط الربح  : {unreinforced['pnl_pct'].mean():.2f}%")
 
     # ── 3. PER-STOCK ─────────────────────────────────────────────────────────
     sec("SECTION 3 — مقارنة الأسهم سهم × سهم")

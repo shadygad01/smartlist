@@ -2089,11 +2089,10 @@ def daily_scan():
     positions = load_open_positions()
 
     if is_egx_trading_day(today_cairo()):
+        # Step 1: تحليل الأسهم
         html, _results = build_report(holiday_mode=False)
-        send_email(html)
-        send_telegram_alerts(_results)
 
-        # تسجيل صفقات جديدة من الـ qualifying stocks
+        # Step 2: تسجيل صفقات جديدة من الـ qualifying stocks (قبل الإرسال!)
         qualifying_stocks = {
             s for s in STOCKS
             if _results[s].get("ok") and _results[s].get("score", 0) >= 35
@@ -2104,6 +2103,13 @@ def daily_scan():
                 if current_price > 0:
                     add_position(stock, current_price, datetime.now(CAIRO).isoformat())
                     print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
+
+        # Step 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة المسجلة)
+        html, _results = build_report(holiday_mode=False)
+
+        # Step 4: إرسال التقرير والتيليجرام
+        send_email(html)
+        send_telegram_alerts(_results)
 
         # حفظ النتائج الحالية
         save_scan_results(_results)
@@ -2114,11 +2120,11 @@ def daily_scan():
             send_change_alert(changes)
     else:
         last_td = most_recent_trading_day(today_cairo())
-        html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
-        send_email(html, subject_suffix=f" (Holiday — Last Session: {last_td})")
-        send_telegram_alerts(_results)
 
-        # تسجيل صفقات جديدة من الـ qualifying stocks
+        # Step 1: تحليل الأسهم
+        html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
+
+        # Step 2: تسجيل صفقات جديدة من الـ qualifying stocks (قبل الإرسال!)
         qualifying_stocks = {
             s for s in STOCKS
             if _results[s].get("ok") and _results[s].get("score", 0) >= 35
@@ -2129,6 +2135,13 @@ def daily_scan():
                 if current_price > 0:
                     add_position(stock, current_price, datetime.now(CAIRO).isoformat())
                     print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
+
+        # Step 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة المسجلة)
+        html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
+
+        # Step 4: إرسال التقرير والتيليجرام
+        send_email(html, subject_suffix=f" (Holiday — Last Session: {last_td})")
+        send_telegram_alerts(_results)
 
         # حفظ النتائج الحالية
         save_scan_results(_results)

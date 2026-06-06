@@ -447,7 +447,6 @@ class BacktestEngine:
 
             # UPDATE DYNAMIC TARGET (رفع التارجت لكن لا ينزل)
             if position:
-                old_target = position["target"]
                 best_fib_idx = position["current_target_level"]
 
                 for i, fib_target in enumerate(position["fib_targets"]):
@@ -455,94 +454,53 @@ class BacktestEngine:
                         best_fib_idx = max(best_fib_idx, i)
 
                 position["target"] = position["fib_targets"][best_fib_idx]
-
-                # Send notification if target was updated
-                if best_fib_idx > position["current_target_level"] and self.send_notifications:
-                    fib_pct = ((position["target"] - position["entry_price"]) / position["entry_price"]) * 100
-                    send_telegram_notification(
-                        self.symbol,
-                        position["entry_price"],
-                        old_target,
-                        position["target"],
-                        price,
-                        fib_pct
-                    )
-
                 position["current_target_level"] = best_fib_idx
 
                 weakness = self._detect_weakness(close) if self.params.get("dynamic_target") else False
 
-                # EXIT: Target Hit (exit at actual price if it exceeds target)
+                # EXIT: Price reached target
                 if price >= position["target"]:
-                    exit_date = date
-                    exit_price = price
-                    pnl = exit_price - position["entry_price"]
-                    pnl_pct = (pnl / position["entry_price"]) * 100
+                    # Check for weakness at the moment of reaching target
+                    if weakness:
+                        # Weakness detected at target — exit now
+                        exit_date = date
+                        exit_price = price
+                        pnl = exit_price - position["entry_price"]
+                        pnl_pct = (pnl / position["entry_price"]) * 100
 
-                    self.trades.append({
-                        "symbol": self.symbol,
-                        "entry_date": position["entry_date"],
-                        "entry_price": position["entry_price"],
-                        "exit_date": exit_date,
-                        "exit_price": exit_price,
-                        "pnl": pnl,
-                        "pnl_pct": pnl_pct,
-                        "days_held": (exit_date - position["entry_date"]).days,
-                        "reason": "target_hit",
-                        "score": position["score"],
-                    })
+                        self.trades.append({
+                            "symbol": self.symbol,
+                            "entry_date": position["entry_date"],
+                            "entry_price": position["entry_price"],
+                            "exit_date": exit_date,
+                            "exit_price": exit_price,
+                            "pnl": pnl,
+                            "pnl_pct": pnl_pct,
+                            "days_held": (exit_date - position["entry_date"]).days,
+                            "reason": "weakness_at_target",
+                            "score": position["score"],
+                        })
+                        position = None
 
-                    position = None
+                    else:
+                        # No weakness — raise target to next Fibonacci level
+                        if best_fib_idx < len(position["fib_targets"]) - 1:
+                            best_fib_idx += 1
+                            position["target"] = position["fib_targets"][best_fib_idx]
+                            position["current_target_level"] = best_fib_idx
 
-                # EXIT: Downtrend - only when price already cleared at least one Fib level above 12%
-                elif position["current_target_level"] > 0 and price < position["fib_targets"][position["current_target_level"]]:
-                    nearest_target = self._get_nearest_lower_target(
-                        position["entry_price"],
-                        price,
-                        position["fib_targets"]
-                    )
-
-                    exit_date = date
-                    exit_price = nearest_target
-                    pnl = exit_price - position["entry_price"]
-                    pnl_pct = (pnl / position["entry_price"]) * 100
-
-                    self.trades.append({
-                        "symbol": self.symbol,
-                        "entry_date": position["entry_date"],
-                        "entry_price": position["entry_price"],
-                        "exit_date": exit_date,
-                        "exit_price": exit_price,
-                        "pnl": pnl,
-                        "pnl_pct": pnl_pct,
-                        "days_held": (exit_date - position["entry_date"]).days,
-                        "reason": "downtrend_exit",
-                        "score": position["score"],
-                    })
-
-                    position = None
-
-                # EXIT: Weakness at minimum target level
-                elif weakness and position["current_target_level"] == 0:
-                    exit_date = date
-                    exit_price = price
-                    pnl = exit_price - position["entry_price"]
-                    pnl_pct = (pnl / position["entry_price"]) * 100
-
-                    self.trades.append({
-                        "symbol": self.symbol,
-                        "entry_date": position["entry_date"],
-                        "entry_price": position["entry_price"],
-                        "exit_date": exit_date,
-                        "exit_price": exit_price,
-                        "pnl": pnl,
-                        "pnl_pct": pnl_pct,
-                        "days_held": (exit_date - position["entry_date"]).days,
-                        "reason": "weakness_at_min_target",
-                        "score": position["score"],
-                    })
-
-                    position = None
+                            # Send notification if target was raised
+                            if self.send_notifications:
+                                fib_pct = ((position["target"] - position["entry_price"]) / position["entry_price"]) * 100
+                                send_telegram_notification(
+                                    self.symbol,
+                                    position["entry_price"],
+                                    position["fib_targets"][best_fib_idx - 1],
+                                    position["target"],
+                                    price,
+                                    fib_pct
+                                )
+                        # Position stays open, waiting for next target
 
         # إغلاق أي مركز مفتوح
         if position:

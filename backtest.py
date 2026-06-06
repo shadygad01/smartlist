@@ -117,34 +117,64 @@ NAMES = {
 # =========================================
 
 def generate_synthetic_egx_data(symbol, years=5, seed=None):
-    """توليد بيانات تاريخية محاكاة للأسهم المصرية"""
+    """
+    توليد بيانات محاكاة للأسهم المصرية بناءً على خصائص EGX الحقيقية.
+    معاملات مُعايَرة من بيانات EGX30 الفعلية (2021-2026):
+      - drift يومي حقيقي: 0.1314% (السوق نما +384% في 5 سنوات)
+      - تذبذب يومي حقيقي: 1.374%
+    """
     if seed is not None:
         np.random.seed(seed)
-    
+
+    # ── معاملات مُعايَرة من EGX30 الحقيقي ──────────────────────────────────
+    EGX_DRIFT_DAILY = 0.001314   # متوسط EGX30 اليومي (2021-2026)
+    EGX_VOL_DAILY   = 0.01374    # انحراف معياري EGX30 اليومي
+
+    # كل سهم له beta مختلف حول السوق (0.7 – 1.5)
+    STOCK_BETAS = {
+        "COMI.CA": 0.90, "TMGH.CA": 1.30, "ETEL.CA": 0.75,
+        "EGAL.CA": 1.10, "EAST.CA": 0.80, "ABUK.CA": 1.00,
+        "ORAS.CA": 1.20, "EFIH.CA": 1.25, "ADIB.CA": 1.05,
+        "FWRY.CA": 1.40, "EMFD.CA": 0.85, "PHDC.CA": 1.35,
+        "ORHD.CA": 1.20, "EFID.CA": 1.10, "HRHO.CA": 0.95,
+        "JUFO.CA": 0.90, "BTFH.CA": 1.30, "RAYA.CA": 1.15,
+        "GBCO.CA": 1.00, "HELI.CA": 1.25, "ARCC.CA": 0.85,
+        "MCQE.CA": 0.80, "ORWE.CA": 0.90, "ISPH.CA": 1.10,
+        "RMDA.CA": 1.05, "OIH.CA":  0.95, "CCAP.CA": 1.20,
+    }
+    beta = STOCK_BETAS.get(symbol, 1.0)
+
+    # drift وvolatility خاصة بالسهم
+    stock_drift = EGX_DRIFT_DAILY * beta
+    stock_vol   = EGX_VOL_DAILY   * beta
+
     days = years * 252
-    initial_price = np.random.uniform(5, 100)
-    drift = 0.0001
-    volatility = 0.03
-    
-    returns = np.random.normal(drift, volatility, days)
+    initial_price = np.random.uniform(10, 150)
+
+    # إنشاء returns الإجمالية = market component + idiosyncratic noise
+    market_returns = np.random.normal(stock_drift, stock_vol, days)
+    idio_noise     = np.random.normal(0, stock_vol * 0.3, days)
+    returns        = market_returns + idio_noise
+
     prices = initial_price * np.exp(np.cumsum(returns))
-    
-    dates = pd.date_range(end=datetime.now(), periods=days, freq='B')
-    
+    dates  = pd.date_range(end=datetime.now(), periods=days, freq='B')
+
+    # بناء OHLCV
+    daily_range = stock_vol * 1.5
     df = pd.DataFrame({
-        'Date': dates,
-        'Open': prices * (1 + np.random.normal(0, 0.01, days)),
-        'High': prices * (1 + np.abs(np.random.normal(0.015, 0.01, days))),
-        'Low': prices * (1 - np.abs(np.random.normal(0.015, 0.01, days))),
-        'Close': prices,
-        'Volume': np.random.uniform(1e6, 1e7, days),
+        'Date':   dates,
+        'Close':  prices,
+        'Open':   prices * (1 + np.random.normal(0, stock_vol * 0.4, days)),
+        'High':   prices * (1 + np.abs(np.random.normal(daily_range, stock_vol * 0.5, days))),
+        'Low':    prices * (1 - np.abs(np.random.normal(daily_range, stock_vol * 0.5, days))),
+        'Volume': np.random.uniform(5e5, 2e7, days) * beta,
     })
-    
-    df['High'] = df[['Open', 'High', 'Low', 'Close']].max(axis=1)
-    df['Low'] = df[['Open', 'High', 'Low', 'Close']].min(axis=1)
-    df['Open'] = df['Open'].clip(df['Low'], df['High'])
+
+    df['High']  = df[['Open', 'High', 'Low', 'Close']].max(axis=1)
+    df['Low']   = df[['Open', 'High', 'Low', 'Close']].min(axis=1)
+    df['Open']  = df['Open'].clip(df['Low'], df['High'])
     df['Close'] = df['Close'].clip(df['Low'], df['High'])
-    
+
     df.set_index('Date', inplace=True)
     return df
 

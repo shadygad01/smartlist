@@ -1,6 +1,7 @@
 """
 Backtest Comparison: Static 12% Target vs Dynamic Fibonacci Target
 5-Year analysis on all EGX stocks — optimised (precomputed signals)
+With Volatility-Based Dynamic Minimum Target
 """
 
 import pandas as pd
@@ -18,6 +19,45 @@ BASE_PARAMS = {
 }
 
 FIB_LEVELS = [0.236, 0.382, 0.50, 0.618, 1.0, 1.5, 2.0]
+
+
+# ── Volatility-Based Dynamic Minimum Target ────────────────────────────────
+
+def calculate_volatility_based_min_target(df):
+    """احسب min_target ديناميكي بناءً على volatility السهم
+
+    High Vol (> 4%)   → 12% (معايير أسهل، الصعود سريع)
+    Low Vol (< 1%)    → 20% (معايير أصعب، الصعود بطيء)
+    حد أدنى مطلق      → 12% (لا تنزل عن هذا أبداً)
+    """
+    close = df["Close"].values
+    high = df["High"].values
+    low = df["Low"].values
+
+    # ATR (Average True Range)
+    tr = np.maximum(
+        high - low,
+        np.maximum(
+            np.abs(high - np.roll(close, 1)),
+            np.abs(low - np.roll(close, 1))
+        )
+    )
+
+    atr = pd.Series(tr).rolling(14).mean().iloc[-1]
+    current_price = close[-1]
+    volatility = (atr / current_price) * 100 if current_price > 0 else 0
+
+    # احسب min_target حسب volatility
+    if volatility > 4:
+        min_target = 0.12  # High Vol
+    elif volatility < 1:
+        min_target = 0.20  # Low Vol
+    else:
+        # Linear interpolation بين 12% و 20%
+        min_target = 0.12 + (0.08 * (1 - volatility) / 3)
+
+    # الحد الأدنى المطلق هو 12%
+    return max(0.12, min_target), volatility
 
 
 # ── fast vectorised signal pre-compute ──────────────────────────────────────
@@ -292,7 +332,7 @@ def compare_min_targets(years=5):
 def run_comparison(years=5):
     print("\n" + "=" * 110)
     print("  SMARTLIST EGX — BACKTEST COMPARISON REPORT")
-    print(f"  Static 12% Target  vs  Dynamic Fibonacci Target  |  {years} سنوات  |  {len(STOCKS)} سهم")
+    print(f"  Static 12% Target  vs  Dynamic Fibonacci Target (Volatility-Adjusted)  |  {years} سنوات  |  {len(STOCKS)} سهم")
     print("=" * 110)
     print(f"\n  Loading {len(STOCKS)} stocks × {years} years ...\n")
 
@@ -304,8 +344,11 @@ def run_comparison(years=5):
         if df.empty:
             continue
 
-        st = run_engine_fast(symbol, df, BASE_PARAMS, dynamic=False)
-        dt = run_engine_fast(symbol, df, BASE_PARAMS, dynamic=True)
+        # احسب dynamic minimum target بناءً على volatility السهم
+        min_target_pct, volatility = calculate_volatility_based_min_target(df)
+
+        st = run_engine_fast(symbol, df, BASE_PARAMS, dynamic=False, min_target_pct=min_target_pct)
+        dt = run_engine_fast(symbol, df, BASE_PARAMS, dynamic=True, min_target_pct=min_target_pct)
         s_trades.extend(st); d_trades.extend(dt)
 
         def sym_metrics(tlist):

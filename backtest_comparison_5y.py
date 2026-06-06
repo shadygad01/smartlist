@@ -164,12 +164,12 @@ def run_engine_fast(symbol, df, params, dynamic):
             record(price, "target_hit")
             position = None
 
-        elif lvl > 0 and price < tgts[lvl]:
-            record(nearest_lower(ep, price, tgts), "downtrend_exit")
+        elif lvl > 0 and dynamic and macd_crossdown(i):
+            record(tgts[lvl], "downtrend_exit")
             position = None
 
         elif lvl == 0 and dynamic and macd_crossdown(i):
-            record(nearest_lower(ep, price, tgts), "weakness_at_min_target")
+            record(tgts[lvl], "weakness_at_min_target")
             position = None
 
     # Close open position

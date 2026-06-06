@@ -462,14 +462,9 @@ class BacktestEngine:
                 if price >= position["target"]:
                     # Check for weakness at the moment of reaching target
                     if weakness:
-                        # Weakness detected at target — exit at nearest lower Fibonacci
-                        nearest_target = self._get_nearest_lower_target(
-                            position["entry_price"],
-                            price,
-                            position["fib_targets"]
-                        )
+                        # Weakness detected at target — exit at current level reached
                         exit_date = date
-                        exit_price = nearest_target
+                        exit_price = position["fib_targets"][position["current_target_level"]]
                         pnl = exit_price - position["entry_price"]
                         pnl_pct = (pnl / position["entry_price"]) * 100
 
@@ -509,14 +504,9 @@ class BacktestEngine:
 
                 # EXIT: Weakness detected below target (downtrend protection)
                 elif weakness and position["current_target_level"] > 0:
-                    # Exit at nearest lower Fibonacci level
-                    nearest_target = self._get_nearest_lower_target(
-                        position["entry_price"],
-                        price,
-                        position["fib_targets"]
-                    )
+                    # Exit at current level reached
                     exit_date = date
-                    exit_price = nearest_target
+                    exit_price = position["fib_targets"][position["current_target_level"]]
                     pnl = exit_price - position["entry_price"]
                     pnl_pct = (pnl / position["entry_price"]) * 100
 

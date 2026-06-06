@@ -1559,7 +1559,6 @@ def build_report(holiday_mode=False, last_trading=None):
     </td>
     <td align="right" style="padding:14px 16px;">
       <div style="font-family:Arial,sans-serif;font-size:24px;font-weight:bold;color:#222;">{r["price"]} EGP</div>
-      <div style="font-family:Arial,sans-serif;font-size:11px;color:#888;">{r["last_dt"]} · {r.get("price_src","")}</div>
     </td>
   </tr>
 </table>

@@ -167,8 +167,7 @@ def run_engine_fast(symbol, df, params, dynamic, min_target_pct=0.12):
             return True
         return False
 
-    position    = None   # الصفقة الأولى
-    reinforcement = None  # صفقة التعزيز Z3
+    position    = None   # الصفقة المجمعة (الأول + التعزيز)
 
     for i in range(min_dp, n):
         price = float(close[i])
@@ -176,33 +175,37 @@ def run_engine_fast(symbol, df, params, dynamic, min_target_pct=0.12):
         zone3 = float(lo_arr[i]) if not np.isnan(lo_arr[i]) else None
 
         # ── BUY: الدخول الأول ────────────────────────────────────────────────
-        if position is None and reinforcement is None:
+        if position is None:
             if price_ok_arr[i] and scores[i] >= threshold:
                 position = make_position(date, price, scores[i])
+                position["qty"] = 1  # عدد الوحدات
 
-        if position is None and reinforcement is None:
+        if position is None:
             continue
 
-        # ── Zone 3 Reinforcement (مرة واحدة، مستقلة) ────────────────────────
-        if dynamic and position is not None and reinforcement is None and zone3 is not None:
+        # ── Zone 3 Reinforcement: دمج مع الشراء الأول ────────────────────────
+        if dynamic and position is not None and position["qty"] == 1 and zone3 is not None:
             if price <= zone3 * 1.015:
-                reinforcement = make_position(date, price, scores[i], is_reinforcement=True)
+                # دمج التعزيز مع الصفقة الأول
+                old_entry = position["entry_price"]
+                new_entry = price
+                avg_entry = (old_entry + new_entry) / 2
 
-        # ── Update & Exit: الصفقة الأولى ─────────────────────────────────────
+                position["entry_price"] = avg_entry
+                position["fib_targets"] = fib_targets(avg_entry)
+                position["current_level"] = 0
+                position["target"] = position["fib_targets"][0]
+                position["qty"] = 2  # اثنتين الآن
+
+        # ── Update & Exit: الصفقة المجمعة ───────────────────────────────────
         if position is not None:
             if update_and_check_exit(position, price, date, i):
                 position = None
 
-        # ── Update & Exit: صفقة التعزيز ──────────────────────────────────────
-        if reinforcement is not None:
-            if update_and_check_exit(reinforcement, price, date, i):
-                reinforcement = None
-
     # ── إغلاق أي صفقة مفتوحة في نهاية الفترة ────────────────────────────────
-    for pos in [position, reinforcement]:
-        if pos is not None:
-            exit_p = float(close[-1])
-            exit_position(pos, exit_p, "end_of_period", dates[-1])
+    if position is not None:
+        exit_p = float(close[-1])
+        exit_position(position, exit_p, "end_of_period", dates[-1])
 
     return trades
 

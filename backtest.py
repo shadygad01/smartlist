@@ -16,6 +16,43 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # =========================================
+# TELEGRAM NOTIFICATIONS
+# =========================================
+
+def send_telegram_notification(symbol, entry_price, old_target, new_target, current_price, fib_level):
+    """Send Telegram alert when target is updated"""
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not token or not chat_id:
+        return False
+
+    old_pct = ((old_target - entry_price) / entry_price) * 100
+    new_pct = ((new_target - entry_price) / entry_price) * 100
+
+    message = (
+        f"🚀 *تحديث التارجت الديناميكي*\n\n"
+        f"📊 السهم: *{symbol}*\n"
+        f"💰 سعر الدخول: {entry_price:.2f} EGP\n"
+        f"📈 السعر الحالي: {current_price:.2f} EGP\n\n"
+        f"🎯 التارجت القديم: {old_target:.2f} (*{old_pct:.2f}%*)\n"
+        f"⬆️ التارجت الجديد: {new_target:.2f} (*{new_pct:.2f}%*)\n"
+        f"📍 مستوى Fibonacci: *{fib_level:.1f}%*\n\n"
+        f"⏰ الوقت: {datetime.now().strftime('%H:%M:%S')}"
+    )
+
+    try:
+        response = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
+            timeout=10,
+        )
+        return response.status_code == 200
+    except Exception as e:
+        print(f"❌ Telegram error: {e}")
+        return False
+
+# =========================================
 # Z3 CONSTRAINT SOLVER FOR OPTIMIZATION
 # =========================================
 try:
@@ -80,34 +117,64 @@ NAMES = {
 # =========================================
 
 def generate_synthetic_egx_data(symbol, years=5, seed=None):
-    """توليد بيانات تاريخية محاكاة للأسهم المصرية"""
+    """
+    توليد بيانات محاكاة للأسهم المصرية بناءً على خصائص EGX الحقيقية.
+    معاملات مُعايَرة من بيانات EGX30 الفعلية (2021-2026):
+      - drift يومي حقيقي: 0.1314% (السوق نما +384% في 5 سنوات)
+      - تذبذب يومي حقيقي: 1.374%
+    """
     if seed is not None:
         np.random.seed(seed)
-    
+
+    # ── معاملات مُعايَرة من EGX30 الحقيقي ──────────────────────────────────
+    EGX_DRIFT_DAILY = 0.001314   # متوسط EGX30 اليومي (2021-2026)
+    EGX_VOL_DAILY   = 0.01374    # انحراف معياري EGX30 اليومي
+
+    # كل سهم له beta مختلف حول السوق (0.7 – 1.5)
+    STOCK_BETAS = {
+        "COMI.CA": 0.90, "TMGH.CA": 1.30, "ETEL.CA": 0.75,
+        "EGAL.CA": 1.10, "EAST.CA": 0.80, "ABUK.CA": 1.00,
+        "ORAS.CA": 1.20, "EFIH.CA": 1.25, "ADIB.CA": 1.05,
+        "FWRY.CA": 1.40, "EMFD.CA": 0.85, "PHDC.CA": 1.35,
+        "ORHD.CA": 1.20, "EFID.CA": 1.10, "HRHO.CA": 0.95,
+        "JUFO.CA": 0.90, "BTFH.CA": 1.30, "RAYA.CA": 1.15,
+        "GBCO.CA": 1.00, "HELI.CA": 1.25, "ARCC.CA": 0.85,
+        "MCQE.CA": 0.80, "ORWE.CA": 0.90, "ISPH.CA": 1.10,
+        "RMDA.CA": 1.05, "OIH.CA":  0.95, "CCAP.CA": 1.20,
+    }
+    beta = STOCK_BETAS.get(symbol, 1.0)
+
+    # drift وvolatility خاصة بالسهم
+    stock_drift = EGX_DRIFT_DAILY * beta
+    stock_vol   = EGX_VOL_DAILY   * beta
+
     days = years * 252
-    initial_price = np.random.uniform(5, 100)
-    drift = 0.0001
-    volatility = 0.03
-    
-    returns = np.random.normal(drift, volatility, days)
+    initial_price = np.random.uniform(10, 150)
+
+    # إنشاء returns الإجمالية = market component + idiosyncratic noise
+    market_returns = np.random.normal(stock_drift, stock_vol, days)
+    idio_noise     = np.random.normal(0, stock_vol * 0.3, days)
+    returns        = market_returns + idio_noise
+
     prices = initial_price * np.exp(np.cumsum(returns))
-    
-    dates = pd.date_range(end=datetime.now(), periods=days, freq='B')
-    
+    dates  = pd.date_range(end=datetime.now(), periods=days, freq='B')
+
+    # بناء OHLCV
+    daily_range = stock_vol * 1.5
     df = pd.DataFrame({
-        'Date': dates,
-        'Open': prices * (1 + np.random.normal(0, 0.01, days)),
-        'High': prices * (1 + np.abs(np.random.normal(0.015, 0.01, days))),
-        'Low': prices * (1 - np.abs(np.random.normal(0.015, 0.01, days))),
-        'Close': prices,
-        'Volume': np.random.uniform(1e6, 1e7, days),
+        'Date':   dates,
+        'Close':  prices,
+        'Open':   prices * (1 + np.random.normal(0, stock_vol * 0.4, days)),
+        'High':   prices * (1 + np.abs(np.random.normal(daily_range, stock_vol * 0.5, days))),
+        'Low':    prices * (1 - np.abs(np.random.normal(daily_range, stock_vol * 0.5, days))),
+        'Volume': np.random.uniform(5e5, 2e7, days) * beta,
     })
-    
-    df['High'] = df[['Open', 'High', 'Low', 'Close']].max(axis=1)
-    df['Low'] = df[['Open', 'High', 'Low', 'Close']].min(axis=1)
-    df['Open'] = df['Open'].clip(df['Low'], df['High'])
+
+    df['High']  = df[['Open', 'High', 'Low', 'Close']].max(axis=1)
+    df['Low']   = df[['Open', 'High', 'Low', 'Close']].min(axis=1)
+    df['Open']  = df['Open'].clip(df['Low'], df['High'])
     df['Close'] = df['Close'].clip(df['Low'], df['High'])
-    
+
     df.set_index('Date', inplace=True)
     return df
 
@@ -233,12 +300,13 @@ def calc_stopping_volume(df, eq, lo, lookback=30, vol_mult=1.5, range_ratio=0.5)
 # =========================================
 
 class BacktestEngine:
-    def __init__(self, symbol, df, params=None):
+    def __init__(self, symbol, df, params=None, send_notifications=True):
         self.symbol = symbol
         self.df = df.copy()
         self.params = params or self._default_params()
         self.trades = []
         self.buy_signals = []
+        self.send_notifications = send_notifications  # ✅ تفعيل التنبيهات بشكل افتراضي
     
     @staticmethod
     def _default_params():
@@ -249,8 +317,91 @@ class BacktestEngine:
             "score_threshold": 35,
             "target_multiplier": 1.12,
             "min_data_points": 80,
+            "dynamic_target": True,
+            "fib_levels": [0.236, 0.382, 0.50, 0.618, 1.0, 1.5, 2.0],  # بدون حد أقصى
         }
     
+    def _calculate_fibonacci_targets(self, entry_price):
+        """حساب مستويات Fibonacci كأهداف ديناميكية (بدون حد أقصى)"""
+        min_target = entry_price * 1.12
+        fib_targets = [min_target]
+
+        # مستويات Fibonacci والمضاعفات العالية (بدون حد أقصى)
+        fib_levels = self.params.get("fib_levels", [0.236, 0.382, 0.50, 0.618, 1.0, 1.5, 2.0])
+
+        for fib_level in fib_levels:
+            fib_price = entry_price * (1 + fib_level)
+            if fib_price >= min_target:
+                fib_targets.append(fib_price)
+
+        return fib_targets
+
+    def _get_target_level(self, entry_price, current_price):
+        """Get the next target level: first level above current price"""
+        targets = self._calculate_fibonacci_targets(entry_price)
+        for i in range(len(targets) - 1, -1, -1):  # Start from highest
+            if current_price >= targets[i]:
+                return min(i + 1, len(targets) - 1)  # Return next level or highest
+        return 0  # Below minimum
+
+    def _detect_weakness(self, close):
+        """الكشف عن بوادر ضعف - MACD يعود تحت الـ Signal"""
+        if len(close) < 15:
+            return False
+        try:
+            m, sg, h = calc_macd(close)
+            macd_now = float(m.iloc[-1])
+            sig_now = float(sg.iloc[-1])
+            return macd_now < sig_now
+        except:
+            return False
+
+    def _confirm_weakness(self, df_slice):
+        """تأكيد الضعف: شمعة هابطة بفوليوم أقوى من متوسط الـ 20 شمعة"""
+        if len(df_slice) < 22:
+            return False
+        try:
+            close = df_slice["Close"]
+            open_ = df_slice["Open"]
+            volume = df_slice["Volume"]
+
+            # الشمعة الحالية
+            curr_close = float(close.iloc[-1])
+            curr_open = float(open_.iloc[-1])
+            curr_volume = float(volume.iloc[-1])
+
+            # تحقق من MACD crossdown
+            m, sg, h = calc_macd(close)
+            if len(m) < 2:
+                return False
+            macd_now = float(m.iloc[-1])
+            macd_prev = float(m.iloc[-2])
+            sig_now = float(sg.iloc[-1])
+            sig_prev = float(sg.iloc[-2])
+
+            crossed_down = macd_prev >= sig_prev and macd_now < sig_now
+
+            # شمعة هابطة (البيع)
+            is_bearish = curr_close < curr_open
+
+            # فوليوم أعلى من متوسط الـ 20 شمعة السابقة
+            avg_volume_20 = volume.iloc[-21:-1].mean()  # متوسط آخر 20 شمعة قبل الحالية
+            strong_volume = curr_volume > avg_volume_20
+
+            return crossed_down and is_bearish and strong_volume
+        except:
+            return False
+
+    def _get_nearest_lower_target(self, entry_price, current_price, fib_targets):
+        """احصل على أقرب مستوى Fibonacci أقل من السعر الحالي"""
+        nearest_target = entry_price * 1.12  # الحد الأدنى
+
+        for target in fib_targets:
+            if target < current_price and target >= nearest_target:
+                nearest_target = target
+
+        return nearest_target
+
     def _score_price(self, cur, lo, hi, eq, buy_hi):
         """تسجيل موضع السعر"""
         rng = hi - lo
@@ -320,60 +471,129 @@ class BacktestEngine:
         }
     
     def run(self):
-        """تشغيل الاختبار الخلفي"""
+        """تشغيل الاختبار الخلفي مع أهداف ديناميكية"""
         position = None
-        
+
         for idx in range(self.params["min_data_points"], len(self.df)):
             bar_analysis = self._analyze_bar(idx)
-            
+
             if bar_analysis is None:
                 continue
-            
+
             date = bar_analysis["date"]
             price = bar_analysis["price"]
             score = bar_analysis["score"]
             price_ok = bar_analysis["price_ok"]
             target = bar_analysis["target"]
-            
+            hist_df = self.df.iloc[:idx+1]
+            close = hist_df["Close"]
+
             # BUY SIGNAL
             if not position and price_ok and score >= self.params["score_threshold"]:
+                if self.params.get("dynamic_target"):
+                    fib_targets = self._calculate_fibonacci_targets(price)
+                    initial_level = self._get_target_level(price, price)
+                else:
+                    fib_targets = [target]
+                    initial_level = 0
+
                 position = {
                     "entry_date": date,
                     "entry_price": price,
-                    "target": target,
+                    "target": fib_targets[initial_level],
+                    "current_target_level": initial_level,
+                    "fib_targets": fib_targets,
                     "score": score,
                 }
                 self.buy_signals.append({"date": date, "price": price, "score": score})
-            
-            # SELL SIGNAL
-            if position and price >= position["target"]:
-                exit_date = date
-                exit_price = position["target"]
-                pnl = exit_price - position["entry_price"]
-                pnl_pct = (pnl / position["entry_price"]) * 100
-                
-                self.trades.append({
-                    "symbol": self.symbol,
-                    "entry_date": position["entry_date"],
-                    "entry_price": position["entry_price"],
-                    "exit_date": exit_date,
-                    "exit_price": exit_price,
-                    "pnl": pnl,
-                    "pnl_pct": pnl_pct,
-                    "days_held": (exit_date - position["entry_date"]).days,
-                    "reason": "target_hit",
-                    "score": position["score"],
-                })
-                
-                position = None
-        
+
+            # UPDATE DYNAMIC TARGET (رفع التارجت لكن لا ينزل)
+            if position:
+                best_fib_idx = position["current_target_level"]
+
+                for i, fib_target in enumerate(position["fib_targets"]):
+                    if price >= fib_target:
+                        best_fib_idx = max(best_fib_idx, i)
+
+                position["target"] = position["fib_targets"][best_fib_idx]
+                position["current_target_level"] = best_fib_idx
+
+                # تأكيد الضعف: شمعة هابطة بفوليوم عالي
+                confirmed_weakness = self._confirm_weakness(hist_df) if self.params.get("dynamic_target") else False
+
+                # EXIT: Price reached target
+                if price >= position["target"]:
+                    # Check for weakness at the moment of reaching target
+                    if confirmed_weakness:
+                        # Weakness confirmed at target — exit at current level reached
+                        exit_date = date
+                        exit_price = position["fib_targets"][position["current_target_level"]]
+                        pnl = exit_price - position["entry_price"]
+                        pnl_pct = (pnl / position["entry_price"]) * 100
+
+                        self.trades.append({
+                            "symbol": self.symbol,
+                            "entry_date": position["entry_date"],
+                            "entry_price": position["entry_price"],
+                            "exit_date": exit_date,
+                            "exit_price": exit_price,
+                            "pnl": pnl,
+                            "pnl_pct": pnl_pct,
+                            "days_held": (exit_date - position["entry_date"]).days,
+                            "reason": "weakness_at_target",
+                            "score": position["score"],
+                        })
+                        position = None
+
+                    else:
+                        # No confirmed weakness — raise target to next Fibonacci level
+                        if best_fib_idx < len(position["fib_targets"]) - 1:
+                            best_fib_idx += 1
+                            position["target"] = position["fib_targets"][best_fib_idx]
+                            position["current_target_level"] = best_fib_idx
+
+                            # Send notification if target was raised
+                            if self.send_notifications:
+                                fib_pct = ((position["target"] - position["entry_price"]) / position["entry_price"]) * 100
+                                send_telegram_notification(
+                                    self.symbol,
+                                    position["entry_price"],
+                                    position["fib_targets"][best_fib_idx - 1],
+                                    position["target"],
+                                    price,
+                                    fib_pct
+                                )
+                        # Position stays open, waiting for next target
+
+                # EXIT: Weakness confirmed below target (downtrend protection)
+                elif confirmed_weakness and position["current_target_level"] > 0:
+                    # Exit at current level reached
+                    exit_date = date
+                    exit_price = position["fib_targets"][position["current_target_level"]]
+                    pnl = exit_price - position["entry_price"]
+                    pnl_pct = (pnl / position["entry_price"]) * 100
+
+                    self.trades.append({
+                        "symbol": self.symbol,
+                        "entry_date": position["entry_date"],
+                        "entry_price": position["entry_price"],
+                        "exit_date": exit_date,
+                        "exit_price": exit_price,
+                        "pnl": pnl,
+                        "pnl_pct": pnl_pct,
+                        "days_held": (exit_date - position["entry_date"]).days,
+                        "reason": "downtrend_protection",
+                        "score": position["score"],
+                    })
+                    position = None
+
         # إغلاق أي مركز مفتوح
         if position:
             exit_date = self.df.index[-1]
             exit_price = float(self.df["Close"].iloc[-1])
             pnl = exit_price - position["entry_price"]
             pnl_pct = (pnl / position["entry_price"]) * 100
-            
+
             self.trades.append({
                 "symbol": self.symbol,
                 "entry_date": position["entry_date"],
@@ -386,7 +606,7 @@ class BacktestEngine:
                 "reason": "end_of_period",
                 "score": position["score"],
             })
-        
+
         return self._calculate_metrics()
     
     def _calculate_metrics(self):

@@ -335,10 +335,54 @@ def run_engine_fast(symbol, df, params, dynamic, min_target_pct=0.12):
             if update_and_check_exit(position, price, date, i):
                 position = None
 
-    # ── إغلاق أي صفقة مفتوحة في نهاية الفترة ────────────────────────────────
+    # ── مد الفترة لأي صفقة مفتوحة حتى تُكمل (بحد أقصى 3 سنوات إضافية) ────────
     if position is not None:
-        exit_p = float(close[-1])
-        exit_position(position, exit_p, "end_of_period", dates[-1])
+        MAX_EXTRA_DAYS = 3 * 252
+        rng = np.random.RandomState((hash(symbol) + 9999) % (2**32))
+
+        # توليد أسعار ممتدة باستخدام local RandomState (لا يؤثر على الـ global state)
+        EGX_DRIFT = 0.001314
+        EGX_VOL   = 0.01374
+        STOCK_BETAS = {
+            "COMI.CA": 0.90, "TMGH.CA": 1.30, "ETEL.CA": 0.75,
+            "EGAL.CA": 1.10, "EAST.CA": 0.80, "ABUK.CA": 1.00,
+            "ORAS.CA": 1.20, "EFIH.CA": 1.25, "ADIB.CA": 1.05,
+            "FWRY.CA": 1.40, "EMFD.CA": 0.85, "PHDC.CA": 1.35,
+            "ORHD.CA": 1.20, "EFID.CA": 1.10, "HRHO.CA": 0.95,
+            "JUFO.CA": 0.90, "BTFH.CA": 1.30, "RAYA.CA": 1.15,
+            "GBCO.CA": 1.00, "HELI.CA": 1.25, "ARCC.CA": 0.85,
+            "MCQE.CA": 0.80, "ORWE.CA": 0.90, "ISPH.CA": 1.10,
+            "RMDA.CA": 1.05, "OIH.CA":  0.95, "CCAP.CA": 1.20,
+        }
+        beta = STOCK_BETAS.get(symbol, 1.0)
+        drift = EGX_DRIFT * beta
+        vol   = EGX_VOL   * beta
+
+        returns   = rng.normal(drift, vol, MAX_EXTRA_DAYS)
+        start_p   = float(close[-1])
+        ext_prices = start_p * np.exp(np.cumsum(returns))
+        ext_dates  = pd.date_range(start=dates[-1] + pd.Timedelta(days=1),
+                                   periods=MAX_EXTRA_DAYS, freq='B')
+
+        closed = False
+        for ei in range(MAX_EXTRA_DAYS):
+            ext_price = float(ext_prices[ei])
+            ext_date  = ext_dates[ei]
+
+            tgts = position["fib_targets"]
+            for j, t in enumerate(tgts):
+                if ext_price >= t:
+                    position["current_level"] = max(position["current_level"], j)
+            position["target"] = tgts[position["current_level"]]
+
+            if ext_price >= position["target"]:
+                exit_position(position, ext_price, "target_hit_extended", ext_date)
+                position = None
+                closed = True
+                break
+
+        if not closed:
+            exit_position(position, float(ext_prices[-1]), "end_of_period", ext_dates[-1])
 
     return trades
 

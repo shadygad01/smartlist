@@ -87,7 +87,7 @@ NAMES = {
     "ARCC.CA": "Arabian Cement Company",
     "MCQE.CA": "Misr Cement (Qena)",
     "ORWE.CA": "Oriental Weavers",
-    "ISPH.CA": "Integrated Diagnostics Holdings",
+    "ISPH.CA": "Ibnsina Pharma",
     "RMDA.CA": "Rameda Pharmaceutical",
     "OIH.CA":  "Orascom Investment Holding",
     "CCAP.CA": "Qalaa Holdings",

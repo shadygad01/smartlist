@@ -125,84 +125,83 @@ def run_engine_fast(symbol, df, params, dynamic):
         except Exception:
             return False
 
+    def make_position(entry_date, entry_price, score, is_reinforcement=False):
+        tgts = fib_targets(entry_price) if dynamic else [entry_price * 1.12]
+        return dict(entry_date=entry_date, entry_price=entry_price,
+                    fib_targets=tgts, current_level=0, target=tgts[0],
+                    score=score, is_reinforcement=is_reinforcement)
+
+    def exit_position(pos, exit_p, reason, date):
+        ep  = pos["entry_price"]
+        pnl = exit_p - ep
+        trades.append(dict(symbol=symbol,
+                           entry_date=pos["entry_date"], entry_price=ep,
+                           exit_date=date, exit_price=exit_p,
+                           pnl=pnl, pnl_pct=pnl / ep * 100,
+                           days_held=(date - pos["entry_date"]).days,
+                           reason=reason, score=pos["score"],
+                           reinforced=pos["is_reinforcement"]))
+
+    def update_and_check_exit(pos, price, date, i):
+        """Update ratchet and check exit conditions. Returns True if position closed."""
+        tgts = pos["fib_targets"]
+        for j, t in enumerate(tgts):
+            if price >= t:
+                pos["current_level"] = max(pos["current_level"], j)
+        pos["target"] = tgts[pos["current_level"]]
+        lvl = pos["current_level"]
+
+        if price >= pos["target"]:
+            if dynamic and macd_crossdown(i):
+                exit_position(pos, tgts[lvl], "weakness_at_target", date)
+                return True
+            elif dynamic and lvl < len(tgts) - 1:
+                pos["current_level"] = lvl + 1
+                pos["target"] = tgts[pos["current_level"]]
+            else:
+                exit_position(pos, price, "target_hit", date)
+                return True
+        elif lvl > 0 and dynamic and macd_crossdown(i):
+            exit_position(pos, tgts[lvl], "downtrend_protection", date)
+            return True
+        return False
+
+    position    = None   # الصفقة الأولى
+    reinforcement = None  # صفقة التعزيز Z3
+
     for i in range(min_dp, n):
         price = float(close[i])
         date  = dates[i]
-        # Zone 3 = swing low of current 80-bar window
         zone3 = float(lo_arr[i]) if not np.isnan(lo_arr[i]) else None
 
-        # BUY
-        if position is None and price_ok_arr[i] and scores[i] >= threshold:
-            tgts  = fib_targets(price) if dynamic else [price * 1.12]
-            position = dict(entry_date=date, entry_price=price,
-                            fib_targets=tgts, current_level=0,
-                            target=tgts[0],
-                            reinforced=False,   # تم التعزيز؟
-                            qty=1)              # عدد الوحدات
+        # ── BUY: الدخول الأول ────────────────────────────────────────────────
+        if position is None and reinforcement is None:
+            if price_ok_arr[i] and scores[i] >= threshold:
+                position = make_position(date, price, scores[i])
 
-        if position is None:
+        if position is None and reinforcement is None:
             continue
 
-        # ── Zone 3 Reinforcement (مرة واحدة فقط) ────────────────────────────
-        if dynamic and not position["reinforced"] and zone3 is not None:
-            if price <= zone3 * 1.015:  # السعر وصل Zone 3 (±1.5%)
-                # تعزيز: شراء وحدة ثانية
-                avg_entry = (position["entry_price"] + price) / 2
-                position["entry_price"] = avg_entry
-                position["fib_targets"] = fib_targets(avg_entry)
-                position["current_level"] = 0
-                position["target"] = position["fib_targets"][0]
-                position["reinforced"] = True
-                position["qty"] = 2
+        # ── Zone 3 Reinforcement (مرة واحدة، مستقلة) ────────────────────────
+        if dynamic and position is not None and reinforcement is None and zone3 is not None:
+            if price <= zone3 * 1.015:
+                reinforcement = make_position(date, price, scores[i], is_reinforcement=True)
 
-        # Update ratchet
-        for j, t in enumerate(position["fib_targets"]):
-            if price >= t:
-                position["current_level"] = max(position["current_level"], j)
-        position["target"] = position["fib_targets"][position["current_level"]]
-        ep   = position["entry_price"]
-        tgts = position["fib_targets"]
-        lvl  = position["current_level"]
-
-        def record(exit_p, reason):
-            pnl     = exit_p - ep
-            pnl_pct = pnl / ep * 100
-            trades.append(dict(symbol=symbol,
-                               entry_date=position["entry_date"], entry_price=ep,
-                               exit_date=date, exit_price=exit_p,
-                               pnl=pnl, pnl_pct=pnl_pct,
-                               days_held=(date - position["entry_date"]).days,
-                               reason=reason, score=scores[i],
-                               reinforced=position["reinforced"]))
-
-        # Exit conditions
-        if price >= position["target"]:
-            if dynamic and macd_crossdown(i):
-                record(tgts[lvl], "weakness_at_target")
-                position = None
-            elif dynamic and lvl < len(tgts) - 1:
-                position["current_level"] = lvl + 1
-                position["target"] = tgts[position["current_level"]]
-            else:
-                record(price, "target_hit")
+        # ── Update & Exit: الصفقة الأولى ─────────────────────────────────────
+        if position is not None:
+            if update_and_check_exit(position, price, date, i):
                 position = None
 
-        elif lvl > 0 and dynamic and macd_crossdown(i):
-            record(tgts[lvl], "downtrend_protection")
-            position = None
+        # ── Update & Exit: صفقة التعزيز ──────────────────────────────────────
+        if reinforcement is not None:
+            if update_and_check_exit(reinforcement, price, date, i):
+                reinforcement = None
 
-    # Close open position
-    if position:
-        exit_p  = float(close[-1])
-        pnl     = exit_p - position["entry_price"]
-        trades.append(dict(symbol=symbol,
-                           entry_date=position["entry_date"],
-                           entry_price=position["entry_price"],
-                           exit_date=dates[-1], exit_price=exit_p,
-                           pnl=pnl, pnl_pct=pnl / position["entry_price"] * 100,
-                           days_held=(dates[-1] - position["entry_date"]).days,
-                           reason="end_of_period", score=0,
-                           reinforced=position["reinforced"]))
+    # ── إغلاق أي صفقة مفتوحة في نهاية الفترة ────────────────────────────────
+    for pos in [position, reinforcement]:
+        if pos is not None:
+            exit_p = float(close[-1])
+            exit_position(pos, exit_p, "end_of_period", dates[-1])
 
     return trades
 

@@ -462,9 +462,14 @@ class BacktestEngine:
                 if price >= position["target"]:
                     # Check for weakness at the moment of reaching target
                     if weakness:
-                        # Weakness detected at target — exit now
+                        # Weakness detected at target — exit at nearest lower Fibonacci
+                        nearest_target = self._get_nearest_lower_target(
+                            position["entry_price"],
+                            price,
+                            position["fib_targets"]
+                        )
                         exit_date = date
-                        exit_price = price
+                        exit_price = nearest_target
                         pnl = exit_price - position["entry_price"]
                         pnl_pct = (pnl / position["entry_price"]) * 100
 
@@ -501,6 +506,33 @@ class BacktestEngine:
                                     fib_pct
                                 )
                         # Position stays open, waiting for next target
+
+                # EXIT: Weakness detected below target (downtrend protection)
+                elif weakness and position["current_target_level"] > 0:
+                    # Exit at nearest lower Fibonacci level
+                    nearest_target = self._get_nearest_lower_target(
+                        position["entry_price"],
+                        price,
+                        position["fib_targets"]
+                    )
+                    exit_date = date
+                    exit_price = nearest_target
+                    pnl = exit_price - position["entry_price"]
+                    pnl_pct = (pnl / position["entry_price"]) * 100
+
+                    self.trades.append({
+                        "symbol": self.symbol,
+                        "entry_date": position["entry_date"],
+                        "entry_price": position["entry_price"],
+                        "exit_date": exit_date,
+                        "exit_price": exit_price,
+                        "pnl": pnl,
+                        "pnl_pct": pnl_pct,
+                        "days_held": (exit_date - position["entry_date"]).days,
+                        "reason": "downtrend_protection",
+                        "score": position["score"],
+                    })
+                    position = None
 
         # إغلاق أي مركز مفتوح
         if position:

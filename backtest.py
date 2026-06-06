@@ -330,6 +330,16 @@ class BacktestEngine:
         except:
             return False
 
+    def _get_nearest_lower_target(self, entry_price, current_price, fib_targets):
+        """احصل على أقرب مستوى Fibonacci أقل من السعر الحالي"""
+        nearest_target = entry_price * 1.12  # الحد الأدنى
+
+        for target in fib_targets:
+            if target < current_price and target >= nearest_target:
+                nearest_target = target
+
+        return nearest_target
+
     def _score_price(self, cur, lo, hi, eq, buy_hi):
         """تسجيل موضع السعر"""
         rng = hi - lo
@@ -484,8 +494,36 @@ class BacktestEngine:
 
                     position = None
 
-                # EXIT: Weakness Signs (ضعف وإشارة ارتداد)
-                elif weakness and price < position["target"] and position["target"] > position["entry_price"] * 1.12:
+                # EXIT: Downtrend - Exit at nearest lower Fibonacci level (الهبوط - الخروج عند أقرب مستوى)
+                elif price < position["target"] and position["target"] > position["entry_price"] * 1.12:
+                    nearest_target = self._get_nearest_lower_target(
+                        position["entry_price"],
+                        price,
+                        position["fib_targets"]
+                    )
+
+                    exit_date = date
+                    exit_price = nearest_target  # Exit at nearest lower Fibonacci level
+                    pnl = exit_price - position["entry_price"]
+                    pnl_pct = (pnl / position["entry_price"]) * 100
+
+                    self.trades.append({
+                        "symbol": self.symbol,
+                        "entry_date": position["entry_date"],
+                        "entry_price": position["entry_price"],
+                        "exit_date": exit_date,
+                        "exit_price": exit_price,
+                        "pnl": pnl,
+                        "pnl_pct": pnl_pct,
+                        "days_held": (exit_date - position["entry_date"]).days,
+                        "reason": "downtrend_exit",
+                        "score": position["score"],
+                    })
+
+                    position = None
+
+                # EXIT: Weakness Signs (ضعف وإشارة ارتداد) - Optional
+                elif weakness and price < position["target"] and position["target"] == position["entry_price"] * 1.12:
                     exit_date = date
                     exit_price = price
                     pnl = exit_price - position["entry_price"]
@@ -500,7 +538,7 @@ class BacktestEngine:
                         "pnl": pnl,
                         "pnl_pct": pnl_pct,
                         "days_held": (exit_date - position["entry_date"]).days,
-                        "reason": "weakness_detected",
+                        "reason": "weakness_at_min_target",
                         "score": position["score"],
                     })
 

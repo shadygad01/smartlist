@@ -1435,9 +1435,6 @@ def build_report(holiday_mode=False, last_trading=None):
         for sym, p in open_pos_list:
             entry   = p["entry_price"]
             dyn_tgt = p["target"]
-            lvl     = p.get("current_level", 0)
-            fib_lbl = FIB_LABELS.get(lvl, f"Fib {lvl}")
-            # حاول الحصول على السعر من النتائج الحالية، وإلا استخدم current_price المحفوظ
             if sym in results and results[sym].get("ok"):
                 cur_price = results[sym]["price"]
             elif "current_price" in p:
@@ -1447,25 +1444,24 @@ def build_report(holiday_mode=False, last_trading=None):
             pnl_pct = ((float(cur_price) - entry) / entry * 100) if cur_price != "—" else None
             pnl_str = (f'+{pnl_pct:.1f}%' if pnl_pct and pnl_pct >= 0 else f'{pnl_pct:.1f}%') if pnl_pct is not None else "—"
             pnl_col = "#155724" if (pnl_pct or 0) >= 0 else "#721c24"
+            entry_date = p.get("entry_date", "")[:10]
             open_pos_rows += f"""
 <tr style="border-bottom:1px solid #e8f0f8;">
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#1C4587;">{NAMES.get(sym, sym)}<br><span style="font-size:10px;color:#999;">{sym}</span></td>
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;">{entry:.2f} EGP</td>
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;color:{pnl_col};font-weight:bold;">{cur_price} EGP &nbsp;<span style="font-size:11px;">({pnl_str})</span></td>
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;">{dyn_tgt:.2f} EGP</td>
-  <td style="padding:9px 12px;"><span style="font-family:Arial,sans-serif;font-size:11px;background:#e8f0fe;color:#1a56db;padding:3px 8px;border-radius:10px;font-weight:bold;">{fib_lbl}</span></td>
-  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;">{p.get("entry_date","")}</td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;">{entry_date}</td>
 </tr>"""
         open_positions_block = f"""
-<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;margin:20px 0 6px 0;letter-spacing:0.5px;">📊 المراكز المفتوحة — التارجت الديناميكي</div>
+<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;margin:20px 0 6px 0;letter-spacing:0.5px;">📊 Open Positions — Dynamic Target</div>
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #c8daf5;border-collapse:collapse;margin-bottom:20px;">
   <tr style="background:#0B5394;">
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">السهم</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">سعر الدخول</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">السعر الحالي</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">التارجت الديناميكي</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">مستوى Fib</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">تاريخ الدخول</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Stock</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Entry Price</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Current Price</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Dynamic Target</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Entry Date</th>
   </tr>
   {open_pos_rows}
 </table>"""
@@ -2382,75 +2378,71 @@ def send_change_email(changed_stocks):
         print("⚠️ Email config missing for change alert")
         return
     
-    # بناء HTML للإيميل
     html_body = f"""
-    <html style="font-family: Arial, sans-serif; direction: rtl;">
+    <html style="font-family: Arial, sans-serif;">
     <body style="background-color: #f5f5f5; padding: 20px;">
         <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h2 style="color: #d32f2f; text-align: center;">🚨 تنبيه: إشارة شراء جديدة</h2>
+            <h2 style="color: #d32f2f; text-align: center;">🚨 Alert: New Buy Signal</h2>
             <hr style="border: none; border-top: 2px solid #d32f2f;">
-            
+
             <p style="color: #333; font-size: 14px;">
-                <strong>الوقت:</strong> {fmt_cairo()}
+                <strong>Time:</strong> {fmt_cairo()}
             </p>
     """
-    
-    # فصل الأسهم إلى whitelist وعادي
+
     whitelist_stocks = [s for s in changed_stocks if s['stock'] in WHITELIST]
     normal_stocks = [s for s in changed_stocks if s['stock'] not in WHITELIST]
-    
-    # أسهم Whitelist أولاً (مع تمييز)
+
     if whitelist_stocks:
-        html_body += "<h3 style='color: #f57c00; margin-top: 20px; border-bottom: 2px solid #ff9800; padding-bottom: 10px;'>⭐ أسهم قائمة البيضاء (Whitelist)</h3>"
-        
+        html_body += "<h3 style='color: #f57c00; margin-top: 20px; border-bottom: 2px solid #ff9800; padding-bottom: 10px;'>⭐ Whitelist Stocks</h3>"
+
         for item in whitelist_stocks:
             html_body += f"""
-            <div style="background-color: #fff3e0; border-right: 4px solid #ff9800; padding: 15px; margin: 10px 0; border-radius: 4px;">
+            <div style="background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; margin: 10px 0; border-radius: 4px;">
                 <h3 style="color: #f57c00; margin: 0 0 10px 0;">⭐ {item['stock']} - WHITELIST ⭐</h3>
                 <table style="width: 100%; color: #333; font-size: 13px;">
                     <tr>
-                        <td style="padding: 5px;"><strong>الإشارة:</strong></td>
+                        <td style="padding: 5px;"><strong>Signal:</strong></td>
                         <td style="padding: 5px;">{item['from']} → <strong style="color: #2e7d32;">{item['to']}</strong></td>
                     </tr>
                     <tr>
-                        <td style="padding: 5px;"><strong>الـ Score:</strong></td>
+                        <td style="padding: 5px;"><strong>Score:</strong></td>
                         <td style="padding: 5px;">{item['score']:.1f}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 5px;"><strong>سعر الشراء:</strong></td>
+                        <td style="padding: 5px;"><strong>Entry Price:</strong></td>
                         <td style="padding: 5px;"><strong style="color: #d32f2f;">{item.get('price', 'N/A')} EGP</strong></td>
                     </tr>
                     <tr>
-                        <td style="padding: 5px;"><strong>السعر المستهدف:</strong></td>
+                        <td style="padding: 5px;"><strong>Target Price:</strong></td>
                         <td style="padding: 5px;"><strong style="color: #2e7d32;">{item.get('target', 'N/A')} EGP</strong></td>
                     </tr>
                 </table>
             </div>
             """
-    
-    # أسهم عادية (بدون تمييز)
+
     if normal_stocks:
-        html_body += "<h3 style='color: #1976d2; margin-top: 20px; border-bottom: 2px solid #2196f3; padding-bottom: 10px;'>📈 أسهم عادية</h3>"
-        
+        html_body += "<h3 style='color: #1976d2; margin-top: 20px; border-bottom: 2px solid #2196f3; padding-bottom: 10px;'>📈 Stocks</h3>"
+
         for item in normal_stocks:
             html_body += f"""
-            <div style="background-color: #e3f2fd; border-right: 4px solid #2196f3; padding: 15px; margin: 10px 0; border-radius: 4px;">
+            <div style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 10px 0; border-radius: 4px;">
                 <h3 style="color: #1565c0; margin: 0 0 10px 0;">📈 {item['stock']}</h3>
                 <table style="width: 100%; color: #333; font-size: 13px;">
                     <tr>
-                        <td style="padding: 5px;"><strong>الإشارة:</strong></td>
+                        <td style="padding: 5px;"><strong>Signal:</strong></td>
                         <td style="padding: 5px;">{item['from']} → <strong style="color: #2e7d32;">{item['to']}</strong></td>
                     </tr>
                     <tr>
-                        <td style="padding: 5px;"><strong>الـ Score:</strong></td>
+                        <td style="padding: 5px;"><strong>Score:</strong></td>
                         <td style="padding: 5px;">{item['score']:.1f}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 5px;"><strong>سعر الشراء:</strong></td>
+                        <td style="padding: 5px;"><strong>Entry Price:</strong></td>
                         <td style="padding: 5px;"><strong style="color: #d32f2f;">{item.get('price', 'N/A')} EGP</strong></td>
                     </tr>
                     <tr>
-                        <td style="padding: 5px;"><strong>السعر المستهدف:</strong></td>
+                        <td style="padding: 5px;"><strong>Target Price:</strong></td>
                         <td style="padding: 5px;"><strong style="color: #2e7d32;">{item.get('target', 'N/A')} EGP</strong></td>
                     </tr>
                 </table>
@@ -2470,7 +2462,7 @@ def send_change_email(changed_stocks):
     msg = MIMEMultipart("alternative")
     date_str = now_cairo().strftime("%Y-%m-%d %H:%M")
     total_count = len(changed_stocks)
-    msg["Subject"] = f"🚨 تنبيه: {total_count} أسهم تغيرت إلى BUY — {date_str}"
+    msg["Subject"] = f"🚨 Signal Alert: {total_count} stock(s) moved to BUY — {date_str}"
     msg["From"] = sender
     msg["To"] = EMAIL
     msg.attach(MIMEText(html_body, "html", "utf-8"))

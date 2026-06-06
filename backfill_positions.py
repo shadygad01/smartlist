@@ -128,7 +128,7 @@ def main():
                 entry_date = datetime(day.year, day.month, day.day,
                                       9, 30, 0,
                                       tzinfo=CAIRO_TZ).isoformat()
-                registered[symbol] = (entry_date, round(cur, 2))
+                registered[symbol] = (entry_date, round(cur, 2), score)
                 print(f"    ✅ First signal on {day}: price={cur:.2f}, "
                       f"score={score}, r1={r1}")
                 break   # stop at first qualifying day
@@ -140,7 +140,7 @@ def main():
     print("-" * 55)
 
     # Re-run to get score/r1 for display
-    for symbol, (entry_date, entry_price) in sorted(registered.items()):
+    for symbol, (entry_date, entry_price, entry_score) in sorted(registered.items()):
         entry_day = date.fromisoformat(entry_date[:10])
         df_full = fetch_history(symbol)
         _, score, r1 = score_on_day(df_full, entry_day) if not df_full.empty else (0, 0, 0)
@@ -150,8 +150,8 @@ def main():
         print("\n⚠️  DRY RUN — nothing was saved. Re-run with DRY_RUN=false to apply.")
     else:
         print("\nSaving positions...")
-        for symbol, (entry_date, entry_price) in registered.items():
-            add_position(symbol, entry_price, entry_date)
+        for symbol, (entry_date, entry_price, entry_score) in registered.items():
+            add_position(symbol, entry_price, entry_date, entry_score=entry_score)
             print(f"  ✅ Saved: {NAMES.get(symbol, symbol)} ({symbol}) @ {entry_price} EGP")
         final = load_open_positions()
         print(f"\nDone. open_positions.json now has {len(final)} position(s).")

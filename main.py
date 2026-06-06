@@ -1450,6 +1450,7 @@ def build_report(holiday_mode=False, last_trading=None):
             pnl_str = (f'+{pnl_pct:.1f}%' if pnl_pct and pnl_pct >= 0 else f'{pnl_pct:.1f}%') if pnl_pct is not None else "—"
             pnl_col = "#155724" if (pnl_pct or 0) >= 0 else "#721c24"
             entry_date = p.get("entry_date", "")[:10]
+            entry_score = p.get("entry_score", 0)
             open_pos_rows += f"""
 <tr style="border-bottom:1px solid #e8f0f8;">
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#1C4587;">{NAMES.get(sym, sym)}<br><span style="font-size:10px;color:#999;">{sym}</span></td>
@@ -1457,6 +1458,7 @@ def build_report(holiday_mode=False, last_trading=None):
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;color:{pnl_col};font-weight:bold;">{cur_price} EGP &nbsp;<span style="font-size:11px;">({pnl_str})</span></td>
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;">{dyn_tgt:.2f} EGP</td>
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;">{entry_date}</td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#4a4a4a;text-align:center;">{entry_score}</td>
 </tr>"""
         open_positions_block = f"""
 <div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;margin:20px 0 6px 0;letter-spacing:0.5px;">📊 Open Positions — Dynamic Target</div>
@@ -1467,6 +1469,7 @@ def build_report(holiday_mode=False, last_trading=None):
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Current Price</th>
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Dynamic Target</th>
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Entry Date</th>
+    <th align="center" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Confidence</th>
   </tr>
   {open_pos_rows}
 </table>"""
@@ -1730,7 +1733,7 @@ def save_open_positions():
     except Exception as e:
         print(f"❌ Error saving positions: {e}")
 
-def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12):
+def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12, entry_score=0):
     """Add new position when entry signal is triggered"""
     global open_positions
 
@@ -1749,7 +1752,8 @@ def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12):
         "fib_targets": fib_targets,
         "current_level": 0,
         "target": fib_targets[0],
-        "status": "open"
+        "status": "open",
+        "entry_score": entry_score,
     }
     save_open_positions()
     print(f"✅ Position added: {symbol} @ {entry_price:.2f} EGP")
@@ -1886,8 +1890,9 @@ def send_telegram_alerts(results):
                     cur_str = f"{cur_price} EGP ({pnl})"
                 else:
                     cur_str = "—"
+                score_str = f" | Score {pos.get('entry_score', 0)}" if pos.get('entry_score') else ""
                 msg += f"\n📌 *{sym}* — {NAMES.get(sym, sym)}"
-                msg += f"\n   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*\n"
+                msg += f"\n   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*{score_str}\n"
             msg += "━━━━━━━━━━━━━━━━━━━━━"
         try:
             requests.post(
@@ -1928,8 +1933,9 @@ def send_telegram_alerts(results):
                 cur_str = f"{cur_price} EGP ({pnl})"
             else:
                 cur_str = "—"
+            score_str = f" | Score {pos.get('entry_score', 0)}" if pos.get('entry_score') else ""
             lines.append(f"📌 *{sym}* — {NAMES.get(sym, sym)}")
-            lines.append(f"   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*\n")
+            lines.append(f"   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*{score_str}\n")
         lines.append("━━━━━━━━━━━━━━━━━━━━━\n")
 
     SIGNAL_EMOJI = {
@@ -2090,7 +2096,8 @@ def monitor_scores():
                 # تسجيل المركز الجديد
                 current_price = results[stock].get("cur", 0)
                 if current_price > 0:
-                    add_position(stock, current_price, datetime.now(CAIRO).isoformat())
+                    add_position(stock, current_price, datetime.now(CAIRO).isoformat(),
+                                 entry_score=results[stock].get("score", 0))
 
             # حفظ البيانات الحالية
             global last_score_data
@@ -2140,7 +2147,8 @@ def daily_scan():
             if stock not in positions:
                 current_price = _results[stock].get("price", 0)
                 if current_price > 0:
-                    add_position(stock, current_price, datetime.now(CAIRO).isoformat())
+                    add_position(stock, current_price, datetime.now(CAIRO).isoformat(),
+                                 entry_score=_results[stock].get("score", 0))
                     print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
 
         # تحديث التارجتات الديناميكية للمراكز الحالية
@@ -2182,7 +2190,8 @@ def daily_scan():
             if stock not in positions:
                 current_price = _results[stock].get("price", 0)
                 if current_price > 0:
-                    add_position(stock, current_price, datetime.now(CAIRO).isoformat())
+                    add_position(stock, current_price, datetime.now(CAIRO).isoformat(),
+                                 entry_score=_results[stock].get("score", 0))
                     print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
 
         # تحديث التارجتات الديناميكية للمراكز الحالية
@@ -2259,7 +2268,8 @@ def manual_scan():
         if stock not in positions:
             current_price = _results[stock].get("price", 0)
             if current_price > 0:
-                add_position(stock, current_price, datetime.now(CAIRO).isoformat())
+                add_position(stock, current_price, datetime.now(CAIRO).isoformat(),
+                             entry_score=_results[stock].get("score", 0))
                 new_positions.append(f"{NAMES.get(stock, stock)} @ {current_price}")
                 print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
 

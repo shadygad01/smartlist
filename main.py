@@ -1769,7 +1769,7 @@ def update_position_target(symbol, new_level, current_price):
         return False
 
     pos["current_level"] = new_level
-    pos["target"] = pos["fib_targets"][new_level]
+    pos["target"] = pos["fib_targets"][new_level]   # new_level = التارجت التالي غير المتجاوز
     save_open_positions()
 
     # إرسال تنبيه
@@ -1820,17 +1820,19 @@ def monitor_positions(current_prices):
 
         price = current_prices[symbol]
         pos = open_positions[symbol]
-        current_level = pos["current_level"]
         fib_targets = pos["fib_targets"]
 
-        # تحديث المستوى الحالي
-        for i, target in enumerate(fib_targets):
-            if price >= target:
-                current_level = max(current_level, i)
+        # إيجاد أول تارجت لم يُتجاوز بعد (next_level = index التارجت التالي المطلوب)
+        next_level = pos["current_level"]
+        for i in range(pos["current_level"], len(fib_targets)):
+            if price >= fib_targets[i]:
+                next_level = i + 1
+            else:
+                break
+        next_level = min(next_level, len(fib_targets) - 1)
 
-        # إذا وصلنا لمستوى جديد، حدّث وأرسل تنبيه
-        if current_level > pos["current_level"]:
-            update_position_target(symbol, current_level, price)
+        if next_level > pos["current_level"]:
+            update_position_target(symbol, next_level, price)
 
 def send_telegram_alerts(results):
     """
@@ -2127,7 +2129,13 @@ def daily_scan():
                     add_position(stock, current_price, datetime.now(CAIRO).isoformat())
                     print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
 
-        # الخطوة 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة المسجلة!)
+        # تحديث التارجتات الديناميكية للمراكز الحالية
+        _cur_prices = {s: _results[s]["price"] for s in STOCKS
+                       if _results[s].get("ok") and isinstance(_results[s].get("price"), (int, float))
+                       and _results[s]["price"] > 0}
+        monitor_positions(_cur_prices)
+
+        # الخطوة 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة والتارجتات المحدّثة!)
         html, _results = build_report(holiday_mode=False)
 
         # الخطوة 4: إرسال الإيميل والتيليجرام مع البيانات المحدّثة
@@ -2163,7 +2171,13 @@ def daily_scan():
                     add_position(stock, current_price, datetime.now(CAIRO).isoformat())
                     print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
 
-        # الخطوة 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة المسجلة!)
+        # تحديث التارجتات الديناميكية للمراكز الحالية
+        _cur_prices = {s: _results[s]["price"] for s in STOCKS
+                       if _results[s].get("ok") and isinstance(_results[s].get("price"), (int, float))
+                       and _results[s]["price"] > 0}
+        monitor_positions(_cur_prices)
+
+        # الخطوة 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة والتارجتات المحدّثة!)
         html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
 
         # الخطوة 4: إرسال الإيميل والتيليجرام مع البيانات المحدّثة
@@ -2235,9 +2249,14 @@ def manual_scan():
                 new_positions.append(f"{NAMES.get(stock, stock)} @ {current_price}")
                 print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
 
-    # الخطوة 3: إعادة بناء التقرير مع المراكز الجديدة إن وُجدت
-    if new_positions:
-        html, _results = build_report(holiday_mode=holiday, last_trading=str(last_td) if last_td else None)
+    # تحديث التارجتات الديناميكية للمراكز الحالية
+    _cur_prices = {s: _results[s]["price"] for s in STOCKS
+                   if _results[s].get("ok") and isinstance(_results[s].get("price"), (int, float))
+                   and _results[s]["price"] > 0}
+    monitor_positions(_cur_prices)
+
+    # الخطوة 3: إعادة بناء التقرير مع المراكز الجديدة والتارجتات المحدّثة
+    html, _results = build_report(holiday_mode=holiday, last_trading=str(last_td) if last_td else None)
 
     # الخطوة 4: الإرسال
     suffix = " (Holiday)" if holiday else ""

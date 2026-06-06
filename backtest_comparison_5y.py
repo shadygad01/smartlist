@@ -1,11 +1,12 @@
 """
 Backtest Comparison: Static 12% Target vs Dynamic Fibonacci Target
 5-Year analysis on all EGX stocks — optimised (precomputed signals)
-With Volatility-Based Dynamic Minimum Target
+With Volatility-Based Dynamic Minimum Target + Real yfinance Data
 """
 
 import pandas as pd
 import numpy as np
+import yfinance as yf
 from datetime import datetime
 from backtest import (BacktestEngine, generate_synthetic_egx_data,
                       STOCKS, NAMES, swings, calc_macd, calc_stopping_volume, WHITELIST)
@@ -19,6 +20,28 @@ BASE_PARAMS = {
 }
 
 FIB_LEVELS = [0.236, 0.382, 0.50, 0.618, 1.0, 1.5, 2.0]
+
+
+# ── Real Data Loader ───────────────────────────────────────────────────────
+
+def download_real_data(symbol, years=5):
+    """تحميل بيانات حقيقية من yfinance"""
+    yf_symbol = symbol if symbol.endswith(".CA") else f"{symbol}.CA"
+    period = f"{years}y"
+    try:
+        ticker = yf.Ticker(yf_symbol)
+        df = ticker.history(period=period, interval="1d", auto_adjust=False, repair=True)
+        if df.empty or len(df) < 80:
+            print(f"  ⚠️ {symbol}: بيانات غير كافية من yfinance، استخدام بيانات اصطناعية")
+            return generate_synthetic_egx_data(symbol, years=years, seed=hash(symbol) % (2**32))
+        df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
+        df.index = df.index.tz_localize(None)
+        df = df.dropna(subset=["Close"])
+        print(f"  ✓ {symbol}: {len(df)} يوم من البيانات الحقيقية")
+        return df
+    except Exception as e:
+        print(f"  ⚠️ {symbol}: خطأ ({e})، استخدام بيانات اصطناعية")
+        return generate_synthetic_egx_data(symbol, years=years, seed=hash(symbol) % (2**32))
 
 
 # ── Volatility-Based Dynamic Minimum Target ────────────────────────────────
@@ -296,7 +319,7 @@ def compare_min_targets(years=5):
         s_results, d_results = [], []
 
         for symbol in STOCKS:
-            df = generate_synthetic_egx_data(symbol, years=years, seed=hash(symbol) % (2**32))
+            df = download_real_data(symbol, years=years)
             if df.empty:
                 continue
 
@@ -371,7 +394,7 @@ def run_comparison(years=5):
     s_results, d_results = [], []
 
     for symbol in STOCKS:
-        df = generate_synthetic_egx_data(symbol, years=years, seed=hash(symbol) % (2**32))
+        df = download_real_data(symbol, years=years)
         if df.empty:
             continue
 

@@ -475,7 +475,7 @@ class BacktestEngine:
                 # EXIT: Target Hit (exit at actual price if it exceeds target)
                 if price >= position["target"]:
                     exit_date = date
-                    exit_price = price  # Exit at current price, not target
+                    exit_price = price
                     pnl = exit_price - position["entry_price"]
                     pnl_pct = (pnl / position["entry_price"]) * 100
 
@@ -494,8 +494,8 @@ class BacktestEngine:
 
                     position = None
 
-                # EXIT: Downtrend - Exit at nearest lower Fibonacci level (الهبوط - الخروج عند أقرب مستوى)
-                elif price < position["target"] and position["target"] > position["entry_price"] * 1.12:
+                # EXIT: Downtrend - only when price already cleared at least one Fib level above 12%
+                elif position["current_target_level"] > 0 and price < position["fib_targets"][position["current_target_level"]]:
                     nearest_target = self._get_nearest_lower_target(
                         position["entry_price"],
                         price,
@@ -503,7 +503,7 @@ class BacktestEngine:
                     )
 
                     exit_date = date
-                    exit_price = nearest_target  # Exit at nearest lower Fibonacci level
+                    exit_price = nearest_target
                     pnl = exit_price - position["entry_price"]
                     pnl_pct = (pnl / position["entry_price"]) * 100
 
@@ -522,8 +522,8 @@ class BacktestEngine:
 
                     position = None
 
-                # EXIT: Weakness Signs (ضعف وإشارة ارتداد) - Optional
-                elif weakness and price < position["target"] and position["target"] == position["entry_price"] * 1.12:
+                # EXIT: Weakness at minimum target level
+                elif weakness and position["current_target_level"] == 0:
                     exit_date = date
                     exit_price = price
                     pnl = exit_price - position["entry_price"]

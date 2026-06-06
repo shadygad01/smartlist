@@ -1431,6 +1431,11 @@ def build_report(holiday_mode=False, last_trading=None):
     # ── Open Positions section ────────────────────────────────────────────────
     open_pos_rows = ""
     open_pos_list = [(sym, p) for sym, p in positions.items() if p.get("status") == "open"]
+    open_pos_list.sort(key=lambda x: (
+        ((results[x[0]]["price"] - x[1]["entry_price"]) / x[1]["entry_price"])
+        if x[0] in results and results[x[0]].get("ok") else
+        ((x[1].get("current_price", x[1]["entry_price"]) - x[1]["entry_price"]) / x[1]["entry_price"])
+    ), reverse=True)
     if open_pos_list:
         for sym, p in open_pos_list:
             entry   = p["entry_price"]
@@ -1859,6 +1864,11 @@ def send_telegram_alerts(results):
             f"No stocks reached the Watch threshold (≥35) today."
         )
         open_pos = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
+        open_pos.sort(key=lambda x: (
+            ((results[x[0]]["price"] - x[1]["entry_price"]) / x[1]["entry_price"])
+            if x[0] in results and results[x[0]].get("ok") else
+            ((x[1].get("current_price", x[1]["entry_price"]) - x[1]["entry_price"]) / x[1]["entry_price"])
+        ), reverse=True)
         if open_pos:
             msg += f"\n\n━━━━━━━━━━━━━━━━━━━━━"
             msg += f"\n📂 *Open Positions ({len(open_pos)})*\n"
@@ -1896,6 +1906,11 @@ def send_telegram_alerts(results):
 
     # Add open positions section if any exist
     open_positions_list = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
+    open_positions_list.sort(key=lambda x: (
+        ((results[x[0]]["price"] - x[1]["entry_price"]) / x[1]["entry_price"])
+        if x[0] in results and results[x[0]].get("ok") else
+        ((x[1].get("current_price", x[1]["entry_price"]) - x[1]["entry_price"]) / x[1]["entry_price"])
+    ), reverse=True)
     if open_positions_list:
         lines.append("\n━━━━━━━━━━━━━━━━━━━━━")
         lines.append(f"📂 *Open Positions ({len(open_positions_list)})*\n")

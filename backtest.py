@@ -382,16 +382,14 @@ class BacktestEngine:
 
             # UPDATE DYNAMIC TARGET (رفع التارجت لكن لا ينزل)
             if position:
-                old_target = position["target"]
                 best_fib_idx = position["current_target_level"]
 
                 for i, fib_target in enumerate(position["fib_targets"]):
-                    if price >= fib_target and i > best_fib_idx:
-                        best_fib_idx = i
+                    if price >= fib_target:
+                        best_fib_idx = max(best_fib_idx, i)
 
-                if best_fib_idx < len(position["fib_targets"]):
-                    position["target"] = position["fib_targets"][best_fib_idx]
-                    position["current_target_level"] = best_fib_idx
+                position["target"] = position["fib_targets"][best_fib_idx]
+                position["current_target_level"] = best_fib_idx
 
                 weakness = self._detect_weakness(close) if self.params.get("dynamic_target") else False
 

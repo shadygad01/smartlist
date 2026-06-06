@@ -1379,11 +1379,30 @@ def build_ez_html(r):
             f'</td></tr></table>')
 
 
+FIB_LABELS = {0: "12% Min", 1: "23.6%", 2: "38.2%", 3: "50%", 4: "61.8%", 5: "100%", 6: "150%", 7: "200%"}
+
+def _target_box_html(symbol, r, positions):
+    pos = positions.get(symbol)
+    if pos and pos.get("status") == "open":
+        dyn_tgt = pos["target"]
+        fib_lbl = FIB_LABELS.get(pos.get("current_level", 0), "—")
+        return (
+            '<div style="font-family:Arial,sans-serif;font-size:10px;color:#155724;font-weight:bold;letter-spacing:1px;">🎯 DYNAMIC TARGET</div>'
+            f'<div style="font-family:Arial,sans-serif;font-size:17px;font-weight:bold;color:#155724;">{dyn_tgt:.2f} EGP</div>'
+            f'<div style="font-family:Arial,sans-serif;font-size:10px;color:#0B5394;margin-top:2px;">Fib {fib_lbl}</div>'
+        )
+    return (
+        '<div style="font-family:Arial,sans-serif;font-size:10px;color:#155724;font-weight:bold;letter-spacing:1px;">TARGET</div>'
+        f'<div style="font-family:Arial,sans-serif;font-size:17px;font-weight:bold;color:#155724;">{r["target"]} EGP</div>'
+        '<div style="font-family:Arial,sans-serif;font-size:11px;color:#888;margin-top:2px;">Initial</div>'
+    )
+
 def build_report(holiday_mode=False, last_trading=None):
     results={}; news={}
     print("  Fetching Dow Jones status...")
     dj = get_dow_jones_status()
     dow_banner = build_dow_banner(dj)
+    positions = load_open_positions()
 
     for s in STOCKS:
         print(f"  Analyzing: {NAMES.get(s,s)} ...")
@@ -1409,6 +1428,44 @@ def build_report(holiday_mode=False, last_trading=None):
   </td></tr>
 </table>"""
 
+    # ── Open Positions section ────────────────────────────────────────────────
+    open_pos_rows = ""
+    open_pos_list = [(sym, p) for sym, p in positions.items() if p.get("status") == "open"]
+    if open_pos_list:
+        for sym, p in open_pos_list:
+            entry   = p["entry_price"]
+            dyn_tgt = p["target"]
+            lvl     = p.get("current_level", 0)
+            fib_lbl = FIB_LABELS.get(lvl, f"Fib {lvl}")
+            cur_price = results[sym]["price"] if sym in results and results[sym].get("ok") else "—"
+            pnl_pct = ((float(cur_price) - entry) / entry * 100) if cur_price != "—" else None
+            pnl_str = (f'+{pnl_pct:.1f}%' if pnl_pct and pnl_pct >= 0 else f'{pnl_pct:.1f}%') if pnl_pct is not None else "—"
+            pnl_col = "#155724" if (pnl_pct or 0) >= 0 else "#721c24"
+            open_pos_rows += f"""
+<tr style="border-bottom:1px solid #e8f0f8;">
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#1C4587;">{NAMES.get(sym, sym)}<br><span style="font-size:10px;color:#999;">{sym}</span></td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;">{entry:.2f} EGP</td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;color:{pnl_col};font-weight:bold;">{cur_price} EGP &nbsp;<span style="font-size:11px;">({pnl_str})</span></td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;">{dyn_tgt:.2f} EGP</td>
+  <td style="padding:9px 12px;"><span style="font-family:Arial,sans-serif;font-size:11px;background:#e8f0fe;color:#1a56db;padding:3px 8px;border-radius:10px;font-weight:bold;">{fib_lbl}</span></td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;">{p.get("entry_date","")}</td>
+</tr>"""
+        open_positions_block = f"""
+<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;margin:20px 0 6px 0;letter-spacing:0.5px;">📊 المراكز المفتوحة — التارجت الديناميكي</div>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #c8daf5;border-collapse:collapse;margin-bottom:20px;">
+  <tr style="background:#0B5394;">
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">السهم</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">سعر الدخول</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">السعر الحالي</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">التارجت الديناميكي</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">مستوى Fib</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">تاريخ الدخول</th>
+  </tr>
+  {open_pos_rows}
+</table>"""
+    else:
+        open_positions_block = ""
+
     parts.append(f"""
 {holiday_banner}
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0B5394;">
@@ -1422,7 +1479,8 @@ def build_report(holiday_mode=False, last_trading=None):
   <tr><td style="font-family:Arial,sans-serif;font-size:12px;color:{dq_c};">
     <b>Data Status:</b> {dq_msg}
   </td></tr>
-</table>""")
+</table>
+{open_positions_block}""")
 
     wr=""
     for s in sorted_stocks:
@@ -1439,7 +1497,9 @@ def build_report(holiday_mode=False, last_trading=None):
   <td style="padding:10px 12px;">
     <span style="font-family:Arial,sans-serif;display:inline-block;padding:4px 12px;border-radius:14px;font-size:12px;font-weight:bold;background:{tbg};color:{tc};border:1px solid {tbr};">{r["signal"]}</span></td>
   <td style="padding:10px 12px;">{bar(r["score"])}</td>
-  <td style="padding:10px 12px;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;color:#155724;">{r["target"]} EGP</td>
+  <td style="padding:10px 12px;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;color:#155724;">
+    {f'{positions[s]["target"]:.2f} EGP <span style="font-size:10px;color:#0B5394;">🎯 {FIB_LABELS.get(positions[s].get("current_level",0),"")}</span>' if s in positions and positions[s].get("status")=="open" else f'{r["target"]} EGP'}
+  </td>
 </tr>"""
 
     parts.append(f"""
@@ -1499,8 +1559,7 @@ def build_report(holiday_mode=False, last_trading=None):
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0;">
   <tr>
     <td width="130" style="padding:10px 16px;background:#d4edda;border:1px solid #c3e6cb;text-align:center;">
-      <div style="font-family:Arial,sans-serif;font-size:10px;color:#155724;font-weight:bold;letter-spacing:1px;">TARGET</div>
-      <div style="font-family:Arial,sans-serif;font-size:17px;font-weight:bold;color:#155724;">{r["target"]} EGP</div>
+      {_target_box_html(s, r, positions)}
     </td>
     <td width="12"></td>
     <td style="padding:10px 14px;background:#f4f8ff;border:1px solid #d0e4f7;font-family:Arial,sans-serif;font-size:12px;color:#444;">

@@ -249,8 +249,38 @@ class BacktestEngine:
             "score_threshold": 35,
             "target_multiplier": 1.12,
             "min_data_points": 80,
+            "dynamic_target": True,
+            "fib_levels": [0.236, 0.382, 0.50, 0.618],
         }
     
+    def _calculate_fibonacci_targets(self, entry_price):
+        """حساب مستويات Fibonacci كأهداف ديناميكية (أعلى من 12%)"""
+        min_target = entry_price * 1.12
+        fib_targets = []
+
+        for fib_level in self.params.get("fib_levels", [0.236, 0.382, 0.50, 0.618]):
+            fib_price = entry_price * (1 + fib_level)
+            if fib_price >= min_target:
+                fib_targets.append(fib_price)
+
+        return [min_target] + fib_targets
+
+    def _detect_weakness(self, close):
+        """الكشف عن بوادر ضعف - MACD يعود تحت الـ Signal أو تفصيل"""
+        if len(close) < 15:
+            return False
+        try:
+            m, sg, h = calc_macd(close)
+            macd_now = float(m.iloc[-1])
+            macd_prev = float(m.iloc[-2]) if len(m) > 1 else 0
+            sig_now = float(sg.iloc[-1])
+            sig_prev = float(sg.iloc[-2]) if len(sg) > 1 else 0
+
+            crossed_down = macd_prev >= sig_prev and macd_now < sig_now
+            return crossed_down
+        except:
+            return False
+
     def _score_price(self, cur, lo, hi, eq, buy_hi):
         """تسجيل موضع السعر"""
         rng = hi - lo
@@ -320,60 +350,102 @@ class BacktestEngine:
         }
     
     def run(self):
-        """تشغيل الاختبار الخلفي"""
+        """تشغيل الاختبار الخلفي مع أهداف ديناميكية"""
         position = None
-        
+
         for idx in range(self.params["min_data_points"], len(self.df)):
             bar_analysis = self._analyze_bar(idx)
-            
+
             if bar_analysis is None:
                 continue
-            
+
             date = bar_analysis["date"]
             price = bar_analysis["price"]
             score = bar_analysis["score"]
             price_ok = bar_analysis["price_ok"]
             target = bar_analysis["target"]
-            
+            hist_df = self.df.iloc[:idx+1]
+            close = hist_df["Close"]
+
             # BUY SIGNAL
             if not position and price_ok and score >= self.params["score_threshold"]:
+                fib_targets = self._calculate_fibonacci_targets(price) if self.params.get("dynamic_target") else [target]
                 position = {
                     "entry_date": date,
                     "entry_price": price,
-                    "target": target,
+                    "target": fib_targets[0],
+                    "current_target_level": 0,
+                    "fib_targets": fib_targets,
                     "score": score,
                 }
                 self.buy_signals.append({"date": date, "price": price, "score": score})
-            
-            # SELL SIGNAL
-            if position and price >= position["target"]:
-                exit_date = date
-                exit_price = position["target"]
-                pnl = exit_price - position["entry_price"]
-                pnl_pct = (pnl / position["entry_price"]) * 100
-                
-                self.trades.append({
-                    "symbol": self.symbol,
-                    "entry_date": position["entry_date"],
-                    "entry_price": position["entry_price"],
-                    "exit_date": exit_date,
-                    "exit_price": exit_price,
-                    "pnl": pnl,
-                    "pnl_pct": pnl_pct,
-                    "days_held": (exit_date - position["entry_date"]).days,
-                    "reason": "target_hit",
-                    "score": position["score"],
-                })
-                
-                position = None
-        
+
+            # UPDATE DYNAMIC TARGET (رفع التارجت لكن لا ينزل)
+            if position:
+                old_target = position["target"]
+                best_fib_idx = position["current_target_level"]
+
+                for i, fib_target in enumerate(position["fib_targets"]):
+                    if price >= fib_target and i > best_fib_idx:
+                        best_fib_idx = i
+
+                if best_fib_idx < len(position["fib_targets"]):
+                    position["target"] = position["fib_targets"][best_fib_idx]
+                    position["current_target_level"] = best_fib_idx
+
+                weakness = self._detect_weakness(close) if self.params.get("dynamic_target") else False
+
+                # EXIT: Target Hit
+                if price >= position["target"]:
+                    exit_date = date
+                    exit_price = position["target"]
+                    pnl = exit_price - position["entry_price"]
+                    pnl_pct = (pnl / position["entry_price"]) * 100
+
+                    self.trades.append({
+                        "symbol": self.symbol,
+                        "entry_date": position["entry_date"],
+                        "entry_price": position["entry_price"],
+                        "exit_date": exit_date,
+                        "exit_price": exit_price,
+                        "pnl": pnl,
+                        "pnl_pct": pnl_pct,
+                        "days_held": (exit_date - position["entry_date"]).days,
+                        "reason": "target_hit",
+                        "score": position["score"],
+                    })
+
+                    position = None
+
+                # EXIT: Weakness Signs (ضعف وإشارة ارتداد)
+                elif weakness and price < position["target"] and position["target"] > position["entry_price"] * 1.12:
+                    exit_date = date
+                    exit_price = price
+                    pnl = exit_price - position["entry_price"]
+                    pnl_pct = (pnl / position["entry_price"]) * 100
+
+                    self.trades.append({
+                        "symbol": self.symbol,
+                        "entry_date": position["entry_date"],
+                        "entry_price": position["entry_price"],
+                        "exit_date": exit_date,
+                        "exit_price": exit_price,
+                        "pnl": pnl,
+                        "pnl_pct": pnl_pct,
+                        "days_held": (exit_date - position["entry_date"]).days,
+                        "reason": "weakness_detected",
+                        "score": position["score"],
+                    })
+
+                    position = None
+
         # إغلاق أي مركز مفتوح
         if position:
             exit_date = self.df.index[-1]
             exit_price = float(self.df["Close"].iloc[-1])
             pnl = exit_price - position["entry_price"]
             pnl_pct = (pnl / position["entry_price"]) * 100
-            
+
             self.trades.append({
                 "symbol": self.symbol,
                 "entry_date": position["entry_date"],
@@ -386,7 +458,7 @@ class BacktestEngine:
                 "reason": "end_of_period",
                 "score": position["score"],
             })
-        
+
         return self._calculate_metrics()
     
     def _calculate_metrics(self):

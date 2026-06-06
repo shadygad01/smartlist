@@ -169,7 +169,8 @@ def run_engine_fast(symbol, df, params, dynamic):
             position = None
 
         elif lvl == 0 and dynamic and macd_crossdown(i):
-            record(tgts[lvl], "weakness_at_min_target")
+            # Exit at current market price (haven't reached 12% target yet)
+            record(price, "weakness_at_min_target")
             position = None
 
     # Close open position

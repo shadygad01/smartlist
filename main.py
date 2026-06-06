@@ -1837,6 +1837,9 @@ def send_telegram_alerts(results):
         print("Telegram: TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not set — skipping.")
         return
 
+    # Load open positions
+    positions = load_open_positions()
+
     # Collect qualifying stocks sorted by score descending
     alerts = [
         (s, results[s])
@@ -1851,6 +1854,18 @@ def send_telegram_alerts(results):
             f"📊 *EGX Daily Scan — {now_cairo().strftime('%d %b %Y')}*\n"
             f"No stocks reached the Watch threshold (≥35) today."
         )
+        if positions:
+            msg += f"\n\n📊 *المراكز المفتوحة: {len(positions)}*"
+            for sym, pos in positions.items():
+                if pos.get("status") == "open":
+                    entry = pos["entry_price"]
+                    tgt = pos["target"]
+                    cur_price = results.get(sym, {}).get("price", "—")
+                    pnl = "—"
+                    if cur_price != "—":
+                        pnl_pct = ((float(cur_price) - entry) / entry * 100)
+                        pnl = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
+                    msg += f"\n   • {NAMES.get(sym, sym)}: {entry:.2f} → {tgt:.2f} EGP ({pnl})"
         try:
             requests.post(
                 f"https://api.telegram.org/bot{token}/sendMessage",
@@ -1863,7 +1878,25 @@ def send_telegram_alerts(results):
 
     # Build one summary message with all qualifying stocks
     date_str = now_cairo().strftime("%d %b %Y")
-    lines = [f"📊 *EGX Daily Scan — {date_str}*\n_{len(alerts)} stock(s) above threshold_\n"]
+    lines = [f"📊 *EGX Daily Scan — {date_str}*\n_{len(alerts)} stock(s) above threshold_"]
+
+    # Add open positions section if any exist
+    open_positions_list = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
+    if open_positions_list:
+        lines.append("\n━━━━━━━━━━━━━━━━━━━━━")
+        lines.append("📊 *المراكز المفتوحة*")
+        for sym, pos in open_positions_list:
+            entry = pos["entry_price"]
+            tgt = pos["target"]
+            lvl = FIB_LABELS.get(pos.get("current_level", 0), "")
+            cur_price = results.get(sym, {}).get("price", "—")
+            if cur_price != "—":
+                pnl_pct = ((float(cur_price) - entry) / entry * 100)
+                pnl = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
+            else:
+                pnl = "—"
+            lines.append(f"   {NAMES.get(sym, sym)}: {entry:.2f} → *{tgt:.2f}* EGP ({pnl}) {lvl}")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━\n")
 
     SIGNAL_EMOJI = {
         "STRONG BUY":  "🟢",
@@ -1882,16 +1915,21 @@ def send_telegram_alerts(results):
 
         if is_buy:
             # Full details for BUY / STRONG BUY
+            # Use dynamic target if position is open, otherwise use static target
+            target_to_display = r["target"]
+            if s in positions and positions[s].get("status") == "open":
+                target_to_display = positions[s]["target"]
+
             upside = ""
             try:
-                pct    = (float(r["target"]) - float(r["price"])) / float(r["price"]) * 100
+                pct    = (float(target_to_display) - float(r["price"])) / float(r["price"]) * 100
                 upside = f" (+{pct:.1f}%)"
             except Exception:
                 pass
             lines.append(
                 f"{emoji} *{NAMES.get(s, s)}* `{s}`\n"
                 f"   Signal: *{r['signal']}*  |  Score: *{r['score']}/100*\n"
-                f"   Price: *{r['price']} EGP*  →  Target: *{r['target']} EGP*{upside}\n"
+                f"   Price: *{r['price']} EGP*  →  Target: *{target_to_display} EGP*{upside}\n"
                 f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
             )
         else:
@@ -2044,18 +2082,31 @@ def daily_scan():
     المسح اليومي في تمام الساعة 8:30 صباحاً
     """
     print(f"\n📅 Daily scan started at {fmt_cairo()}")
-    
-    # تحميل النتائج السابقة
+
+    # تحميل النتائج السابقة والمراكز المفتوحة
     previous_results = load_previous_results()
-    
+    positions = load_open_positions()
+
     if is_egx_trading_day(today_cairo()):
         html, _results = build_report(holiday_mode=False)
         send_email(html)
         send_telegram_alerts(_results)
-        
+
+        # تسجيل صفقات جديدة من الـ qualifying stocks
+        qualifying_stocks = {
+            s for s in STOCKS
+            if _results[s].get("ok") and _results[s].get("score", 0) >= 35
+        }
+        for stock in qualifying_stocks:
+            if stock not in positions:
+                current_price = _results[stock].get("price", 0)
+                if current_price > 0:
+                    add_position(stock, current_price, datetime.now(CAIRO).isoformat())
+                    print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
+
         # حفظ النتائج الحالية
         save_scan_results(_results)
-        
+
         # كشف التغييرات وإرسال تنبيهات
         changes = detect_signal_changes(_results, previous_results)
         if changes:
@@ -2065,10 +2116,22 @@ def daily_scan():
         html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
         send_email(html, subject_suffix=f" (Holiday — Last Session: {last_td})")
         send_telegram_alerts(_results)
-        
+
+        # تسجيل صفقات جديدة من الـ qualifying stocks
+        qualifying_stocks = {
+            s for s in STOCKS
+            if _results[s].get("ok") and _results[s].get("score", 0) >= 35
+        }
+        for stock in qualifying_stocks:
+            if stock not in positions:
+                current_price = _results[stock].get("price", 0)
+                if current_price > 0:
+                    add_position(stock, current_price, datetime.now(CAIRO).isoformat())
+                    print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
+
         # حفظ النتائج الحالية
         save_scan_results(_results)
-        
+
         # كشف التغييرات وإرسال تنبيهات
         changes = detect_signal_changes(_results, previous_results)
         if changes:

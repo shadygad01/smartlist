@@ -1437,7 +1437,13 @@ def build_report(holiday_mode=False, last_trading=None):
             dyn_tgt = p["target"]
             lvl     = p.get("current_level", 0)
             fib_lbl = FIB_LABELS.get(lvl, f"Fib {lvl}")
-            cur_price = results[sym]["price"] if sym in results and results[sym].get("ok") else "—"
+            # حاول الحصول على السعر من النتائج الحالية، وإلا استخدم current_price المحفوظ
+            if sym in results and results[sym].get("ok"):
+                cur_price = results[sym]["price"]
+            elif "current_price" in p:
+                cur_price = p["current_price"]
+            else:
+                cur_price = "—"
             pnl_pct = ((float(cur_price) - entry) / entry * 100) if cur_price != "—" else None
             pnl_str = (f'+{pnl_pct:.1f}%' if pnl_pct and pnl_pct >= 0 else f'{pnl_pct:.1f}%') if pnl_pct is not None else "—"
             pnl_col = "#155724" if (pnl_pct or 0) >= 0 else "#721c24"
@@ -1860,7 +1866,13 @@ def send_telegram_alerts(results):
                 if pos.get("status") == "open":
                     entry = pos["entry_price"]
                     tgt = pos["target"]
-                    cur_price = results.get(sym, {}).get("price", "—")
+                    # حاول الحصول على السعر من النتائج الحالية، وإلا استخدم current_price المحفوظ
+                    if sym in results and results[sym].get("ok"):
+                        cur_price = results[sym].get("price", "—")
+                    elif "current_price" in pos:
+                        cur_price = pos["current_price"]
+                    else:
+                        cur_price = "—"
                     pnl = "—"
                     if cur_price != "—":
                         pnl_pct = ((float(cur_price) - entry) / entry * 100)
@@ -1889,7 +1901,13 @@ def send_telegram_alerts(results):
             entry = pos["entry_price"]
             tgt = pos["target"]
             lvl = FIB_LABELS.get(pos.get("current_level", 0), "")
-            cur_price = results.get(sym, {}).get("price", "—")
+            # حاول الحصول على السعر من النتائج الحالية، وإلا استخدم current_price المحفوظ
+            if sym in results and results[sym].get("ok"):
+                cur_price = results[sym].get("price", "—")
+            elif "current_price" in pos:
+                cur_price = pos["current_price"]
+            else:
+                cur_price = "—"
             if cur_price != "—":
                 pnl_pct = ((float(cur_price) - entry) / entry * 100)
                 pnl = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"

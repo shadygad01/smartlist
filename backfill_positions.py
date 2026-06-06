@@ -42,8 +42,8 @@ def score_on_day(df_full: pd.DataFrame, as_of: date):
     if len(df) < 20:
         return None, 0, 0
 
-    cur   = float(df["Close"].iloc[-1])
-    close = df["Close"]
+    close = df["Close"].squeeze()   # ensure 1-D Series
+    cur   = float(close.iloc[-1])
 
     hi, lo, eq, buy_hi, sell_lo = swings(close)
     av, alo                     = calc_avwap(df)
@@ -79,12 +79,16 @@ def trading_days_since(start: date) -> list:
 
 def fetch_history(symbol: str) -> pd.DataFrame:
     """Download full price history needed for backfill."""
-    # Go back 2 years to have enough bars for the first day's 110-bar window
-    start_fetch = (START_DATE - timedelta(days=365)).strftime("%Y-%m-%d")
+    # Use Ticker.history() to avoid MultiIndex columns from yf.download()
+    # Go back to 2025-01-01 to have 110 bars before START_DATE
+    start_fetch = (START_DATE - timedelta(days=400)).strftime("%Y-%m-%d")
     try:
-        df = yf.download(symbol, start=start_fetch, auto_adjust=True, progress=False)
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(start=start_fetch, interval="1d",
+                            auto_adjust=False, repair=True)
         if df.empty:
             return pd.DataFrame()
+        df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
         df.index = pd.to_datetime(df.index).tz_localize(None)
         return df
     except Exception as e:

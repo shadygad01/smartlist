@@ -1437,7 +1437,13 @@ def build_report(holiday_mode=False, last_trading=None):
             dyn_tgt = p["target"]
             lvl     = p.get("current_level", 0)
             fib_lbl = FIB_LABELS.get(lvl, f"Fib {lvl}")
-            cur_price = results[sym]["price"] if sym in results and results[sym].get("ok") else "—"
+            # حاول الحصول على السعر من النتائج الحالية، وإلا استخدم current_price المحفوظ
+            if sym in results and results[sym].get("ok"):
+                cur_price = results[sym]["price"]
+            elif "current_price" in p:
+                cur_price = p["current_price"]
+            else:
+                cur_price = "—"
             pnl_pct = ((float(cur_price) - entry) / entry * 100) if cur_price != "—" else None
             pnl_str = (f'+{pnl_pct:.1f}%' if pnl_pct and pnl_pct >= 0 else f'{pnl_pct:.1f}%') if pnl_pct is not None else "—"
             pnl_col = "#155724" if (pnl_pct or 0) >= 0 else "#721c24"
@@ -1860,13 +1866,18 @@ def send_telegram_alerts(results):
                 if pos.get("status") == "open":
                     entry = pos["entry_price"]
                     tgt = pos["target"]
-                    lvl = FIB_LABELS.get(pos.get("current_level", 0), "")
-                    cur_price = results.get(sym, {}).get("price", "—")
+                    # حاول الحصول على السعر من النتائج الحالية، وإلا استخدم current_price المحفوظ
+                    if sym in results and results[sym].get("ok"):
+                        cur_price = results[sym].get("price", "—")
+                    elif "current_price" in pos:
+                        cur_price = pos["current_price"]
+                    else:
+                        cur_price = "—"
                     pnl = "—"
                     if cur_price != "—":
                         pnl_pct = ((float(cur_price) - entry) / entry * 100)
                         pnl = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
-                    msg += f"\n   • {NAMES.get(sym, sym)}: {entry:.2f} → {tgt:.2f} EGP ({pnl}) {lvl}"
+                    msg += f"\n   • {NAMES.get(sym, sym)}: {entry:.2f} → {tgt:.2f} EGP ({pnl})"
         try:
             requests.post(
                 f"https://api.telegram.org/bot{token}/sendMessage",
@@ -1890,7 +1901,13 @@ def send_telegram_alerts(results):
             entry = pos["entry_price"]
             tgt = pos["target"]
             lvl = FIB_LABELS.get(pos.get("current_level", 0), "")
-            cur_price = results.get(sym, {}).get("price", "—")
+            # حاول الحصول على السعر من النتائج الحالية، وإلا استخدم current_price المحفوظ
+            if sym in results and results[sym].get("ok"):
+                cur_price = results[sym].get("price", "—")
+            elif "current_price" in pos:
+                cur_price = pos["current_price"]
+            else:
+                cur_price = "—"
             if cur_price != "—":
                 pnl_pct = ((float(cur_price) - entry) / entry * 100)
                 pnl = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
@@ -2089,16 +2106,16 @@ def daily_scan():
     positions = load_open_positions()
 
     if is_egx_trading_day(today_cairo()):
-        # Step 1: تحليل الأسهم
+        # الخطوة 1: تحليل الأسهم أولاً
         html, _results = build_report(holiday_mode=False)
 
-        # Step 2: تسجيل صفقات جديدة من الـ qualifying stocks (قبل الإرسال!)
+        # الخطوة 2: تسجيل صفقات جديدة من الـ qualifying stocks (قبل الإرسال!)
         qualifying_stocks = {
             s for s in STOCKS
             if _results[s].get("ok") and _results[s].get("score", 0) >= 35
         }
         for stock in qualifying_stocks:
-            # حمّل الـ positions مرة أخرى قبل التسجيل (تحديث!)
+            # أعد تحميل البيانات من الملف قبل كل فحص
             positions = load_open_positions()
             if stock not in positions:
                 current_price = _results[stock].get("price", 0)
@@ -2106,10 +2123,10 @@ def daily_scan():
                     add_position(stock, current_price, datetime.now(CAIRO).isoformat())
                     print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
 
-        # Step 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة المسجلة)
+        # الخطوة 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة المسجلة!)
         html, _results = build_report(holiday_mode=False)
 
-        # Step 4: إرسال التقرير والتيليجرام
+        # الخطوة 4: إرسال الإيميل والتيليجرام مع البيانات المحدّثة
         send_email(html)
         send_telegram_alerts(_results)
 
@@ -2123,16 +2140,16 @@ def daily_scan():
     else:
         last_td = most_recent_trading_day(today_cairo())
 
-        # Step 1: تحليل الأسهم
+        # الخطوة 1: تحليل الأسهم أولاً
         html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
 
-        # Step 2: تسجيل صفقات جديدة من الـ qualifying stocks (قبل الإرسال!)
+        # الخطوة 2: تسجيل صفقات جديدة من الـ qualifying stocks (قبل الإرسال!)
         qualifying_stocks = {
             s for s in STOCKS
             if _results[s].get("ok") and _results[s].get("score", 0) >= 35
         }
         for stock in qualifying_stocks:
-            # حمّل الـ positions مرة أخرى قبل التسجيل (تحديث!)
+            # أعد تحميل البيانات من الملف قبل كل فحص
             positions = load_open_positions()
             if stock not in positions:
                 current_price = _results[stock].get("price", 0)
@@ -2140,10 +2157,10 @@ def daily_scan():
                     add_position(stock, current_price, datetime.now(CAIRO).isoformat())
                     print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
 
-        # Step 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة المسجلة)
+        # الخطوة 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة المسجلة!)
         html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
 
-        # Step 4: إرسال التقرير والتيليجرام
+        # الخطوة 4: إرسال الإيميل والتيليجرام مع البيانات المحدّثة
         send_email(html, subject_suffix=f" (Holiday — Last Session: {last_td})")
         send_telegram_alerts(_results)
 

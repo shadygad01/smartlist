@@ -1554,6 +1554,39 @@ def send_email(html, subject_suffix=""):
 # TELEGRAM ALERTS
 # =========================================
 
+def send_telegram_target_update(symbol, entry_price, old_target, new_target, current_price, fib_level):
+    """Send alert when dynamic target is updated"""
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not token or not chat_id:
+        return False
+
+    old_pct = ((old_target - entry_price) / entry_price) * 100
+    new_pct = ((new_target - entry_price) / entry_price) * 100
+
+    message = (
+        f"🚀 *تحديث التارجت الديناميكي*\n\n"
+        f"📊 السهم: *{NAMES.get(symbol, symbol)}* `{symbol}`\n"
+        f"💰 سعر الدخول: {entry_price:.2f} EGP\n"
+        f"📈 السعر الحالي: {current_price:.2f} EGP\n\n"
+        f"🎯 التارجت القديم: {old_target:.2f} (*{old_pct:.2f}%*)\n"
+        f"⬆️ التارجت الجديد: {new_target:.2f} (*{new_pct:.2f}%*)\n"
+        f"📍 مستوى Fibonacci: *{fib_level:.1f}%*\n\n"
+        f"⏰ الوقت: {now_cairo().strftime('%H:%M:%S')}"
+    )
+
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
+            timeout=10,
+        )
+        return True
+    except Exception as e:
+        print(f"❌ Telegram error: {e}")
+        return False
+
 def send_telegram_alerts(results):
     """
     Send a Telegram message for every stock with score >= 35.

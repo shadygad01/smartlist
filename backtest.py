@@ -16,6 +16,43 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # =========================================
+# TELEGRAM NOTIFICATIONS
+# =========================================
+
+def send_telegram_notification(symbol, entry_price, old_target, new_target, current_price, fib_level):
+    """Send Telegram alert when target is updated"""
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not token or not chat_id:
+        return False
+
+    old_pct = ((old_target - entry_price) / entry_price) * 100
+    new_pct = ((new_target - entry_price) / entry_price) * 100
+
+    message = (
+        f"🚀 *تحديث التارجت الديناميكي*\n\n"
+        f"📊 السهم: *{symbol}*\n"
+        f"💰 سعر الدخول: {entry_price:.2f} EGP\n"
+        f"📈 السعر الحالي: {current_price:.2f} EGP\n\n"
+        f"🎯 التارجت القديم: {old_target:.2f} (*{old_pct:.2f}%*)\n"
+        f"⬆️ التارجت الجديد: {new_target:.2f} (*{new_pct:.2f}%*)\n"
+        f"📍 مستوى Fibonacci: *{fib_level:.1f}%*\n\n"
+        f"⏰ الوقت: {datetime.now().strftime('%H:%M:%S')}"
+    )
+
+    try:
+        response = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
+            timeout=10,
+        )
+        return response.status_code == 200
+    except Exception as e:
+        print(f"❌ Telegram error: {e}")
+        return False
+
+# =========================================
 # Z3 CONSTRAINT SOLVER FOR OPTIMIZATION
 # =========================================
 try:
@@ -233,12 +270,13 @@ def calc_stopping_volume(df, eq, lo, lookback=30, vol_mult=1.5, range_ratio=0.5)
 # =========================================
 
 class BacktestEngine:
-    def __init__(self, symbol, df, params=None):
+    def __init__(self, symbol, df, params=None, send_notifications=False):
         self.symbol = symbol
         self.df = df.copy()
         self.params = params or self._default_params()
         self.trades = []
         self.buy_signals = []
+        self.send_notifications = send_notifications
     
     @staticmethod
     def _default_params():
@@ -382,6 +420,7 @@ class BacktestEngine:
 
             # UPDATE DYNAMIC TARGET (رفع التارجت لكن لا ينزل)
             if position:
+                old_target = position["target"]
                 best_fib_idx = position["current_target_level"]
 
                 for i, fib_target in enumerate(position["fib_targets"]):
@@ -389,6 +428,19 @@ class BacktestEngine:
                         best_fib_idx = max(best_fib_idx, i)
 
                 position["target"] = position["fib_targets"][best_fib_idx]
+
+                # Send notification if target was updated
+                if best_fib_idx > position["current_target_level"] and self.send_notifications:
+                    fib_pct = ((position["target"] - position["entry_price"]) / position["entry_price"]) * 100
+                    send_telegram_notification(
+                        self.symbol,
+                        position["entry_price"],
+                        old_target,
+                        position["target"],
+                        price,
+                        fib_pct
+                    )
+
                 position["current_target_level"] = best_fib_idx
 
                 weakness = self._detect_weakness(close) if self.params.get("dynamic_target") else False

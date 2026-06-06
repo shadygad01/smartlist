@@ -288,15 +288,18 @@ class BacktestEngine:
             "target_multiplier": 1.12,
             "min_data_points": 80,
             "dynamic_target": True,
-            "fib_levels": [0.236, 0.382, 0.50, 0.618],
+            "fib_levels": [0.236, 0.382, 0.50, 0.618, 1.0, 1.5, 2.0],  # بدون حد أقصى
         }
     
     def _calculate_fibonacci_targets(self, entry_price):
-        """حساب مستويات Fibonacci كأهداف ديناميكية (أعلى من 12%)"""
+        """حساب مستويات Fibonacci كأهداف ديناميكية (بدون حد أقصى)"""
         min_target = entry_price * 1.12
         fib_targets = [min_target]
 
-        for fib_level in self.params.get("fib_levels", [0.236, 0.382, 0.50, 0.618]):
+        # مستويات Fibonacci والمضاعفات العالية (بدون حد أقصى)
+        fib_levels = self.params.get("fib_levels", [0.236, 0.382, 0.50, 0.618, 1.0, 1.5, 2.0])
+
+        for fib_level in fib_levels:
             fib_price = entry_price * (1 + fib_level)
             if fib_price >= min_target:
                 fib_targets.append(fib_price)

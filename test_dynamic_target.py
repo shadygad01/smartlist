@@ -129,7 +129,10 @@ def test_scenario(scenario):
         print(f"   • اليوم: {exit_day}")
         print(f"   • سعر الخروج: {exit_price:.2f}")
         print(f"   • الأرباح: {exit_profit:.2f}%")
-        print(f"   • المستوى: {target_labels[current_level]}")
+        if current_level < len(target_labels):
+            print(f"   • المستوى: {target_labels[current_level]}")
+        else:
+            print(f"   • المستوى: {((targets[current_level] - entry_price) / entry_price) * 100:.1f}% (مستوى عالي)")
     else:
         print(f"❌ لم يتم الخروج من الصفقة")
         print(f"   • التارجت الحالي: {current_target:.2f}")

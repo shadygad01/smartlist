@@ -2098,6 +2098,8 @@ def daily_scan():
             if _results[s].get("ok") and _results[s].get("score", 0) >= 35
         }
         for stock in qualifying_stocks:
+            # حمّل الـ positions مرة أخرى قبل التسجيل (تحديث!)
+            positions = load_open_positions()
             if stock not in positions:
                 current_price = _results[stock].get("price", 0)
                 if current_price > 0:
@@ -2130,6 +2132,8 @@ def daily_scan():
             if _results[s].get("ok") and _results[s].get("score", 0) >= 35
         }
         for stock in qualifying_stocks:
+            # حمّل الـ positions مرة أخرى قبل التسجيل (تحديث!)
+            positions = load_open_positions()
             if stock not in positions:
                 current_price = _results[stock].get("price", 0)
                 if current_price > 0:

@@ -1554,6 +1554,58 @@ def send_email(html, subject_suffix=""):
 # TELEGRAM ALERTS
 # =========================================
 
+def send_telegram_zone3_reinforcement(symbol, entry_price, reinforcement_price):
+    """Send alert when Zone 3 reinforcement is triggered"""
+    token   = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return False
+
+    name = NAMES.get(symbol, symbol)
+    drop_pct = ((reinforcement_price - entry_price) / entry_price) * 100
+
+    def fib_levels_str(ep):
+        levels = [
+            (12.0,  ep * 1.120),
+            (23.6,  ep * 1.236),
+            (38.2,  ep * 1.382),
+            (50.0,  ep * 1.500),
+        ]
+        return "\n".join(
+            f"   {'حد أدنى 12%' if pct == 12.0 else f'🎯 {pct}%':14}: {price:.2f} EGP"
+            for pct, price in levels
+        )
+
+    message = (
+        f"🔄 *تعزيز Zone 3 — إضافة للمركز*\n\n"
+        f"📊 السهم: *{name}* `{symbol}`\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🟢 *الشراء الأول*\n"
+        f"   سعر الدخول  : {entry_price:.2f} EGP\n"
+        f"{fib_levels_str(entry_price)}\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🔵 *التعزيز (Zone 3)*\n"
+        f"   سعر التعزيز : {reinforcement_price:.2f} EGP\n"
+        f"{fib_levels_str(reinforcement_price)}\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"⚠️ الخروج عند أول ضعف بعد 12%\n"
+        f"   الهدف يرتفع تلقائياً بلا حد أقصى\n\n"
+        f"📉 الهبوط من الدخول: *{drop_pct:.1f}%*\n"
+        f"⏰ {now_cairo().strftime('%H:%M | %d-%m-%Y')}"
+    )
+
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
+            timeout=10,
+        )
+        return True
+    except Exception as e:
+        print(f"❌ Telegram error: {e}")
+        return False
+
+
 def send_telegram_target_update(symbol, entry_price, old_target, new_target, current_price, fib_level):
     """Send alert when dynamic target is updated"""
     token = os.getenv("TELEGRAM_TOKEN")

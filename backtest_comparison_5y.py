@@ -25,23 +25,62 @@ FIB_LEVELS = [0.236, 0.382, 0.50, 0.618, 1.0, 1.5, 2.0]
 # ── Real Data Loader ───────────────────────────────────────────────────────
 
 def download_real_data(symbol, years=5):
-    """تحميل بيانات حقيقية من yfinance"""
-    yf_symbol = symbol if symbol.endswith(".CA") else f"{symbol}.CA"
-    period = f"{years}y"
+    """
+    تحميل بيانات حقيقية — ترتيب الأولوية:
+    1. ملف CSV محلي من مجلد data/
+    2. GitHub raw (إذا رُفعت البيانات على الـ repo)
+    3. yfinance مباشرة
+    4. بيانات اصطناعية كـ fallback أخير
+    """
+    import os
+
+    # ── 1. CSV محلي ───────────────────────────────────────────────────────────
+    local_path = os.path.join("data", f"{symbol}.csv")
+    if os.path.exists(local_path):
+        try:
+            df = pd.read_csv(local_path, index_col=0, parse_dates=True)
+            df = df[["Open", "High", "Low", "Close", "Volume"]].dropna(subset=["Close"])
+            if len(df) >= 80:
+                print(f"  ✓ {symbol}: {len(df)} يوم (CSV محلي)")
+                return df
+        except Exception:
+            pass
+
+    # ── 2. GitHub raw ─────────────────────────────────────────────────────────
+    github_url = (
+        f"https://raw.githubusercontent.com/shadygad01/smartlist/main/data/{symbol}.csv"
+    )
     try:
-        ticker = yf.Ticker(yf_symbol)
-        df = ticker.history(period=period, interval="1d", auto_adjust=False, repair=True)
-        if df.empty or len(df) < 80:
-            print(f"  ⚠️ {symbol}: بيانات غير كافية من yfinance، استخدام بيانات اصطناعية")
-            return generate_synthetic_egx_data(symbol, years=years, seed=hash(symbol) % (2**32))
-        df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
-        df.index = df.index.tz_localize(None)
-        df = df.dropna(subset=["Close"])
-        print(f"  ✓ {symbol}: {len(df)} يوم من البيانات الحقيقية")
-        return df
-    except Exception as e:
-        print(f"  ⚠️ {symbol}: خطأ ({e})، استخدام بيانات اصطناعية")
-        return generate_synthetic_egx_data(symbol, years=years, seed=hash(symbol) % (2**32))
+        df = pd.read_csv(github_url, index_col=0, parse_dates=True)
+        df = df[["Open", "High", "Low", "Close", "Volume"]].dropna(subset=["Close"])
+        if len(df) >= 80:
+            # حفظ نسخة محلية لتسريع التشغيل القادم
+            os.makedirs("data", exist_ok=True)
+            df.to_csv(local_path)
+            print(f"  ✓ {symbol}: {len(df)} يوم (GitHub)")
+            return df
+    except Exception:
+        pass
+
+    # ── 3. yfinance ───────────────────────────────────────────────────────────
+    try:
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(period=f"{years}y", interval="1d",
+                            auto_adjust=False, repair=True)
+        if not df.empty and len(df) >= 80:
+            df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
+            df.index = df.index.tz_localize(None)
+            df = df.dropna(subset=["Close"])
+            os.makedirs("data", exist_ok=True)
+            df.to_csv(local_path)
+            print(f"  ✓ {symbol}: {len(df)} يوم (yfinance)")
+            return df
+    except Exception:
+        pass
+
+    # ── 4. Fallback: بيانات اصطناعية ─────────────────────────────────────────
+    print(f"  ⚠️ {symbol}: استخدام بيانات اصطناعية")
+    return generate_synthetic_egx_data(symbol, years=years, seed=hash(symbol) % (2**32))
 
 
 # ── Volatility-Based Dynamic Minimum Target ────────────────────────────────

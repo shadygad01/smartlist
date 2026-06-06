@@ -157,12 +157,43 @@ def run_engine_fast(symbol, df, params, dynamic, min_target_pct=0.12):
         return best
 
     def macd_crossdown(idx):
+        """MACD crossdown detection"""
         if idx < 1:
             return False
         try:
             sl  = df["Close"].iloc[max(0, idx-30):idx+1]
             m, sg, _ = calc_macd(sl)
             return (m.iloc[-2] >= sg.iloc[-2]) and (m.iloc[-1] < sg.iloc[-1])
+        except Exception:
+            return False
+
+    def confirm_weakness(idx):
+        """تأكيد الضعف: شمعة هابطة بفوليوم أقوى من متوسط الـ 20 شمعة"""
+        if idx < 22:
+            return False
+        try:
+            # MACD crossdown تأكيد
+            sl = df["Close"].iloc[max(0, idx-30):idx+1]
+            m, sg, _ = calc_macd(sl)
+            if len(m) < 2:
+                return False
+            crossed_down = (m.iloc[-2] >= sg.iloc[-2]) and (m.iloc[-1] < sg.iloc[-1])
+            if not crossed_down:
+                return False
+
+            # شمعة هابطة (close < open)
+            curr_close = float(df["Close"].iloc[idx])
+            curr_open = float(df["Open"].iloc[idx])
+            is_bearish = curr_close < curr_open
+            if not is_bearish:
+                return False
+
+            # فوليوم أعلى من متوسط آخر 20 شمعة
+            curr_volume = float(df["Volume"].iloc[idx])
+            avg_vol_20 = df["Volume"].iloc[max(0, idx-21):idx].mean()
+            strong_volume = curr_volume > avg_vol_20
+
+            return crossed_down and is_bearish and strong_volume
         except Exception:
             return False
 
@@ -193,7 +224,7 @@ def run_engine_fast(symbol, df, params, dynamic, min_target_pct=0.12):
         lvl = pos["current_level"]
 
         if price >= pos["target"]:
-            if dynamic and macd_crossdown(i):
+            if dynamic and confirm_weakness(i):
                 exit_position(pos, tgts[lvl], "weakness_at_target", date)
                 return True
             elif dynamic and lvl < len(tgts) - 1:
@@ -202,7 +233,7 @@ def run_engine_fast(symbol, df, params, dynamic, min_target_pct=0.12):
             else:
                 exit_position(pos, price, "target_hit", date)
                 return True
-        elif lvl > 0 and dynamic and macd_crossdown(i):
+        elif lvl > 0 and dynamic and confirm_weakness(i):
             exit_position(pos, tgts[lvl], "downtrend_protection", date)
             return True
         return False

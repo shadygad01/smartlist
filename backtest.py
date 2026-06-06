@@ -315,18 +315,50 @@ class BacktestEngine:
         return 0  # Below minimum
 
     def _detect_weakness(self, close):
-        """الكشف عن بوادر ضعف - MACD يعود تحت الـ Signal أو تفصيل"""
+        """الكشف عن بوادر ضعف - MACD يعود تحت الـ Signal"""
         if len(close) < 15:
             return False
         try:
             m, sg, h = calc_macd(close)
             macd_now = float(m.iloc[-1])
-            macd_prev = float(m.iloc[-2]) if len(m) > 1 else 0
             sig_now = float(sg.iloc[-1])
-            sig_prev = float(sg.iloc[-2]) if len(sg) > 1 else 0
+            return macd_now < sig_now
+        except:
+            return False
+
+    def _confirm_weakness(self, df_slice):
+        """تأكيد الضعف: شمعة هابطة بفوليوم أقوى من متوسط الـ 20 شمعة"""
+        if len(df_slice) < 22:
+            return False
+        try:
+            close = df_slice["Close"]
+            open_ = df_slice["Open"]
+            volume = df_slice["Volume"]
+
+            # الشمعة الحالية
+            curr_close = float(close.iloc[-1])
+            curr_open = float(open_.iloc[-1])
+            curr_volume = float(volume.iloc[-1])
+
+            # تحقق من MACD crossdown
+            m, sg, h = calc_macd(close)
+            if len(m) < 2:
+                return False
+            macd_now = float(m.iloc[-1])
+            macd_prev = float(m.iloc[-2])
+            sig_now = float(sg.iloc[-1])
+            sig_prev = float(sg.iloc[-2])
 
             crossed_down = macd_prev >= sig_prev and macd_now < sig_now
-            return crossed_down
+
+            # شمعة هابطة (البيع)
+            is_bearish = curr_close < curr_open
+
+            # فوليوم أعلى من متوسط الـ 20 شمعة السابقة
+            avg_volume_20 = volume.iloc[-21:-1].mean()  # متوسط آخر 20 شمعة قبل الحالية
+            strong_volume = curr_volume > avg_volume_20
+
+            return crossed_down and is_bearish and strong_volume
         except:
             return False
 
@@ -456,13 +488,14 @@ class BacktestEngine:
                 position["target"] = position["fib_targets"][best_fib_idx]
                 position["current_target_level"] = best_fib_idx
 
-                weakness = self._detect_weakness(close) if self.params.get("dynamic_target") else False
+                # تأكيد الضعف: شمعة هابطة بفوليوم عالي
+                confirmed_weakness = self._confirm_weakness(hist_df) if self.params.get("dynamic_target") else False
 
                 # EXIT: Price reached target
                 if price >= position["target"]:
                     # Check for weakness at the moment of reaching target
-                    if weakness:
-                        # Weakness detected at target — exit at current level reached
+                    if confirmed_weakness:
+                        # Weakness confirmed at target — exit at current level reached
                         exit_date = date
                         exit_price = position["fib_targets"][position["current_target_level"]]
                         pnl = exit_price - position["entry_price"]
@@ -483,7 +516,7 @@ class BacktestEngine:
                         position = None
 
                     else:
-                        # No weakness — raise target to next Fibonacci level
+                        # No confirmed weakness — raise target to next Fibonacci level
                         if best_fib_idx < len(position["fib_targets"]) - 1:
                             best_fib_idx += 1
                             position["target"] = position["fib_targets"][best_fib_idx]
@@ -502,8 +535,8 @@ class BacktestEngine:
                                 )
                         # Position stays open, waiting for next target
 
-                # EXIT: Weakness detected below target (downtrend protection)
-                elif weakness and position["current_target_level"] > 0:
+                # EXIT: Weakness confirmed below target (downtrend protection)
+                elif confirmed_weakness and position["current_target_level"] > 0:
                     # Exit at current level reached
                     exit_date = date
                     exit_price = position["fib_targets"][position["current_target_level"]]

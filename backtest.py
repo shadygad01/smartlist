@@ -294,14 +294,22 @@ class BacktestEngine:
     def _calculate_fibonacci_targets(self, entry_price):
         """حساب مستويات Fibonacci كأهداف ديناميكية (أعلى من 12%)"""
         min_target = entry_price * 1.12
-        fib_targets = []
+        fib_targets = [min_target]
 
         for fib_level in self.params.get("fib_levels", [0.236, 0.382, 0.50, 0.618]):
             fib_price = entry_price * (1 + fib_level)
             if fib_price >= min_target:
                 fib_targets.append(fib_price)
 
-        return [min_target] + fib_targets
+        return fib_targets
+
+    def _get_target_level(self, entry_price, current_price):
+        """Get the next target level: first level above current price"""
+        targets = self._calculate_fibonacci_targets(entry_price)
+        for i in range(len(targets) - 1, -1, -1):  # Start from highest
+            if current_price >= targets[i]:
+                return min(i + 1, len(targets) - 1)  # Return next level or highest
+        return 0  # Below minimum
 
     def _detect_weakness(self, close):
         """الكشف عن بوادر ضعف - MACD يعود تحت الـ Signal أو تفصيل"""
@@ -407,12 +415,18 @@ class BacktestEngine:
 
             # BUY SIGNAL
             if not position and price_ok and score >= self.params["score_threshold"]:
-                fib_targets = self._calculate_fibonacci_targets(price) if self.params.get("dynamic_target") else [target]
+                if self.params.get("dynamic_target"):
+                    fib_targets = self._calculate_fibonacci_targets(price)
+                    initial_level = self._get_target_level(price, price)
+                else:
+                    fib_targets = [target]
+                    initial_level = 0
+
                 position = {
                     "entry_date": date,
                     "entry_price": price,
-                    "target": fib_targets[0],
-                    "current_target_level": 0,
+                    "target": fib_targets[initial_level],
+                    "current_target_level": initial_level,
                     "fib_targets": fib_targets,
                     "score": score,
                 }
@@ -445,10 +459,10 @@ class BacktestEngine:
 
                 weakness = self._detect_weakness(close) if self.params.get("dynamic_target") else False
 
-                # EXIT: Target Hit
+                # EXIT: Target Hit (exit at actual price if it exceeds target)
                 if price >= position["target"]:
                     exit_date = date
-                    exit_price = position["target"]
+                    exit_price = price  # Exit at current price, not target
                     pnl = exit_price - position["entry_price"]
                     pnl_pct = (pnl / position["entry_price"]) * 100
 

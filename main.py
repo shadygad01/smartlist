@@ -1860,12 +1860,13 @@ def send_telegram_alerts(results):
                 if pos.get("status") == "open":
                     entry = pos["entry_price"]
                     tgt = pos["target"]
+                    lvl = FIB_LABELS.get(pos.get("current_level", 0), "")
                     cur_price = results.get(sym, {}).get("price", "—")
                     pnl = "—"
                     if cur_price != "—":
                         pnl_pct = ((float(cur_price) - entry) / entry * 100)
                         pnl = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
-                    msg += f"\n   • {NAMES.get(sym, sym)}: {entry:.2f} → {tgt:.2f} EGP ({pnl})"
+                    msg += f"\n   • {NAMES.get(sym, sym)}: {entry:.2f} → {tgt:.2f} EGP ({pnl}) {lvl}"
         try:
             requests.post(
                 f"https://api.telegram.org/bot{token}/sendMessage",

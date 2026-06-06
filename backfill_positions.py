@@ -85,7 +85,7 @@ def fetch_history(symbol: str) -> pd.DataFrame:
     try:
         ticker = yf.Ticker(symbol)
         df = ticker.history(start=start_fetch, interval="1d",
-                            auto_adjust=False, repair=True)
+                            auto_adjust=False)
         if df.empty:
             return pd.DataFrame()
         df = df[["Open", "High", "Low", "Close", "Volume"]].copy()

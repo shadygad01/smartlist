@@ -244,10 +244,6 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
     <div class="lbl">Best Return ({best_ret_ticker.replace('.CA','')})</div>
   </div>
   <div class="stat">
-    <div class="val">{max_score_stock[1]}</div>
-    <div class="lbl">Peak Score ({max_score_stock[0].replace('.CA','')})</div>
-  </div>
-  <div class="stat">
     <div class="val" id="pend-stat">{len(pending)}</div>
     <div class="lbl">Pending Signals</div>
   </div>
@@ -265,7 +261,6 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
   <span class="ctrl-label" style="margin-left:8px">View</span>
   <div class="btn-group">
     <button class="btn active" id="view-score"  onclick="setView('score')">Score</button>
-    <button class="btn r1c"    id="view-r1"     onclick="setView('r1')">R1</button>
     <button class="btn ret"    id="view-return" onclick="setView('return')">Return %</button>
   </div>
 </div>
@@ -674,7 +669,7 @@ function setRange(r) {{
 }}
 function setView(v) {{
     currentView = v;
-    ['score','r1','return'].forEach(x => document.getElementById('view-'+x).classList.remove('active'));
+    ['score','return'].forEach(x => document.getElementById('view-'+x).classList.remove('active'));
     document.getElementById('view-'+v).classList.add('active');
     buildLegend();
     buildHeatmap();

@@ -64,7 +64,7 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-seri
 .sn-pend{color:#d29922!important}
 .sn-sig{color:#3fb950!important}
 
-.hm-cell{width:15px;height:25px;border-radius:2px;cursor:pointer;position:relative;transition:transform .1s,outline .1s}
+.hm-cell{height:25px;border-radius:2px;cursor:pointer;position:relative;transition:transform .1s,outline .1s}
 .hm-cell:hover{transform:scale(1.5);z-index:10;outline:2px solid #e6edf3}
 .pos-marker{position:absolute;bottom:2px;right:1px;width:4px;height:4px;border-radius:50%;background:#f78166}
 .pend-marker{position:absolute;bottom:2px;right:1px;width:4px;height:4px;border-radius:50%;background:#d29922}
@@ -170,6 +170,7 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-seri
     <button class="btn" id="btn-60" onclick="setRange(60)">60d</button>
     <button class="btn" id="btn-30" onclick="setRange(30)">30d</button>
   </div>
+  <span id="days-count" style="font-size:10px;color:#6e7681;margin-left:4px"></span>
   <span class="ctrl-label" style="margin-left:8px">View</span>
   <div class="btn-group">
     <button class="btn active" id="view-score"  onclick="setView('score')">Score</button>
@@ -329,9 +330,17 @@ function buildLegend() {
     });
 }
 
+// ── Dynamic cell width based on available space ───────────────────────────
+function calcCellW(numDates) {
+    const available = (window.innerWidth || 800) - 82 - 76 - 56;
+    const ideal = Math.floor(available / numDates);
+    return Math.max(14, Math.min(ideal, 48));
+}
+
 // ── Heatmap ───────────────────────────────────────────────────────────────
 function buildHeatmap() {
     const dates = filteredDates();
+    const CW    = calcCellW(dates.length);
     const tbl   = document.getElementById('hm-table');
     tbl.innerHTML = '';
 
@@ -344,11 +353,13 @@ function buildHeatmap() {
         const prev  = dates[i-1] || '';
         const th    = document.createElement('td');
         th.className = 'date-header';
-        if (d.slice(0,7) !== prev.slice(0,7) || i===0) {
+        th.style.width = CW + 'px';
+        if (d.slice(0,7) !== prev.slice(0,7) || i===0 || CW >= 22) {
             th.textContent = d.slice(5);
         }
         hRow.appendChild(th);
     });
+    document.getElementById('days-count').textContent = `(${dates.length} days)`;
     const sep0 = document.createElement('td'); sep0.className='today-sep'; hRow.appendChild(sep0);
     const thToday = document.createElement('td'); thToday.className='today-header'; thToday.textContent='TODAY'; hRow.appendChild(thToday);
     tbl.appendChild(hRow);
@@ -391,6 +402,7 @@ function buildHeatmap() {
                 td.style.padding = '1px';
                 const cell  = document.createElement('div');
                 cell.className = 'hm-cell';
+                cell.style.width  = CW + 'px';
                 cell.style.background = cellColor(stock, entry, d);
 
                 if (entry) {
@@ -578,6 +590,7 @@ function setRange(r) {
     ['all','90','60','30'].forEach(x => document.getElementById('btn-'+x).classList.remove('active'));
     document.getElementById('btn-'+r).classList.add('active');
     buildHeatmap();
+    document.querySelector('.hm-outer').scrollLeft = 0;
 }
 function setView(v) {
     currentView = v;

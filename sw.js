@@ -1,7 +1,7 @@
-const CACHE = 'egx-smc-v3';
-const STATIC = ['heatmap.html', 'manifest.json', 'icon.svg'];
+const CACHE = 'egx-smc-v4';
+const STATIC = ['manifest.json', 'icon.svg'];
 
-// ── Install: cache static assets ─────────────────────────────────────────
+// ── Install: cache only non-HTML static assets ────────────────────────────
 self.addEventListener('install', e => {
     e.waitUntil(
         caches.open(CACHE)
@@ -21,11 +21,13 @@ self.addEventListener('activate', e => {
     );
 });
 
-// ── Fetch: network-first for data.json, cache-first for rest ─────────────
+// ── Fetch: network-first for HTML + data.json, cache-first for rest ───────
 self.addEventListener('fetch', e => {
     const url = new URL(e.request.url);
+    const isHTML = url.pathname.endsWith('.html') || url.pathname.endsWith('/');
+    const isData = url.pathname.endsWith('data.json');
 
-    if (url.pathname.endsWith('data.json')) {
+    if (isHTML || isData) {
         e.respondWith(
             fetch(e.request)
                 .then(res => {

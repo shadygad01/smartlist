@@ -109,6 +109,9 @@ HTML = f"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#161b22">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -140,6 +143,8 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
 
 /* ── Controls ─────────────────────────────── */
 .controls{{padding:10px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#0d1117;border-bottom:1px solid #21262d}}
+@keyframes flashChip{{0%{{background:#388bfd;transform:scale(1.08)}}100%{{background:#1f2d3d;transform:scale(1)}}}}
+.range-flash{{animation:flashChip .4s ease-out}}
 .ctrl-label{{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}}
 .btn-group{{display:flex;gap:3px}}
 .btn{{background:#21262d;border:1px solid #30363d;border-radius:6px;padding:4px 11px;font-size:12px;color:#c9d1d9;cursor:pointer;transition:all .12s}}
@@ -239,7 +244,7 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
 <!-- ── Header ──────────────────────────────────────────────────────── -->
 <div class="header">
   <h1>EGX SMC — Signal Score Heatmap</h1>
-  <span class="badge green">Generated: {today_str}</span>
+  <span class="badge green">Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC</span>
   <span class="badge yellow">{len(positions)} Open Positions</span>
   <span class="badge">EGX · Cairo Time</span>
   <button id="btn-install" style="display:none;align-items:center;gap:6px;background:#238636;border:1px solid #2ea043;border-radius:6px;padding:5px 12px;font-size:12px;color:#fff;cursor:pointer">
@@ -472,6 +477,9 @@ function buildHeatmap() {{
     if (dates.length) {{
         rl.textContent = fmtD(dates[0]) + ' → ' + fmtD(dates[dates.length-1]);
         rl.style.display = 'inline-block';
+        rl.classList.remove('range-flash');
+        void rl.offsetWidth;
+        rl.classList.add('range-flash');
     }} else {{ rl.style.display = 'none'; }}
     const sep0 = document.createElement('td'); sep0.className='today-sep'; hRow.appendChild(sep0);
     const thToday = document.createElement('td'); thToday.className='today-header'; thToday.textContent='TODAY'; hRow.appendChild(thToday);

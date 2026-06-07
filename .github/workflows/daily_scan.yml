@@ -8,18 +8,20 @@ on:
     # May-October: 6:00 UTC (EEST = UTC+3)
     - cron: '0 6 * * 1-5'
 
-    # كل 5 دقائق من 08:00 لـ 11:55 UTC (= 10:00–13:55 Cairo in winter, 9:00-12:55 in summer)
-    # Winter schedule (Nov-Apr): 08:00-11:55 UTC
+    # كل 5 دقائق من 10:00 لـ 13:55 Cairo — winter (Nov-Apr): 08:00-11:55 UTC
     - cron: '0,5,10,15,20,25,30,35,40,45,50,55 8-11 * * 0-4'
-    # Summer schedule (May-Oct): 07:00-10:55 UTC (= 10:00-13:55 Cairo)
+    # كل 5 دقائق من 10:00 لـ 13:55 Cairo — summer (May-Oct): 07:00-10:55 UTC
     - cron: '0,5,10,15,20,25,30,35,40,45,50,55 7-10 * * 1-5'
 
-    # كل 5 دقائق من 12:00 لـ 12:30 UTC (= 14:00–14:30 Cairo in winter)
+    # 14:00-14:30 Cairo — winter: 12:00-12:30 UTC
     - cron: '0,5,10,15,20,25,30 12 * * 0-4'
-    # Summer schedule: 11:00-11:30 UTC (= 14:00-14:30 Cairo)
+    # 14:00-14:30 Cairo — summer: 11:00-11:30 UTC
     - cron: '0,5,10,15,20,25,30 11 * * 1-5'
 
   workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   contents: write
@@ -37,9 +39,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install APScheduler --upgrade
+        run: pip install -r requirements.txt
 
       - name: Run EGX Scanner
         env:

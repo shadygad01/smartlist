@@ -2,11 +2,11 @@ name: EGX Daily Scanner
 
 on:
   schedule:
-    # Daily report الساعة 8:30 صبح Cairo
-    # November-April: 6:30 UTC (EET = UTC+2)
-    - cron: '30 6 * * 0-4'
-    # May-October: 5:30 UTC (EEST = UTC+3)
-    - cron: '30 5 * * 1-5'
+    # Daily report الساعة 9:00 صبح Cairo
+    # November-April: 7:00 UTC (EET = UTC+2)
+    - cron: '0 7 * * 0-4'
+    # May-October: 6:00 UTC (EEST = UTC+3)
+    - cron: '0 6 * * 1-5'
 
     # كل 5 دقائق من 08:00 لـ 11:55 UTC (= 10:00–13:55 Cairo in winter, 9:00-12:55 in summer)
     # Winter schedule (Nov-Apr): 08:00-11:55 UTC

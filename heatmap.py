@@ -6,9 +6,10 @@ Run: python heatmap.py  →  heatmap.html
 
 import json
 import os
-from datetime import date
+from datetime import date, datetime
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE    = os.path.dirname(os.path.abspath(__file__))
+WEB_OUT = os.environ.get('WEB_OUT', BASE)   # CI sets WEB_OUT=./web_deploy
 
 
 def load(name):
@@ -87,6 +88,18 @@ max_score_stock = max(
     key=lambda x: x[1], default=('—', 0)
 )
 
+# ── data.json — state snapshot for PWA change detection ──────────────────
+data_snapshot = {
+    'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+    'pending':   pending,
+    'open_count': len(positions),
+    'avg_return': avg_ret,
+    'positions': {
+        t: {'level': d['current_level'], 'return_pct': d['return_pct']}
+        for t, d in pos_data.items()
+    },
+}
+
 # ── Serialise for JS ──────────────────────────────────────────────────────
 def js(obj): return json.dumps(obj, ensure_ascii=False, separators=(',', ':'))
 
@@ -96,6 +109,13 @@ HTML = f"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#161b22">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SMC">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon.svg">
 <title>EGX SMC — Signal Score Heatmap</title>
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
@@ -222,6 +242,9 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
   <span class="badge green">Generated: {today_str}</span>
   <span class="badge yellow">{len(positions)} Open Positions</span>
   <span class="badge">EGX · Cairo Time</span>
+  <button id="btn-install" style="display:none;align-items:center;gap:6px;background:#238636;border:1px solid #2ea043;border-radius:6px;padding:5px 12px;font-size:12px;color:#fff;cursor:pointer">
+    ＋ Install App
+  </button>
 </div>
 
 <!-- ── Stats bar ───────────────────────────────────────────────────── -->
@@ -675,16 +698,112 @@ buildLegend();
 buildHeatmap();
 buildPositions();
 buildPending();
+
+// ── PWA: Service Worker registration ──────────────────────────────────────
+if ('serviceWorker' in navigator) {{
+    navigator.serviceWorker.register('./sw.js').catch(() => {{}});
+}}
+
+// ── PWA: Install prompt ────────────────────────────────────────────────────
+let _deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {{
+    e.preventDefault();
+    _deferredPrompt = e;
+    document.getElementById('btn-install').style.display = 'inline-flex';
+}});
+document.getElementById('btn-install').addEventListener('click', async () => {{
+    if (!_deferredPrompt) return;
+    _deferredPrompt.prompt();
+    const {{ outcome }} = await _deferredPrompt.userChoice;
+    if (outcome === 'accepted') document.getElementById('btn-install').style.display = 'none';
+    _deferredPrompt = null;
+}});
+window.addEventListener('appinstalled', () => {{
+    document.getElementById('btn-install').style.display = 'none';
+}});
+
+// ── PWA: Change detection + Notifications ─────────────────────────────────
+const DATA_URL = './data.json';
+const STORE_KEY = 'egx_smc_state';
+
+async function checkChanges() {{
+    try {{
+        const res = await fetch(DATA_URL + '?t=' + Date.now());
+        if (!res.ok) return;
+        const curr = await res.json();
+        const prev = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+        localStorage.setItem(STORE_KEY, JSON.stringify(curr));
+        if (!prev) return;   // first visit — nothing to compare
+
+        const alerts = [];
+
+        // New pending signals
+        const prevTickers = new Set((prev.pending || []).map(p => p.ticker));
+        (curr.pending || []).forEach(p => {{
+            if (!prevTickers.has(p.ticker))
+                alerts.push(`⏳ ${{p.ticker}} — Wait (score ${{p.score}})`);
+        }});
+
+        // Fibonacci level advances
+        Object.entries(curr.positions || {{}}).forEach(([t, d]) => {{
+            const pd = (prev.positions || {{}})[t];
+            if (pd && d.level > pd.level)
+                alerts.push(`🎯 ${{t}} hit Target ${{d.level + 1}}/8 (+${{d.return_pct}}%)`);
+        }});
+
+        // New open position
+        const prevOpen = new Set(Object.keys(prev.positions || {{}}));
+        Object.keys(curr.positions || {{}}).forEach(t => {{
+            if (!prevOpen.has(t))
+                alerts.push(`🟢 New position opened: ${{t}}`);
+        }});
+
+        if (alerts.length && Notification.permission === 'granted') {{
+            alerts.forEach(msg => {{
+                new Notification('EGX SMC Alert', {{
+                    body: msg,
+                    icon: './icon.svg',
+                    badge: './icon.svg',
+                    tag: msg,
+                }});
+            }});
+        }}
+    }} catch(e) {{}}
+}}
+
+async function initNotifications() {{
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {{
+        await Notification.requestPermission();
+    }}
+    checkChanges();
+    setInterval(checkChanges, 5 * 60 * 1000);   // re-check every 5 min
+}}
+
+window.addEventListener('load', () => setTimeout(initNotifications, 1500));
 </script>
 </body>
 </html>
 """
 
-out = os.path.join(BASE, 'heatmap.html')
-with open(out, 'w', encoding='utf-8') as f:
+os.makedirs(WEB_OUT, exist_ok=True)
+
+# Write heatmap.html
+html_path = os.path.join(WEB_OUT, 'heatmap.html')
+with open(html_path, 'w', encoding='utf-8') as f:
     f.write(HTML)
 
-print(f"✅  heatmap.html  ({os.path.getsize(out)//1024} KB)")
+# Write data.json
+data_path = os.path.join(WEB_OUT, 'data.json')
+with open(data_path, 'w', encoding='utf-8') as f:
+    json.dump(data_snapshot, f, ensure_ascii=False, separators=(',', ':'))
+
+# Also write heatmap.html locally if WEB_OUT differs (for local preview)
+if WEB_OUT != BASE:
+    with open(os.path.join(BASE, 'heatmap.html'), 'w', encoding='utf-8') as f:
+        f.write(HTML)
+
+print(f"✅  heatmap.html  ({os.path.getsize(html_path)//1024} KB)")
 print(f"   Stocks w/ history : {len(stocks_with_history)}")
 print(f"   Date range         : {all_dates[0] if all_dates else '—'} → {all_dates[-1] if all_dates else '—'} ({len(all_dates)} days)")
 print(f"   Open positions     : {len(positions)}  avg return: {avg_ret:+.1f}%")

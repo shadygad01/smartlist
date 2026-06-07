@@ -113,7 +113,7 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
 /* ── Stats bar ────────────────────────────── */
 .stats{{display:flex;gap:1px;background:#30363d;border-bottom:1px solid #30363d}}
 .stat{{flex:1;background:#161b22;padding:10px 16px;text-align:center;min-width:0}}
-.stat .val{{font-size:20px;font-weight:700;color:#e6edf3;line-height:1}}
+.stat .val{{font-size:16px;font-weight:700;color:#e6edf3;line-height:1}}
 .stat .val.pos{{color:#3fb950}}
 .stat .val.neg{{color:#f85149}}
 .stat .lbl{{font-size:10px;color:#8b949e;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}

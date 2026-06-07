@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#161b22">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SMC">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon.svg">
+<title>EGX SMC — Signal Score Heatmap</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;min-height:100vh}
+
+/* ── Header ───────────────────────────────── */
+.header{background:#161b22;border-bottom:1px solid #30363d;padding:14px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.header h1{font-size:17px;font-weight:600;color:#e6edf3;flex:1 0 auto}
+.badge{background:#21262d;border:1px solid #30363d;border-radius:6px;padding:3px 10px;font-size:11px;color:#8b949e;white-space:nowrap}
+.badge.green{border-color:#238636;color:#3fb950}
+.badge.yellow{border-color:#9e6a03;color:#d29922}
+.badge.blue{border-color:#1f6feb;color:#58a6ff}
+.badge.red{border-color:#da3633;color:#f85149}
+
+/* ── Stats bar ────────────────────────────── */
+.stats{display:flex;gap:1px;background:#30363d;border-bottom:1px solid #30363d}
+.stat{flex:1;background:#161b22;padding:10px 16px;text-align:center;min-width:0}
+.stat .val{font-size:16px;font-weight:700;color:#e6edf3;line-height:1}
+.stat .val.pos{color:#3fb950}
+.stat .val.neg{color:#f85149}
+.stat .lbl{font-size:10px;color:#8b949e;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── Controls ─────────────────────────────── */
+.controls{padding:10px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#0d1117;border-bottom:1px solid #21262d}
+.ctrl-label{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.btn-group{display:flex;gap:3px}
+.btn{background:#21262d;border:1px solid #30363d;border-radius:6px;padding:4px 11px;font-size:12px;color:#c9d1d9;cursor:pointer;transition:all .12s}
+.btn:hover{background:#30363d;border-color:#8b949e}
+.btn.active{background:#238636;border-color:#2ea043;color:#fff}
+.btn.active.ret{background:#1f6feb;border-color:#388bfd}
+.btn.active.r1c{background:#9e6a03;border-color:#d29922}
+
+/* ── Legend ───────────────────────────────── */
+.legend{padding:7px 24px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #21262d}
+.legend-text{font-size:10px;color:#6e7681;white-space:nowrap}
+.leg-cells{display:flex;gap:2px;align-items:center}
+.leg-cell{width:18px;height:12px;border-radius:2px}
+.leg-sep{width:12px;height:1px;background:#30363d;margin:0 4px}
+.ind{display:flex;align-items:center;gap:4px;font-size:10px;color:#8b949e;margin-left:8px}
+.ind-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pend-dot{background:#d29922}
+.pos-dot{background:#f78166}
+
+/* ── Heatmap ──────────────────────────────── */
+.hm-outer{overflow-x:auto;padding:20px 24px 12px}
+.hm-table{border-collapse:collapse;white-space:nowrap}
+.sector-row td{padding:10px 6px 3px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6e7681;font-weight:600;border:none!important}
+.stock-name{position:sticky;left:0;z-index:2;background:#0d1117;padding:0 8px 0 0;text-align:right;font-size:11px;font-weight:500;width:82px;min-width:82px;cursor:default}
+.stock-name .sn-ticker{display:block}
+.stock-name .sn-badge{font-size:9px;color:#6e7681}
+.sn-open{color:#f78166!important}
+.sn-pend{color:#d29922!important}
+.sn-sig{color:#3fb950!important}
+
+.hm-cell{width:15px;height:25px;border-radius:2px;cursor:pointer;position:relative;transition:transform .1s,outline .1s}
+.hm-cell:hover{transform:scale(1.5);z-index:10;outline:2px solid #e6edf3}
+.pos-marker{position:absolute;bottom:2px;right:1px;width:4px;height:4px;border-radius:50%;background:#f78166}
+.pend-marker{position:absolute;bottom:2px;right:1px;width:4px;height:4px;border-radius:50%;background:#d29922}
+
+/* ── Today column ─────────────────────────── */
+.today-sep{width:6px}
+.today-cell{width:70px;min-width:70px;height:25px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700;transition:transform .1s;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap}
+.today-cell:hover{transform:scale(1.06);z-index:10;outline:2px solid #e6edf3}
+.date-header{font-size:9px;color:#6e7681;text-align:center;padding:0;transform:rotate(-55deg) translateX(3px);transform-origin:center bottom;height:46px;vertical-align:bottom;width:17px}
+.today-header{font-size:9px;color:#3fb950;font-weight:700;text-align:center;vertical-align:bottom;padding-bottom:4px;letter-spacing:.03em}
+
+/* ── Tooltip ──────────────────────────────── */
+#tooltip{position:fixed;pointer-events:none;background:#1c2128;border:1px solid #30363d;border-radius:8px;padding:10px 13px;font-size:12px;line-height:1.5;z-index:9999;min-width:170px;max-width:260px;box-shadow:0 8px 24px #0009;display:none}
+.tt-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.tt-ticker{font-size:14px;font-weight:700;color:#e6edf3}
+.tt-date{font-size:10px;color:#8b949e;text-align:right}
+.tt-score-big{font-size:26px;font-weight:800;line-height:1}
+.tt-score-lbl{font-size:10px;color:#8b949e;margin-bottom:6px}
+.tt-divider{border:none;border-top:1px solid #30363d;margin:6px 0}
+.tt-row{display:flex;justify-content:space-between;gap:12px;font-size:11px}
+.tt-lbl{color:#8b949e}
+.tt-val{color:#e6edf3;font-weight:600;text-align:right}
+.tt-tag{font-size:10px;margin-top:5px;padding:2px 7px;border-radius:4px;display:inline-block}
+.tt-open{background:#21262d;color:#f78166;border:1px solid #f7816633}
+.tt-pend{background:#21262d;color:#d29922;border:1px solid #d2992233}
+.tt-peak{background:#21262d;color:#58a6ff;border:1px solid #388bfd33}
+
+/* ── Bottom panels ────────────────────────── */
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#30363d;border-top:1px solid #30363d}
+.panel{background:#0d1117;padding:20px 24px}
+.panel-title{font-size:11px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.panel-title .cnt{background:#21262d;border:1px solid #30363d;border-radius:10px;padding:1px 8px;font-size:10px;color:#c9d1d9;font-weight:700}
+
+/* Position cards */
+.pos-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.pos-card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:11px 14px;cursor:default;transition:border-color .15s}
+.pos-card:hover{border-color:#58a6ff44}
+.pc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.pc-ticker{font-size:13px;font-weight:700;color:#e6edf3}
+.pc-ret{font-size:14px;font-weight:800}
+.pc-ret.pos{color:#3fb950}
+.pc-ret.neg{color:#f85149}
+.pc-meta{font-size:10px;color:#8b949e;display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.pc-meta span{white-space:nowrap}
+.pc-fib{display:flex;gap:2px;margin-top:4px}
+.pc-fib-cell{flex:1;height:5px;border-radius:1px}
+
+/* Pending cards */
+.pend-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.pend-card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 13px}
+.pend-card:hover{border-color:#d2992233}
+.pend-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.pend-ticker{font-size:13px;font-weight:700;color:#e6edf3}
+.pend-score{font-size:16px;font-weight:800}
+.pend-meta{font-size:10px;color:#8b949e}
+.empty-state{color:#6e7681;font-size:12px;font-style:italic;padding:8px 0}
+
+@media(max-width:700px){
+  .panels{grid-template-columns:1fr}
+  .stats .lbl{font-size:9px}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────── -->
+<div class="header">
+  <h1>EGX SMC — Signal Score Heatmap</h1>
+  <span class="badge green">Generated: 2026-06-07</span>
+  <span class="badge yellow">15 Open Positions</span>
+  <span class="badge">EGX · Cairo Time</span>
+  <button id="btn-install" style="display:none;align-items:center;gap:6px;background:#238636;border:1px solid #2ea043;border-radius:6px;padding:5px 12px;font-size:12px;color:#fff;cursor:pointer">
+    ＋ Install App
+  </button>
+</div>
+
+<!-- ── Stats bar ───────────────────────────────────────────────────── -->
+<div class="stats">
+  <div class="stat">
+    <div class="val" id="pend-stat-val">1</div>
+    <div class="lbl">Pending Signals</div>
+  </div>
+  <div class="stat">
+    <div class="val">15</div>
+    <div class="lbl">Open Positions</div>
+  </div>
+  <div class="stat">
+    <div class="val pos" id="avg-ret-val">+30.2%</div>
+    <div class="lbl">Avg Return</div>
+  </div>
+  <div class="stat">
+    <div class="val pos" id="best-ret-val">+81.1%</div>
+    <div class="lbl">Best Return (PHDC)</div>
+  </div>
+</div>
+
+<!-- ── Controls ────────────────────────────────────────────────────── -->
+<div class="controls">
+  <span class="ctrl-label">Range</span>
+  <div class="btn-group">
+    <button class="btn" id="btn-all" onclick="setRange('all')">All</button>
+    <button class="btn active" id="btn-90" onclick="setRange(90)">90d</button>
+    <button class="btn" id="btn-60" onclick="setRange(60)">60d</button>
+    <button class="btn" id="btn-30" onclick="setRange(30)">30d</button>
+  </div>
+  <span class="ctrl-label" style="margin-left:8px">View</span>
+  <div class="btn-group">
+    <button class="btn active" id="view-score"  onclick="setView('score')">Score</button>
+    <button class="btn ret"    id="view-return" onclick="setView('return')">Return %</button>
+  </div>
+</div>
+
+<!-- ── Legend ──────────────────────────────────────────────────────── -->
+<div class="legend" id="legend-bar">
+  <span class="legend-text" id="leg-label">Score:</span>
+  <div class="leg-cells" id="leg-cells"></div>
+  <span class="legend-text" id="leg-range">35 → 100</span>
+  <div class="leg-sep"></div>
+  <div class="ind"><div class="ind-dot pos-dot"></div><span>Open Position</span></div>
+  <div class="ind"><div class="ind-dot pend-dot"></div><span>Pending Signal</span></div>
+</div>
+
+<!-- ── Heatmap ─────────────────────────────────────────────────────── -->
+<div class="hm-outer">
+  <table class="hm-table" id="hm-table"></table>
+</div>
+
+<!-- ── Bottom panels ───────────────────────────────────────────────── -->
+<div class="panels">
+  <div class="panel">
+    <div class="panel-title">Open Positions <span class="cnt" id="op-cnt">15</span></div>
+    <div class="pos-cards" id="pos-cards"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Pending Signals <span class="cnt" id="pend-cnt">1</span></div>
+    <div class="pend-cards" id="pend-cards"></div>
+  </div>
+</div>
+
+<!-- ── Tooltip ─────────────────────────────────────────────────────── -->
+<div id="tooltip"></div>
+
+<script>
+// ── Embedded data ────────────────────────────────────────────────────────
+const HISTORY   = {"COMI.CA":{},"TMGH.CA":{"2026-03-16":{"date":"2026-03-16","price":73.81,"score":54,"r1":21},"2026-03-29":{"date":"2026-03-29","price":76.41,"score":57,"r1":21},"2026-03-30":{"date":"2026-03-30","price":75.0,"score":43,"r1":26},"2026-03-31":{"date":"2026-03-31","price":74.51,"score":65,"r1":28},"2026-04-02":{"date":"2026-04-02","price":77.41,"score":47,"r1":18}},"ETEL.CA":{},"EGAL.CA":{},"EAST.CA":{"2026-01-01":{"date":"2026-01-01","price":37.1,"score":67,"r1":30},"2026-01-04":{"date":"2026-01-04","price":36.0,"score":67,"r1":30},"2026-01-05":{"date":"2026-01-05","price":36.0,"score":67,"r1":30},"2026-01-06":{"date":"2026-01-06","price":37.52,"score":58,"r1":21},"2026-01-07":{"date":"2026-01-07","price":37.52,"score":58,"r1":21},"2026-01-08":{"date":"2026-01-08","price":37.8,"score":56,"r1":19},"2026-01-11":{"date":"2026-01-11","price":37.14,"score":60,"r1":23},"2026-01-12":{"date":"2026-01-12","price":36.2,"score":72,"r1":29},"2026-01-13":{"date":"2026-01-13","price":36.0,"score":75,"r1":30},"2026-01-14":{"date":"2026-01-14","price":35.89,"score":64,"r1":30},"2026-01-15":{"date":"2026-01-15","price":36.57,"score":54,"r1":26},"2026-01-18":{"date":"2026-01-18","price":36.99,"score":52,"r1":24},"2026-01-19":{"date":"2026-01-19","price":37.5,"score":49,"r1":21},"2026-01-20":{"date":"2026-01-20","price":37.7,"score":47,"r1":19},"2026-01-21":{"date":"2026-01-21","price":37.43,"score":49,"r1":21},"2026-01-22":{"date":"2026-01-22","price":37.7,"score":47,"r1":19},"2026-01-25":{"date":"2026-01-25","price":37.0,"score":51,"r1":23},"2026-01-26":{"date":"2026-01-26","price":38.0,"score":48,"r1":18},"2026-01-27":{"date":"2026-01-27","price":37.0,"score":41,"r1":23},"2026-01-28":{"date":"2026-01-28","price":37.8,"score":40,"r1":19},"2026-01-29":{"date":"2026-01-29","price":37.8,"score":40,"r1":19},"2026-02-01":{"date":"2026-02-01","price":38.0,"score":39,"r1":18},"2026-02-22":{"date":"2026-02-22","price":39.51,"score":35,"r1":12},"2026-03-03":{"date":"2026-03-03","price":39.29,"score":44,"r1":13},"2026-03-04":{"date":"2026-03-04","price":37.85,"score":50,"r1":18},"2026-03-05":{"date":"2026-03-05","price":38.35,"score":49,"r1":16},"2026-03-08":{"date":"2026-03-08","price":37.89,"score":53,"r1":18},"2026-03-09":{"date":"2026-03-09","price":37.59,"score":54,"r1":19},"2026-03-10":{"date":"2026-03-10","price":37.85,"score":52,"r1":18},"2026-03-11":{"date":"2026-03-11","price":35.0,"score":61,"r1":30},"2026-03-15":{"date":"2026-03-15","price":37.0,"score":47,"r1":18},"2026-03-16":{"date":"2026-03-16","price":37.1,"score":46,"r1":17},"2026-03-17":{"date":"2026-03-17","price":37.32,"score":54,"r1":17},"2026-03-18":{"date":"2026-03-18","price":35.89,"score":50,"r1":24},"2026-03-19":{"date":"2026-03-19","price":35.89,"score":50,"r1":24},"2026-03-22":{"date":"2026-03-22","price":35.89,"score":50,"r1":24},"2026-03-23":{"date":"2026-03-23","price":35.89,"score":50,"r1":24},"2026-03-24":{"date":"2026-03-24","price":36.41,"score":43,"r1":20},"2026-03-25":{"date":"2026-03-25","price":37.7,"score":51,"r1":13},"2026-03-26":{"date":"2026-03-26","price":37.5,"score":55,"r1":14},"2026-03-29":{"date":"2026-03-29","price":36.75,"score":61,"r1":17},"2026-03-30":{"date":"2026-03-30","price":35.59,"score":54,"r1":26},"2026-03-31":{"date":"2026-03-31","price":34.85,"score":56,"r1":30},"2026-04-01":{"date":"2026-04-01","price":35.6,"score":49,"r1":25},"2026-04-02":{"date":"2026-04-02","price":35.5,"score":63,"r1":25},"2026-04-05":{"date":"2026-04-05","price":35.77,"score":55,"r1":23},"2026-04-06":{"date":"2026-04-06","price":36.45,"score":50,"r1":16},"2026-04-07":{"date":"2026-04-07","price":35.99,"score":51,"r1":19}},"ABUK.CA":{},"ORAS.CA":{},"EFIH.CA":{},"ADIB.CA":{},"FWRY.CA":{},"EMFD.CA":{"2026-01-28":{"date":"2026-01-28","price":9.05,"score":39,"r1":15},"2026-01-29":{"date":"2026-01-29","price":9.05,"score":39,"r1":15},"2026-02-01":{"date":"2026-02-01","price":9.07,"score":41,"r1":17},"2026-02-02":{"date":"2026-02-02","price":9.05,"score":45,"r1":17},"2026-02-24":{"date":"2026-02-24","price":9.2,"score":39,"r1":13},"2026-02-25":{"date":"2026-02-25","price":9.08,"score":42,"r1":16},"2026-02-26":{"date":"2026-02-26","price":8.95,"score":51,"r1":22},"2026-03-01":{"date":"2026-03-01","price":8.75,"score":65,"r1":30},"2026-03-02":{"date":"2026-03-02","price":8.81,"score":51,"r1":27},"2026-03-03":{"date":"2026-03-03","price":9.05,"score":46,"r1":16},"2026-03-04":{"date":"2026-03-04","price":9.0,"score":39,"r1":17},"2026-03-09":{"date":"2026-03-09","price":8.92,"score":41,"r1":19}},"PHDC.CA":{"2026-03-16":{"date":"2026-03-16","price":8.2,"score":36,"r1":17},"2026-03-29":{"date":"2026-03-29","price":8.46,"score":50,"r1":13},"2026-03-30":{"date":"2026-03-30","price":8.28,"score":38,"r1":19},"2026-03-31":{"date":"2026-03-31","price":8.39,"score":47,"r1":16},"2026-04-01":{"date":"2026-04-01","price":8.35,"score":56,"r1":17},"2026-04-02":{"date":"2026-04-02","price":8.46,"score":52,"r1":17},"2026-04-05":{"date":"2026-04-05","price":8.42,"score":48,"r1":19},"2026-04-06":{"date":"2026-04-06","price":8.46,"score":46,"r1":17},"2026-04-07":{"date":"2026-04-07","price":8.25,"score":64,"r1":27},"2026-04-09":{"date":"2026-04-09","price":8.43,"score":50,"r1":18},"2026-04-12":{"date":"2026-04-12","price":8.43,"score":50,"r1":18},"2026-04-13":{"date":"2026-04-13","price":8.43,"score":50,"r1":18},"2026-04-14":{"date":"2026-04-14","price":8.55,"score":45,"r1":14}},"ORHD.CA":{"2026-03-04":{"date":"2026-03-04","price":23.6,"score":50,"r1":19}},"EFID.CA":{"2026-04-02":{"date":"2026-04-02","price":25.05,"score":50,"r1":25},"2026-04-05":{"date":"2026-04-05","price":25.12,"score":72,"r1":27},"2026-04-06":{"date":"2026-04-06","price":25.4,"score":73,"r1":26},"2026-04-07":{"date":"2026-04-07","price":25.21,"score":75,"r1":28}},"HRHO.CA":{"2026-01-01":{"date":"2026-01-01","price":24.92,"score":64,"r1":28},"2026-01-04":{"date":"2026-01-04","price":24.8,"score":66,"r1":30},"2026-01-05":{"date":"2026-01-05","price":24.45,"score":66,"r1":30},"2026-01-06":{"date":"2026-01-06","price":24.73,"score":50,"r1":26},"2026-01-07":{"date":"2026-01-07","price":24.73,"score":50,"r1":26},"2026-01-08":{"date":"2026-01-08","price":25.61,"score":43,"r1":15},"2026-01-13":{"date":"2026-01-13","price":25.71,"score":48,"r1":14},"2026-01-14":{"date":"2026-01-14","price":25.3,"score":56,"r1":18},"2026-01-15":{"date":"2026-01-15","price":24.3,"score":71,"r1":30},"2026-01-18":{"date":"2026-01-18","price":25.3,"score":54,"r1":17},"2026-01-19":{"date":"2026-01-19","price":25.42,"score":50,"r1":15},"2026-01-20":{"date":"2026-01-20","price":25.77,"score":45,"r1":12},"2026-03-03":{"date":"2026-03-03","price":26.0,"score":47,"r1":12},"2026-03-04":{"date":"2026-03-04","price":25.78,"score":47,"r1":14},"2026-03-05":{"date":"2026-03-05","price":26.1,"score":45,"r1":12},"2026-03-08":{"date":"2026-03-08","price":26.01,"score":45,"r1":12},"2026-03-09":{"date":"2026-03-09","price":25.78,"score":47,"r1":14},"2026-03-12":{"date":"2026-03-12","price":25.91,"score":46,"r1":13},"2026-03-29":{"date":"2026-03-29","price":25.7,"score":40,"r1":15},"2026-03-30":{"date":"2026-03-30","price":25.2,"score":52,"r1":19},"2026-03-31":{"date":"2026-03-31","price":25.16,"score":53,"r1":20},"2026-04-01":{"date":"2026-04-01","price":25.83,"score":49,"r1":14},"2026-04-02":{"date":"2026-04-02","price":25.6,"score":49,"r1":16},"2026-04-05":{"date":"2026-04-05","price":25.99,"score":45,"r1":12},"2026-04-06":{"date":"2026-04-06","price":26.0,"score":45,"r1":12},"2026-04-07":{"date":"2026-04-07","price":25.25,"score":49,"r1":18},"2026-05-20":{"date":"2026-05-20","price":26.2,"score":35,"r1":15}},"JUFO.CA":{"2026-03-31":{"date":"2026-03-31","price":24.27,"score":41,"r1":21}},"BTFH.CA":{"2026-03-03":{"date":"2026-03-03","price":2.92,"score":60,"r1":24},"2026-03-04":{"date":"2026-03-04","price":2.94,"score":48,"r1":21},"2026-03-05":{"date":"2026-03-05","price":2.96,"score":44,"r1":19},"2026-03-08":{"date":"2026-03-08","price":2.94,"score":51,"r1":21},"2026-03-09":{"date":"2026-03-09","price":2.9,"score":59,"r1":26},"2026-03-10":{"date":"2026-03-10","price":2.96,"score":44,"r1":19},"2026-03-11":{"date":"2026-03-11","price":2.96,"score":44,"r1":19},"2026-03-12":{"date":"2026-03-12","price":2.92,"score":48,"r1":24},"2026-03-15":{"date":"2026-03-15","price":2.86,"score":54,"r1":30},"2026-03-16":{"date":"2026-03-16","price":2.84,"score":52,"r1":30},"2026-03-17":{"date":"2026-03-17","price":2.9,"score":52,"r1":24},"2026-03-18":{"date":"2026-03-18","price":2.91,"score":50,"r1":23},"2026-03-19":{"date":"2026-03-19","price":2.91,"score":50,"r1":23},"2026-03-22":{"date":"2026-03-22","price":2.91,"score":50,"r1":23},"2026-03-23":{"date":"2026-03-23","price":2.91,"score":50,"r1":23},"2026-03-24":{"date":"2026-03-24","price":2.91,"score":52,"r1":23},"2026-03-25":{"date":"2026-03-25","price":2.91,"score":50,"r1":23},"2026-03-26":{"date":"2026-03-26","price":2.88,"score":56,"r1":26},"2026-03-29":{"date":"2026-03-29","price":2.87,"score":57,"r1":27},"2026-03-30":{"date":"2026-03-30","price":2.81,"score":40,"r1":30},"2026-03-31":{"date":"2026-03-31","price":2.81,"score":48,"r1":30},"2026-04-01":{"date":"2026-04-01","price":2.85,"score":44,"r1":26},"2026-04-02":{"date":"2026-04-02","price":2.83,"score":44,"r1":28},"2026-04-05":{"date":"2026-04-05","price":2.92,"score":44,"r1":19},"2026-04-06":{"date":"2026-04-06","price":2.87,"score":48,"r1":24},"2026-04-07":{"date":"2026-04-07","price":2.83,"score":60,"r1":28},"2026-04-08":{"date":"2026-04-08","price":2.89,"score":50,"r1":22},"2026-04-09":{"date":"2026-04-09","price":2.87,"score":52,"r1":24},"2026-04-12":{"date":"2026-04-12","price":2.87,"score":52,"r1":24},"2026-04-13":{"date":"2026-04-13","price":2.87,"score":52,"r1":24},"2026-04-14":{"date":"2026-04-14","price":2.88,"score":51,"r1":23},"2026-04-15":{"date":"2026-04-15","price":2.91,"score":48,"r1":20},"2026-04-20":{"date":"2026-04-20","price":2.92,"score":47,"r1":18},"2026-04-21":{"date":"2026-04-21","price":2.91,"score":48,"r1":19}},"RAYA.CA":{},"GBCO.CA":{"2026-03-04":{"date":"2026-03-04","price":26.84,"score":51,"r1":12},"2026-03-08":{"date":"2026-03-08","price":25.69,"score":61,"r1":22},"2026-03-09":{"date":"2026-03-09","price":24.64,"score":61,"r1":30},"2026-03-11":{"date":"2026-03-11","price":25.99,"score":51,"r1":16},"2026-03-15":{"date":"2026-03-15","price":24.6,"score":47,"r1":30},"2026-03-16":{"date":"2026-03-16","price":24.05,"score":67,"r1":30},"2026-03-17":{"date":"2026-03-17","price":24.42,"score":71,"r1":26},"2026-03-18":{"date":"2026-03-18","price":24.92,"score":62,"r1":21},"2026-03-19":{"date":"2026-03-19","price":24.92,"score":58,"r1":21},"2026-03-22":{"date":"2026-03-22","price":24.92,"score":58,"r1":21},"2026-03-23":{"date":"2026-03-23","price":24.92,"score":58,"r1":21},"2026-03-24":{"date":"2026-03-24","price":24.81,"score":59,"r1":22},"2026-03-25":{"date":"2026-03-25","price":24.76,"score":60,"r1":23},"2026-03-26":{"date":"2026-03-26","price":24.8,"score":59,"r1":22},"2026-03-29":{"date":"2026-03-29","price":24.24,"score":73,"r1":28},"2026-03-30":{"date":"2026-03-30","price":24.45,"score":68,"r1":26},"2026-03-31":{"date":"2026-03-31","price":24.1,"score":66,"r1":29},"2026-04-01":{"date":"2026-04-01","price":25.0,"score":51,"r1":20},"2026-04-02":{"date":"2026-04-02","price":24.6,"score":52,"r1":24},"2026-04-05":{"date":"2026-04-05","price":24.55,"score":54,"r1":25},"2026-04-06":{"date":"2026-04-06","price":24.51,"score":55,"r1":25},"2026-04-07":{"date":"2026-04-07","price":24.33,"score":62,"r1":27},"2026-04-08":{"date":"2026-04-08","price":26.05,"score":39,"r1":12},"2026-04-09":{"date":"2026-04-09","price":25.65,"score":47,"r1":15},"2026-04-12":{"date":"2026-04-12","price":25.65,"score":47,"r1":15},"2026-04-13":{"date":"2026-04-13","price":25.65,"score":47,"r1":15},"2026-04-14":{"date":"2026-04-14","price":26.16,"score":43,"r1":12},"2026-05-19":{"date":"2026-05-19","price":26.15,"score":43,"r1":12},"2026-05-20":{"date":"2026-05-20","price":25.5,"score":50,"r1":16}},"HELI.CA":{"2026-01-01":{"date":"2026-01-01","price":3.6,"score":67,"r1":25},"2026-01-04":{"date":"2026-01-04","price":3.54,"score":69,"r1":26},"2026-01-05":{"date":"2026-01-05","price":3.47,"score":69,"r1":26},"2026-01-06":{"date":"2026-01-06","price":3.48,"score":49,"r1":26},"2026-01-07":{"date":"2026-01-07","price":3.48,"score":49,"r1":26}},"ARCC.CA":{"2026-03-16":{"date":"2026-03-16","price":45.7,"score":39,"r1":26},"2026-03-17":{"date":"2026-03-17","price":45.67,"score":40,"r1":27}},"MCQE.CA":{},"ORWE.CA":{"2026-01-15":{"date":"2026-01-15","price":21.52,"score":42,"r1":20},"2026-01-21":{"date":"2026-01-21","price":22.04,"score":40,"r1":18},"2026-01-28":{"date":"2026-01-28","price":22.0,"score":46,"r1":19},"2026-01-29":{"date":"2026-01-29","price":22.0,"score":46,"r1":19},"2026-03-01":{"date":"2026-03-01","price":21.89,"score":55,"r1":21},"2026-03-02":{"date":"2026-03-02","price":22.0,"score":42,"r1":19},"2026-03-03":{"date":"2026-03-03","price":21.9,"score":54,"r1":21},"2026-03-04":{"date":"2026-03-04","price":22.01,"score":43,"r1":18},"2026-05-18":{"date":"2026-05-18","price":22.08,"score":46,"r1":23},"2026-05-19":{"date":"2026-05-19","price":22.05,"score":47,"r1":24},"2026-05-20":{"date":"2026-05-20","price":21.62,"score":66,"r1":30},"2026-05-21":{"date":"2026-05-21","price":21.7,"score":43,"r1":27}},"ISPH.CA":{"2026-01-14":{"date":"2026-01-14","price":10.39,"score":45,"r1":30},"2026-01-15":{"date":"2026-01-15","price":10.25,"score":43,"r1":30},"2026-03-09":{"date":"2026-03-09","price":10.3,"score":41,"r1":28},"2026-03-12":{"date":"2026-03-12","price":10.5,"score":53,"r1":22},"2026-03-16":{"date":"2026-03-16","price":10.23,"score":40,"r1":30},"2026-03-17":{"date":"2026-03-17","price":10.34,"score":37,"r1":27},"2026-03-18":{"date":"2026-03-18","price":10.4,"score":55,"r1":25},"2026-03-19":{"date":"2026-03-19","price":10.4,"score":55,"r1":25},"2026-03-22":{"date":"2026-03-22","price":10.4,"score":55,"r1":25},"2026-03-23":{"date":"2026-03-23","price":10.4,"score":55,"r1":25},"2026-03-24":{"date":"2026-03-24","price":10.33,"score":57,"r1":27},"2026-03-26":{"date":"2026-03-26","price":10.5,"score":51,"r1":21},"2026-03-29":{"date":"2026-03-29","price":10.23,"score":40,"r1":30},"2026-03-30":{"date":"2026-03-30","price":9.9,"score":60,"r1":30},"2026-03-31":{"date":"2026-03-31","price":9.7,"score":40,"r1":30},"2026-04-01":{"date":"2026-04-01","price":10.16,"score":47,"r1":18},"2026-04-02":{"date":"2026-04-02","price":10.05,"score":43,"r1":21},"2026-04-05":{"date":"2026-04-05","price":10.06,"score":43,"r1":21},"2026-04-06":{"date":"2026-04-06","price":10.16,"score":42,"r1":18},"2026-04-07":{"date":"2026-04-07","price":10.04,"score":54,"r1":21}},"RMDA.CA":{"2026-01-04":{"date":"2026-01-04","price":3.3,"score":35,"r1":18},"2026-01-11":{"date":"2026-01-11","price":3.26,"score":38,"r1":20},"2026-01-12":{"date":"2026-01-12","price":3.22,"score":42,"r1":23},"2026-01-13":{"date":"2026-01-13","price":3.15,"score":50,"r1":27},"2026-01-14":{"date":"2026-01-14","price":3.12,"score":46,"r1":28},"2026-01-15":{"date":"2026-01-15","price":3.1,"score":65,"r1":29},"2026-01-18":{"date":"2026-01-18","price":3.1,"score":65,"r1":29},"2026-01-19":{"date":"2026-01-19","price":3.13,"score":67,"r1":28},"2026-01-20":{"date":"2026-01-20","price":3.1,"score":67,"r1":29},"2026-01-21":{"date":"2026-01-21","price":3.11,"score":61,"r1":29},"2026-01-22":{"date":"2026-01-22","price":3.2,"score":57,"r1":24},"2026-01-25":{"date":"2026-01-25","price":3.2,"score":55,"r1":24},"2026-01-26":{"date":"2026-01-26","price":3.19,"score":55,"r1":24},"2026-01-27":{"date":"2026-01-27","price":3.17,"score":56,"r1":25},"2026-01-28":{"date":"2026-01-28","price":3.09,"score":69,"r1":30},"2026-01-29":{"date":"2026-01-29","price":3.09,"score":69,"r1":30},"2026-02-01":{"date":"2026-02-01","price":3.18,"score":48,"r1":25},"2026-02-02":{"date":"2026-02-02","price":3.2,"score":49,"r1":24},"2026-02-03":{"date":"2026-02-03","price":3.29,"score":46,"r1":19}},"OIH.CA":{},"CCAP.CA":{}};
+const TODAY_SC  = {"COMI.CA":{"score":0,"price":131.7,"signal":"Skip","r1":0},"TMGH.CA":{"score":0,"price":95.0,"signal":"Skip","r1":0},"ETEL.CA":{"score":0,"price":95.8,"signal":"Skip","r1":0},"EGAL.CA":{"score":0,"price":325.0,"signal":"Skip","r1":0},"EAST.CA":{"score":35,"price":38.7,"signal":"Wait","r1":1},"ABUK.CA":{"score":0,"price":81.37,"signal":"Skip","r1":0},"ORAS.CA":{"score":0,"price":736.0,"signal":"Skip","r1":0},"EFIH.CA":{"score":0,"price":21.97,"signal":"Skip","r1":0},"ADIB.CA":{"score":0,"price":46.8,"signal":"Skip","r1":0},"FWRY.CA":{"score":0,"price":19.18,"signal":"Skip","r1":0},"EMFD.CA":{"score":0,"price":12.45,"signal":"Skip","r1":0},"PHDC.CA":{"score":0,"price":14.85,"signal":"Skip","r1":0},"ORHD.CA":{"score":0,"price":37.88,"signal":"Skip","r1":0},"EFID.CA":{"score":0,"price":28.85,"signal":"Skip","r1":0},"HRHO.CA":{"score":25,"price":26.83,"signal":"Skip","r1":10},"JUFO.CA":{"score":0,"price":29.7,"signal":"Skip","r1":0},"BTFH.CA":{"score":0,"price":3.08,"signal":"Skip","r1":0},"RAYA.CA":{"score":0,"price":7.54,"signal":"Skip","r1":0},"GBCO.CA":{"score":22,"price":26.0,"signal":"Skip","r1":12},"HELI.CA":{"score":0,"price":6.49,"signal":"Skip","r1":0},"ARCC.CA":{"score":0,"price":59.0,"signal":"Skip","r1":0},"MCQE.CA":{"score":0,"price":194.22,"signal":"Skip","r1":0},"ORWE.CA":{"score":0,"price":23.56,"signal":"Skip","r1":0},"ISPH.CA":{"score":0,"price":12.48,"signal":"Skip","r1":0},"RMDA.CA":{"score":0,"price":5.09,"signal":"Skip","r1":0},"OIH.CA":{"score":0,"price":1.4,"signal":"Skip","r1":0},"CCAP.CA":{"score":0,"price":5.4,"signal":"Skip","r1":0}};
+const ALL_DATES = ["2026-01-01","2026-01-04","2026-01-05","2026-01-06","2026-01-07","2026-01-08","2026-01-11","2026-01-12","2026-01-13","2026-01-14","2026-01-15","2026-01-18","2026-01-19","2026-01-20","2026-01-21","2026-01-22","2026-01-25","2026-01-26","2026-01-27","2026-01-28","2026-01-29","2026-02-01","2026-02-02","2026-02-03","2026-02-22","2026-02-24","2026-02-25","2026-02-26","2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05","2026-03-08","2026-03-09","2026-03-10","2026-03-11","2026-03-12","2026-03-15","2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-22","2026-03-23","2026-03-24","2026-03-25","2026-03-26","2026-03-29","2026-03-30","2026-03-31","2026-04-01","2026-04-02","2026-04-05","2026-04-06","2026-04-07","2026-04-08","2026-04-09","2026-04-12","2026-04-13","2026-04-14","2026-04-15","2026-04-20","2026-04-21","2026-05-18","2026-05-19","2026-05-20","2026-05-21"];
+const OPEN_POS  = new Set(["TMGH.CA","EAST.CA","EMFD.CA","PHDC.CA","ORHD.CA","EFID.CA","HRHO.CA","JUFO.CA","BTFH.CA","GBCO.CA","HELI.CA","ARCC.CA","ORWE.CA","ISPH.CA","RMDA.CA"]);
+const PENDING   = new Set(["EAST.CA"]);
+const POS_DATA  = {"TMGH.CA":{"entry_price":73.81,"entry_date":"2026-03-16","current_price":95.0,"return_pct":28.7,"current_level":2,"fib_targets":[82.67,91.23,102.01,110.72,119.42,147.62,184.53,221.43],"entry_score":54,"status":"open"},"EAST.CA":{"entry_price":37.1,"entry_date":"2026-01-01","current_price":38.7,"return_pct":4.3,"current_level":0,"fib_targets":[41.55,45.86,51.27,55.65,60.03,74.2,92.75,111.3],"entry_score":67,"status":"open"},"EMFD.CA":{"entry_price":9.05,"entry_date":"2026-01-28","current_price":12.45,"return_pct":37.6,"current_level":2,"fib_targets":[10.14,11.19,12.51,13.58,14.64,18.1,22.62,27.15],"entry_score":39,"status":"open"},"PHDC.CA":{"entry_price":8.2,"entry_date":"2026-03-16","current_price":14.85,"return_pct":81.1,"current_level":5,"fib_targets":[9.18,10.14,11.33,12.3,13.27,16.4,20.5,24.6],"entry_score":36,"status":"open"},"ORHD.CA":{"entry_price":23.6,"entry_date":"2026-03-04","current_price":37.88,"return_pct":60.5,"current_level":4,"fib_targets":[26.43,29.17,32.62,35.4,38.18,47.2,59.0,70.8],"entry_score":50,"status":"open"},"EFID.CA":{"entry_price":25.05,"entry_date":"2026-04-02","current_price":28.85,"return_pct":15.2,"current_level":1,"fib_targets":[28.06,30.96,34.62,37.58,40.53,50.1,62.62,75.15],"entry_score":50,"status":"open"},"HRHO.CA":{"entry_price":24.92,"entry_date":"2026-01-01","current_price":26.83,"return_pct":7.7,"current_level":0,"fib_targets":[27.91,30.8,34.44,37.38,40.32,49.84,62.3,74.76],"entry_score":64,"status":"open"},"JUFO.CA":{"entry_price":24.27,"entry_date":"2026-03-31","current_price":29.7,"return_pct":22.4,"current_level":1,"fib_targets":[27.18,30.0,33.54,36.41,39.27,48.54,60.67,72.81],"entry_score":41,"status":"open"},"BTFH.CA":{"entry_price":2.92,"entry_date":"2026-03-03","current_price":3.08,"return_pct":5.5,"current_level":0,"fib_targets":[3.27,3.61,4.04,4.38,4.72,5.84,7.3,8.76],"entry_score":60,"status":"open"},"GBCO.CA":{"entry_price":26.84,"entry_date":"2026-03-04","current_price":26.0,"return_pct":-3.1,"current_level":0,"fib_targets":[30.06,33.17,37.09,40.26,43.43,53.68,67.1,80.52],"entry_score":51,"status":"open"},"HELI.CA":{"entry_price":3.6,"entry_date":"2026-01-01","current_price":6.49,"return_pct":80.3,"current_level":5,"fib_targets":[4.03,4.45,4.98,5.4,5.82,7.2,9.0,10.8],"entry_score":67,"status":"open"},"ARCC.CA":{"entry_price":45.7,"entry_date":"2026-03-16","current_price":59.0,"return_pct":29.1,"current_level":2,"fib_targets":[51.18,56.49,63.16,68.55,73.94,91.4,114.25,137.1],"entry_score":39,"status":"open"},"ORWE.CA":{"entry_price":21.52,"entry_date":"2026-01-15","current_price":23.56,"return_pct":9.5,"current_level":0,"fib_targets":[24.1,26.6,29.74,32.28,34.82,43.04,53.8,64.56],"entry_score":42,"status":"open"},"ISPH.CA":{"entry_price":10.39,"entry_date":"2026-01-14","current_price":12.48,"return_pct":20.1,"current_level":1,"fib_targets":[11.64,12.84,14.36,15.59,16.81,20.78,25.98,31.17],"entry_score":45,"status":"open"},"RMDA.CA":{"entry_price":3.3,"entry_date":"2026-01-04","current_price":5.09,"return_pct":54.2,"current_level":4,"fib_targets":[3.7,4.08,4.56,4.95,5.34,6.6,8.25,9.9],"entry_score":35,"status":"open"}};
+const PEAK      = {"TMGH.CA":{"score":65,"date":"2026-03-31"},"EAST.CA":{"score":75,"date":"2026-01-13"},"EMFD.CA":{"score":65,"date":"2026-03-01"},"PHDC.CA":{"score":64,"date":"2026-04-07"},"ORHD.CA":{"score":50,"date":"2026-03-04"},"EFID.CA":{"score":75,"date":"2026-04-07"},"HRHO.CA":{"score":71,"date":"2026-01-15"},"JUFO.CA":{"score":41,"date":"2026-03-31"},"BTFH.CA":{"score":60,"date":"2026-03-03"},"GBCO.CA":{"score":73,"date":"2026-03-29"},"HELI.CA":{"score":69,"date":"2026-01-04"},"ARCC.CA":{"score":40,"date":"2026-03-17"},"ORWE.CA":{"score":66,"date":"2026-05-20"},"ISPH.CA":{"score":60,"date":"2026-03-30"},"RMDA.CA":{"score":69,"date":"2026-01-28"}};
+const SECTORS   = [["Real Estate",["TMGH.CA","EMFD.CA","PHDC.CA","ORHD.CA","HELI.CA"]],["Industrial",["EAST.CA","ABUK.CA","ORAS.CA","EFID.CA","HRHO.CA","JUFO.CA","ARCC.CA","ORWE.CA","CCAP.CA"]],["Healthcare",["MCQE.CA","ISPH.CA","RMDA.CA"]],["Finance/Tech",["FWRY.CA","EFIH.CA","RAYA.CA","BTFH.CA"]],["Banking",["COMI.CA","EGAL.CA","ADIB.CA"]],["Telecom/Auto",["ETEL.CA","GBCO.CA","OIH.CA"]]];
+const PENDING_LIST = [{"ticker":"EAST.CA","score":35,"price":38.7,"signal":"Wait","r1":1}];
+const TODAY     = "2026-06-07";
+
+let currentRange = 90;
+let currentView  = 'score';
+
+// ── Color helpers ─────────────────────────────────────────────────────────
+function scoreColor(v) {
+    if (!v || v < 35) return '#1c2128';
+    const t = Math.min((v - 35) / 65, 1);
+    return `rgb(${r(27,64,t)},${r(58,210,t)},${r(46,100,t)})`;
+}
+function r1Color(v) {
+    if (!v || v < 12) return '#1c2128';
+    const t = Math.min((v - 12) / 20, 1);
+    return `rgb(${r(80,220,t)},${r(55,160,t)},${r(15,40,t)})`;
+}
+function returnColor(pct) {
+    if (pct === null || pct === undefined) return '#1c2128';
+    if (pct >= 0) {
+        const t = Math.min(pct / 100, 1);
+        return `rgb(${r(27,64,t)},${r(58,210,t)},${r(46,100,t)})`;
+    }
+    const t = Math.min(-pct / 30, 1);
+    return `rgb(${r(80,220,t)},${r(30,40,t)},${r(30,40,t)})`;
+}
+function r(a,b,t) { return Math.round(a + t*(b-a)); }
+function darkText(t) { return t > 0.6 ? '#0d1117' : '#8b949e'; }
+function scoreTextColor(v) { return darkText(Math.min((v-35)/65,1)); }
+function retTextColor(pct) {
+    if (pct >= 0) return darkText(Math.min(pct/100,1));
+    return darkText(Math.min(-pct/30,1));
+}
+
+// ── Current view color ────────────────────────────────────────────────────
+function cellColor(stock, entry, dateStr) {
+    if (!entry) return '#1c2128';
+    if (currentView === 'score')  return scoreColor(entry.score);
+    if (currentView === 'r1')     return r1Color(entry.r1);
+    // return view
+    const pd = POS_DATA[stock];
+    if (!pd) return '#1c2128';
+    if (dateStr < pd.entry_date) return '#1c2128';
+    return returnColor((entry.price - pd.entry_price) / pd.entry_price * 100);
+}
+function todayColor(stock) {
+    const td = TODAY_SC[stock] || {};
+    if (currentView === 'score')  return scoreColor(td.score);
+    if (currentView === 'r1')     return r1Color(td.r1);
+    const pd = POS_DATA[stock];
+    if (!pd) return '#1c2128';
+    return returnColor(pd.return_pct);
+}
+function todayLabel(stock) {
+    const td = TODAY_SC[stock] || {};
+    if (currentView === 'score')  return td.score || '—';
+    if (currentView === 'r1')     return td.r1    || '—';
+    const pd = POS_DATA[stock];
+    if (!pd) return '—';
+    return (pd.return_pct >= 0 ? '+' : '') + pd.return_pct + '%';
+}
+function todayLabelColor(stock) {
+    const td = TODAY_SC[stock] || {};
+    if (currentView === 'score') {
+        const s = td.score || 0;
+        return s >= 35 ? scoreTextColor(s) : '#484f58';
+    }
+    if (currentView === 'r1') {
+        const rv = td.r1 || 0;
+        return rv >= 12 ? darkText(Math.min((rv-12)/20,1)) : '#484f58';
+    }
+    const pd = POS_DATA[stock];
+    if (!pd) return '#484f58';
+    return retTextColor(pd.return_pct);
+}
+
+// ── Date filter ───────────────────────────────────────────────────────────
+function filteredDates() {
+    if (currentRange === 'all') return ALL_DATES;
+    const d = new Date(TODAY);
+    d.setDate(d.getDate() - currentRange);
+    const cut = d.toISOString().slice(0,10);
+    return ALL_DATES.filter(x => x >= cut);
+}
+
+// ── Legend ────────────────────────────────────────────────────────────────
+function buildLegend() {
+    const cells = document.getElementById('leg-cells');
+    const lbl   = document.getElementById('leg-label');
+    const rng   = document.getElementById('leg-range');
+    cells.innerHTML = '';
+    let steps, colorFn, label, range;
+    if (currentView === 'score') {
+        steps = [0,35,45,55,65,75,85,95]; colorFn = v => v===0?'#1c2128':scoreColor(v);
+        label = 'Score:'; range = '35 → 100';
+    } else if (currentView === 'r1') {
+        steps = [0,12,16,20,24,28]; colorFn = v => v===0?'#1c2128':r1Color(v);
+        label = 'R1:'; range = '12 → 30';
+    } else {
+        steps = [-30,-20,-10,0,10,25,50,80]; colorFn = v => v===0?'#21262d':returnColor(v);
+        label = 'Return:'; range = '-30% → +80%';
+    }
+    lbl.textContent = label; rng.textContent = range;
+    steps.forEach(v => {
+        const d = document.createElement('div');
+        d.className = 'leg-cell';
+        d.style.background = colorFn(v);
+        d.title = currentView==='return' ? (v>0?'+':'')+v+'%' : (v===0?'No data':'≥'+v);
+        cells.appendChild(d);
+    });
+}
+
+// ── Heatmap ───────────────────────────────────────────────────────────────
+function buildHeatmap() {
+    const dates = filteredDates();
+    const tbl   = document.getElementById('hm-table');
+    tbl.innerHTML = '';
+
+    // Header row
+    const hRow = document.createElement('tr');
+    const corner = document.createElement('td');
+    corner.style.cssText = 'width:82px;min-width:82px';
+    hRow.appendChild(corner);
+    dates.forEach((d, i) => {
+        const prev  = dates[i-1] || '';
+        const th    = document.createElement('td');
+        th.className = 'date-header';
+        if (d.slice(0,7) !== prev.slice(0,7) || i===0) {
+            th.textContent = d.slice(5);
+        }
+        hRow.appendChild(th);
+    });
+    const sep0 = document.createElement('td'); sep0.className='today-sep'; hRow.appendChild(sep0);
+    const thToday = document.createElement('td'); thToday.className='today-header'; thToday.textContent='TODAY'; hRow.appendChild(thToday);
+    tbl.appendChild(hRow);
+
+    SECTORS.forEach(([sector, stocks]) => {
+        // Sector label
+        const sr = document.createElement('tr');
+        sr.className = 'sector-row';
+        const sTd = document.createElement('td');
+        sTd.setAttribute('colspan', dates.length + 3);
+        sTd.textContent = sector;
+        sr.appendChild(sTd);
+        tbl.appendChild(sr);
+
+        stocks.forEach(stock => {
+            const stockData = HISTORY[stock] || {};
+            const hasPos    = OPEN_POS.has(stock);
+            const isPend    = PENDING.has(stock);
+            const todayInfo = TODAY_SC[stock] || {};
+
+            const tr = document.createElement('tr');
+
+            // Stock name (sticky)
+            const nameTd = document.createElement('td');
+            nameTd.className = 'stock-name';
+            const ticker = stock.replace('.CA','');
+            let badgeText = '';
+            let cls = '';
+            if (hasPos)   { cls = 'sn-open'; badgeText = 'open'; }
+            else if (isPend) { cls = 'sn-pend'; badgeText = 'pending'; }
+            else if ((todayInfo.score||0) >= 35) { cls = 'sn-sig'; badgeText = 'signal'; }
+            nameTd.innerHTML = `<span class="sn-ticker ${cls}">${ticker}</span>${badgeText?`<span class="sn-badge">${badgeText}</span>`:''}`;
+            nameTd.title = stock;
+            tr.appendChild(nameTd);
+
+            // Date cells
+            dates.forEach(d => {
+                const entry = stockData[d];
+                const td    = document.createElement('td');
+                td.style.padding = '1px';
+                const cell  = document.createElement('div');
+                cell.className = 'hm-cell';
+                cell.style.background = cellColor(stock, entry, d);
+
+                if (entry) {
+                    if (hasPos) { const dot=document.createElement('div'); dot.className='pos-marker'; cell.appendChild(dot); }
+                    else if (isPend) { const dot=document.createElement('div'); dot.className='pend-marker'; cell.appendChild(dot); }
+                    cell.addEventListener('mouseenter', e => showTip(e, stock, d, entry, hasPos, isPend));
+                    cell.addEventListener('mousemove',  e => moveTip(e));
+                    cell.addEventListener('mouseleave', hideTip);
+                }
+                td.appendChild(cell); tr.appendChild(td);
+            });
+
+            // Today separator
+            const sep = document.createElement('td'); sep.className='today-sep'; tr.appendChild(sep);
+
+            // Today cell
+            const tTd = document.createElement('td'); tTd.style.padding='2px 0';
+            const bg  = todayColor(stock);
+            const lbl = todayLabel(stock);
+            const fg  = todayLabelColor(stock);
+            const tCell = document.createElement('div');
+            tCell.className = 'today-cell';
+            tCell.style.cssText = `background:${bg};color:${fg}`;
+            tCell.textContent = lbl;
+            if (hasPos || (todayInfo.score||0) >= 35 || POS_DATA[stock]) {
+                tCell.addEventListener('mouseenter', e => showTip(e, stock, TODAY,
+                    {score:todayInfo.score,r1:todayInfo.r1,price:todayInfo.price,signal:todayInfo.signal},
+                    hasPos, isPend));
+                tCell.addEventListener('mousemove',  e => moveTip(e));
+                tCell.addEventListener('mouseleave', hideTip);
+            }
+            tTd.appendChild(tCell); tr.appendChild(tTd);
+            tbl.appendChild(tr);
+        });
+    });
+}
+
+// ── Tooltip ───────────────────────────────────────────────────────────────
+const tip = document.getElementById('tooltip');
+
+function showTip(e, stock, dt, entry, hasPos, isPend) {
+    const s   = entry.score || 0;
+    const rv  = entry.r1    || 0;
+    const p   = entry.price || 0;
+    const sig = entry.signal || '—';
+    const sc  = scoreColor(s);
+    const pd  = POS_DATA[stock];
+    const pk  = PEAK[stock];
+
+    let retRow = '';
+    if (pd) {
+        const ret = dt === TODAY
+            ? pd.return_pct
+            : p && pd.entry_price ? ((p - pd.entry_price) / pd.entry_price * 100) : null;
+        if (ret !== null) {
+            const retStr = (ret>=0?'+':'')+ret.toFixed(1)+'%';
+            const retC   = returnColor(ret);
+            retRow = `<div class="tt-row"><span class="tt-lbl">Return</span><span class="tt-val" style="color:${retC}">${retStr}</span></div>`;
+        }
+    }
+
+    let posBlock = '';
+    if (pd) {
+        const lvl  = pd.current_level;
+        const nxt  = pd.fib_targets[lvl] ?? '—';
+        const ep   = pd.entry_price;
+        posBlock = `
+          <hr class="tt-divider">
+          <div class="tt-row"><span class="tt-lbl">Entry</span><span class="tt-val">EGP ${ep.toFixed(2)} (${pd.entry_date})</span></div>
+          <div class="tt-row"><span class="tt-lbl">Level</span><span class="tt-val">${lvl+1} / 8</span></div>
+          <div class="tt-row"><span class="tt-lbl">Next Target</span><span class="tt-val">EGP ${typeof nxt==='number'?nxt.toFixed(2):nxt}</span></div>`;
+    }
+
+    let peakBlock = '';
+    if (pk) {
+        peakBlock = `<span class="tt-tag tt-peak">Peak: ${pk.score} on ${pk.date}</span>`;
+    }
+    let tagBlock = '';
+    if (hasPos)  tagBlock += `<span class="tt-tag tt-open">● Open Position</span> `;
+    if (isPend)  tagBlock += `<span class="tt-tag tt-pend">⚡ Pending Signal</span> `;
+
+    tip.innerHTML = `
+      <div class="tt-head">
+        <div>
+          <div class="tt-ticker">${stock}</div>
+          <div style="font-size:10px;color:#8b949e">${dt}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="tt-score-big" style="color:${sc}">${s||'—'}</div>
+          <div class="tt-score-lbl">SMC Score</div>
+        </div>
+      </div>
+      <div class="tt-row"><span class="tt-lbl">Price</span><span class="tt-val">EGP ${p.toFixed(2)}</span></div>
+      <div class="tt-row"><span class="tt-lbl">R1</span><span class="tt-val">${rv}</span></div>
+      <div class="tt-row"><span class="tt-lbl">Signal</span><span class="tt-val" style="color:${sc}">${sig}</span></div>
+      ${retRow}
+      ${posBlock}
+      ${tagBlock || peakBlock ? `<hr class="tt-divider"><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:2px">${tagBlock}${peakBlock}</div>` : ''}
+    `;
+    tip.style.display = 'block';
+    moveTip(e);
+}
+function moveTip(e) {
+    const x=e.clientX+16, y=e.clientY+16;
+    const tw=tip.offsetWidth, th=tip.offsetHeight;
+    tip.style.left=(x+tw>innerWidth  ? e.clientX-tw-8 : x)+'px';
+    tip.style.top =(y+th>innerHeight ? e.clientY-th-8 : y)+'px';
+}
+function hideTip() { tip.style.display='none'; }
+
+// ── Open Positions cards ──────────────────────────────────────────────────
+function buildPositions() {
+    const el = document.getElementById('pos-cards');
+    el.innerHTML = '';
+    if (!OPEN_POS.size) { el.innerHTML='<div class="empty-state">No open positions.</div>'; return; }
+
+    // sort by return desc
+    const sorted = [...OPEN_POS].map(t => ({t, ...POS_DATA[t]}))
+        .sort((a,b) => (b.return_pct||0)-(a.return_pct||0));
+
+    sorted.forEach(pd => {
+        if (!pd) return;
+        const s  = TODAY_SC[pd.t] || {};
+        const ret = pd.return_pct;
+        const retStr = (ret>=0?'+':'')+ret+'%';
+        const retCls = ret>=0 ? 'pos' : 'neg';
+        const sc = scoreColor(s.score||0);
+        const lvl = pd.current_level;
+        // Fibonacci progress cells (8 levels)
+        let fibCells = '';
+        for (let i=0;i<8;i++) {
+            const filled = i < lvl;
+            const current = i === lvl;
+            const bg = filled ? '#3fb950' : current ? '#58a6ff' : '#21262d';
+            fibCells += `<div class="pc-fib-cell" style="background:${bg}" title="Target ${i+1}: EGP ${pd.fib_targets[i]?.toFixed(2)||'?'}"></div>`;
+        }
+        const card = document.createElement('div');
+        card.className = 'pos-card';
+        card.innerHTML = `
+          <div class="pc-top">
+            <div class="pc-ticker">${pd.t}</div>
+            <div class="pc-ret ${retCls}">${retStr}</div>
+          </div>
+          <div class="pc-meta">
+            <span>Entry EGP ${pd.entry_price.toFixed(2)}</span>
+            <span>Now EGP ${pd.current_price.toFixed(2)}</span>
+            <span>Lvl ${lvl+1}/8</span>
+            <span style="color:${sc}">Score ${s.score||'—'}</span>
+          </div>
+          <div class="pc-fib">${fibCells}</div>
+        `;
+        el.appendChild(card);
+    });
+}
+
+// ── Pending cards ─────────────────────────────────────────────────────────
+function buildPending() {
+    const el = document.getElementById('pend-cards');
+    el.innerHTML = '';
+    if (!PENDING_LIST.length) {
+        el.innerHTML = '<div class="empty-state">No new pending signals right now.</div>';
+        return;
+    }
+    PENDING_LIST.forEach(p => {
+        const sc = scoreColor(p.score);
+        const card = document.createElement('div');
+        card.className = 'pend-card';
+        card.innerHTML = `
+          <div class="pend-top">
+            <div class="pend-ticker">${p.ticker}</div>
+            <div class="pend-score" style="color:${sc}">${p.score}</div>
+          </div>
+          <div class="pend-meta">
+            EGP ${p.price.toFixed(2)} &nbsp;·&nbsp; R1: ${p.r1} &nbsp;·&nbsp;
+            <span style="color:${sc}">${p.signal}</span>
+          </div>
+        `;
+        el.appendChild(card);
+    });
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────
+function setRange(r) {
+    currentRange = r;
+    ['all','90','60','30'].forEach(x => document.getElementById('btn-'+x).classList.remove('active'));
+    document.getElementById('btn-'+r).classList.add('active');
+    buildHeatmap();
+}
+function setView(v) {
+    currentView = v;
+    ['score','return'].forEach(x => document.getElementById('view-'+x).classList.remove('active'));
+    document.getElementById('view-'+v).classList.add('active');
+    buildLegend();
+    buildHeatmap();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+buildLegend();
+buildHeatmap();
+buildPositions();
+buildPending();
+
+// ── PWA: Service Worker registration ──────────────────────────────────────
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// ── iOS: Show "Add to Home Screen" banner ────────────────────────────────
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isInStandalone = window.navigator.standalone === true;
+if (isIOS && !isInStandalone && !localStorage.getItem('ios_banner_dismissed')) {
+    const banner = document.createElement('div');
+    banner.id = 'ios-banner';
+    banner.style.cssText = `
+        position:fixed;bottom:0;left:0;right:0;z-index:9999;
+        background:#161b22;border-top:1px solid #30363d;
+        padding:14px 20px;display:flex;align-items:center;gap:12px;
+        box-shadow:0 -4px 20px #0009;
+    `;
+    banner.innerHTML = `
+        <img src="./icon.svg" style="width:36px;height:36px;border-radius:8px;flex-shrink:0">
+        <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:#e6edf3">Install EGX SMC App</div>
+            <div style="font-size:11px;color:#8b949e;margin-top:2px">
+                Tap <strong style="color:#c9d1d9">Share</strong>
+                <span style="font-size:14px">⎋</span> then
+                <strong style="color:#c9d1d9">Add to Home Screen</strong>
+            </div>
+        </div>
+        <button onclick="localStorage.setItem('ios_banner_dismissed','1');document.getElementById('ios-banner').remove()"
+            style="background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer;padding:4px;flex-shrink:0">✕</button>
+    `;
+    document.body.appendChild(banner);
+}
+
+// ── PWA: Install prompt ────────────────────────────────────────────────────
+let _deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    _deferredPrompt = e;
+    document.getElementById('btn-install').style.display = 'inline-flex';
+});
+document.getElementById('btn-install').addEventListener('click', async () => {
+    if (!_deferredPrompt) return;
+    _deferredPrompt.prompt();
+    const { outcome } = await _deferredPrompt.userChoice;
+    if (outcome === 'accepted') document.getElementById('btn-install').style.display = 'none';
+    _deferredPrompt = null;
+});
+window.addEventListener('appinstalled', () => {
+    document.getElementById('btn-install').style.display = 'none';
+});
+
+// ── PWA: Change detection + Notifications ─────────────────────────────────
+const DATA_URL = './data.json';
+const STORE_KEY = 'egx_smc_state';
+
+async function checkChanges() {
+    try {
+        const res = await fetch(DATA_URL + '?t=' + Date.now());
+        if (!res.ok) return;
+        const curr = await res.json();
+        const prev = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+        localStorage.setItem(STORE_KEY, JSON.stringify(curr));
+        if (!prev) return;   // first visit — nothing to compare
+
+        const alerts = [];
+
+        // New pending signals
+        const prevTickers = new Set((prev.pending || []).map(p => p.ticker));
+        (curr.pending || []).forEach(p => {
+            if (!prevTickers.has(p.ticker))
+                alerts.push(`⏳ ${p.ticker} — Wait (score ${p.score})`);
+        });
+
+        // Fibonacci level advances
+        Object.entries(curr.positions || {}).forEach(([t, d]) => {
+            const pd = (prev.positions || {})[t];
+            if (pd && d.level > pd.level)
+                alerts.push(`🎯 ${t} hit Target ${d.level + 1}/8 (+${d.return_pct}%)`);
+        });
+
+        // New open position
+        const prevOpen = new Set(Object.keys(prev.positions || {}));
+        Object.keys(curr.positions || {}).forEach(t => {
+            if (!prevOpen.has(t))
+                alerts.push(`🟢 New position opened: ${t}`);
+        });
+
+        if (alerts.length && Notification.permission === 'granted') {
+            alerts.forEach(msg => {
+                new Notification('EGX SMC Alert', {
+                    body: msg,
+                    icon: './icon.svg',
+                    badge: './icon.svg',
+                    tag: msg,
+                });
+            });
+        }
+    } catch(e) {}
+}
+
+async function initNotifications() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+        await Notification.requestPermission();
+    }
+    checkChanges();
+    setInterval(checkChanges, 5 * 60 * 1000);   // re-check every 5 min
+}
+
+window.addEventListener('load', () => setTimeout(initNotifications, 1500));
+</script>
+</body>
+</html>

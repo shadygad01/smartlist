@@ -2147,7 +2147,7 @@ def monitor_scores():
                 send_alert_for_high_score(stock, score, results[stock])
                 last_alerted_stocks.add(stock)
                 # تسجيل المركز الجديد
-                current_price = results[stock].get("cur", 0)
+                current_price = results[stock].get("price", 0)
                 if current_price > 0:
                     add_position(stock, current_price, datetime.now(CAIRO).isoformat(),
                                  entry_score=results[stock].get("score", 0))
@@ -2157,7 +2157,7 @@ def monitor_scores():
             last_score_data = results
 
             # مراقبة المراكز المفتوحة
-            current_prices = {s: results[s].get("cur", 0) for s in STOCKS if results[s].get("cur")}
+            current_prices = {s: results[s].get("price", 0) for s in STOCKS if results[s].get("ok") and isinstance(results[s].get("price"), (int, float)) and results[s].get("price", 0) > 0}
             monitor_positions(current_prices)
             monitor_reinforcement(current_prices, results)
 

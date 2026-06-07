@@ -704,6 +704,34 @@ if ('serviceWorker' in navigator) {{
     navigator.serviceWorker.register('./sw.js').catch(() => {{}});
 }}
 
+// ── iOS: Show "Add to Home Screen" banner ────────────────────────────────
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isInStandalone = window.navigator.standalone === true;
+if (isIOS && !isInStandalone && !localStorage.getItem('ios_banner_dismissed')) {{
+    const banner = document.createElement('div');
+    banner.id = 'ios-banner';
+    banner.style.cssText = `
+        position:fixed;bottom:0;left:0;right:0;z-index:9999;
+        background:#161b22;border-top:1px solid #30363d;
+        padding:14px 20px;display:flex;align-items:center;gap:12px;
+        box-shadow:0 -4px 20px #0009;
+    `;
+    banner.innerHTML = `
+        <img src="./icon.svg" style="width:36px;height:36px;border-radius:8px;flex-shrink:0">
+        <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:#e6edf3">Install EGX SMC App</div>
+            <div style="font-size:11px;color:#8b949e;margin-top:2px">
+                Tap <strong style="color:#c9d1d9">Share</strong>
+                <span style="font-size:14px">⎋</span> then
+                <strong style="color:#c9d1d9">Add to Home Screen</strong>
+            </div>
+        </div>
+        <button onclick="localStorage.setItem('ios_banner_dismissed','1');document.getElementById('ios-banner').remove()"
+            style="background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer;padding:4px;flex-shrink:0">✕</button>
+    `;
+    document.body.appendChild(banner);
+}}
+
 // ── PWA: Install prompt ────────────────────────────────────────────────────
 let _deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', e => {{

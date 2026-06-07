@@ -221,15 +221,14 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
   <h1>EGX SMC — Signal Score Heatmap</h1>
   <span class="badge green">Generated: {today_str}</span>
   <span class="badge yellow">{len(positions)} Open Positions</span>
-  <span class="badge blue" id="pend-badge">{len(pending)} Pending</span>
   <span class="badge">EGX · Cairo Time</span>
 </div>
 
 <!-- ── Stats bar ───────────────────────────────────────────────────── -->
 <div class="stats">
   <div class="stat">
-    <div class="val">{len(stocks_with_history)}</div>
-    <div class="lbl">Stocks Tracked</div>
+    <div class="val" id="pend-stat-val">{len(pending)}</div>
+    <div class="lbl">Pending Signals</div>
   </div>
   <div class="stat">
     <div class="val">{len(positions)}</div>
@@ -242,10 +241,6 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
   <div class="stat">
     <div class="val pos" id="best-ret-val">+{best_ret}%</div>
     <div class="lbl">Best Return ({best_ret_ticker.replace('.CA','')})</div>
-  </div>
-  <div class="stat">
-    <div class="val" id="pend-stat">{len(pending)}</div>
-    <div class="lbl">Pending Signals</div>
   </div>
 </div>
 

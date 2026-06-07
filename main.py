@@ -1451,10 +1451,21 @@ def build_report(holiday_mode=False, last_trading=None):
             pnl_col = "#155724" if (pnl_pct or 0) >= 0 else "#721c24"
             entry_date = p.get("entry_date", "")[:10]
             entry_score = p.get("entry_score", 0)
+            reinforced = p.get("reinforced", False)
+            reinf_price = p.get("reinforcement_price")
+            avg_price   = p.get("avg_price")
+            if reinforced and reinf_price:
+                entry_cell = (
+                    f"{entry:.2f} EGP<br>"
+                    f"<span style='font-size:11px;color:#c0392b;'>🔄 إعادة شراء: {reinf_price:.2f} EGP</span><br>"
+                    f"<span style='font-size:11px;color:#7d3c98;font-weight:bold;'>متوسط: {avg_price:.2f} EGP</span>"
+                )
+            else:
+                entry_cell = f"{entry:.2f} EGP"
             open_pos_rows += f"""
 <tr style="border-bottom:1px solid #e8f0f8;">
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#1C4587;">{NAMES.get(sym, sym)}<br><span style="font-size:10px;color:#999;">{sym}</span></td>
-  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;">{entry:.2f} EGP</td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;">{entry_cell}</td>
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;color:{pnl_col};font-weight:bold;">{cur_price} EGP &nbsp;<span style="font-size:11px;">({pnl_str})</span></td>
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;">{dyn_tgt:.2f} EGP</td>
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;">{entry_date}</td>
@@ -1624,7 +1635,7 @@ def send_email(html, subject_suffix=""):
 # TELEGRAM ALERTS
 # =========================================
 
-def send_telegram_zone3_reinforcement(symbol, entry_price, reinforcement_price):
+def send_telegram_zone3_reinforcement(symbol, entry_price, reinforcement_price, avg_price):
     """Send alert when Zone 3 reinforcement is triggered"""
     token   = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
@@ -1656,8 +1667,10 @@ def send_telegram_zone3_reinforcement(symbol, entry_price, reinforcement_price):
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"🔵 *التعزيز (Zone 3)*\n"
         f"   سعر التعزيز : {reinforcement_price:.2f} EGP\n"
+        f"   ⚠️ إعادة شراء\n"
         f"{fib_levels_str(reinforcement_price)}\n\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📐 *متوسط السعر الجديد: {avg_price:.2f} EGP*\n\n"
         f"⚠️ الخروج عند أول ضعف بعد 12%\n"
         f"   الهدف يرتفع تلقائياً بلا حد أقصى\n\n"
         f"📉 الهبوط من الدخول: *{drop_pct:.1f}%*\n"
@@ -1838,6 +1851,32 @@ def monitor_positions(current_prices):
         if next_level > pos["current_level"]:
             update_position_target(symbol, next_level, price)
 
+def monitor_reinforcement(current_prices, results):
+    """Check if any open position has hit Zone 3 — trigger re-buy reinforcement once."""
+    global open_positions
+
+    for symbol in list(open_positions.keys()):
+        pos = open_positions[symbol]
+        if pos["status"] != "open" or pos.get("reinforced"):
+            continue
+        if symbol not in current_prices or symbol not in results:
+            continue
+        ez = results[symbol].get("entry_zones")
+        if not ez or "z3" not in ez:
+            continue
+        z3 = ez["z3"]
+        cur = current_prices[symbol]
+        if z3["lo"] <= cur <= z3["hi"]:
+            entry_price = pos["entry_price"]
+            avg_price = round((entry_price + cur) / 2, 2)
+            open_positions[symbol]["reinforced"] = True
+            open_positions[symbol]["reinforcement_price"] = round(cur, 2)
+            open_positions[symbol]["avg_price"] = avg_price
+            save_open_positions()
+            print(f"🔄 Z3 Reinforcement triggered: {symbol} @ {cur:.2f} (avg {avg_price:.2f})")
+            send_telegram_zone3_reinforcement(symbol, entry_price, round(cur, 2), avg_price)
+
+
 def send_telegram_alerts(results):
     """
     Send a Telegram message for every stock with score >= 35.
@@ -1892,7 +1931,11 @@ def send_telegram_alerts(results):
                     cur_str = "—"
                 score_str = f" | Score {pos.get('entry_score', 0)}" if pos.get('entry_score') else ""
                 msg += f"\n📌 *{sym}* — {NAMES.get(sym, sym)}"
-                msg += f"\n   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*{score_str}\n"
+                msg += f"\n   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*{score_str}"
+                if pos.get("reinforced") and pos.get("reinforcement_price"):
+                    msg += f"\n   🔄 إعادة شراء: {pos['reinforcement_price']:.2f} EGP"
+                    msg += f"\n   📐 متوسط السعر: *{pos['avg_price']:.2f} EGP*"
+                msg += "\n"
             msg += "━━━━━━━━━━━━━━━━━━━━━"
         try:
             requests.post(
@@ -1935,7 +1978,12 @@ def send_telegram_alerts(results):
                 cur_str = "—"
             score_str = f" | Score {pos.get('entry_score', 0)}" if pos.get('entry_score') else ""
             lines.append(f"📌 *{sym}* — {NAMES.get(sym, sym)}")
-            lines.append(f"   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*{score_str}\n")
+            pos_line = f"   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*{score_str}"
+            lines.append(pos_line)
+            if pos.get("reinforced") and pos.get("reinforcement_price"):
+                lines.append(f"   🔄 إعادة شراء: {pos['reinforcement_price']:.2f} EGP")
+                lines.append(f"   📐 متوسط السعر: *{pos['avg_price']:.2f} EGP*")
+            lines.append("")
         lines.append("━━━━━━━━━━━━━━━━━━━━━\n")
 
     SIGNAL_EMOJI = {
@@ -2106,6 +2154,7 @@ def monitor_scores():
             # مراقبة المراكز المفتوحة
             current_prices = {s: results[s].get("cur", 0) for s in STOCKS if results[s].get("cur")}
             monitor_positions(current_prices)
+            monitor_reinforcement(current_prices, results)
 
             # انتظر 5 دقائق قبل التحديث التالي
             time.sleep(300)
@@ -2156,6 +2205,7 @@ def daily_scan():
                        if _results[s].get("ok") and isinstance(_results[s].get("price"), (int, float))
                        and _results[s]["price"] > 0}
         monitor_positions(_cur_prices)
+        monitor_reinforcement(_cur_prices, _results)
 
         # الخطوة 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة والتارجتات المحدّثة!)
         html, _results = build_report(holiday_mode=False)
@@ -2199,6 +2249,7 @@ def daily_scan():
                        if _results[s].get("ok") and isinstance(_results[s].get("price"), (int, float))
                        and _results[s]["price"] > 0}
         monitor_positions(_cur_prices)
+        monitor_reinforcement(_cur_prices, _results)
 
         # الخطوة 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة والتارجتات المحدّثة!)
         html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
@@ -2278,6 +2329,7 @@ def manual_scan():
                    if _results[s].get("ok") and isinstance(_results[s].get("price"), (int, float))
                    and _results[s]["price"] > 0}
     monitor_positions(_cur_prices)
+    monitor_reinforcement(_cur_prices, _results)
 
     # الخطوة 3: إعادة بناء التقرير مع المراكز الجديدة والتارجتات المحدّثة
     html, _results = build_report(holiday_mode=holiday, last_trading=str(last_td) if last_td else None)

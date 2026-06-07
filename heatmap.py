@@ -438,8 +438,9 @@ function buildLegend() {{
 
 // ── Dynamic cell width based on available space ───────────────────────────
 function calcCellW(numDates) {{
-    const available = window.innerWidth - 82 - 70 - 56;
-    return Math.max(14, Math.min(Math.floor(available / numDates), 40));
+    const available = (window.innerWidth || 800) - 82 - 76 - 56;
+    const ideal = Math.floor(available / numDates);
+    return Math.max(14, Math.min(ideal, 48));
 }}
 
 // ── Heatmap ───────────────────────────────────────────────────────────────
@@ -695,6 +696,7 @@ function setRange(r) {{
     ['all','90','60','30'].forEach(x => document.getElementById('btn-'+x).classList.remove('active'));
     document.getElementById('btn-'+r).classList.add('active');
     buildHeatmap();
+    document.querySelector('.hm-outer').scrollLeft = 0;
 }}
 function setView(v) {{
     currentView = v;

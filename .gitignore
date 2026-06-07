@@ -37,6 +37,8 @@ last_scores.json
 oras_history.csv
 signals_history.csv
 scan_results.json
+signal_history.json
+telegram_history.txt
 data/
 *.log
 .env
@@ -50,8 +52,11 @@ Thumbs.db
 *.tmp
 *.temp
 
-# Test and debug files
+# Test and debug files (root-level scratch files only)
 test_*.py
+# Re-include the formal test suite
+!tests/
+!tests/test_*.py
 debug_*.py
 *_test.py
 *_debug.py

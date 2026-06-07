@@ -954,8 +954,14 @@ def _calc_rsi(close, period=14):
     loss  = (-delta).clip(lower=0)
     avg_g = gain.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
     avg_l = loss.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
-    rs    = avg_g / avg_l.replace(0, np.nan)
-    return 100 - (100 / (1 + rs))
+    # avg_l == 0 means no losses → RSI = 100; use where() to avoid NaN propagation
+    rsi = avg_l.copy()
+    rsi[:] = 100.0
+    has_loss = avg_l > 0
+    rs = avg_g[has_loss] / avg_l[has_loss]
+    rsi[has_loss] = 100 - (100 / (1 + rs))
+    rsi[avg_g == 0] = 0.0   # no gains either → RSI = 0 (flat price after warmup)
+    return rsi
 
 def sc_div(close, ml):
     """
@@ -2147,7 +2153,7 @@ def monitor_scores():
                 send_alert_for_high_score(stock, score, results[stock])
                 last_alerted_stocks.add(stock)
                 # تسجيل المركز الجديد
-                current_price = results[stock].get("cur", 0)
+                current_price = results[stock].get("price", 0)
                 if current_price > 0:
                     add_position(stock, current_price, datetime.now(CAIRO).isoformat(),
                                  entry_score=results[stock].get("score", 0))
@@ -2157,7 +2163,7 @@ def monitor_scores():
             last_score_data = results
 
             # مراقبة المراكز المفتوحة
-            current_prices = {s: results[s].get("cur", 0) for s in STOCKS if results[s].get("cur")}
+            current_prices = {s: results[s].get("price", 0) for s in STOCKS if results[s].get("ok") and isinstance(results[s].get("price"), (int, float)) and results[s].get("price", 0) > 0}
             monitor_positions(current_prices)
             monitor_reinforcement(current_prices, results)
 
@@ -2379,9 +2385,9 @@ def is_trading_day_today():
     """
     today = today_cairo()
     
-    # 0=Monday, 1=Tuesday, ..., 6=Sunday
-    # Cairo market: Sunday-Thursday
-    if today.weekday() >= 4:  # Friday(4) or Saturday(5)
+    # 0=Monday, 1=Tuesday, ..., 4=Friday, 5=Saturday, 6=Sunday
+    # Cairo market: Sunday(6)-Thursday(3) — Friday(4) and Saturday(5) only are weekend
+    if today.weekday() in (4, 5):  # Friday or Saturday
         return False
     
     if today in EGX_HOLIDAYS:
@@ -2428,8 +2434,8 @@ def detect_signal_changes(current_results, previous_results):
         current = current_results.get(stock, {})
         previous = previous_results.get(stock, {})
         
-        current_sig = current.get("sig", "Skip")
-        previous_sig = previous.get("sig", "Skip")
+        current_sig = current.get("signal", "Skip")
+        previous_sig = previous.get("signal", "Skip")
         current_score = current.get("score", 0)
         current_price = current.get("price", "N/A")
         current_target = current.get("target", "N/A")

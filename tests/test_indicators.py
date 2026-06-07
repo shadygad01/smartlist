@@ -87,15 +87,11 @@ class TestCalcRsi:
         assert (rsi <= 100).all(), "RSI should never exceed 100"
 
     def test_all_gains_rsi_near_100(self):
-        # Perfectly rising prices → RSI should approach 100.
-        # NOTE: the implementation uses avg_l.replace(0, NaN) which causes NaN
-        # propagation when there are zero losses — documenting actual behavior.
+        # Perfectly rising prices → RSI must be 100 (no losses → avg_l = 0)
         close = make_close([100 + i for i in range(50)])
-        rsi = _calc_rsi(close)
-        valid = rsi.dropna()
-        if len(valid) > 0:
-            assert float(valid.iloc[-1]) > 90
-        # else: all NaN is the current behavior when no losses exist (known edge case)
+        rsi = _calc_rsi(close).dropna()
+        assert len(rsi) > 0, "RSI should produce valid values for all-gain series"
+        assert float(rsi.iloc[-1]) == pytest.approx(100.0)
 
     def test_all_losses_rsi_near_0(self):
         # Perfectly falling prices → RSI approaches 0

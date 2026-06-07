@@ -954,8 +954,14 @@ def _calc_rsi(close, period=14):
     loss  = (-delta).clip(lower=0)
     avg_g = gain.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
     avg_l = loss.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
-    rs    = avg_g / avg_l.replace(0, np.nan)
-    return 100 - (100 / (1 + rs))
+    # avg_l == 0 means no losses → RSI = 100; use where() to avoid NaN propagation
+    rsi = avg_l.copy()
+    rsi[:] = 100.0
+    has_loss = avg_l > 0
+    rs = avg_g[has_loss] / avg_l[has_loss]
+    rsi[has_loss] = 100 - (100 / (1 + rs))
+    rsi[avg_g == 0] = 0.0   # no gains either → RSI = 0 (flat price after warmup)
+    return rsi
 
 def sc_div(close, ml):
     """

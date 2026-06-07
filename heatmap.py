@@ -65,9 +65,10 @@ for t, pos in positions.items():
         'status':        pos.get('status', 'open'),
     }
 
-rets     = [d['return_pct'] for d in pos_data.values()]
-avg_ret  = round(sum(rets) / len(rets), 1) if rets else 0
-best_ret = max((d['return_pct'] for d in pos_data.values()), default=0)
+total_invested = sum(d['entry_price'] for d in pos_data.values())
+total_current  = sum(d['current_price'] for d in pos_data.values())
+avg_ret        = round((total_current - total_invested) / total_invested * 100, 1) if total_invested else 0
+best_ret       = max((d['return_pct'] for d in pos_data.values()), default=0)
 best_ret_ticker = next(
     (t for t, d in pos_data.items() if d['return_pct'] == best_ret), '—'
 )

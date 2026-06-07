@@ -2227,6 +2227,7 @@ def daily_scan():
 
         # حفظ النتائج الحالية
         save_scan_results(_results)
+        save_signal_history(_results)
 
         # كشف التغييرات وإرسال تنبيهات
         changes = detect_signal_changes(_results, previous_results)
@@ -2271,6 +2272,7 @@ def daily_scan():
 
         # حفظ النتائج الحالية
         save_scan_results(_results)
+        save_signal_history(_results)
 
         # كشف التغييرات وإرسال تنبيهات
         changes = detect_signal_changes(_results, previous_results)
@@ -2291,10 +2293,11 @@ def continuous_scan():
     
     # إجراء المسح الحالي
     html, current_results = build_report(holiday_mode=False)
-    
+
     # حفظ النتائج الحالية
     save_scan_results(current_results)
-    
+    save_signal_history(current_results)
+
     # كشف التغييرات وإرسال تنبيهات فورية
     changes = detect_signal_changes(current_results, previous_results)
     if changes:
@@ -2350,6 +2353,7 @@ def manual_scan():
     send_email(html, subject_suffix=f" — Manual Scan{suffix}")
     send_telegram_alerts(_results)
     save_scan_results(_results)
+    save_signal_history(_results)
 
     changes = detect_signal_changes(_results, previous_results)
     if changes:
@@ -2409,6 +2413,41 @@ def save_scan_results(results):
         print(f"✅ Results saved to scan_results.json")
     except Exception as e:
         print(f"❌ Error saving results: {e}")
+
+
+def save_signal_history(results):
+    """
+    Append today's per-stock scan data to signal_history.json for heatmap.
+    """
+    try:
+        from datetime import date as _date
+        today = _date.today().isoformat()
+        hist = {}
+        if os.path.exists("signal_history.json"):
+            with open("signal_history.json", "r", encoding="utf-8") as f:
+                hist = json.load(f)
+        for ticker, d in results.items():
+            if not isinstance(d, dict) or not d.get("ok"):
+                continue
+            entry = {
+                "date":   today,
+                "score":  d.get("score", 0),
+                "price":  d.get("price", 0),
+                "r1":     d.get("r1", 0),
+                "signal": d.get("signal", ""),
+            }
+            stock_hist = hist.setdefault(ticker, [])
+            # replace if same date already exists, otherwise append
+            existing = [i for i, e in enumerate(stock_hist) if e.get("date") == today]
+            if existing:
+                stock_hist[existing[0]] = entry
+            else:
+                stock_hist.append(entry)
+        with open("signal_history.json", "w", encoding="utf-8") as f:
+            json.dump(hist, f, ensure_ascii=False, separators=(",", ":"))
+        print(f"✅ signal_history.json updated ({today})")
+    except Exception as e:
+        print(f"❌ Error saving signal history: {e}")
 
 
 def load_previous_results():

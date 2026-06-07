@@ -157,7 +157,7 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
 
 /* ── Today column ─────────────────────────── */
 .today-sep{{width:6px}}
-.today-cell{{width:58px;min-width:58px;height:25px;border-radius:4px;cursor:pointer;font-size:9px;font-weight:700;letter-spacing:-.02em;transition:transform .1s;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap}}
+.today-cell{{width:70px;min-width:70px;height:25px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700;transition:transform .1s;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap}}
 .today-cell:hover{{transform:scale(1.06);z-index:10;outline:2px solid #e6edf3}}
 .date-header{{font-size:9px;color:#6e7681;text-align:center;padding:0;transform:rotate(-55deg) translateX(3px);transform-origin:center bottom;height:46px;vertical-align:bottom;width:17px}}
 .today-header{{font-size:9px;color:#3fb950;font-weight:700;text-align:center;vertical-align:bottom;padding-bottom:4px;letter-spacing:.03em}}

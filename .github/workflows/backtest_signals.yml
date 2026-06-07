@@ -23,8 +23,8 @@ jobs:
           pip install -r requirements.txt
           pip install APScheduler --upgrade
 
-      - name: Run backtest
-        run: python backtest_signals.py
+      - name: Build signal history from Yahoo Finance
+        run: python build_history.py
 
       - name: Commit signal history
         run: |

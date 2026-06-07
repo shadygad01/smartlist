@@ -435,9 +435,18 @@ function buildLegend() {{
     }});
 }}
 
+// ── Dynamic cell width based on available space ───────────────────────────
+function calcCellW(numDates) {{
+    const outer     = document.querySelector('.hm-outer');
+    const available = (outer ? outer.clientWidth : 800) - 82 - 70 - 8;
+    const ideal     = Math.floor(available / numDates);
+    return Math.max(14, Math.min(ideal, 36));
+}}
+
 // ── Heatmap ───────────────────────────────────────────────────────────────
 function buildHeatmap() {{
     const dates = filteredDates();
+    const CW    = calcCellW(dates.length);
     const tbl   = document.getElementById('hm-table');
     tbl.innerHTML = '';
 
@@ -450,7 +459,8 @@ function buildHeatmap() {{
         const prev  = dates[i-1] || '';
         const th    = document.createElement('td');
         th.className = 'date-header';
-        if (d.slice(0,7) !== prev.slice(0,7) || i===0) {{
+        th.style.width = CW + 'px';
+        if (d.slice(0,7) !== prev.slice(0,7) || i===0 || CW >= 22) {{
             th.textContent = d.slice(5);
         }}
         hRow.appendChild(th);
@@ -497,6 +507,7 @@ function buildHeatmap() {{
                 td.style.padding = '1px';
                 const cell  = document.createElement('div');
                 cell.className = 'hm-cell';
+                cell.style.width  = CW + 'px';
                 cell.style.background = cellColor(stock, entry, d);
 
                 if (entry) {{

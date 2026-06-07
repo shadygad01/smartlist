@@ -2385,9 +2385,9 @@ def is_trading_day_today():
     """
     today = today_cairo()
     
-    # 0=Monday, 1=Tuesday, ..., 6=Sunday
-    # Cairo market: Sunday-Thursday
-    if today.weekday() >= 4:  # Friday(4) or Saturday(5)
+    # 0=Monday, 1=Tuesday, ..., 4=Friday, 5=Saturday, 6=Sunday
+    # Cairo market: Sunday(6)-Thursday(3) — Friday(4) and Saturday(5) only are weekend
+    if today.weekday() in (4, 5):  # Friday or Saturday
         return False
     
     if today in EGX_HOLIDAYS:
@@ -2434,8 +2434,8 @@ def detect_signal_changes(current_results, previous_results):
         current = current_results.get(stock, {})
         previous = previous_results.get(stock, {})
         
-        current_sig = current.get("sig", "Skip")
-        previous_sig = previous.get("sig", "Skip")
+        current_sig = current.get("signal", "Skip")
+        previous_sig = previous.get("signal", "Skip")
         current_score = current.get("score", 0)
         current_price = current.get("price", "N/A")
         current_target = current.get("target", "N/A")

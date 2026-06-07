@@ -119,7 +119,8 @@ class TestScanResultsIO:
 class TestDetectSignalChanges:
 
     def _result(self, sig, score=40, price=100.0, target=115.0):
-        return {"sig": sig, "score": score, "price": price, "target": target, "ok": True}
+        # analyze() returns "signal" key — detect_signal_changes() must read "signal"
+        return {"signal": sig, "score": score, "price": price, "target": target, "ok": True}
 
     def test_skip_to_buy_is_detected(self):
         current  = {STOCKS[0]: self._result("Buy")}

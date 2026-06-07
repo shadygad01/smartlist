@@ -9,7 +9,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from main import is_egx_trading_day, most_recent_trading_day, EGX_HOLIDAYS
+from main import is_egx_trading_day, most_recent_trading_day, is_trading_day_today, EGX_HOLIDAYS
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -113,4 +113,53 @@ class TestMostRecentTradingDay:
             result = most_recent_trading_day(d)
             assert is_egx_trading_day(result) is True, (
                 f"most_recent_trading_day({d}) returned {result} which is not a trading day"
+            )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# is_trading_day_today — consistency with is_egx_trading_day
+# (regression tests for the weekday >= 4 bug that blocked Sundays)
+# ─────────────────────────────────────────────────────────────────────────────
+
+import main as _main
+
+class TestIsTradingDayToday:
+
+    def _mock_today(self, d, monkeypatch):
+        monkeypatch.setattr(_main, "today_cairo", lambda: d)
+
+    def test_sunday_is_trading_day(self, monkeypatch):
+        # 2026-01-04 is a Sunday — weekday()=6 — must be True (EGX trades Sun–Thu)
+        # The old bug `>= 4` returned False for Sunday (6 >= 4 is True → blocked)
+        self._mock_today(date(2026, 1, 4), monkeypatch)
+        assert _main.is_trading_day_today() is True
+
+    def test_monday_is_trading_day(self, monkeypatch):
+        self._mock_today(date(2026, 1, 5), monkeypatch)
+        assert _main.is_trading_day_today() is True
+
+    def test_thursday_is_trading_day(self, monkeypatch):
+        self._mock_today(date(2026, 1, 8), monkeypatch)
+        assert _main.is_trading_day_today() is True
+
+    def test_friday_is_not_trading_day(self, monkeypatch):
+        self._mock_today(date(2026, 1, 2), monkeypatch)
+        assert _main.is_trading_day_today() is False
+
+    def test_saturday_is_not_trading_day(self, monkeypatch):
+        self._mock_today(date(2026, 1, 3), monkeypatch)
+        assert _main.is_trading_day_today() is False
+
+    def test_holiday_is_not_trading_day(self, monkeypatch):
+        self._mock_today(date(2026, 1, 7), monkeypatch)
+        assert _main.is_trading_day_today() is False
+
+    def test_consistent_with_is_egx_trading_day(self, monkeypatch):
+        # Both functions must agree on every day of the year
+        start = date(2026, 1, 1)
+        for i in range(365):
+            d = start + timedelta(days=i)
+            self._mock_today(d, monkeypatch)
+            assert _main.is_trading_day_today() == is_egx_trading_day(d), (
+                f"is_trading_day_today() and is_egx_trading_day() disagree on {d}"
             )

@@ -1509,10 +1509,12 @@ def build_report(holiday_mode=False, last_trading=None):
         if not r["ok"] or r["score"]<35: continue
         if r.get("r1", 0) < 18: continue
         _,tc,tbg,tbr=sig_info(r["score"])
+        in_portfolio = s in positions and positions[s].get("status") == "open"
+        portfolio_badge = ' <span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:bold;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;">🔵 In Portfolio</span>' if in_portfolio else ""
         wr+=f"""
 <tr style="border-bottom:1px solid #e0e0e0;">
   <td style="padding:10px 12px;font-family:Arial,sans-serif;">
-    <b style="font-size:14px;">{NAMES.get(s,s)}</b> {fresh_badge(r["is_fresh"],r["last_dt"])}<br>
+    <b style="font-size:14px;">{NAMES.get(s,s)}</b> {fresh_badge(r["is_fresh"],r["last_dt"])}{portfolio_badge}<br>
     <span style="font-size:11px;color:#888;">{s} · {SECTORS.get(s,"")}</span></td>
   <td style="padding:10px 12px;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">{r["price"]} EGP</td>
   <td style="padding:10px 12px;">
@@ -2001,11 +2003,14 @@ def send_telegram_alerts(results):
         fresh_flag   = "✅" if r.get("is_fresh") else "⚠️"
         is_buy       = signal_upper in ("BUY", "STRONG BUY")
 
+        in_portfolio = s in positions and positions[s].get("status") == "open"
+        portfolio_tag = "  🔵 _In Portfolio_" if in_portfolio else ""
+
         if is_buy:
             # Full details for BUY / STRONG BUY
             # Use dynamic target if position is open, otherwise use static target
             target_to_display = r["target"]
-            if s in positions and positions[s].get("status") == "open":
+            if in_portfolio:
                 target_to_display = positions[s]["target"]
 
             upside = ""
@@ -2015,7 +2020,7 @@ def send_telegram_alerts(results):
             except Exception:
                 pass
             lines.append(
-                f"{emoji} *{NAMES.get(s, s)}* `{s}`\n"
+                f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
                 f"   Signal: *{r['signal']}*  |  Score: *{r['score']}/100*\n"
                 f"   Price: *{r['price']} EGP*  →  Target: *{target_to_display} EGP*{upside}\n"
                 f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
@@ -2023,7 +2028,7 @@ def send_telegram_alerts(results):
         else:
             # WATCH only — no target, no buy mention
             lines.append(
-                f"{emoji} *{NAMES.get(s, s)}* `{s}`\n"
+                f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
                 f"   👀 Watch  |  Score: *{r['score']}/100*\n"
                 f"   Price: *{r['price']} EGP*\n"
                 f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"

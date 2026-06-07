@@ -72,12 +72,12 @@ best_ret_ticker = next(
     (t for t, d in pos_data.items() if d['return_pct'] == best_ret), '—'
 )
 
-# ── Pending signals (score ≥ 35, not in open positions) ───────────────────
+# ── Pending signals (signal = "Wait") ────────────────────────────────────
 pending = [
     {'ticker': t, 'score': d.get('score', 0), 'price': d.get('price', 0),
      'signal': d.get('signal', '-'), 'r1': d.get('r1', 0)}
     for t, d in scan_results.items()
-    if d.get('score', 0) >= 35 and t not in positions
+    if d.get('signal', '').lower() == 'wait'
 ]
 pending.sort(key=lambda x: x['score'], reverse=True)
 

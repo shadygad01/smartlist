@@ -1,4 +1,4 @@
-const CACHE = 'egx-smc-v2';
+const CACHE = 'egx-smc-v3';
 const STATIC = ['heatmap.html', 'manifest.json', 'icon.svg'];
 
 // ── Install: cache static assets ─────────────────────────────────────────

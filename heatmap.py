@@ -277,6 +277,7 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
     <button class="btn" id="btn-30" onclick="setRange(30)">30d</button>
   </div>
   <span id="days-count" style="font-size:10px;color:#6e7681;margin-left:4px"></span>
+  <span id="range-label" style="font-size:11px;font-weight:600;color:#58a6ff;background:#1f2d3d;border:1px solid #1f6feb;border-radius:6px;padding:3px 10px;margin-left:6px"></span>
   <span class="ctrl-label" style="margin-left:8px">View</span>
   <div class="btn-group">
     <button class="btn active" id="view-score"  onclick="setView('score')">Score</button>
@@ -466,6 +467,12 @@ function buildHeatmap() {{
         hRow.appendChild(th);
     }});
     document.getElementById('days-count').textContent = `(${{dates.length}} days)`;
+    const fmtD = s => {{ const [y,m,d] = s.split('-'); return new Date(y,m-1,d).toLocaleDateString('en-GB',{{day:'numeric',month:'short'}}); }};
+    const rl = document.getElementById('range-label');
+    if (dates.length) {{
+        rl.textContent = fmtD(dates[0]) + ' → ' + fmtD(dates[dates.length-1]);
+        rl.style.display = 'inline-block';
+    }} else {{ rl.style.display = 'none'; }}
     const sep0 = document.createElement('td'); sep0.className='today-sep'; hRow.appendChild(sep0);
     const thToday = document.createElement('td'); thToday.className='today-header'; thToday.textContent='TODAY'; hRow.appendChild(thToday);
     tbl.appendChild(hRow);

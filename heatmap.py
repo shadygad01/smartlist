@@ -170,7 +170,7 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
 .sn-pend{{color:#d29922!important}}
 .sn-sig{{color:#3fb950!important}}
 
-.hm-cell{{width:15px;height:25px;border-radius:2px;cursor:pointer;position:relative;transition:transform .1s,outline .1s}}
+.hm-cell{{height:25px;border-radius:2px;cursor:pointer;position:relative;transition:transform .1s,outline .1s}}
 .hm-cell:hover{{transform:scale(1.5);z-index:10;outline:2px solid #e6edf3}}
 .pos-marker{{position:absolute;bottom:2px;right:1px;width:4px;height:4px;border-radius:50%;background:#f78166}}
 .pend-marker{{position:absolute;bottom:2px;right:1px;width:4px;height:4px;border-radius:50%;background:#d29922}}
@@ -276,6 +276,7 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
     <button class="btn" id="btn-60" onclick="setRange(60)">60d</button>
     <button class="btn" id="btn-30" onclick="setRange(30)">30d</button>
   </div>
+  <span id="days-count" style="font-size:10px;color:#6e7681;margin-left:4px"></span>
   <span class="ctrl-label" style="margin-left:8px">View</span>
   <div class="btn-group">
     <button class="btn active" id="view-score"  onclick="setView('score')">Score</button>
@@ -437,10 +438,8 @@ function buildLegend() {{
 
 // ── Dynamic cell width based on available space ───────────────────────────
 function calcCellW(numDates) {{
-    const outer     = document.querySelector('.hm-outer');
-    const available = (outer ? outer.clientWidth : 800) - 82 - 70 - 8;
-    const ideal     = Math.floor(available / numDates);
-    return Math.max(14, Math.min(ideal, 36));
+    const available = window.innerWidth - 82 - 70 - 56;
+    return Math.max(14, Math.min(Math.floor(available / numDates), 40));
 }}
 
 // ── Heatmap ───────────────────────────────────────────────────────────────
@@ -465,6 +464,7 @@ function buildHeatmap() {{
         }}
         hRow.appendChild(th);
     }});
+    document.getElementById('days-count').textContent = `(${{dates.length}} days)`;
     const sep0 = document.createElement('td'); sep0.className='today-sep'; hRow.appendChild(sep0);
     const thToday = document.createElement('td'); thToday.className='today-header'; thToday.textContent='TODAY'; hRow.appendChild(thToday);
     tbl.appendChild(hRow);

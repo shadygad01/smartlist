@@ -416,6 +416,7 @@ const POS_DATA  = {js(pos_data)};
 const PEAK      = {js(peak_scores)};
 const SECTORS   = {js(SECTORS)};
 const PENDING_LIST = {js(pending)};
+const PEND_MAP  = Object.fromEntries(PENDING_LIST.map(p => [p.ticker, p]));
 const TODAY     = {js(today_str)};
 
 let currentRange = 90;
@@ -641,7 +642,7 @@ function buildHeatmap() {{
         let badgeText = '', cls = '';
         if (isBuy)       {{ cls = 'sn-buy';  badgeText = 'buy'; }}
         else if (hasPos) {{ cls = 'sn-open'; badgeText = 'open'; }}
-        else if (isPend) {{ cls = 'sn-pend'; badgeText = 'pending'; }}
+        else if (isPend) {{ cls = 'sn-pend'; badgeText = String(PEND_MAP[stock]?.score ?? '—'); }}
         else if ((todayInfo.score||0) >= 35) {{ cls = 'sn-sig'; badgeText = 'signal'; }}
         nameTd.innerHTML = `<span class="sn-ticker ${{cls}}">${{ticker}}</span>${{badgeText?`<span class="sn-badge">${{badgeText}}</span>`:''}}`;
         nameTd.title = stock;

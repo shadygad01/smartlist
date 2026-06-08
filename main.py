@@ -2509,11 +2509,6 @@ def send_change_email(changed_stocks):
 
     time_str = fmt_cairo()
 
-    def _score_bar_color(sc):
-        if sc >= 65: return "#22c55e"
-        if sc >= 50: return "#f59e0b"
-        return "#ef4444"
-
     def _gain_str(price, target):
         try:
             pct = round(((float(target) - float(price)) / float(price)) * 100, 1)
@@ -2529,9 +2524,10 @@ def send_change_email(changed_stocks):
         signal = item.get("to", "Buy")
         ez     = item.get("entry_zones")
 
-        gain      = _gain_str(price, target)
-        bar_color = _score_bar_color(score)
-        bar_w     = min(int(score), 100)
+        gain  = _gain_str(price, target)
+        bar_w = min(int(score), 100)
+        # gradient spans the filled portion — short bars stay amber, long bars reach deep green
+        bar_gradient = "linear-gradient(90deg,#f59e0b 0%,#eab308 25%,#84cc16 50%,#22c55e 75%,#16a34a 100%)"
 
         # Zone 1 → سعر الدخول المقترح
         entry_price = price
@@ -2621,7 +2617,7 @@ def send_change_email(changed_stocks):
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="margin-top:8px;background:#1e2641;border-radius:20px;overflow:hidden;">'
             f'<tr>'
-            f'<td width="{bar_w}%" style="background:{bar_color};height:8px;border-radius:20px;font-size:1px;">&nbsp;</td>'
+            f'<td width="{bar_w}%" style="background:{bar_gradient};height:8px;border-radius:20px;font-size:1px;">&nbsp;</td>'
             f'<td style="height:8px;font-size:1px;">&nbsp;</td>'
             f'</tr></table>'
             f'</td></tr></table>'

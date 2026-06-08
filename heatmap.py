@@ -149,6 +149,13 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
 .badge.blue{{border-color:#1f6feb;color:#58a6ff}}
 .badge.red{{border-color:#da3633;color:#f85149}}
 
+/* ── Run-scan button ──────────────────────── */
+.btn-scan{{background:#1f6feb;border:1px solid #388bfd;border-radius:6px;padding:5px 13px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}}
+.btn-scan:hover{{background:#388bfd}}
+.btn-scan:disabled{{opacity:.7;cursor:default}}
+.btn-scan.ok{{background:#238636;border-color:#2ea043}}
+.btn-scan.err{{background:#da3633;border-color:#b91c1c}}
+
 /* ── Stats bar ────────────────────────────── */
 .stats{{display:flex;gap:1px;background:#30363d;border-bottom:1px solid #30363d}}
 .stat{{flex:1;background:#161b22;padding:10px 16px;text-align:center;min-width:0}}
@@ -268,6 +275,9 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
   <span class="badge">EGX · Cairo Time</span>
   <button id="btn-install" style="display:none;align-items:center;gap:6px;background:#238636;border:1px solid #2ea043;border-radius:6px;padding:5px 12px;font-size:12px;color:#fff;cursor:pointer">
     ＋ Install App
+  </button>
+  <button id="btn-scan" class="btn-scan" onclick="triggerScan()" title="Run manual scan now">
+    ⟳ Run Scan
   </button>
 </div>
 
@@ -939,6 +949,73 @@ async function initNotifications() {{
 }}
 
 window.addEventListener('load', () => setTimeout(initNotifications, 1500));
+
+// ── Manual Scan Trigger ────────────────────────────────────────────────────
+async function triggerScan() {{
+    const btn = document.getElementById('btn-scan');
+
+    let token = localStorage.getItem('gh_pat');
+    if (!token) {{
+        token = prompt(
+            'Enter your GitHub Personal Access Token\\n\\n' +
+            'GitHub → Settings → Developer Settings\\n' +
+            '→ Personal Access Tokens → Fine-grained\\n' +
+            'Permission needed: Actions (Read & Write)'
+        );
+        if (!token) return;
+        localStorage.setItem('gh_pat', token.trim());
+        token = token.trim();
+    }}
+
+    btn.textContent = '⏳ Running…';
+    btn.disabled = true;
+    btn.className = 'btn-scan';
+
+    try {{
+        const res = await fetch(
+            'https://api.github.com/repos/shadygad01/smartlist/actions/workflows/daily_scan.yml/dispatches',
+            {{
+                method: 'POST',
+                headers: {{
+                    'Authorization': `Bearer ${{token}}`,
+                    'Accept': 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28',
+                    'Content-Type': 'application/json',
+                }},
+                body: JSON.stringify({{ ref: 'main', inputs: {{}} }})
+            }}
+        );
+
+        if (res.status === 204) {{
+            btn.textContent = '✓ Scan Started!';
+            btn.className = 'btn-scan ok';
+            setTimeout(() => {{
+                btn.textContent = '⟳ Run Scan';
+                btn.className = 'btn-scan';
+                btn.disabled = false;
+            }}, 4000);
+        }} else if (res.status === 401 || res.status === 403) {{
+            localStorage.removeItem('gh_pat');
+            btn.textContent = '✕ Token Invalid';
+            btn.className = 'btn-scan err';
+            setTimeout(() => {{
+                btn.textContent = '⟳ Run Scan';
+                btn.className = 'btn-scan';
+                btn.disabled = false;
+            }}, 3000);
+        }} else {{
+            throw new Error(`HTTP ${{res.status}}`);
+        }}
+    }} catch(e) {{
+        btn.textContent = '✕ Error';
+        btn.className = 'btn-scan err';
+        setTimeout(() => {{
+            btn.textContent = '⟳ Run Scan';
+            btn.className = 'btn-scan';
+            btn.disabled = false;
+        }}, 3000);
+    }}
+}}
 </script>
 </body>
 </html>

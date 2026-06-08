@@ -500,6 +500,9 @@ function buildHeatmap() {{
     corner.style.cssText = 'width:82px;min-width:82px';
     hRow.appendChild(corner);
     const fmtD = s => {{ const [y,m,d2] = s.split('-'); return new Date(+y,+m-1,+d2).toLocaleDateString('en-GB',{{day:'numeric',month:'short'}}); }};
+    // TODAY first, then historical weeks
+    const sep0 = document.createElement('td'); sep0.className='today-sep'; hRow.appendChild(sep0);
+    const thToday = document.createElement('td'); thToday.className='today-header'; thToday.textContent='TODAY'; hRow.appendChild(thToday);
     weeks.forEach(([wkStart]) => {{
         const th = document.createElement('td');
         th.className = 'date-header';
@@ -517,8 +520,6 @@ function buildHeatmap() {{
         void rl.offsetWidth;
         rl.classList.add('range-flash');
     }} else {{ rl.style.display = 'none'; }}
-    const sep0 = document.createElement('td'); sep0.className='today-sep'; hRow.appendChild(sep0);
-    const thToday = document.createElement('td'); thToday.className='today-header'; thToday.textContent='TODAY'; hRow.appendChild(thToday);
     tbl.appendChild(hRow);
 
     // ── Section label ─────────────────────────────────────────────────────
@@ -551,7 +552,23 @@ function buildHeatmap() {{
         nameTd.title = stock;
         tr.appendChild(nameTd);
 
-        // Weekly cells
+        // Today cell (before historical weeks)
+        const sep   = document.createElement('td'); sep.className='today-sep'; tr.appendChild(sep);
+        const tTd   = document.createElement('td'); tTd.style.padding='2px 0';
+        const tCell = document.createElement('div');
+        tCell.className = 'today-cell';
+        tCell.style.cssText = `background:${{todayColor(stock)}};color:${{todayLabelColor(stock)}}`;
+        tCell.textContent = todayLabel(stock);
+        if (hasPos || (todayInfo.score||0) >= 35 || POS_DATA[stock]) {{
+            tCell.addEventListener('mouseenter', e => showTip(e, stock, TODAY,
+                {{score:todayInfo.score,r1:todayInfo.r1,price:todayInfo.price,signal:todayInfo.signal}},
+                hasPos, isPend));
+            tCell.addEventListener('mousemove',  e => moveTip(e));
+            tCell.addEventListener('mouseleave', hideTip);
+        }}
+        tTd.appendChild(tCell); tr.appendChild(tTd);
+
+        // Weekly cells (after today)
         weeks.forEach(([wkStart, wkDays]) => {{
             const entry = bestEntry(stock, wkDays);
             // For return view use last-day entry; for score/r1 use best-score entry
@@ -574,21 +591,6 @@ function buildHeatmap() {{
             td.appendChild(cell); tr.appendChild(td);
         }});
 
-        // Today cell
-        const sep   = document.createElement('td'); sep.className='today-sep'; tr.appendChild(sep);
-        const tTd   = document.createElement('td'); tTd.style.padding='2px 0';
-        const tCell = document.createElement('div');
-        tCell.className = 'today-cell';
-        tCell.style.cssText = `background:${{todayColor(stock)}};color:${{todayLabelColor(stock)}}`;
-        tCell.textContent = todayLabel(stock);
-        if (hasPos || (todayInfo.score||0) >= 35 || POS_DATA[stock]) {{
-            tCell.addEventListener('mouseenter', e => showTip(e, stock, TODAY,
-                {{score:todayInfo.score,r1:todayInfo.r1,price:todayInfo.price,signal:todayInfo.signal}},
-                hasPos, isPend));
-            tCell.addEventListener('mousemove',  e => moveTip(e));
-            tCell.addEventListener('mouseleave', hideTip);
-        }}
-        tTd.appendChild(tCell); tr.appendChild(tTd);
         tbl.appendChild(tr);
     }}
 

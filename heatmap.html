@@ -254,6 +254,9 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-seri
       → Personal Access Tokens → Fine-grained<br>
       Permission needed: <strong style="color:#c9d1d9">Actions (Read &amp; Write)</strong>
     </div>
+    <div id="token-error" style="display:none;color:#f85149;font-size:11px;margin-bottom:10px;padding:6px 10px;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);border-radius:6px">
+      ✕ Token rejected (401/403) — paste a new valid token below
+    </div>
     <input id="token-inp" class="modal-inp" type="password"
            placeholder="ghp_xxxxxxxxxxxxxxxx"
            autocomplete="off" autocorrect="off" spellcheck="false"
@@ -870,21 +873,24 @@ window.addEventListener('load', () => setTimeout(initNotifications, 1500));
 // ── Token modal ───────────────────────────────────────────────────────────
 let _runAfterSave = false;
 
-function openTokenModal(runAfter) {
+function openTokenModal(runAfter, showError) {
     _runAfterSave = runAfter !== false;
     const inp = document.getElementById('token-inp');
     const clearBtn = document.getElementById('modal-clear-btn');
+    const errEl = document.getElementById('token-error');
     const stored = localStorage.getItem('gh_pat');
     inp.value = '';
     inp.placeholder = stored
         ? '(token saved — paste a new one to replace)'
         : 'ghp_xxxxxxxxxxxxxxxx';
     clearBtn.style.display = stored ? 'inline-block' : 'none';
+    errEl.style.display = showError ? 'block' : 'none';
     document.getElementById('token-modal').classList.add('open');
     setTimeout(() => inp.focus(), 200);
 }
 function closeTokenModal() {
     document.getElementById('token-modal').classList.remove('open');
+    document.getElementById('token-error').style.display = 'none';
     _runAfterSave = false;
 }
 function clearToken() {
@@ -942,15 +948,14 @@ async function triggerScan() {
             btn.className = 'btn-scan';
             pollScanCompletion(token, Date.now());
         } else if (res.status === 401 || res.status === 403) {
-            localStorage.removeItem('gh_pat');
-            updateKeyBtn();
-            btn.textContent = '✕ Token Invalid — click 🔑 to update';
+            btn.textContent = '✕ Token Invalid';
             btn.className = 'btn-scan err';
+            btn.disabled = false;
             setTimeout(() => {
                 btn.textContent = '⟳ Run Scan';
                 btn.className = 'btn-scan';
-                btn.disabled = false;
-            }, 4000);
+                openTokenModal(true, true);
+            }, 1500);
         } else {
             throw new Error(`HTTP ${res.status}`);
         }

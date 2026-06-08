@@ -174,8 +174,8 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
 /* ── Heatmap ──────────────────────────────── */
 .hm-outer{{overflow-x:auto;padding:20px 24px 12px}}
 .hm-table{{border-collapse:collapse;white-space:nowrap}}
-.sector-row td{{padding:10px 6px 3px;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#6e7681;font-weight:600;border:none!important;display:flex;justify-content:space-between;align-items:center}}
-.sector-range{{font-size:9px;color:#444d56;font-weight:400;text-transform:none;letter-spacing:0;white-space:nowrap}}
+.sector-row td{{padding:10px 6px 3px;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#6e7681;font-weight:600;border:none!important}}
+.hm-range-title td{{padding:6px 6px 2px;font-size:10px;color:#444d56;font-weight:500;border:none!important}}
 .stock-name{{position:sticky;left:0;z-index:2;background:#0d1117;padding:0 8px 0 0;text-align:right;font-size:11px;font-weight:500;width:82px;min-width:82px;cursor:default}}
 .stock-name .sn-ticker{{display:block}}
 .stock-name .sn-badge{{font-size:9px;color:#6e7681}}
@@ -523,13 +523,19 @@ function buildHeatmap() {{
     }} else {{ rl.style.display = 'none'; }}
     tbl.appendChild(hRow);
 
-    // ── Build range text for section labels ───────────────────────────────
-    let rangeText = '';
+    // ── Range title row (first row, before all sections) ─────────────────
     if (weeks.length) {{
         const firstDay = weeks[0][0];
         const lastWkDays = weeks[weeks.length-1][1];
         const lastDay = lastWkDays[lastWkDays.length-1];
-        rangeText = fmtD(firstDay) + ' → ' + fmtD(lastDay) + ` (${{weeks.length}} wks)`;
+        const rangeText = fmtD(firstDay) + ' → ' + fmtD(lastDay) + ` (${{weeks.length}} wks)`;
+        const rr  = document.createElement('tr');
+        rr.className = 'hm-range-title';
+        const rTd = document.createElement('td');
+        rTd.setAttribute('colspan', weeks.length + 3);
+        rTd.textContent = rangeText;
+        rr.appendChild(rTd);
+        tbl.appendChild(rr);
     }}
 
     // ── Section label ─────────────────────────────────────────────────────
@@ -538,15 +544,7 @@ function buildHeatmap() {{
         sr.className = 'sector-row';
         const sTd = document.createElement('td');
         sTd.setAttribute('colspan', weeks.length + 3);
-        const lSpan = document.createElement('span');
-        lSpan.textContent = label;
-        sTd.appendChild(lSpan);
-        if (rangeText) {{
-            const rSpan = document.createElement('span');
-            rSpan.className = 'sector-range';
-            rSpan.textContent = rangeText;
-            sTd.appendChild(rSpan);
-        }}
+        sTd.textContent = label;
         sr.appendChild(sTd);
         tbl.appendChild(sr);
     }}

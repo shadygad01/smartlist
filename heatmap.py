@@ -734,6 +734,19 @@ buildHeatmap();
 buildPositions();
 buildPending();
 
+// ── Auto-refresh: reload when opened from shortcut / background ───────────
+window.addEventListener('pageshow', e => {{
+    if (e.persisted) location.reload();   // restored from bfcache
+}});
+let _hiddenAt = null;
+document.addEventListener('visibilitychange', () => {{
+    if (document.visibilityState === 'hidden') {{
+        _hiddenAt = Date.now();
+    }} else if (_hiddenAt && Date.now() - _hiddenAt > 10 * 60 * 1000) {{
+        location.reload();   // been away 10+ min
+    }}
+}});
+
 // ── PWA: Service Worker registration ──────────────────────────────────────
 if ('serviceWorker' in navigator) {{
     navigator.serviceWorker.register('./sw.js').catch(() => {{}});

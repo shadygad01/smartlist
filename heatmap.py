@@ -102,12 +102,12 @@ strong_buy = [
 ]
 strong_buy.sort(key=lambda x: x['score'], reverse=True)
 
-# ── Pending signals (signal = "Wait") ────────────────────────────────────
+# ── Pending signals (score > 0, excluding buy signals) ───────────────────
 pending = [
     {'ticker': t, 'score': d.get('score', 0), 'price': d.get('price', 0),
      'signal': d.get('signal', '-'), 'r1': d.get('r1', 0)}
     for t, d in scan_results.items()
-    if d.get('signal', '').lower() in ('wait', 'skip')
+    if d.get('score', 0) > 0 and 'buy' not in d.get('signal', '').lower()
 ]
 pending.sort(key=lambda x: x['score'], reverse=True)
 

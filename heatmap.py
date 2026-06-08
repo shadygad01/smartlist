@@ -393,7 +393,7 @@ function todayColor(stock) {{
 function todayLabel(stock) {{
     const td = TODAY_SC[stock] || {{}};
     if (currentView === 'score')  return td.score || '—';
-    if (currentView === 'r1')     return td.r1    || '—';
+    if (currentView === 'r1')     return td.r1 ? Math.round(Math.min(td.r1/30,1)*100)+'%' : '—';
     const pd = POS_DATA[stock];
     if (!pd) return '—';
     return (pd.return_pct >= 0 ? '+' : '') + pd.return_pct + '%';
@@ -434,7 +434,7 @@ function buildLegend() {{
         label = 'Score:'; range = '35 → 100';
     }} else if (currentView === 'r1') {{
         steps = [0,12,16,20,24,28]; colorFn = v => v===0?'#1c2128':r1Color(v);
-        label = 'R1:'; range = '12 → 30';
+        label = 'R1:'; range = '40% → 100%';
     }} else {{
         steps = [-30,-20,-10,0,10,25,50,80]; colorFn = v => v===0?'#21262d':returnColor(v);
         label = 'Return:'; range = '-30% → +80%';
@@ -624,7 +624,7 @@ function showTip(e, stock, dt, entry, hasPos, isPend) {{
         </div>
       </div>
       <div class="tt-row"><span class="tt-lbl">Price</span><span class="tt-val">EGP ${{p.toFixed(2)}}</span></div>
-      <div class="tt-row"><span class="tt-lbl">R1</span><span class="tt-val">${{rv}}</span></div>
+      <div class="tt-row"><span class="tt-lbl">R1</span><span class="tt-val">${{Math.round(Math.min(rv/30,1)*100)}}%</span></div>
       <div class="tt-row"><span class="tt-lbl">Signal</span><span class="tt-val" style="color:${{sc}}">${{sig}}</span></div>
       ${{retRow}}
       ${{posBlock}}
@@ -704,7 +704,7 @@ function buildPending() {{
             <div class="pend-score" style="color:${{sc}}">${{p.score}}</div>
           </div>
           <div class="pend-meta">
-            EGP ${{p.price.toFixed(2)}} &nbsp;·&nbsp; R1: ${{p.r1}} &nbsp;·&nbsp;
+            EGP ${{p.price.toFixed(2)}} &nbsp;·&nbsp; R1: ${{Math.round(Math.min(p.r1/30,1)*100)}}% &nbsp;·&nbsp;
             <span style="color:${{sc}}">${{p.signal}}</span>
           </div>
         `;

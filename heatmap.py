@@ -80,6 +80,15 @@ best_ret_ticker = next(
     (t for t, d in pos_data.items() if d['return_pct'] == best_ret), '—'
 )
 
+# ── Strong Buy signals (signal = "Strong Buy", score ≥ 65) ───────────────
+strong_buy = [
+    {'ticker': t, 'score': d.get('score', 0), 'price': d.get('price', 0),
+     'signal': d.get('signal', '-'), 'r1': d.get('r1', 0)}
+    for t, d in scan_results.items()
+    if d.get('signal', '').lower() == 'strong buy'
+]
+strong_buy.sort(key=lambda x: x['score'], reverse=True)
+
 # ── Pending signals (signal = "Wait") ────────────────────────────────────
 pending = [
     {'ticker': t, 'score': d.get('score', 0), 'price': d.get('price', 0),
@@ -179,6 +188,7 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
 .stock-name{{position:sticky;left:0;z-index:2;background:#0d1117;padding:0 8px 0 0;text-align:right;font-size:11px;font-weight:500;width:82px;min-width:82px;cursor:default}}
 .stock-name .sn-ticker{{display:block}}
 .stock-name .sn-badge{{font-size:9px;color:#6e7681}}
+.sn-buy{{color:#3fb950!important}}
 .sn-open{{color:#f78166!important}}
 .sn-pend{{color:#d29922!important}}
 .sn-sig{{color:#3fb950!important}}
@@ -335,6 +345,7 @@ const HISTORY   = {js(lookup)};
 const TODAY_SC  = {js(today_scores)};
 const ALL_DATES = {js(all_dates)};
 const OPEN_POS  = new Set({js(list(positions.keys()))});
+const STRONG_BUY = new Set({js([s['ticker'] for s in strong_buy])});
 const PENDING   = new Set({js([p['ticker'] for p in pending])});
 const POS_DATA  = {js(pos_data)};
 const PEAK      = {js(peak_scores)};
@@ -554,6 +565,7 @@ function buildHeatmap() {{
     function addStockRow(stock) {{
         const hasPos    = OPEN_POS.has(stock);
         const isPend    = PENDING.has(stock);
+        const isBuy     = STRONG_BUY.has(stock);
         const todayInfo = TODAY_SC[stock] || {{}};
         const tr = document.createElement('tr');
 
@@ -562,7 +574,8 @@ function buildHeatmap() {{
         nameTd.className = 'stock-name';
         const ticker = stock.replace('.CA','');
         let badgeText = '', cls = '';
-        if (hasPos)      {{ cls = 'sn-open'; badgeText = 'open'; }}
+        if (isBuy)       {{ cls = 'sn-buy';  badgeText = 'buy'; }}
+        else if (hasPos) {{ cls = 'sn-open'; badgeText = 'open'; }}
         else if (isPend) {{ cls = 'sn-pend'; badgeText = 'pending'; }}
         else if ((todayInfo.score||0) >= 35) {{ cls = 'sn-sig'; badgeText = 'signal'; }}
         nameTd.innerHTML = `<span class="sn-ticker ${{cls}}">${{ticker}}</span>${{badgeText?`<span class="sn-badge">${{badgeText}}</span>`:''}}`;
@@ -611,20 +624,25 @@ function buildHeatmap() {{
         tbl.appendChild(tr);
     }}
 
-    // ── Render: pending → sectors → open positions ────────────────────────
+    // ── Render: strong buy → pending → sectors → open positions ─────────────
+    const buyStocks = [...STRONG_BUY].sort((a,b) => (TODAY_SC[b]?.score||0)-(TODAY_SC[a]?.score||0));
+    if (buyStocks.length) {{
+        addSectionLabel('🚀 Strong Buy');
+        buyStocks.forEach(addStockRow);
+    }}
     const pendingStocks = [...PENDING].sort((a,b) => (TODAY_SC[b]?.score||0)-(TODAY_SC[a]?.score||0));
     if (pendingStocks.length) {{
         addSectionLabel('⏳ Pending Signals');
         pendingStocks.forEach(addStockRow);
     }}
     SECTORS.forEach(([sector, stocks]) => {{
-        const rest = stocks.filter(s => !PENDING.has(s));
+        const rest = stocks.filter(s => !PENDING.has(s) && !STRONG_BUY.has(s));
         if (!rest.length) return;
         addSectionLabel(sector);
         rest.forEach(addStockRow);
     }});
 
-    const openStocks = [...OPEN_POS].filter(s => !PENDING.has(s))
+    const openStocks = [...OPEN_POS].filter(s => !PENDING.has(s) && !STRONG_BUY.has(s))
         .sort((a,b) => (POS_DATA[b]?.return_pct||0)-(POS_DATA[a]?.return_pct||0));
     if (openStocks.length) {{
         addSectionLabel('📈 Open Positions');

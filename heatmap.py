@@ -315,12 +315,12 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
 <!-- ── Bottom panels ───────────────────────────────────────────────── -->
 <div class="panels">
   <div class="panel">
-    <div class="panel-title">Open Positions <span class="cnt" id="op-cnt">{len(positions)}</span></div>
-    <div class="pos-cards" id="pos-cards"></div>
-  </div>
-  <div class="panel">
     <div class="panel-title">Pending Signals <span class="cnt" id="pend-cnt">{len(pending)}</span></div>
     <div class="pend-cards" id="pend-cards"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Open Positions <span class="cnt" id="op-cnt">{len(positions)}</span></div>
+    <div class="pos-cards" id="pos-cards"></div>
   </div>
 </div>
 

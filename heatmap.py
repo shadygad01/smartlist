@@ -456,33 +456,62 @@ function calcCellW(numDates) {{
     return Math.max(14, Math.min(ideal, 48));
 }}
 
+// ── Group daily dates into ISO weeks (Mon–Fri) ───────────────────────────
+function toWeeks(dates) {{
+    const map = new Map();
+    dates.forEach(d => {{
+        const dt  = new Date(d + 'T12:00:00');
+        const dow = dt.getDay();
+        const mon = new Date(dt);
+        mon.setDate(dt.getDate() - (dow === 0 ? 6 : dow - 1));
+        const wk = mon.toISOString().slice(0,10);
+        if (!map.has(wk)) map.set(wk, []);
+        map.get(wk).push(d);
+    }});
+    return [...map.entries()].sort(([a],[b]) => a < b ? -1 : 1);
+}}
+
+// Best entry for a stock across a set of dates (max score)
+function bestEntry(stock, days) {{
+    const h = HISTORY[stock] || {{}};
+    let best = null;
+    days.forEach(d => {{
+        const e = h[d];
+        if (e && (!best || e.score > best.score)) best = {{...e, _date: d}};
+    }});
+    // also attach last-day entry for return-% view
+    for (let i = days.length - 1; i >= 0; i--) {{
+        if (h[days[i]]) {{ best._last = {{...h[days[i]], _date: days[i]}}; break; }}
+    }}
+    return best;
+}}
+
 // ── Heatmap ───────────────────────────────────────────────────────────────
 function buildHeatmap() {{
     const dates = filteredDates();
-    const CW    = calcCellW(dates.length);
+    const weeks = toWeeks(dates);   // [[wkStart, [d1,d2,...]], ...]
+    const CW    = calcCellW(weeks.length);
     const tbl   = document.getElementById('hm-table');
     tbl.innerHTML = '';
 
-    // Header row
+    // ── Header row ────────────────────────────────────────────────────────
     const hRow = document.createElement('tr');
     const corner = document.createElement('td');
     corner.style.cssText = 'width:82px;min-width:82px';
     hRow.appendChild(corner);
-    dates.forEach((d, i) => {{
-        const prev  = dates[i-1] || '';
-        const th    = document.createElement('td');
+    const fmtD = s => {{ const [y,m,d2] = s.split('-'); return new Date(+y,+m-1,+d2).toLocaleDateString('en-GB',{{day:'numeric',month:'short'}}); }};
+    weeks.forEach(([wkStart]) => {{
+        const th = document.createElement('td');
         th.className = 'date-header';
         th.style.width = CW + 'px';
-        if (d.slice(0,7) !== prev.slice(0,7) || i===0 || CW >= 22) {{
-            th.textContent = d.slice(5);
-        }}
+        th.textContent = fmtD(wkStart);
         hRow.appendChild(th);
     }});
-    document.getElementById('days-count').textContent = `(${{dates.length}} days)`;
-    const fmtD = s => {{ const [y,m,d] = s.split('-'); return new Date(y,m-1,d).toLocaleDateString('en-GB',{{day:'numeric',month:'short'}}); }};
+    document.getElementById('days-count').textContent = `(${{weeks.length}} wks)`;
     const rl = document.getElementById('range-label');
-    if (dates.length) {{
-        rl.textContent = fmtD(dates[0]) + ' → ' + fmtD(dates[dates.length-1]);
+    if (weeks.length) {{
+        const lastDays = weeks[weeks.length-1][1];
+        rl.textContent = fmtD(weeks[0][0]) + ' → ' + fmtD(lastDays[lastDays.length-1]);
         rl.style.display = 'inline-block';
         rl.classList.remove('range-flash');
         void rl.offsetWidth;
@@ -492,62 +521,66 @@ function buildHeatmap() {{
     const thToday = document.createElement('td'); thToday.className='today-header'; thToday.textContent='TODAY'; hRow.appendChild(thToday);
     tbl.appendChild(hRow);
 
-    // ── Sort stocks: pending → open → rest (by sector) ───────────────────
+    // ── Section label ─────────────────────────────────────────────────────
     function addSectionLabel(label) {{
-        const sr = document.createElement('tr');
+        const sr  = document.createElement('tr');
         sr.className = 'sector-row';
         const sTd = document.createElement('td');
-        sTd.setAttribute('colspan', dates.length + 3);
+        sTd.setAttribute('colspan', weeks.length + 3);
         sTd.textContent = label;
         sr.appendChild(sTd);
         tbl.appendChild(sr);
     }}
 
+    // ── Stock row (weekly cells) ──────────────────────────────────────────
     function addStockRow(stock) {{
-        const stockData = HISTORY[stock] || {{}};
         const hasPos    = OPEN_POS.has(stock);
         const isPend    = PENDING.has(stock);
         const todayInfo = TODAY_SC[stock] || {{}};
         const tr = document.createElement('tr');
 
+        // Name cell
         const nameTd = document.createElement('td');
         nameTd.className = 'stock-name';
         const ticker = stock.replace('.CA','');
         let badgeText = '', cls = '';
-        if (hasPos)        {{ cls = 'sn-open'; badgeText = 'open'; }}
-        else if (isPend)   {{ cls = 'sn-pend'; badgeText = 'pending'; }}
+        if (hasPos)      {{ cls = 'sn-open'; badgeText = 'open'; }}
+        else if (isPend) {{ cls = 'sn-pend'; badgeText = 'pending'; }}
         else if ((todayInfo.score||0) >= 35) {{ cls = 'sn-sig'; badgeText = 'signal'; }}
         nameTd.innerHTML = `<span class="sn-ticker ${{cls}}">${{ticker}}</span>${{badgeText?`<span class="sn-badge">${{badgeText}}</span>`:''}}`;
         nameTd.title = stock;
         tr.appendChild(nameTd);
 
-        dates.forEach(d => {{
-            const entry = stockData[d];
-            const td    = document.createElement('td');
+        // Weekly cells
+        weeks.forEach(([wkStart, wkDays]) => {{
+            const entry = bestEntry(stock, wkDays);
+            // For return view use last-day entry; for score/r1 use best-score entry
+            const colorEntry = (currentView === 'return' && entry?._last) ? entry._last : entry;
+            const td   = document.createElement('td');
             td.style.padding = '1px';
-            const cell  = document.createElement('div');
+            const cell = document.createElement('div');
             cell.className = 'hm-cell';
-            cell.style.width  = CW + 'px';
-            cell.style.background = cellColor(stock, entry, d);
+            cell.style.width = CW + 'px';
+            cell.style.background = cellColor(stock, colorEntry, colorEntry?._date);
             if (entry) {{
                 if (hasPos) {{ const dot=document.createElement('div'); dot.className='pos-marker'; cell.appendChild(dot); }}
                 else if (isPend) {{ const dot=document.createElement('div'); dot.className='pend-marker'; cell.appendChild(dot); }}
-                cell.addEventListener('mouseenter', e => showTip(e, stock, d, entry, hasPos, isPend));
+                const wkEnd = wkDays[wkDays.length-1];
+                const tipLabel = fmtD(wkStart) + ' – ' + fmtD(wkEnd);
+                cell.addEventListener('mouseenter', e => showTip(e, stock, tipLabel, entry, hasPos, isPend));
                 cell.addEventListener('mousemove',  e => moveTip(e));
                 cell.addEventListener('mouseleave', hideTip);
             }}
             td.appendChild(cell); tr.appendChild(td);
         }});
 
-        const sep = document.createElement('td'); sep.className='today-sep'; tr.appendChild(sep);
-        const tTd = document.createElement('td'); tTd.style.padding='2px 0';
-        const bg  = todayColor(stock);
-        const lbl = todayLabel(stock);
-        const fg  = todayLabelColor(stock);
+        // Today cell
+        const sep   = document.createElement('td'); sep.className='today-sep'; tr.appendChild(sep);
+        const tTd   = document.createElement('td'); tTd.style.padding='2px 0';
         const tCell = document.createElement('div');
         tCell.className = 'today-cell';
-        tCell.style.cssText = `background:${{bg}};color:${{fg}}`;
-        tCell.textContent = lbl;
+        tCell.style.cssText = `background:${{todayColor(stock)}};color:${{todayLabelColor(stock)}}`;
+        tCell.textContent = todayLabel(stock);
         if (hasPos || (todayInfo.score||0) >= 35 || POS_DATA[stock]) {{
             tCell.addEventListener('mouseenter', e => showTip(e, stock, TODAY,
                 {{score:todayInfo.score,r1:todayInfo.r1,price:todayInfo.price,signal:todayInfo.signal}},
@@ -559,14 +592,12 @@ function buildHeatmap() {{
         tbl.appendChild(tr);
     }}
 
-    // Pending first (sorted by score desc)
+    // ── Render: pending → sectors → open positions ────────────────────────
     const pendingStocks = [...PENDING].sort((a,b) => (TODAY_SC[b]?.score||0)-(TODAY_SC[a]?.score||0));
     if (pendingStocks.length) {{
         addSectionLabel('⏳ Pending Signals');
         pendingStocks.forEach(addStockRow);
     }}
-
-    // Sectors (excluding pending, all stocks including open positions)
     SECTORS.forEach(([sector, stocks]) => {{
         const rest = stocks.filter(s => !PENDING.has(s));
         if (!rest.length) return;
@@ -574,15 +605,6 @@ function buildHeatmap() {{
         rest.forEach(addStockRow);
     }});
 
-    // Open positions last (sorted by return desc)
-    const openStocks = [...OPEN_POS].filter(s => !PENDING.has(s))
-        .sort((a,b) => (POS_DATA[b]?.return_pct||0)-(POS_DATA[a]?.return_pct||0));
-    if (openStocks.length) {{
-        addSectionLabel('📈 Open Positions');
-        openStocks.forEach(addStockRow);
-    }}
-
-    // Open positions last (sorted by return desc)
     const openStocks = [...OPEN_POS].filter(s => !PENDING.has(s))
         .sort((a,b) => (POS_DATA[b]?.return_pct||0)-(POS_DATA[a]?.return_pct||0));
     if (openStocks.length) {{

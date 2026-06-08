@@ -604,6 +604,7 @@ function buildHeatmap() {{
         addSectionLabel(sector);
         rest.forEach(addStockRow);
     }});
+
     const openStocks = [...OPEN_POS].filter(s => !PENDING.has(s))
         .sort((a,b) => (POS_DATA[b]?.return_pct||0)-(POS_DATA[a]?.return_pct||0));
     if (openStocks.length) {{

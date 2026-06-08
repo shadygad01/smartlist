@@ -107,7 +107,7 @@ pending = [
     {'ticker': t, 'score': d.get('score', 0), 'price': d.get('price', 0),
      'signal': d.get('signal', '-'), 'r1': d.get('r1', 0)}
     for t, d in scan_results.items()
-    if d.get('signal', '').lower() == 'wait'
+    if d.get('signal', '').lower() in ('wait', 'skip')
 ]
 pending.sort(key=lambda x: x['score'], reverse=True)
 
@@ -964,7 +964,7 @@ async function checkChanges() {{
         const prevTickers = new Set((prev.pending || []).map(p => p.ticker));
         (curr.pending || []).forEach(p => {{
             if (!prevTickers.has(p.ticker))
-                alerts.push(`⏳ ${{p.ticker}} — Wait (score ${{p.score}})`);
+                alerts.push(`⏳ ${{p.ticker}} — ${{p.signal}} (score ${{p.score}})`);
         }});
 
         // Fibonacci level advances

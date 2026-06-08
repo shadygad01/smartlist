@@ -1060,13 +1060,9 @@ async function triggerScan() {{
         );
 
         if (res.status === 204) {{
-            btn.textContent = '✓ Scan Started!';
-            btn.className = 'btn-scan ok';
-            setTimeout(() => {{
-                btn.textContent = '⟳ Run Scan';
-                btn.className = 'btn-scan';
-                btn.disabled = false;
-            }}, 4000);
+            btn.textContent = '⏳ Scan Running…';
+            btn.className = 'btn-scan';
+            pollScanCompletion(token, Date.now());
         }} else if (res.status === 401 || res.status === 403) {{
             localStorage.removeItem('gh_pat');
             updateKeyBtn();
@@ -1089,6 +1085,49 @@ async function triggerScan() {{
             btn.disabled = false;
         }}, 3000);
     }}
+}}
+
+async function pollScanCompletion(token, triggerTime) {{
+    const btn = document.getElementById('btn-scan');
+    const maxWait = 15 * 60 * 1000;
+    const interval = 30 * 1000;
+
+    async function check() {{
+        if (Date.now() - triggerTime > maxWait) {{
+            btn.textContent = '⟳ Run Scan';
+            btn.className = 'btn-scan';
+            btn.disabled = false;
+            return;
+        }}
+        const elapsed = Math.round((Date.now() - triggerTime) / 1000);
+        btn.textContent = `⏳ Scanning… (${{elapsed}}s)`;
+        try {{
+            const r = await fetch(
+                'https://api.github.com/repos/shadygad01/smartlist/actions/workflows/daily_scan.yml/runs?per_page=1',
+                {{ headers: {{ 'Authorization': `Bearer ${{token}}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }} }}
+            );
+            if (r.ok) {{
+                const data = await r.json();
+                const run = (data.workflow_runs || [])[0];
+                if (run && new Date(run.created_at).getTime() >= triggerTime - 90000) {{
+                    if (run.status === 'completed') {{
+                        if (run.conclusion === 'success') {{
+                            btn.textContent = '✓ Done! Refreshing…';
+                            btn.className = 'btn-scan ok';
+                            setTimeout(() => location.reload(), 2000);
+                        }} else {{
+                            btn.textContent = `✕ ${{run.conclusion}}`;
+                            btn.className = 'btn-scan err';
+                            setTimeout(() => {{ btn.textContent = '⟳ Run Scan'; btn.className = 'btn-scan'; btn.disabled = false; }}, 5000);
+                        }}
+                        return;
+                    }}
+                }}
+            }}
+        }} catch(e) {{}}
+        setTimeout(check, interval);
+    }}
+    setTimeout(check, 20000);
 }}
 
 window.addEventListener('load', () => updateKeyBtn());

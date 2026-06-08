@@ -843,7 +843,7 @@ function buildPending() {{
         return;
     }}
     PENDING_LIST.forEach(p => {{
-        const sc = scoreColor(p.score);
+        const sc = p.score >= 35 ? scoreColor(p.score) : '#d29922';
         const card = document.createElement('div');
         card.className = 'pend-card';
         card.innerHTML = `

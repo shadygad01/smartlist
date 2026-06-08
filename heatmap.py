@@ -155,6 +155,23 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
 .btn-scan:disabled{{opacity:.7;cursor:default}}
 .btn-scan.ok{{background:#238636;border-color:#2ea043}}
 .btn-scan.err{{background:#da3633;border-color:#b91c1c}}
+.btn-key{{background:none;border:1px solid #30363d;border-radius:6px;padding:5px 8px;font-size:13px;color:#8b949e;cursor:pointer;transition:border-color .15s;white-space:nowrap}}
+.btn-key:hover{{border-color:#8b949e;color:#c9d1d9}}
+.btn-key.saved{{border-color:#238636;color:#3fb950}}
+
+/* ── Token modal ──────────────────────────── */
+#token-modal{{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:16px}}
+#token-modal.open{{display:flex}}
+.modal-box{{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:20px;width:100%;max-width:360px;box-shadow:0 16px 40px rgba(0,0,0,.8)}}
+.modal-title{{font-size:14px;font-weight:700;color:#e6edf3;margin-bottom:8px}}
+.modal-desc{{font-size:11px;color:#8b949e;margin-bottom:14px;line-height:1.7}}
+.modal-inp{{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:9px 11px;font-size:13px;color:#e6edf3;font-family:monospace;box-sizing:border-box;-webkit-appearance:none;appearance:none}}
+.modal-inp:focus{{outline:none;border-color:#58a6ff;box-shadow:0 0 0 2px rgba(31,111,235,.25)}}
+.modal-footer{{display:flex;gap:8px;margin-top:14px;align-items:center}}
+.modal-btn{{border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;-webkit-appearance:none}}
+.modal-save{{background:#1f6feb;color:#fff}}
+.modal-cancel{{background:#21262d;color:#c9d1d9;border:1px solid #30363d}}
+.modal-clear{{background:none;border:none;color:#f85149;font-size:11px;padding:0;text-decoration:underline;cursor:pointer;margin-right:auto}}
 
 /* ── Stats bar ────────────────────────────── */
 .stats{{display:flex;gap:1px;background:#30363d;border-bottom:1px solid #30363d}}
@@ -279,6 +296,7 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
   <button id="btn-scan" class="btn-scan" onclick="triggerScan()" title="Run manual scan now">
     ⟳ Run Scan
   </button>
+  <button id="btn-key" class="btn-key" onclick="openTokenModal(false)" title="Manage GitHub token">🔑</button>
 </div>
 
 <!-- ── Stats bar ───────────────────────────────────────────────────── -->
@@ -348,6 +366,27 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
 
 <!-- ── Tooltip ─────────────────────────────────────────────────────── -->
 <div id="tooltip"></div>
+
+<!-- ── Token modal ─────────────────────────────────────────────────── -->
+<div id="token-modal" onclick="if(event.target===this)closeTokenModal()">
+  <div class="modal-box">
+    <div class="modal-title">🔑 GitHub Access Token</div>
+    <div class="modal-desc">
+      GitHub → Settings → Developer Settings<br>
+      → Personal Access Tokens → Fine-grained<br>
+      Permission needed: <strong style="color:#c9d1d9">Actions (Read &amp; Write)</strong>
+    </div>
+    <input id="token-inp" class="modal-inp" type="password"
+           placeholder="ghp_xxxxxxxxxxxxxxxx"
+           autocomplete="off" autocorrect="off" spellcheck="false"
+           autocapitalize="none">
+    <div class="modal-footer">
+      <button class="modal-btn modal-clear" id="modal-clear-btn" onclick="clearToken()">Clear saved token</button>
+      <button class="modal-btn modal-cancel" onclick="closeTokenModal()">Cancel</button>
+      <button class="modal-btn modal-save" onclick="saveToken()">Save &amp; Run</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ── Embedded data ────────────────────────────────────────────────────────
@@ -950,23 +989,57 @@ async function initNotifications() {{
 
 window.addEventListener('load', () => setTimeout(initNotifications, 1500));
 
+// ── Token modal ───────────────────────────────────────────────────────────
+let _runAfterSave = false;
+
+function openTokenModal(runAfter) {{
+    _runAfterSave = runAfter !== false;
+    const inp = document.getElementById('token-inp');
+    const clearBtn = document.getElementById('modal-clear-btn');
+    const stored = localStorage.getItem('gh_pat');
+    inp.value = '';
+    inp.placeholder = stored
+        ? '(token saved — paste a new one to replace)'
+        : 'ghp_xxxxxxxxxxxxxxxx';
+    clearBtn.style.display = stored ? 'inline-block' : 'none';
+    document.getElementById('token-modal').classList.add('open');
+    setTimeout(() => inp.focus(), 200);
+}}
+function closeTokenModal() {{
+    document.getElementById('token-modal').classList.remove('open');
+    _runAfterSave = false;
+}}
+function clearToken() {{
+    localStorage.removeItem('gh_pat');
+    closeTokenModal();
+    updateKeyBtn();
+}}
+function saveToken() {{
+    const val = document.getElementById('token-inp').value.trim();
+    if (val) localStorage.setItem('gh_pat', val);
+    closeTokenModal();
+    updateKeyBtn();
+    if (_runAfterSave && (val || localStorage.getItem('gh_pat'))) {{
+        triggerScan();
+    }}
+}}
+function updateKeyBtn() {{
+    const btn = document.getElementById('btn-key');
+    if (!btn) return;
+    const has = !!localStorage.getItem('gh_pat');
+    btn.title = has ? 'GitHub token: saved ✓  (click to update)' : 'GitHub token: not saved (click to set)';
+    if (has) btn.classList.add('saved'); else btn.classList.remove('saved');
+}}
+
 // ── Manual Scan Trigger ────────────────────────────────────────────────────
 async function triggerScan() {{
-    const btn = document.getElementById('btn-scan');
-
-    let token = localStorage.getItem('gh_pat');
+    const token = localStorage.getItem('gh_pat');
     if (!token) {{
-        token = prompt(
-            'Enter your GitHub Personal Access Token\\n\\n' +
-            'GitHub → Settings → Developer Settings\\n' +
-            '→ Personal Access Tokens → Fine-grained\\n' +
-            'Permission needed: Actions (Read & Write)'
-        );
-        if (!token) return;
-        localStorage.setItem('gh_pat', token.trim());
-        token = token.trim();
+        openTokenModal(true);
+        return;
     }}
 
+    const btn = document.getElementById('btn-scan');
     btn.textContent = '⏳ Running…';
     btn.disabled = true;
     btn.className = 'btn-scan';
@@ -996,13 +1069,14 @@ async function triggerScan() {{
             }}, 4000);
         }} else if (res.status === 401 || res.status === 403) {{
             localStorage.removeItem('gh_pat');
-            btn.textContent = '✕ Token Invalid';
+            updateKeyBtn();
+            btn.textContent = '✕ Token Invalid — click 🔑 to update';
             btn.className = 'btn-scan err';
             setTimeout(() => {{
                 btn.textContent = '⟳ Run Scan';
                 btn.className = 'btn-scan';
                 btn.disabled = false;
-            }}, 3000);
+            }}, 4000);
         }} else {{
             throw new Error(`HTTP ${{res.status}}`);
         }}
@@ -1016,6 +1090,8 @@ async function triggerScan() {{
         }}, 3000);
     }}
 }}
+
+window.addEventListener('load', () => updateKeyBtn());
 </script>
 </body>
 </html>

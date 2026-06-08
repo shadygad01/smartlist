@@ -853,7 +853,7 @@ function buildPending() {{
           </div>
           <div class="pend-meta">
             EGP ${{p.price.toFixed(2)}} &nbsp;·&nbsp; R1: ${{Math.round(Math.min(p.r1/30,1)*100)}}% &nbsp;·&nbsp;
-            <span style="color:${{sc}}">${{p.signal}}</span>
+            <span style="color:${{sc}}">Pending</span>
           </div>
         `;
         el.appendChild(card);

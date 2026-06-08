@@ -566,7 +566,15 @@ function buildHeatmap() {{
         pendingStocks.forEach(addStockRow);
     }}
 
-    // Open positions (sorted by return desc)
+    // Sectors (excluding pending, all stocks including open positions)
+    SECTORS.forEach(([sector, stocks]) => {{
+        const rest = stocks.filter(s => !PENDING.has(s));
+        if (!rest.length) return;
+        addSectionLabel(sector);
+        rest.forEach(addStockRow);
+    }});
+
+    // Open positions last (sorted by return desc)
     const openStocks = [...OPEN_POS].filter(s => !PENDING.has(s))
         .sort((a,b) => (POS_DATA[b]?.return_pct||0)-(POS_DATA[a]?.return_pct||0));
     if (openStocks.length) {{
@@ -574,13 +582,13 @@ function buildHeatmap() {{
         openStocks.forEach(addStockRow);
     }}
 
-    // Rest grouped by sector
-    SECTORS.forEach(([sector, stocks]) => {{
-        const rest = stocks.filter(s => !PENDING.has(s) && !OPEN_POS.has(s));
-        if (!rest.length) return;
-        addSectionLabel(sector);
-        rest.forEach(addStockRow);
-    }});
+    // Open positions last (sorted by return desc)
+    const openStocks = [...OPEN_POS].filter(s => !PENDING.has(s))
+        .sort((a,b) => (POS_DATA[b]?.return_pct||0)-(POS_DATA[a]?.return_pct||0));
+    if (openStocks.length) {{
+        addSectionLabel('📈 Open Positions');
+        openStocks.forEach(addStockRow);
+    }}
 }}
 
 // ── Tooltip ───────────────────────────────────────────────────────────────

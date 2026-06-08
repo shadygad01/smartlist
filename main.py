@@ -2677,13 +2677,15 @@ if __name__ == "__main__":
     # DETERMINE RUN MODE BASED ON TIME
     # =========================================
     
-    manual_run = os.getenv("MANUAL_RUN", "False") == "True"
+    manual_run  = os.getenv("MANUAL_RUN",  "False") == "True"
+    force_daily = os.getenv("FORCE_DAILY", "False") == "True"
     hour = now_cairo().hour
     minute = now_cairo().minute
-    
+
     print(f"Current time: {hour:02d}:{minute:02d}")
-    print(f"Manual run: {manual_run}\n")
-    
+    print(f"Manual run: {manual_run}")
+    print(f"Force daily: {force_daily}\n")
+
     try:
         # =========================================
         # MODE 1: MANUAL RUN (Any time)
@@ -2696,11 +2698,11 @@ if __name__ == "__main__":
             print("\n✅ Manual scan completed!")
             print("="*60 + "\n")
             sys.exit(0)
-        
+
         # =========================================
-        # MODE 2: DAILY SCAN (9:00 AM exactly)
+        # MODE 2: DAILY SCAN (9:00 AM or force_daily)
         # =========================================
-        elif hour == 9 and 0 <= minute <= 10:
+        elif force_daily or hour == 9:
             print("📅 DAILY SCAN MODE (9:00 AM)")
             print("="*60 + "\n")
             daily_scan()

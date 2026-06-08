@@ -6,19 +6,25 @@ on:
     # November-April: 7:00 UTC (EET = UTC+2)
     - cron: '0 7 * * 0-4'
     # May-October: 6:00 UTC (EEST = UTC+3)
-    - cron: '0 6 * * 1-5'
+    - cron: '0 6 * * 0-4'
 
     # كل 5 دقائق من 10:00 لـ 13:55 Cairo — winter (Nov-Apr): 08:00-11:55 UTC
     - cron: '0,5,10,15,20,25,30,35,40,45,50,55 8-11 * * 0-4'
     # كل 5 دقائق من 10:00 لـ 13:55 Cairo — summer (May-Oct): 07:00-10:55 UTC
-    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 7-10 * * 1-5'
+    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 7-10 * * 0-4'
 
     # 14:00-14:30 Cairo — winter: 12:00-12:30 UTC
     - cron: '0,5,10,15,20,25,30 12 * * 0-4'
     # 14:00-14:30 Cairo — summer: 11:00-11:30 UTC
-    - cron: '0,5,10,15,20,25,30 11 * * 1-5'
+    - cron: '0,5,10,15,20,25,30 11 * * 0-4'
 
   workflow_dispatch:
+    inputs:
+      force_daily:
+        description: 'Force daily scan (test automatic path — no Manual label)'
+        required: false
+        default: 'false'
+        type: boolean
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -49,7 +55,8 @@ jobs:
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' && 'True' || 'False' }}
+          MANUAL_RUN: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.force_daily != 'true') && 'True' || 'False' }}
+          FORCE_DAILY: ${{ github.event.inputs.force_daily == 'true' && 'True' || 'False' }}
         run: python main.py
 
       - name: Save updated positions

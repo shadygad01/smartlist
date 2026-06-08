@@ -2700,7 +2700,7 @@ if __name__ == "__main__":
         # =========================================
         # MODE 2: DAILY SCAN (9:00 AM exactly)
         # =========================================
-        elif hour == 9 and 0 <= minute <= 10:
+        elif hour == 9:
             print("📅 DAILY SCAN MODE (9:00 AM)")
             print("="*60 + "\n")
             daily_scan()

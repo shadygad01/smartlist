@@ -492,79 +492,94 @@ function buildHeatmap() {{
     const thToday = document.createElement('td'); thToday.className='today-header'; thToday.textContent='TODAY'; hRow.appendChild(thToday);
     tbl.appendChild(hRow);
 
-    SECTORS.forEach(([sector, stocks]) => {{
-        // Sector label
+    // ── Sort stocks: pending → open → rest (by sector) ───────────────────
+    function addSectionLabel(label) {{
         const sr = document.createElement('tr');
         sr.className = 'sector-row';
         const sTd = document.createElement('td');
         sTd.setAttribute('colspan', dates.length + 3);
-        sTd.textContent = sector;
+        sTd.textContent = label;
         sr.appendChild(sTd);
         tbl.appendChild(sr);
+    }}
 
-        stocks.forEach(stock => {{
-            const stockData = HISTORY[stock] || {{}};
-            const hasPos    = OPEN_POS.has(stock);
-            const isPend    = PENDING.has(stock);
-            const todayInfo = TODAY_SC[stock] || {{}};
+    function addStockRow(stock) {{
+        const stockData = HISTORY[stock] || {{}};
+        const hasPos    = OPEN_POS.has(stock);
+        const isPend    = PENDING.has(stock);
+        const todayInfo = TODAY_SC[stock] || {{}};
+        const tr = document.createElement('tr');
 
-            const tr = document.createElement('tr');
+        const nameTd = document.createElement('td');
+        nameTd.className = 'stock-name';
+        const ticker = stock.replace('.CA','');
+        let badgeText = '', cls = '';
+        if (hasPos)        {{ cls = 'sn-open'; badgeText = 'open'; }}
+        else if (isPend)   {{ cls = 'sn-pend'; badgeText = 'pending'; }}
+        else if ((todayInfo.score||0) >= 35) {{ cls = 'sn-sig'; badgeText = 'signal'; }}
+        nameTd.innerHTML = `<span class="sn-ticker ${{cls}}">${{ticker}}</span>${{badgeText?`<span class="sn-badge">${{badgeText}}</span>`:''}}`;
+        nameTd.title = stock;
+        tr.appendChild(nameTd);
 
-            // Stock name (sticky)
-            const nameTd = document.createElement('td');
-            nameTd.className = 'stock-name';
-            const ticker = stock.replace('.CA','');
-            let badgeText = '';
-            let cls = '';
-            if (hasPos)   {{ cls = 'sn-open'; badgeText = 'open'; }}
-            else if (isPend) {{ cls = 'sn-pend'; badgeText = 'pending'; }}
-            else if ((todayInfo.score||0) >= 35) {{ cls = 'sn-sig'; badgeText = 'signal'; }}
-            nameTd.innerHTML = `<span class="sn-ticker ${{cls}}">${{ticker}}</span>${{badgeText?`<span class="sn-badge">${{badgeText}}</span>`:''}}`;
-            nameTd.title = stock;
-            tr.appendChild(nameTd);
-
-            // Date cells
-            dates.forEach(d => {{
-                const entry = stockData[d];
-                const td    = document.createElement('td');
-                td.style.padding = '1px';
-                const cell  = document.createElement('div');
-                cell.className = 'hm-cell';
-                cell.style.width  = CW + 'px';
-                cell.style.background = cellColor(stock, entry, d);
-
-                if (entry) {{
-                    if (hasPos) {{ const dot=document.createElement('div'); dot.className='pos-marker'; cell.appendChild(dot); }}
-                    else if (isPend) {{ const dot=document.createElement('div'); dot.className='pend-marker'; cell.appendChild(dot); }}
-                    cell.addEventListener('mouseenter', e => showTip(e, stock, d, entry, hasPos, isPend));
-                    cell.addEventListener('mousemove',  e => moveTip(e));
-                    cell.addEventListener('mouseleave', hideTip);
-                }}
-                td.appendChild(cell); tr.appendChild(td);
-            }});
-
-            // Today separator
-            const sep = document.createElement('td'); sep.className='today-sep'; tr.appendChild(sep);
-
-            // Today cell
-            const tTd = document.createElement('td'); tTd.style.padding='2px 0';
-            const bg  = todayColor(stock);
-            const lbl = todayLabel(stock);
-            const fg  = todayLabelColor(stock);
-            const tCell = document.createElement('div');
-            tCell.className = 'today-cell';
-            tCell.style.cssText = `background:${{bg}};color:${{fg}}`;
-            tCell.textContent = lbl;
-            if (hasPos || (todayInfo.score||0) >= 35 || POS_DATA[stock]) {{
-                tCell.addEventListener('mouseenter', e => showTip(e, stock, TODAY,
-                    {{score:todayInfo.score,r1:todayInfo.r1,price:todayInfo.price,signal:todayInfo.signal}},
-                    hasPos, isPend));
-                tCell.addEventListener('mousemove',  e => moveTip(e));
-                tCell.addEventListener('mouseleave', hideTip);
+        dates.forEach(d => {{
+            const entry = stockData[d];
+            const td    = document.createElement('td');
+            td.style.padding = '1px';
+            const cell  = document.createElement('div');
+            cell.className = 'hm-cell';
+            cell.style.width  = CW + 'px';
+            cell.style.background = cellColor(stock, entry, d);
+            if (entry) {{
+                if (hasPos) {{ const dot=document.createElement('div'); dot.className='pos-marker'; cell.appendChild(dot); }}
+                else if (isPend) {{ const dot=document.createElement('div'); dot.className='pend-marker'; cell.appendChild(dot); }}
+                cell.addEventListener('mouseenter', e => showTip(e, stock, d, entry, hasPos, isPend));
+                cell.addEventListener('mousemove',  e => moveTip(e));
+                cell.addEventListener('mouseleave', hideTip);
             }}
-            tTd.appendChild(tCell); tr.appendChild(tTd);
-            tbl.appendChild(tr);
+            td.appendChild(cell); tr.appendChild(td);
         }});
+
+        const sep = document.createElement('td'); sep.className='today-sep'; tr.appendChild(sep);
+        const tTd = document.createElement('td'); tTd.style.padding='2px 0';
+        const bg  = todayColor(stock);
+        const lbl = todayLabel(stock);
+        const fg  = todayLabelColor(stock);
+        const tCell = document.createElement('div');
+        tCell.className = 'today-cell';
+        tCell.style.cssText = `background:${{bg}};color:${{fg}}`;
+        tCell.textContent = lbl;
+        if (hasPos || (todayInfo.score||0) >= 35 || POS_DATA[stock]) {{
+            tCell.addEventListener('mouseenter', e => showTip(e, stock, TODAY,
+                {{score:todayInfo.score,r1:todayInfo.r1,price:todayInfo.price,signal:todayInfo.signal}},
+                hasPos, isPend));
+            tCell.addEventListener('mousemove',  e => moveTip(e));
+            tCell.addEventListener('mouseleave', hideTip);
+        }}
+        tTd.appendChild(tCell); tr.appendChild(tTd);
+        tbl.appendChild(tr);
+    }}
+
+    // Pending first (sorted by score desc)
+    const pendingStocks = [...PENDING].sort((a,b) => (TODAY_SC[b]?.score||0)-(TODAY_SC[a]?.score||0));
+    if (pendingStocks.length) {{
+        addSectionLabel('⏳ Pending Signals');
+        pendingStocks.forEach(addStockRow);
+    }}
+
+    // Open positions (sorted by return desc)
+    const openStocks = [...OPEN_POS].filter(s => !PENDING.has(s))
+        .sort((a,b) => (POS_DATA[b]?.return_pct||0)-(POS_DATA[a]?.return_pct||0));
+    if (openStocks.length) {{
+        addSectionLabel('📈 Open Positions');
+        openStocks.forEach(addStockRow);
+    }}
+
+    // Rest grouped by sector
+    SECTORS.forEach(([sector, stocks]) => {{
+        const rest = stocks.filter(s => !PENDING.has(s) && !OPEN_POS.has(s));
+        if (!rest.length) return;
+        addSectionLabel(sector);
+        rest.forEach(addStockRow);
     }});
 }}
 

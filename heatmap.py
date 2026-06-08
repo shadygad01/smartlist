@@ -28,6 +28,19 @@ history      = load('signal_history.json')
 scan_results = load('scan_results.json')
 positions    = load('open_positions.json')
 
+# Fall back to latest signal_history prices when scan_results.json is missing/empty
+if not scan_results and history:
+    scan_results = {
+        stock: {
+            'price':  sigs[-1].get('price', 0),
+            'score':  sigs[-1].get('score', 0),
+            'signal': sigs[-1].get('signal', '-'),
+            'r1':     sigs[-1].get('r1', 0),
+        }
+        for stock, sigs in history.items()
+        if sigs
+    }
+
 SECTORS = [
     ('Real Estate',  ['TMGH.CA', 'EMFD.CA', 'PHDC.CA', 'ORHD.CA', 'HELI.CA']),
     ('Industrial',   ['EAST.CA', 'ABUK.CA', 'ORAS.CA', 'EFID.CA', 'HRHO.CA',

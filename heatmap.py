@@ -6,10 +6,17 @@ Run: python heatmap.py  →  heatmap.html
 
 import json
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timezone, timedelta
 
 BASE    = os.path.dirname(os.path.abspath(__file__))
 WEB_OUT = os.environ.get('WEB_OUT', BASE)   # CI sets WEB_OUT=./web_deploy
+
+def cairo_now():
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo('Africa/Cairo'))
+    except Exception:
+        return datetime.now(timezone(timedelta(hours=2)))
 
 
 def load(name):
@@ -244,7 +251,7 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
 <!-- ── Header ──────────────────────────────────────────────────────── -->
 <div class="header">
   <h1>EGX SMC — Signal Score Heatmap</h1>
-  <span class="badge green">Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC</span>
+  <span class="badge green">Generated: {cairo_now().strftime('%Y-%m-%d %H:%M')} Cairo</span>
   <span class="badge yellow">{len(positions)} Open Positions</span>
   <span class="badge">EGX · Cairo Time</span>
   <button id="btn-install" style="display:none;align-items:center;gap:6px;background:#238636;border:1px solid #2ea043;border-radius:6px;padding:5px 12px;font-size:12px;color:#fff;cursor:pointer">

@@ -2487,7 +2487,8 @@ def detect_signal_changes(current_results, previous_results):
                 "to": current_sig,
                 "score": current_score,
                 "price": current_price,
-                "target": current_target
+                "target": current_target,
+                "entry_zones": current.get("entry_zones", None),
             })
     
     return changed_stocks
@@ -2496,115 +2497,239 @@ def detect_signal_changes(current_results, previous_results):
 def send_change_email(changed_stocks):
     """
     إرسال Email فوري عند تغيير أي سهم (whitelist أو عادي) إلى BUY
-    مع تمييز الـ whitelist بـ ⭐
     """
     if not changed_stocks:
         return
-    
-    sender = os.getenv("EMAIL_USER")
+
+    sender   = os.getenv("EMAIL_USER")
     password = os.getenv("EMAIL_PASS")
-    
     if not sender or not password:
         print("⚠️ Email config missing for change alert")
         return
-    
-    html_body = f"""
-    <html style="font-family: Arial, sans-serif;">
-    <body style="background-color: #f5f5f5; padding: 20px;">
-        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h2 style="color: #d32f2f; text-align: center;">🚨 Alert: New Buy Signal</h2>
-            <hr style="border: none; border-top: 2px solid #d32f2f;">
 
-            <p style="color: #333; font-size: 14px;">
-                <strong>Time:</strong> {fmt_cairo()}
-            </p>
-    """
+    time_str = fmt_cairo()
 
-    whitelist_stocks = [s for s in changed_stocks if s['stock'] in WHITELIST]
-    normal_stocks = [s for s in changed_stocks if s['stock'] not in WHITELIST]
+    def _gain_str(price, target):
+        try:
+            pct = round(((float(target) - float(price)) / float(price)) * 100, 1)
+            return f"+{pct}%"
+        except Exception:
+            return ""
+
+    def _stock_card(item, is_whitelist):
+        stock  = item["stock"]
+        price  = item.get("price", "N/A")
+        target = item.get("target", "N/A")
+        score  = item.get("score", 0)
+        signal = item.get("to", "Buy")
+        ez     = item.get("entry_zones")
+
+        gain  = _gain_str(price, target)
+        bar_w = min(int(score), 100)
+        # gradient spans the filled portion — short bars stay amber, long bars reach deep green
+        bar_gradient = "linear-gradient(90deg,#f59e0b 0%,#eab308 25%,#84cc16 50%,#22c55e 75%,#16a34a 100%)"
+
+        # Zone 1 → سعر الدخول المقترح
+        entry_price = price
+        if ez and "z1" in ez:
+            entry_price = ez["z1"]["center"]
+
+        # Zone 3 → منطقة Deep Value
+        z3_lo = z3_hi = None
+        if ez and "z3" in ez:
+            z3_lo = ez["z3"]["lo"]
+            z3_hi = ez["z3"]["hi"]
+
+        hdr_bg    = "#b45309" if is_whitelist else "#1d4ed8"
+        hdr_label = f"⭐ {stock} — WHITELIST" if is_whitelist else f"📈 {stock}"
+
+        if z3_lo is not None:
+            dv_row = (
+                f'<tr><td style="padding:0 16px 16px;">'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+                f' style="background:#0d1117;border-radius:10px;border-left:4px solid #818cf8;">'
+                f'<tr><td style="padding:12px 15px;">'
+                f'<p style="color:#94a3b8;font-size:10px;text-transform:uppercase;'
+                f'letter-spacing:1px;margin:0 0 8px 0;">🔷 منطقة Deep Value — Zone 3</p>'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+                f'<tr>'
+                f'<td style="color:#818cf8;font-size:14px;font-weight:bold;">{z3_lo} EGP</td>'
+                f'<td align="center" style="color:#4b5563;font-size:13px;">↔</td>'
+                f'<td align="right" style="color:#818cf8;font-size:14px;font-weight:bold;">{z3_hi} EGP</td>'
+                f'</tr></table>'
+                f'</td></tr></table>'
+                f'</td></tr>'
+            )
+        else:
+            dv_row = (
+                f'<tr><td style="padding:0 16px 16px;">'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+                f' style="background:#0d1117;border-radius:10px;border-left:4px solid #374151;">'
+                f'<tr><td style="padding:10px 15px;">'
+                f'<p style="color:#4b5563;font-size:11px;margin:0;">🔷 Deep Value Zone: غير متاح</p>'
+                f'</td></tr></table>'
+                f'</td></tr>'
+            )
+
+        return (
+            f'<tr><td style="padding:3px 0 0;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a1f36;">'
+
+            # ── card header ──
+            f'<tr><td style="background:{hdr_bg};padding:12px 18px;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'<tr>'
+            f'<td style="color:#fff;font-size:15px;font-weight:bold;">{hdr_label}</td>'
+            f'<td align="right">'
+            f'<span style="background:rgba(0,0,0,0.28);color:#fff;padding:4px 12px;'
+            f'border-radius:20px;font-size:12px;font-weight:bold;">{signal}</span>'
+            f'</td>'
+            f'</tr></table>'
+            f'</td></tr>'
+
+            # ── current price + target ──
+            f'<tr><td style="padding:14px 16px 0;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'<tr>'
+            f'<td width="48%" style="background:#0d1117;border-radius:10px;padding:14px;text-align:center;vertical-align:top;">'
+            f'<p style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:0 0 5px 0;">السعر الحالي</p>'
+            f'<p style="color:#f8fafc;font-size:22px;font-weight:bold;margin:0 0 2px 0;">{price}</p>'
+            f'<p style="color:#64748b;font-size:11px;margin:0;">EGP</p>'
+            f'</td>'
+            f'<td width="4%">&nbsp;</td>'
+            f'<td width="48%" style="background:#0d1117;border-radius:10px;padding:14px;text-align:center;vertical-align:top;">'
+            f'<p style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:0 0 5px 0;">التارجت المستهدف</p>'
+            f'<p style="color:#22c55e;font-size:22px;font-weight:bold;margin:0 0 2px 0;">{target}</p>'
+            f'<p style="color:#22c55e;font-size:11px;margin:0;">{gain}</p>'
+            f'</td>'
+            f'</tr></table>'
+            f'</td></tr>'
+
+            # ── score bar ──
+            f'<tr><td style="padding:12px 16px 0;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0d1117;border-radius:10px;">'
+            f'<tr><td style="padding:12px 15px;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'<tr>'
+            f'<td style="color:#94a3b8;font-size:11px;letter-spacing:0.5px;">Score</td>'
+            f'<td align="right" style="color:#f8fafc;font-size:14px;font-weight:bold;">{score:.0f} / 100</td>'
+            f'</tr></table>'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+            f' style="margin-top:8px;background:#1e2641;border-radius:20px;overflow:hidden;">'
+            f'<tr>'
+            f'<td width="{bar_w}%" style="background:{bar_gradient};height:8px;border-radius:20px;font-size:1px;">&nbsp;</td>'
+            f'<td style="height:8px;font-size:1px;">&nbsp;</td>'
+            f'</tr></table>'
+            f'</td></tr></table>'
+            f'</td></tr>'
+
+            # ── entry price (Zone 1) ──
+            f'<tr><td style="padding:12px 16px 0;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0d1117;border-radius:10px;">'
+            f'<tr><td style="padding:12px 15px;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'<tr>'
+            f'<td style="color:#94a3b8;font-size:12px;">🎯 سعر الدخول</td>'
+            f'<td align="right" style="color:#fbbf24;font-size:16px;font-weight:bold;">{entry_price} EGP</td>'
+            f'</tr></table>'
+            f'</td></tr></table>'
+            f'</td></tr>'
+
+            # ── deep value zone ──
+            + dv_row +
+
+            f'</table></td></tr>'
+        )
+
+    whitelist_stocks = [s for s in changed_stocks if s["stock"] in WHITELIST]
+    normal_stocks    = [s for s in changed_stocks if s["stock"] not in WHITELIST]
+    total_count      = len(changed_stocks)
+
+    cards_html = ""
 
     if whitelist_stocks:
-        html_body += "<h3 style='color: #f57c00; margin-top: 20px; border-bottom: 2px solid #ff9800; padding-bottom: 10px;'>⭐ Whitelist Stocks</h3>"
-
+        cards_html += (
+            f'<tr><td style="padding:18px 18px 8px;">'
+            f'<p style="color:#f59e0b;font-size:12px;font-weight:bold;'
+            f'letter-spacing:1.5px;margin:0;text-transform:uppercase;">'
+            f'⭐ Whitelist Stocks ({len(whitelist_stocks)})</p>'
+            f'<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">'
+            f'<tr><td style="background:#d97706;height:2px;border-radius:1px;"></td></tr>'
+            f'</table></td></tr>'
+        )
         for item in whitelist_stocks:
-            html_body += f"""
-            <div style="background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; margin: 10px 0; border-radius: 4px;">
-                <h3 style="color: #f57c00; margin: 0 0 10px 0;">⭐ {item['stock']} - WHITELIST ⭐</h3>
-                <table style="width: 100%; color: #333; font-size: 13px;">
-                    <tr>
-                        <td style="padding: 5px;"><strong>Signal:</strong></td>
-                        <td style="padding: 5px;">{item['from']} → <strong style="color: #2e7d32;">{item['to']}</strong></td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px;"><strong>Score:</strong></td>
-                        <td style="padding: 5px;">{item['score']:.1f}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px;"><strong>Entry Price:</strong></td>
-                        <td style="padding: 5px;"><strong style="color: #d32f2f;">{item.get('price', 'N/A')} EGP</strong></td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px;"><strong>Target Price:</strong></td>
-                        <td style="padding: 5px;"><strong style="color: #2e7d32;">{item.get('target', 'N/A')} EGP</strong></td>
-                    </tr>
-                </table>
-            </div>
-            """
+            cards_html += _stock_card(item, True)
 
     if normal_stocks:
-        html_body += "<h3 style='color: #1976d2; margin-top: 20px; border-bottom: 2px solid #2196f3; padding-bottom: 10px;'>📈 Stocks</h3>"
-
+        cards_html += (
+            f'<tr><td style="padding:18px 18px 8px;">'
+            f'<p style="color:#60a5fa;font-size:12px;font-weight:bold;'
+            f'letter-spacing:1.5px;margin:0;text-transform:uppercase;">'
+            f'📈 Stocks ({len(normal_stocks)})</p>'
+            f'<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">'
+            f'<tr><td style="background:#3b82f6;height:2px;border-radius:1px;"></td></tr>'
+            f'</table></td></tr>'
+        )
         for item in normal_stocks:
-            html_body += f"""
-            <div style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 10px 0; border-radius: 4px;">
-                <h3 style="color: #1565c0; margin: 0 0 10px 0;">📈 {item['stock']}</h3>
-                <table style="width: 100%; color: #333; font-size: 13px;">
-                    <tr>
-                        <td style="padding: 5px;"><strong>Signal:</strong></td>
-                        <td style="padding: 5px;">{item['from']} → <strong style="color: #2e7d32;">{item['to']}</strong></td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px;"><strong>Score:</strong></td>
-                        <td style="padding: 5px;">{item['score']:.1f}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px;"><strong>Entry Price:</strong></td>
-                        <td style="padding: 5px;"><strong style="color: #d32f2f;">{item.get('price', 'N/A')} EGP</strong></td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px;"><strong>Target Price:</strong></td>
-                        <td style="padding: 5px;"><strong style="color: #2e7d32;">{item.get('target', 'N/A')} EGP</strong></td>
-                    </tr>
-                </table>
-            </div>
-            """
-    
-    html_body += """
-            <hr style="border: none; border-top: 2px solid #ddd; margin-top: 20px;">
-            <p style="color: #666; font-size: 12px; text-align: center;">
-                EGX SMC Scanner © 2026
-            </p>
-        </div>
-    </body>
-    </html>
-    """
-    
+            cards_html += _stock_card(item, False)
+
+    html_body = (
+        '<!DOCTYPE html><html><head>'
+        '<meta charset="UTF-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '</head>'
+        '<body style="margin:0;padding:0;background:#0d1117;font-family:Arial,Helvetica,sans-serif;">'
+        '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+        ' style="background:#0d1117;padding:24px 0;">'
+        '<tr><td align="center">'
+        '<table width="560" cellpadding="0" cellspacing="0" border="0"'
+        ' style="max-width:560px;width:100%;">'
+
+        # header
+        '<tr><td style="background:#141928;border-radius:16px 16px 0 0;'
+        'padding:28px 28px 20px;text-align:center;">'
+        '<p style="color:#ef4444;font-size:32px;margin:0 0 10px;">🚨</p>'
+        '<h1 style="color:#ffffff;font-size:22px;font-weight:bold;'
+        'margin:0 0 8px;letter-spacing:2px;text-transform:uppercase;">Buy Signal Alert</h1>'
+        f'<p style="color:#94a3b8;font-size:13px;margin:0 0 18px;">📅 {time_str}</p>'
+        '<table width="100%" cellpadding="0" cellspacing="0">'
+        '<tr><td style="background:#ef4444;height:3px;border-radius:2px;font-size:1px;">&nbsp;</td></tr>'
+        '</table>'
+        '</td></tr>'
+
+        # cards wrapper
+        '<tr><td style="background:#1a1f36;padding:0 18px;">'
+        '<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+        + cards_html +
+        '</table>'
+        '</td></tr>'
+
+        # footer
+        '<tr><td style="background:#141928;border-radius:0 0 16px 16px;'
+        'padding:14px;text-align:center;">'
+        '<p style="color:#374151;font-size:11px;margin:0;letter-spacing:0.5px;">'
+        'EGX SMC Scanner &copy; 2026</p>'
+        '</td></tr>'
+
+        '</table>'
+        '</td></tr></table>'
+        '</body></html>'
+    )
+
     msg = MIMEMultipart("alternative")
     date_str = now_cairo().strftime("%Y-%m-%d %H:%M")
-    total_count = len(changed_stocks)
     msg["Subject"] = f"🚨 Signal Alert: {total_count} stock(s) moved to BUY — {date_str}"
-    msg["From"] = sender
-    msg["To"] = EMAIL
+    msg["From"]    = sender
+    msg["To"]      = EMAIL
     msg.attach(MIMEText(html_body, "html", "utf-8"))
-    
+
     try:
         with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as srv:
-            srv.ehlo()
-            srv.starttls()
-            srv.ehlo()
+            srv.ehlo(); srv.starttls(); srv.ehlo()
             srv.login(sender, password)
             srv.sendmail(sender, EMAIL, msg.as_string())
-        print(f"📧 Email alert sent for {total_count} stock(s) ({len(whitelist_stocks)} whitelist, {len(normal_stocks)} normal)")
+        print(f"📧 Email alert sent for {total_count} stock(s) "
+              f"({len(whitelist_stocks)} whitelist, {len(normal_stocks)} normal)")
         return True
     except Exception as e:
         print(f"❌ Email error: {e}")

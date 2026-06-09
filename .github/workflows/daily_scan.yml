@@ -2,21 +2,24 @@ name: EGX Daily Scanner
 
 on:
   schedule:
+    # ─────────────────────────────────────────────────────────────────────────
     # Daily report الساعة 9:00 صبح Cairo
-    # November-April: 7:00 UTC (EET = UTC+2)
-    - cron: '0 7 * * 0-4'
-    # May-October: 6:00 UTC (EEST = UTC+3)
+    # Summer (EEST = UTC+3): 06:00 UTC
     - cron: '0 6 * * 0-4'
+    # Winter (EET  = UTC+2): 07:00 UTC
+    - cron: '0 7 * * 0-4'
 
-    # كل 5 دقائق من 10:00 لـ 13:55 Cairo — winter (Nov-Apr): 08:00-11:55 UTC
-    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 8-11 * * 0-4'
-    # كل 5 دقائق من 10:00 لـ 13:55 Cairo — summer (May-Oct): 07:00-10:55 UTC
+    # كل 5 دقائق من 10:00 لـ 13:55 Cairo
+    # Summer (UTC+3): 07:00-10:55 UTC
     - cron: '0,5,10,15,20,25,30,35,40,45,50,55 7-10 * * 0-4'
+    # Winter (UTC+2): 08:00-11:55 UTC
+    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 8-11 * * 0-4'
 
-    # 14:00-14:30 Cairo — winter: 12:00-12:30 UTC
-    - cron: '0,5,10,15,20,25,30 12 * * 0-4'
-    # 14:00-14:30 Cairo — summer: 11:00-11:30 UTC
+    # 14:00-14:30 Cairo
+    # Summer (UTC+3): 11:00-11:30 UTC
     - cron: '0,5,10,15,20,25,30 11 * * 0-4'
+    # Winter (UTC+2): 12:00-12:30 UTC
+    - cron: '0,5,10,15,20,25,30 12 * * 0-4'
 
   workflow_dispatch:
     inputs:

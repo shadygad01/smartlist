@@ -3,11 +3,11 @@ name: EGX Daily Scanner
 on:
   schedule:
     # ─────────────────────────────────────────────────────────────────────────
-    # Daily report الساعة 9:00 صبح Cairo
-    # Summer (EEST = UTC+3): 06:00 UTC
-    - cron: '0 6 * * 0-4'
-    # Winter (EET  = UTC+2): 07:00 UTC
-    - cron: '0 7 * * 0-4'
+    # Daily report الساعة 7:00 صبح Cairo
+    # Summer (EEST = UTC+3): 04:00 UTC
+    - cron: '0 4 * * 0-4'
+    # Winter (EET  = UTC+2): 05:00 UTC
+    - cron: '0 5 * * 0-4'
 
     # كل 5 دقائق من 10:00 لـ 13:55 Cairo
     # Summer (UTC+3): 07:00-10:55 UTC
@@ -67,8 +67,8 @@ jobs:
           # بدون ده، لو الـ cron اتأخر ساعة بيعمل continuous scan بدل daily!
           FORCE_DAILY: >-
             ${{
-              (github.event.schedule == '0 6 * * 0-4' ||
-               github.event.schedule == '0 7 * * 0-4' ||
+              (github.event.schedule == '0 4 * * 0-4' ||
+               github.event.schedule == '0 5 * * 0-4' ||
                github.event.inputs.force_daily == 'true')
               && 'True' || 'False'
             }}

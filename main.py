@@ -2182,7 +2182,7 @@ def monitor_scores():
 
 def daily_scan():
     """
-    المسح اليومي في تمام الساعة 9:00 صباحاً
+    المسح اليومي في تمام الساعة 7:00 صباحاً
     """
     print(f"\n📅 Daily scan started at {fmt_cairo()}")
 
@@ -2825,10 +2825,10 @@ if __name__ == "__main__":
             sys.exit(0)
 
         # =========================================
-        # MODE 2: DAILY SCAN (9:00 AM or force_daily)
+        # MODE 2: DAILY SCAN (7:00 AM or force_daily)
         # =========================================
-        elif force_daily or hour == 9:
-            print("📅 DAILY SCAN MODE (9:00 AM)")
+        elif force_daily or hour == 7:
+            print("📅 DAILY SCAN MODE (7:00 AM)")
             print("="*60 + "\n")
             daily_scan()
             print("\n✅ Daily scan completed!")

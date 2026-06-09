@@ -17,6 +17,16 @@ def make_close(values):
     return pd.Series(values, dtype=float)
 
 
+def make_swings_df(values):
+    """Build a minimal OHLCV DataFrame for swings() tests.
+    High == Low == Close so the results are identical to the old close-series behaviour."""
+    s = pd.Series(values, dtype=float)
+    return pd.DataFrame({
+        "Open": s, "High": s, "Low": s, "Close": s,
+        "Volume": pd.Series([1.0] * len(s)),
+    })
+
+
 def make_ohlcv(n=100, base=100.0, seed=42):
     """Generate synthetic OHLCV DataFrame with realistic price movement."""
     rng = np.random.default_rng(seed)
@@ -122,46 +132,46 @@ class TestCalcRsi:
 class TestSwings:
 
     def test_returns_five_values(self):
-        close = make_close([100 + i % 10 for i in range(100)])
-        result = swings(close)
+        df = make_swings_df([100 + i % 10 for i in range(100)])
+        result = swings(df)
         assert len(result) == 5
 
     def test_hi_greater_than_lo(self):
-        close = make_close([100 + i % 15 for i in range(100)])
-        hi, lo, eq, buy_hi, sell_lo = swings(close)
+        df = make_swings_df([100 + i % 15 for i in range(100)])
+        hi, lo, eq, buy_hi, sell_lo = swings(df)
         assert hi > lo
 
     def test_eq_is_midpoint(self):
-        close = make_close([100 + i % 10 for i in range(100)])
-        hi, lo, eq, buy_hi, sell_lo = swings(close)
+        df = make_swings_df([100 + i % 10 for i in range(100)])
+        hi, lo, eq, buy_hi, sell_lo = swings(df)
         assert abs(eq - (lo + (hi - lo) * 0.50)) < 1e-9
 
     def test_buy_hi_is_15_pct_of_range(self):
-        close = make_close([100 + i % 10 for i in range(100)])
-        hi, lo, eq, buy_hi, sell_lo = swings(close)
+        df = make_swings_df([100 + i % 10 for i in range(100)])
+        hi, lo, eq, buy_hi, sell_lo = swings(df)
         assert abs(buy_hi - (lo + (hi - lo) * 0.15)) < 1e-9
 
     def test_sell_lo_is_85_pct_of_range(self):
-        close = make_close([100 + i % 10 for i in range(100)])
-        hi, lo, eq, buy_hi, sell_lo = swings(close)
+        df = make_swings_df([100 + i % 10 for i in range(100)])
+        hi, lo, eq, buy_hi, sell_lo = swings(df)
         assert abs(sell_lo - (lo + (hi - lo) * 0.85)) < 1e-9
 
     def test_zone_ordering(self):
-        close = make_close([100 + i % 20 for i in range(100)])
-        hi, lo, eq, buy_hi, sell_lo = swings(close)
+        df = make_swings_df([100 + i % 20 for i in range(100)])
+        hi, lo, eq, buy_hi, sell_lo = swings(df)
         assert lo < buy_hi < eq < sell_lo < hi
 
     def test_constant_prices(self):
         # All same price — range is 0, hi == lo
-        close = make_close([100.0] * 100)
-        hi, lo, eq, buy_hi, sell_lo = swings(close)
+        df = make_swings_df([100.0] * 100)
+        hi, lo, eq, buy_hi, sell_lo = swings(df)
         assert hi == lo == eq == buy_hi == sell_lo
 
     def test_lookback_uses_last_lb_bars(self):
         # First 50 bars are high, last 80 bars used by default lb=80
         prices = [200.0] * 20 + [100.0 + i % 10 for i in range(80)]
-        close = make_close(prices)
-        hi80, lo80, _, _, _ = swings(close, lb=80)
+        df = make_swings_df(prices)
+        hi80, lo80, _, _, _ = swings(df, lb=80)
         # The 200-bars should NOT appear in lb=80 result
         assert hi80 < 150.0
 

@@ -415,12 +415,14 @@ def calc_avwap(df):
 
     tp  = (d_anc["H"] + d_anc["L"] + d_anc["C"]) / 3
     av  = (tp * d_anc["V"]).cumsum() / d_anc["V"].cumsum()
-    std = tp.expanding().std().fillna(0)
-    lo  = av - std
+    cum_v  = d_anc["V"].cumsum()
+    var_vw = ((tp - av) ** 2 * d_anc["V"]).cumsum() / cum_v.where(cum_v > 0, 1)
+    std_vw = np.sqrt(var_vw.clip(lower=0)).fillna(0)
+    lo     = av - std_vw
 
     return float(av.iloc[-1]), float(lo.iloc[-1])
 
-def swings(close, lb=80):
+def swings(df, lb=80):
     """
     Price range levels based on custom SMC framework:
       0.00 = lo  (swing low  — best buy)
@@ -428,9 +430,10 @@ def swings(close, lb=80):
       0.50 = eq  (equilibrium)
       0.85 = sell_lo (bottom of sell zone)
       1.00 = hi  (swing high — best sell)
+    Uses actual High/Low prices for accurate range measurement.
     """
-    hi      = float(close.tail(lb).max())
-    lo      = float(close.tail(lb).min())
+    hi      = float(df["High"].tail(lb).max())
+    lo      = float(df["Low"].tail(lb).min())
     rng     = hi - lo
     eq      = lo + rng * 0.50
     buy_hi  = lo + rng * 0.15   # top of buy zone  (0.15)
@@ -444,7 +447,7 @@ def swings(close, lb=80):
 # STOPPING VOLUME & VOLUME PROFILE
 # =========================================
 
-def calc_stopping_volume(df, eq, lo, lookback=30, vol_mult=1.5, range_ratio=0.5):
+def calc_stopping_volume(df, eq, lo, lookback=30, vol_mult=2.5, range_ratio=0.5):
     """
     Detect Stopping Volume candles inside the discount zone (price < EQ).
     A SV candle: high volume (effort) + narrow range (no result) + in discount.
@@ -473,6 +476,10 @@ def calc_stopping_volume(df, eq, lo, lookback=30, vol_mult=1.5, range_ratio=0.5)
         if c_vol < vol_mult * a_vol:        # must be high volume
             continue
         if c_rng > range_ratio * a_rng:     # must be narrow range
+            continue
+        c_low     = float(d["Low"].iloc[i])
+        close_pos = (c_close - c_low) / c_rng if c_rng > 0 else 0
+        if close_pos < 0.40:                # close must be in upper 60% of range (buyers absorbed selling)
             continue
         discount_range = eq - lo
         depth = (eq - c_close) / discount_range if discount_range > 0 else 0
@@ -642,31 +649,37 @@ def sc_ob(df, cur, eq, lo, buy_hi):
         if c_close >= c_open:
             continue
 
-        # الـ candle التالية لازم تكون impulse صاعد قوي (≥ 1.5x avg range)
-        next_high  = float(search["High"].iloc[i+1])
-        next_low   = float(search["Low"].iloc[i+1])
-        next_range = next_high - next_low
-        if next_range < avg_rng * 1.5:
+        # الـ 1-2 candles التالية لازم يكون فيها impulse صاعد قوي (≥ 1.5x avg range)
+        has_impulse = False
+        for j in range(i + 1, min(i + 3, len(search))):
+            nxt_rng = float(search["High"].iloc[j]) - float(search["Low"].iloc[j])
+            if nxt_rng >= avg_rng * 1.5:
+                has_impulse = True
+                break
+        if not has_impulse:
             continue
 
-        # OB level = top of bearish candle (c_high) as resistance turned support
-        ob_level = c_high
+        # OB zone = body of the bearish candle (open → close)
+        ob_top = max(c_open, c_close)   # top of bearish body
+        ob_bot = min(c_open, c_close)   # bottom of bearish body (mitigation level)
 
-        # OB لازم يكون في Buy Zone (0–15%) فقط
-        if ob_level >= buy_hi:
+        # OB zone must be in Buy Zone (0–15%)
+        if ob_top >= buy_hi:
             continue
 
-        # السعر الحالي لازم يكون فوق الـ OB (مش اخترقه)
-        if cur <= c_low:
+        # OB is mitigated if price closed below the body bottom
+        if cur <= ob_bot:
             continue
 
-        # quality بناءً على موقع الـ OB في الـ discount zone
-        ratio   = (ob_level - lo) / discount_range
+        # quality based on zone midpoint depth in discount zone
+        ob_mid  = (ob_top + ob_bot) / 2
+        ratio   = (ob_mid - lo) / discount_range
         quality = max(0.0, 1.0 - ratio)
 
-        dist = abs(cur - ob_level) / cur
+        dist = abs(cur - ob_top) / cur   # distance to OB top (natural entry point)
         ob_candidates.append({
-            "level":   ob_level,
+            "top":     ob_top,
+            "bot":     ob_bot,
             "quality": quality,
             "dist":    dist,
             "candle":  i,
@@ -679,22 +692,23 @@ def sc_ob(df, cur, eq, lo, buy_hi):
     best = max(ob_candidates,
                key=lambda x: x["quality"] * max(0.1, 1 - x["dist"] * 5))
 
-    ob    = best["level"]
-    qual  = best["quality"]
-    dist  = best["dist"]
-    zone_lbl = "Buy Zone" if ob <= buy_hi else "Mid-Discount"
+    ob_top = best["top"]
+    ob_bot = best["bot"]
+    qual   = best["quality"]
+    dist   = best["dist"]
+    zone_lbl = "Buy Zone" if ob_top <= buy_hi else "Mid-Discount"
 
     if dist > 0.10:
         pts = round(W_OB * qual * 0.15)
-        return pts, f"OB {ob:.1f} [{zone_lbl}] — far ({dist*100:.0f}% away) → {pts}/{W_OB}"
+        return pts, f"OB zone {ob_bot:.1f}–{ob_top:.1f} [{zone_lbl}] — far ({dist*100:.0f}% away) → {pts}/{W_OB}"
     if dist < 0.02:
         pts = round(W_OB * qual)
-        return pts, f"At OB {ob:.1f} [{zone_lbl}] — quality {qual*100:.0f}% → {pts}/{W_OB}"
+        return pts, f"At OB zone {ob_bot:.1f}–{ob_top:.1f} [{zone_lbl}] — quality {qual*100:.0f}% → {pts}/{W_OB}"
     if dist < 0.05:
         pts = round(W_OB * qual * 0.6)
-        return pts, f"Near OB {ob:.1f} [{zone_lbl}] — quality {qual*100:.0f}% → {pts}/{W_OB}"
+        return pts, f"Near OB zone {ob_bot:.1f}–{ob_top:.1f} [{zone_lbl}] — quality {qual*100:.0f}% → {pts}/{W_OB}"
     pts = round(W_OB * qual * 0.30)
-    return pts, f"OB {ob:.1f} [{zone_lbl}] — moderate distance → {pts}/{W_OB}"
+    return pts, f"OB zone {ob_bot:.1f}–{ob_top:.1f} [{zone_lbl}] — moderate distance → {pts}/{W_OB}"
 
 def sc_liquidity(df, cur):
     """
@@ -768,6 +782,22 @@ def sc_liquidity(df, cur):
 
     return min(score, W_LIQ), " · ".join(desc)
 
+def _find_pivots(high_series, low_series, left=3, right=3):
+    """Identify swing highs/lows using left/right bar confirmation."""
+    h = high_series.values
+    l = low_series.values
+    n = min(len(h), len(l))
+    swing_highs, swing_lows = [], []
+    for i in range(left, n - right):
+        if all(h[i] >= h[i - j] for j in range(1, left + 1)) and \
+           all(h[i] >= h[i + j] for j in range(1, right + 1)):
+            swing_highs.append(float(h[i]))
+        if all(l[i] <= l[i - j] for j in range(1, left + 1)) and \
+           all(l[i] <= l[i + j] for j in range(1, right + 1)):
+            swing_lows.append(float(l[i]))
+    return swing_highs, swing_lows
+
+
 def sc_htf(df):
     """
     Higher Timeframe Trend Quality — 3 components (total W_HTF pts):
@@ -829,30 +859,27 @@ def sc_htf(df):
     else:
         desc.append("MA50 slope: insufficient data")
 
-    # ── 3. HH / HL structure (last 20 bars, 4 pivots) ────────────────────────
+    # ── 3. HH / HL structure (last 40 bars, pivot confirmation) ─────────────
     w3 = W_HTF - w1 - w2
     if n >= 20:
-        tail = close.tail(20).values
-        # بنقارن 4 نقاط: أول 5 / تاني 5 / تالت 5 / آخر 5
-        q1 = float(np.mean(tail[0:5]))
-        q2 = float(np.mean(tail[5:10]))
-        q3 = float(np.mean(tail[10:15]))
-        q4 = float(np.mean(tail[15:20]))
+        lb_tail = min(40, n)
+        h_ser = df["High"].dropna().tail(lb_tail) if "High" in df.columns else close.tail(lb_tail)
+        l_ser = df["Low"].dropna().tail(lb_tail)  if "Low"  in df.columns else close.tail(lb_tail)
+        s_highs, s_lows = _find_pivots(h_ser, l_ser, left=3, right=3)
 
-        # Higher Lows: كل quarter أعلى من اللي قبله
-        hl_count = sum([q2 > q1, q3 > q2, q4 > q3])
-
-        # Higher Highs: max of each half
-        hh = float(np.max(tail[10:20])) > float(np.max(tail[0:10]))
-
-        if hl_count >= 2 and hh:
-            pts += w3
-            desc.append(f"HH+HL structure ({hl_count}/3 HL) ✓")
-        elif hl_count >= 2 or hh:
-            pts += round(w3 * 0.5)
-            desc.append(f"Partial structure (HL:{hl_count}/3, HH:{hh})")
+        if len(s_highs) >= 2 and len(s_lows) >= 2:
+            hh = s_highs[-1] > s_highs[-2]
+            hl = s_lows[-1]  > s_lows[-2]
+            if hh and hl:
+                pts += w3
+                desc.append("HH+HL structure confirmed ✓")
+            elif hh or hl:
+                pts += round(w3 * 0.5)
+                desc.append(f"Partial structure (HH:{hh}, HL:{hl})")
+            else:
+                desc.append("No HH/HL — downtrend structure")
         else:
-            desc.append(f"No HH/HL — downtrend structure")
+            desc.append(f"Insufficient pivots ({len(s_highs)} highs, {len(s_lows)} lows) — no structure")
     else:
         desc.append("HH/HL: insufficient data")
 
@@ -1130,7 +1157,7 @@ def analyze(symbol):
         is_fresh   = True
 
         close            = df["Close"]
-        hi,lo,eq,buy_hi,sell_lo = swings(close)
+        hi,lo,eq,buy_hi,sell_lo = swings(df)
         av,alo                  = calc_avwap(df)   # always compute for display
 
         # ── GATE: Price must be strictly below EQ (< 0.50 level) ─────────────
@@ -1167,7 +1194,7 @@ def analyze(symbol):
         # ══════════════════════════════════════════════════════════════════
         # ✅ DYNAMIC PRICE GATE - استخدم 12 للـ whitelist، 18 للأسهم العادية
         PRICE_GATE = PRICE_GATE_WHITELIST if symbol in WHITELIST else PRICE_GATE_NORMAL
-        LIQ_GATE   = 12
+        LIQ_GATE   = W_LIQ   # only Sweep & Reverse (20/20) passes to BUY
 
         price_ok = (r1 >= PRICE_GATE)
         liq_ok   = (r3 >= LIQ_GATE)
@@ -1451,7 +1478,8 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     for s in sorted_stocks:
         r=results[s]
         if not r["ok"] or r["score"]<35: continue
-        if r.get("r1", 0) < 18: continue
+        _pg = PRICE_GATE_WHITELIST if s in WHITELIST else PRICE_GATE_NORMAL
+        if r.get("r1", 0) < _pg: continue
         _,tc,tbg,tbr=sig_info(r["score"])
         in_portfolio = s in positions and positions[s].get("status") == "open"
         portfolio_badge = ' <span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:bold;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;">🔵 In Portfolio</span>' if in_portfolio else ""

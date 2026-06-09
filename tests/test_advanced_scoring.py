@@ -399,10 +399,11 @@ class TestCalcStoppingVolume:
 
     def test_sv_detected_with_high_volume_narrow_range(self):
         """
-        Inject exactly one candle that meets SV criteria:
+        Inject exactly one candle that meets all SV criteria:
           - in discount (close < EQ)
-          - vol >= 1.5x avg vol
-          - range <= 0.5x avg range
+          - vol >= 2.5x avg vol  (raised threshold)
+          - range <= 0.5x avg range  (narrow)
+          - close in upper 60% of candle range  (bullish absorption)
         """
         n = 60
         avg_vol = 300_000.0
@@ -414,12 +415,12 @@ class TestCalcStoppingVolume:
         open_  = close_.copy()
         vol_   = np.full(n, avg_vol)
 
-        # SV candle at bar 40
-        vol_[40]   = avg_vol * 2.0          # 2x avg — passes 1.5x threshold
+        # SV candle at bar 40 — 3x volume (passes 2.5x threshold)
+        vol_[40]   = avg_vol * 3.0
+        low_[40]   = 97.7   # candle range = 0.6  (<= 0.5 * 2.0 = 1.0) ✓
         high_[40]  = 98.3
-        low_[40]   = 97.8
-        close_[40] = 98.0
-        open_[40]  = 98.0
+        close_[40] = 98.1   # close_pos = (98.1 - 97.7) / 0.6 = 0.67 >= 0.40 ✓
+        open_[40]  = 97.9
 
         df = pd.DataFrame({"Open": open_, "High": high_,
                            "Low": low_, "Close": close_, "Volume": vol_})

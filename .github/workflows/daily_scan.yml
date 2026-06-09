@@ -2,21 +2,18 @@ name: EGX Daily Scanner
 
 on:
   schedule:
-    # Daily report الساعة 9:00 صبح Cairo
-    # November-April: 7:00 UTC (EET = UTC+2)
+    # ─────────────────────────────────────────────────────────────────────────
+    # مصر دايماً UTC+2 (ألغت التوقيت الصيفي من 2011) — لا يوجد فارق صيف/شتاء
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # Daily report الساعة 9:00 صبح Cairo = 07:00 UTC
     - cron: '0 7 * * 0-4'
-    # May-October: 6:00 UTC (EEST = UTC+3)
-    - cron: '0 6 * * 0-4'
 
-    # كل 5 دقائق من 10:00 لـ 13:55 Cairo — winter (Nov-Apr): 08:00-11:55 UTC
+    # كل 5 دقائق من 10:00 لـ 13:55 Cairo = 08:00-11:55 UTC
     - cron: '0,5,10,15,20,25,30,35,40,45,50,55 8-11 * * 0-4'
-    # كل 5 دقائق من 10:00 لـ 13:55 Cairo — summer (May-Oct): 07:00-10:55 UTC
-    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 7-10 * * 0-4'
 
-    # 14:00-14:30 Cairo — winter: 12:00-12:30 UTC
+    # 14:00-14:30 Cairo = 12:00-12:30 UTC
     - cron: '0,5,10,15,20,25,30 12 * * 0-4'
-    # 14:00-14:30 Cairo — summer: 11:00-11:30 UTC
-    - cron: '0,5,10,15,20,25,30 11 * * 0-4'
 
   workflow_dispatch:
     inputs:
@@ -28,6 +25,11 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+# منع تراكم الـ runs — لو run جديد بدأ يلغي القديم
+concurrency:
+  group: egx-scanner
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -55,8 +57,20 @@ jobs:
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          MANUAL_RUN: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.force_daily != 'true') && 'True' || 'False' }}
-          FORCE_DAILY: ${{ github.event.inputs.force_daily == 'true' && 'True' || 'False' }}
+          # FORCE_DAILY = True لو الـ cron ده بالظبط هو الـ morning cron (07:00 UTC)
+          # أو لو اليوزر طلب force_daily من الـ workflow_dispatch
+          FORCE_DAILY: >-
+            ${{
+              (github.event.schedule == '0 7 * * 0-4' ||
+               github.event.inputs.force_daily == 'true')
+              && 'True' || 'False'
+            }}
+          MANUAL_RUN: >-
+            ${{
+              (github.event_name == 'workflow_dispatch' &&
+               github.event.inputs.force_daily != 'true')
+              && 'True' || 'False'
+            }}
         run: python main.py
 
       - name: Save updated positions

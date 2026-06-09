@@ -21,7 +21,10 @@ def cairo_now():
 
 def load(name):
     p = os.path.join(BASE, name)
-    return json.load(open(p)) if os.path.exists(p) else {}
+    if not os.path.exists(p):
+        return {}
+    with open(p, encoding="utf-8") as f:
+        return json.load(f)
 
 
 history      = load('signal_history.json')
@@ -69,9 +72,11 @@ for stock, sigs in history.items():
         pk = max(sigs, key=lambda s: s['score'])
         peak_scores[stock] = {'score': pk['score'], 'date': pk['date']}
 
-# ── Position data with return % ───────────────────────────────────────────
+# ── Position data with return % (open positions only) ─────────────────────
 pos_data = {}
 for t, pos in positions.items():
+    if pos.get('status', 'open') != 'open':
+        continue
     ep = pos.get('entry_price', 0)
     cp = scan_results.get(t, {}).get('price', 0)
     ret = round((cp - ep) / ep * 100, 1) if ep else 0
@@ -83,7 +88,7 @@ for t, pos in positions.items():
         'current_level': pos.get('current_level', 0),
         'fib_targets':   [round(x, 2) for x in pos.get('fib_targets', [])],
         'entry_score':   pos.get('entry_score', 0),
-        'status':        pos.get('status', 'open'),
+        'status':        'open',
     }
 
 rets     = [d['return_pct'] for d in pos_data.values()]

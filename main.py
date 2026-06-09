@@ -3,17 +3,14 @@ import os
 import json
 import re
 import sys
+import html as _html
+import csv
 import pandas as pd
 import numpy as np
 import yfinance as yf
 import requests
 import traceback
-import threading
 import time
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
-
-from bs4 import BeautifulSoup
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from email.mime.multipart import MIMEMultipart
@@ -25,9 +22,6 @@ CAIRO = ZoneInfo("Africa/Cairo")
 # GLOBAL STATE FOR MONITORING
 # =========================================
 
-last_alerted_stocks = set()  # لتجنب إرسال تنبيهات متكررة
-monitoring_active = True
-last_score_data = {}
 open_positions = {}  # تتبع المراكز المفتوحة: {symbol: {entry_price, fib_targets, current_level, ...}}
 POSITIONS_FILE = "open_positions.json"
 
@@ -214,13 +208,11 @@ W_MACD   =  4
 W_DIV    =  3
 W_DZ     = 15   # Demand Zone Confluence (Stopping Volume + Volume Profile)
 
-# ── ORAS local history CSV path (stored in repo working directory) ────────────
-ORAS_CSV = "oras_history.csv"
-
 # =========================================
-# EGX HOLIDAY CALENDAR (2026)
+# EGX HOLIDAY CALENDAR (2026+)
 # =========================================
 EGX_HOLIDAYS = {
+    # 2026
     date(2026,1,7),  date(2026,1,29),
     date(2026,3,19), date(2026,3,20), date(2026,3,21),
     date(2026,3,22), date(2026,3,23),
@@ -228,13 +220,23 @@ EGX_HOLIDAYS = {
     date(2026,5,26), date(2026,5,27), date(2026,5,28), date(2026,5,29),
     date(2026,6,16), date(2026,7,23),
     date(2026,8,25), date(2026,10,6),
+    # 2027 — fixed national holidays (Islamic holidays TBD by moon sighting)
+    date(2027,1,7),   # Coptic Christmas
+    date(2027,4,25),  # Sinai Liberation Day
+    date(2027,5,1),   # Labour Day
+    date(2027,7,23),  # Revolution Day
+    date(2027,10,6),  # Armed Forces Day
 }
+
+_HOLIDAY_CAL_WARN_AFTER = date(2027, 10, 6)  # update calendar when approaching this date
 
 def is_egx_trading_day(d=None):
     if d is None:
         d = datetime.now(CAIRO).date()
     if d.weekday() in (4, 5):
         return False
+    if d > _HOLIDAY_CAL_WARN_AFTER:
+        print(f"  ⚠️  WARNING: EGX holiday calendar may be incomplete for {d} — update EGX_HOLIDAYS")
     return d not in EGX_HOLIDAYS
 
 def most_recent_trading_day(from_date=None):
@@ -285,76 +287,6 @@ def tv_get_quote(tv_symbol):
     except Exception as e:
         print(f"  [TV] {tv_symbol} error: {e}")
         return None
-
-
-# =========================================
-# ORAS: TradingView + local CSV history
-# =========================================
-
-def _oras_update_csv(today_date, quote):
-    """
-    Append today's ORAS quote to local CSV.
-    CSV columns: Date, Open, High, Low, Close, Volume
-    """
-    new_row = pd.DataFrame([{
-        "Date":   pd.Timestamp(today_date).normalize(),
-        "Open":   quote["open"],
-        "High":   quote["high"],
-        "Low":    quote["low"],
-        "Close":  quote["close"],
-        "Volume": quote["volume"],
-    }])
-
-    if os.path.exists(ORAS_CSV):
-        existing = pd.read_csv(ORAS_CSV, parse_dates=["Date"])
-        existing["Date"] = pd.to_datetime(existing["Date"]).dt.normalize()
-        # Remove duplicate for today if exists then append
-        existing = existing[existing["Date"] != new_row["Date"].iloc[0]]
-        df = pd.concat([existing, new_row], ignore_index=True).sort_values("Date")
-    else:
-        df = new_row
-
-    df.to_csv(ORAS_CSV, index=False)
-    print(f"  [ORAS] CSV updated: {today_date} → close={quote['close']:.2f} EGP")
-    return df
-
-
-def _oras_load_csv(days=120):
-    """Load ORAS history from local CSV, return DataFrame."""
-    if not os.path.exists(ORAS_CSV):
-        return pd.DataFrame()
-    df = pd.read_csv(ORAS_CSV, parse_dates=["Date"])
-    df["Date"] = pd.to_datetime(df["Date"]).dt.normalize()
-    df = df.set_index("Date").sort_index()
-    cut = pd.Timestamp.today().normalize() - pd.Timedelta(days=days + 5)
-    df = df[df.index >= cut]
-    return df
-
-
-def _oras_history(days=120):
-    """
-    1. جيب السعر اللحظي من TradingView Scanner
-    2. سجّله في CSV محلي
-    3. رجّع الـ DataFrame من الـ CSV
-    """
-    today = most_recent_trading_day()
-
-    # Step 1: جيب السعر من TradingView
-    quote = tv_get_quote("EGX:ORAS")
-    if quote and quote["close"]:
-        print(f"  [ORAS] TradingView: close={quote['close']:.2f} EGP")
-        _oras_update_csv(today, quote)
-    else:
-        print("  [ORAS] TradingView failed — using existing CSV only")
-
-    # Step 2: حمّل الـ CSV
-    df = _oras_load_csv(days)
-    if df.empty:
-        print("  [ORAS] WARNING: CSV is empty — no historical data yet")
-        return pd.DataFrame()
-
-    print(f"  [ORAS] CSV: {len(df)} rows | last={df.index[-1].date()} | close={df['Close'].iloc[-1]:.2f} EGP")
-    return df
 
 
 # =========================================
@@ -412,6 +344,9 @@ def download_data(symbol, days=110):
             url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_symbol}"
                    f"?range=6mo&interval=1d&includeAdjustedClose=false")
             r    = requests.get(url, headers=HEADERS, timeout=15)
+            if r.status_code != 200:
+                print(f"  [{symbol}] Yahoo direct API: HTTP {r.status_code}")
+                raise ValueError(f"HTTP {r.status_code}")
             data = r.json()
             res  = data["chart"]["result"][0]
             ind  = res["indicators"]["quote"][0]
@@ -517,7 +452,7 @@ def calc_stopping_volume(df, eq, lo, lookback=30, vol_mult=1.5, range_ratio=0.5)
     """
     needed = ["High", "Low", "Close", "Open", "Volume"]
     if not all(c in df.columns for c in needed) or len(df) < lookback + 5:
-        return False, 0.0, "Insufficient data for SV scan"
+        return False, 0.0, "Insufficient data for SV scan", 0.0
 
     d         = df[needed].dropna().tail(lookback + 20)
     avg_vol   = d["Volume"].rolling(lookback).mean()
@@ -545,7 +480,7 @@ def calc_stopping_volume(df, eq, lo, lookback=30, vol_mult=1.5, range_ratio=0.5)
                             "vol_ratio": c_vol / a_vol, "depth": depth})
 
     if not sv_candles:
-        return False, 0.0, "No Stopping Volume detected in discount zone"
+        return False, 0.0, "No Stopping Volume detected in discount zone", 0.0
 
     best  = sorted(sv_candles,
                    key=lambda x: x["depth"] * 0.6 + min(x["vol_ratio"] / 5, 1.0) * 0.4,
@@ -554,7 +489,7 @@ def calc_stopping_volume(df, eq, lo, lookback=30, vol_mult=1.5, range_ratio=0.5)
     desc  = (f"Stopping Volume @ {best['close']:.1f} — "
              f"vol {best['vol_ratio']:.1f}x avg — "
              f"depth {best['depth']*100:.0f}% into discount")
-    return True, score, desc
+    return True, score, desc, float(best["close"])
 
 
 def calc_volume_profile(df, eq, lo, buy_hi, bins=20, hvn_pct=0.70):
@@ -577,15 +512,16 @@ def calc_volume_profile(df, eq, lo, buy_hi, bins=20, hvn_pct=0.70):
     vol_bins  = np.zeros(bins)
     bin_edges = np.linspace(price_min, price_max, bins + 1)
 
-    for _, row in d.iterrows():
-        h, l, v = float(row["High"]), float(row["Low"]), float(row["Volume"])
-        if v <= 0 or h <= l:
-            continue
-        lo_bin = max(0, int((l - price_min) / bin_size))
-        hi_bin = min(bins - 1, int((h - price_min) / bin_size))
-        span   = hi_bin - lo_bin + 1
-        for b in range(lo_bin, hi_bin + 1):
-            vol_bins[b] += v / span
+    h_arr = d["High"].values
+    l_arr = d["Low"].values
+    v_arr = d["Volume"].values.astype(float)
+    valid = (v_arr > 0) & (h_arr > l_arr)
+    h_arr, l_arr, v_arr = h_arr[valid], l_arr[valid], v_arr[valid]
+    lo_bins = np.clip(((l_arr - price_min) / bin_size).astype(int), 0, bins - 1)
+    hi_bins = np.clip(((h_arr - price_min) / bin_size).astype(int), 0, bins - 1)
+    for i in range(len(h_arr)):
+        span = hi_bins[i] - lo_bins[i] + 1
+        vol_bins[lo_bins[i]: hi_bins[i] + 1] += v_arr[i] / span
 
     threshold     = np.max(vol_bins) * hvn_pct
     discount_hvns = []
@@ -618,8 +554,8 @@ def sc_demand_zone(df, eq, lo, buy_hi):
     HVN only  → 40% W_DZ   (volume memory, no absorption candle)
     Neither   → 0
     """
-    sv_hit, sv_score, sv_desc   = calc_stopping_volume(df, eq, lo)
-    hvn_hit, hvn_score, _, hvn_desc = calc_volume_profile(df, eq, lo, buy_hi)
+    sv_hit, sv_score, sv_desc, _sv_price = calc_stopping_volume(df, eq, lo)
+    hvn_hit, hvn_score, _, hvn_desc     = calc_volume_profile(df, eq, lo, buy_hi)
 
     if sv_hit and hvn_hit:
         pts  = W_DZ
@@ -787,7 +723,6 @@ def sc_liquidity(df, cur):
         for i in range(1, len(recent) - 1):
             c_low   = float(recent["Low"].iloc[i])
             c_close = float(recent["Close"].iloc[i])
-            prev_lo = float(recent["Low"].iloc[i-1])
 
             # اخترق الـ swing low ثم أقفل فوقه
             if c_low < swing_lo and c_close > swing_lo:
@@ -1071,22 +1006,16 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
             levels.append((hvn_price, "Volume Profile HVN", 2))
 
     # Stopping Volume candle level
-    sv_hit, _, sv_desc = calc_stopping_volume(df, eq, lo)
-    if sv_hit:
-        # extract price from desc string
-        try:
-            sv_price = float(sv_desc.split("@ ")[1].split(" ")[0])
-            if sv_price < eq:
-                merged = False
-                for i, (p, lbl, cnt) in enumerate(levels):
-                    if abs(p - sv_price) / p < 0.02:
-                        levels[i] = (p, lbl + " + SV", cnt + 1)
-                        merged = True
-                        break
-                if not merged:
-                    levels.append((sv_price, "Stopping Volume", 2))
-        except Exception:
-            pass
+    sv_hit, _, _sv_desc, sv_price = calc_stopping_volume(df, eq, lo)
+    if sv_hit and sv_price > 0 and sv_price < eq:
+        merged = False
+        for i, (p, lbl, cnt) in enumerate(levels):
+            if abs(p - sv_price) / p < 0.02:
+                levels[i] = (p, lbl + " + SV", cnt + 1)
+                merged = True
+                break
+        if not merged:
+            levels.append((sv_price, "Stopping Volume", 2))
 
     # Recent swing low (20-bar)
     if len(df) >= 20:
@@ -1296,14 +1225,18 @@ def get_news(symbol):
 # =========================================
 
 def save_history(stock, r):
-    row={"date":now_cairo().strftime("%Y-%m-%d"),"stock":stock,
-         "company":NAMES.get(stock,stock),"price":r.get("price","N/A"),
-         "last_dt":r.get("last_dt","N/A"),"fresh":r.get("is_fresh",False),
-         "signal":r.get("signal","N/A"),"score":r.get("score",0),
-         "target":r.get("target","N/A")}
-    df=pd.DataFrame([row]); f="signals_history.csv"
-    if os.path.exists(f): df=pd.concat([pd.read_csv(f),df],ignore_index=True)
-    df.to_csv(f,index=False)
+    row = {"date": now_cairo().strftime("%Y-%m-%d"), "stock": stock,
+           "company": NAMES.get(stock, stock), "price": r.get("price", "N/A"),
+           "last_dt": r.get("last_dt", "N/A"), "fresh": r.get("is_fresh", False),
+           "signal": r.get("signal", "N/A"), "score": r.get("score", 0),
+           "target": r.get("target", "N/A")}
+    f = "signals_history.csv"
+    file_exists = os.path.exists(f)
+    with open(f, "a", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=row.keys())
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(row)
 
 # =========================================
 # HTML HELPERS
@@ -1322,7 +1255,9 @@ def bar(score):
             f'<span style="font-weight:bold;color:{fg};font-size:14px;">{score}/100</span>')
 
 def fresh_badge(is_fresh, last_dt):
-    return f'<span style="font-size:11px;padding:2px 7px;border-radius:6px;background:#d4edda;color:#155724;margin-left:8px;">Validated: {last_dt}</span>'
+    if is_fresh:
+        return f'<span style="font-size:11px;padding:2px 7px;border-radius:6px;background:#d4edda;color:#155724;margin-left:8px;">✓ {last_dt}</span>'
+    return f'<span style="font-size:11px;padding:2px 7px;border-radius:6px;background:#fff3cd;color:#856404;margin-left:8px;">⚠ Stale: {last_dt}</span>'
 
 # =========================================
 # BUILD REPORT
@@ -1403,16 +1338,20 @@ def _target_box_html(symbol, r, positions):
         '<div style="font-family:Arial,sans-serif;font-size:11px;color:#888;margin-top:2px;">Initial</div>'
     )
 
-def build_report(holiday_mode=False, last_trading=None):
-    results={}; news={}
+def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     print("  Fetching Dow Jones status...")
     dj = get_dow_jones_status()
     dow_banner = build_dow_banner(dj)
     positions = load_open_positions()
 
-    for s in STOCKS:
-        print(f"  Analyzing: {NAMES.get(s,s)} ...")
-        results[s]=analyze(s); news[s]=get_news(s); save_history(s,results[s])
+    if _cached_results is not None:
+        results = _cached_results
+    else:
+        results = {}
+        for s in STOCKS:
+            print(f"  Analyzing: {NAMES.get(s,s)} ...")
+            results[s] = analyze(s)
+            save_history(s, results[s])
 
     # ── Sort stocks by score descending for the entire report ────────────────
     sorted_stocks = sorted(STOCKS, key=lambda s: results[s].get("score", 0), reverse=True)
@@ -1422,7 +1361,6 @@ def build_report(holiday_mode=False, last_trading=None):
     dq_c   ="#155724" if not stale else "#856404"
     dq_bg  ="#d4edda" if not stale else "#fff3cd"
     dq_msg =(f"All {fresh_n} stocks — data fully verified" if not stale else f"{fresh_n}/{len(STOCKS)} fresh")
-    weights=""
 
     parts=[]
     holiday_banner=""
@@ -1544,13 +1482,13 @@ def build_report(holiday_mode=False, last_trading=None):
 </table>""")
 
     for s in sorted_stocks:
-        r=results[s]; nws=news[s]
+        r = results[s]
         if not r["ok"]:
             parts.append(f"""
 <table width="100%" cellpadding="12" cellspacing="0" border="0" style="margin:24px 0;border-top:3px solid #b02a2a;background:#fff5f5;border:1px solid #f5c6cb;">
   <tr><td style="font-family:Arial,sans-serif;">
     <b style="color:#721c24;font-size:16px;">{NAMES.get(s,s)}</b> <span style="font-size:12px;color:#999;margin-left:8px;">{s}</span><br>
-    <span style="color:#721c24;font-size:13px;">Error: {r.get("error","unknown")}</span>
+    <span style="color:#721c24;font-size:13px;">Error: {_html.escape(r.get("error","unknown"))}</span>
   </td></tr></table>"""); continue
 
         _,tc,tbg,tbr=sig_info(r["score"])
@@ -2119,285 +2057,126 @@ def send_alert_for_high_score(stock, score, result):
             print(f"❌ Telegram alert error: {e}")
 
 
+
+
 # =========================================
-# MONITORING FUNCTION
+# UTILITY HELPERS
 # =========================================
 
-def monitor_scores():
-    """
-    مراقبة الـ scores وتتبع المراكز المفتوحة
-    """
-    global last_alerted_stocks, open_positions
+def is_market_hours():
+    """True if current Cairo time is between 10:00 and 14:30."""
+    now = now_cairo()
+    t = now.hour * 60 + now.minute
+    return 600 <= t <= 870   # 10:00–14:30
 
-    load_open_positions()
-    print(f"\n▶️ بدء المراقبة المستمرة في {fmt_cairo()}")
-    print(f"📊 المراكز المفتوحة: {len(open_positions)}")
-
-    while monitoring_active:
-        try:
-            # تنفيذ التحليل
-            html, results = build_report(holiday_mode=False)
-
-            # البحث عن stocks وصلت شروط الشراء (score>=35 AND r1>=18)
-            current_qualified = {
-                s for s in STOCKS
-                if results[s].get("ok")
-                and results[s].get("score", 0) >= 35
-                and results[s].get("r1", 0) >= 18
-            }
-
-            # إرسال تنبيهات للـ stocks الجديدة
-            new_alerts = current_qualified - last_alerted_stocks
-            for stock in new_alerts:
-                score = results[stock].get("score", 0)
-                send_alert_for_high_score(stock, score, results[stock])
-                last_alerted_stocks.add(stock)
-                # تسجيل المركز الجديد
-                current_price = results[stock].get("price", 0)
-                if current_price > 0:
-                    add_position(stock, current_price, datetime.now(CAIRO).isoformat(),
-                                 entry_score=results[stock].get("score", 0))
-
-            # حفظ البيانات الحالية
-            global last_score_data
-            last_score_data = results
-
-            # مراقبة المراكز المفتوحة
-            current_prices = {s: results[s].get("price", 0) for s in STOCKS if results[s].get("ok") and isinstance(results[s].get("price"), (int, float)) and results[s].get("price", 0) > 0}
-            monitor_positions(current_prices)
-            monitor_reinforcement(current_prices, results)
-
-            # انتظر 5 دقائق قبل التحديث التالي
-            time.sleep(300)
-
-        except Exception as e:
-            print(f"❌ Monitor error: {e}")
-            traceback.print_exc()
-            time.sleep(60)
-
+def is_trading_day_today():
+    """Alias for is_egx_trading_day() using today's date."""
+    return is_egx_trading_day(today_cairo())
 
 # =========================================
 # SCHEDULED TASKS
 # =========================================
 
-def daily_scan():
-    """
-    المسح اليومي في تمام الساعة 7:00 صباحاً
-    """
-    print(f"\n📅 Daily scan started at {fmt_cairo()}")
+def _collect_current_prices(results):
+    return {
+        s: results[s]["price"] for s in STOCKS
+        if results[s].get("ok")
+        and isinstance(results[s].get("price"), (int, float))
+        and results[s]["price"] > 0
+    }
 
-    # تحميل النتائج السابقة والمراكز المفتوحة
+def _register_new_positions(results):
+    """Register positions for all qualifying stocks not already tracked."""
+    qualifying = {
+        s for s in STOCKS
+        if results[s].get("ok")
+        and results[s].get("score", 0) >= 35
+        and results[s].get("r1", 0) >= 18
+    }
+    for stock in qualifying:
+        positions = load_open_positions()
+        if stock not in positions:
+            price = results[stock].get("price", 0)
+            if price > 0:
+                add_position(stock, price, datetime.now(CAIRO).isoformat(),
+                             entry_score=results[stock].get("score", 0))
+                print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {price}")
+
+def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
+    """
+    Shared workflow for daily and manual scans:
+    1. Fetch data once
+    2. Register new positions + update targets
+    3. Rebuild HTML from cached data (no re-fetch)
+    4. Send email + Telegram
+    5. Save results + detect changes
+    """
     previous_results = load_previous_results()
-    positions = load_open_positions()
 
+    # Step 1: fetch data
+    html, results = build_report(holiday_mode=holiday_mode, last_trading=last_trading)
+
+    # Step 2: register positions, update targets
+    _register_new_positions(results)
+    cur_prices = _collect_current_prices(results)
+    monitor_positions(cur_prices)
+    monitor_reinforcement(cur_prices, results)
+
+    # Step 3: rebuild HTML using cached prices (no extra HTTP calls)
+    html, _ = build_report(holiday_mode=holiday_mode, last_trading=last_trading,
+                           _cached_results=results)
+
+    # Step 4: send
+    send_email(html, subject_suffix=email_suffix)
+    send_telegram_alerts(results)
+
+    # Step 5: persist + change alerts
+    save_scan_results(results)
+    save_signal_history(results)
+    changes = detect_signal_changes(results, previous_results)
+    if changes:
+        send_change_alert(changes)
+
+
+def daily_scan():
+    print(f"\n📅 Daily scan started at {fmt_cairo()}")
     if is_egx_trading_day(today_cairo()):
-        # الخطوة 1: تحليل الأسهم أولاً
-        html, _results = build_report(holiday_mode=False)
-
-        # الخطوة 2: تسجيل صفقات جديدة — نفس شروط العرض في الإيميل (score>=35 AND r1>=18)
-        qualifying_stocks = {
-            s for s in STOCKS
-            if _results[s].get("ok")
-            and _results[s].get("score", 0) >= 35
-            and _results[s].get("r1", 0) >= 18
-        }
-        for stock in qualifying_stocks:
-            # أعد تحميل البيانات من الملف قبل كل فحص
-            positions = load_open_positions()
-            if stock not in positions:
-                current_price = _results[stock].get("price", 0)
-                if current_price > 0:
-                    add_position(stock, current_price, datetime.now(CAIRO).isoformat(),
-                                 entry_score=_results[stock].get("score", 0))
-                    print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
-
-        # تحديث التارجتات الديناميكية للمراكز الحالية
-        _cur_prices = {s: _results[s]["price"] for s in STOCKS
-                       if _results[s].get("ok") and isinstance(_results[s].get("price"), (int, float))
-                       and _results[s]["price"] > 0}
-        monitor_positions(_cur_prices)
-        monitor_reinforcement(_cur_prices, _results)
-
-        # الخطوة 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة والتارجتات المحدّثة!)
-        html, _results = build_report(holiday_mode=False)
-
-        # الخطوة 4: إرسال الإيميل والتيليجرام مع البيانات المحدّثة
-        send_email(html)
-        send_telegram_alerts(_results)
-
-        # حفظ النتائج الحالية
-        save_scan_results(_results)
-        save_signal_history(_results)
-
-        # كشف التغييرات وإرسال تنبيهات
-        changes = detect_signal_changes(_results, previous_results)
-        if changes:
-            send_change_alert(changes)
+        _run_scan_workflow(holiday_mode=False, last_trading=None, email_suffix="")
     else:
         last_td = most_recent_trading_day(today_cairo())
-
-        # الخطوة 1: تحليل الأسهم أولاً
-        html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
-
-        # الخطوة 2: تسجيل صفقات جديدة — نفس شروط العرض في الإيميل (score>=35 AND r1>=18)
-        qualifying_stocks = {
-            s for s in STOCKS
-            if _results[s].get("ok")
-            and _results[s].get("score", 0) >= 35
-            and _results[s].get("r1", 0) >= 18
-        }
-        for stock in qualifying_stocks:
-            # أعد تحميل البيانات من الملف قبل كل فحص
-            positions = load_open_positions()
-            if stock not in positions:
-                current_price = _results[stock].get("price", 0)
-                if current_price > 0:
-                    add_position(stock, current_price, datetime.now(CAIRO).isoformat(),
-                                 entry_score=_results[stock].get("score", 0))
-                    print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
-
-        # تحديث التارجتات الديناميكية للمراكز الحالية
-        _cur_prices = {s: _results[s]["price"] for s in STOCKS
-                       if _results[s].get("ok") and isinstance(_results[s].get("price"), (int, float))
-                       and _results[s]["price"] > 0}
-        monitor_positions(_cur_prices)
-        monitor_reinforcement(_cur_prices, _results)
-
-        # الخطوة 3: بناء التقرير مرة أخرى (الآن مع المراكز الجديدة والتارجتات المحدّثة!)
-        html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
-
-        # الخطوة 4: إرسال الإيميل والتيليجرام مع البيانات المحدّثة
-        send_email(html, subject_suffix=f" (Holiday — Last Session: {last_td})")
-        send_telegram_alerts(_results)
-
-        # حفظ النتائج الحالية
-        save_scan_results(_results)
-        save_signal_history(_results)
-
-        # كشف التغييرات وإرسال تنبيهات
-        changes = detect_signal_changes(_results, previous_results)
-        if changes:
-            send_change_alert(changes)
+        _run_scan_workflow(
+            holiday_mode=True,
+            last_trading=str(last_td),
+            email_suffix=f" (Holiday — Last Session: {last_td})",
+        )
+    print("\n✅ Daily scan completed!")
 
 
 def continuous_scan():
-    """
-    المسح المستمر كل 5 دقائق (10:00 AM - 2:30 PM فقط)
-    الـ Scheduler يتحكم في أوقات التشغيل
-    يكتشف أي تغيير في الإشارات ويرسل تنبيهات فورية
-    """
     print(f"\n🔄 Continuous scan at {fmt_cairo()}")
-    
-    # تحميل النتائج السابقة
     previous_results = load_previous_results()
-    
-    # إجراء المسح الحالي
     html, current_results = build_report(holiday_mode=False)
-
-    # حفظ النتائج الحالية
     save_scan_results(current_results)
     save_signal_history(current_results)
-
-    # كشف التغييرات وإرسال تنبيهات فورية
     changes = detect_signal_changes(current_results, previous_results)
     if changes:
         print(f"🚨 Found {len(changes)} signal change(s)!")
         send_change_alert(changes)
     else:
-        print(f"ℹ️ No signal changes detected")
+        print("ℹ️ No signal changes detected")
 
 
 def manual_scan():
-    """
-    مسح يدوي عند الطلب
-    """
     print(f"\n🔄 Manual scan at {fmt_cairo()}")
-
-    previous_results = load_previous_results()
     holiday = not is_egx_trading_day(today_cairo())
     last_td = most_recent_trading_day(today_cairo()) if holiday else None
-
-    # الخطوة 1: تحليل الأسهم
-    html, _results = build_report(holiday_mode=holiday, last_trading=str(last_td) if last_td else None)
-
-    # الخطوة 2: تسجيل صفقات جديدة — نفس شروط العرض في الإيميل (score>=35 AND r1>=18)
-    qualifying_stocks = {
-        s for s in STOCKS
-        if _results[s].get("ok")
-        and _results[s].get("score", 0) >= 35
-        and _results[s].get("r1", 0) >= 18
-    }
-    new_positions = []
-    for stock in qualifying_stocks:
-        positions = load_open_positions()
-        if stock not in positions:
-            current_price = _results[stock].get("price", 0)
-            if current_price > 0:
-                add_position(stock, current_price, datetime.now(CAIRO).isoformat(),
-                             entry_score=_results[stock].get("score", 0))
-                new_positions.append(f"{NAMES.get(stock, stock)} @ {current_price}")
-                print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {current_price}")
-
-    # تحديث التارجتات الديناميكية للمراكز الحالية
-    _cur_prices = {s: _results[s]["price"] for s in STOCKS
-                   if _results[s].get("ok") and isinstance(_results[s].get("price"), (int, float))
-                   and _results[s]["price"] > 0}
-    monitor_positions(_cur_prices)
-    monitor_reinforcement(_cur_prices, _results)
-
-    # الخطوة 3: إعادة بناء التقرير مع المراكز الجديدة والتارجتات المحدّثة
-    html, _results = build_report(holiday_mode=holiday, last_trading=str(last_td) if last_td else None)
-
-    # الخطوة 4: الإرسال
-    suffix = " (Holiday)" if holiday else ""
-    send_email(html, subject_suffix=f" — Manual Scan{suffix}")
-    send_telegram_alerts(_results)
-    save_scan_results(_results)
-    save_signal_history(_results)
-
-    changes = detect_signal_changes(_results, previous_results)
-    if changes:
-        send_change_alert(changes)
-
-
-# =========================================
-# RUN
-# =========================================
-
-# =========================================
-# HELPER FUNCTIONS FOR TIME CHECKS
-# =========================================
-
-def is_market_hours():
-    """
-    تحقق إذا الساعة الحالية بين 10 صباحاً و 2:30 مساءً (Cairo Time)
-    """
-    now = now_cairo()
-    hour = now.hour
-    minute = now.minute
-    
-    # 10:00 AM to 14:30 (2:30 PM)
-    start_time = 10 * 60  # 600 minutes
-    end_time = 14 * 60 + 30  # 870 minutes
-    current_time = hour * 60 + minute
-    
-    return start_time <= current_time <= end_time
-
-def is_trading_day_today():
-    """
-    تحقق إذا اليوم يوم تداول (أحد لخميس + ليس عطلة)
-    """
-    today = today_cairo()
-    
-    # 0=Monday, 1=Tuesday, ..., 4=Friday, 5=Saturday, 6=Sunday
-    # Cairo market: Sunday(6)-Thursday(3) — Friday(4) and Saturday(5) only are weekend
-    if today.weekday() in (4, 5):  # Friday or Saturday
-        return False
-    
-    if today in EGX_HOLIDAYS:
-        return False
-    
-    return True
+    suffix = f" — Manual Scan{' (Holiday)' if holiday else ''}"
+    _run_scan_workflow(
+        holiday_mode=holiday,
+        last_trading=str(last_td) if last_td else None,
+        email_suffix=suffix,
+    )
+    print("\n✅ Manual scan completed!")
 
 # =========================================
 # PERSISTENT STATE MANAGEMENT
@@ -2415,13 +2194,16 @@ def save_scan_results(results):
         print(f"❌ Error saving results: {e}")
 
 
+_SIGNAL_HISTORY_DAYS = 365  # keep rolling window of this many days
+
 def save_signal_history(results):
     """
     Append today's per-stock scan data to signal_history.json for heatmap.
+    Keeps a rolling window of _SIGNAL_HISTORY_DAYS to prevent unbounded growth.
     """
     try:
-        from datetime import date as _date
-        today = _date.today().isoformat()
+        today = date.today().isoformat()
+        cutoff = (date.today() - timedelta(days=_SIGNAL_HISTORY_DAYS)).isoformat()
         hist = {}
         if os.path.exists("signal_history.json"):
             with open("signal_history.json", "r", encoding="utf-8") as f:
@@ -2443,6 +2225,8 @@ def save_signal_history(results):
                 stock_hist[existing[0]] = entry
             else:
                 stock_hist.append(entry)
+            # prune entries older than the rolling window
+            hist[ticker] = [e for e in stock_hist if e.get("date", "") >= cutoff]
         with open("signal_history.json", "w", encoding="utf-8") as f:
             json.dump(hist, f, ensure_ascii=False, separators=(",", ":"))
         print(f"✅ signal_history.json updated ({today})")
@@ -2479,8 +2263,9 @@ def detect_signal_changes(current_results, previous_results):
         current_price = current.get("price", "N/A")
         current_target = current.get("target", "N/A")
 
-        # إذا تغيرت الإشارة من Skip/Wait إلى BUY أو STRONG BUY
-        if (previous_sig in ["Skip", "Wait"] and current_sig in ["Buy", "Strong Buy"]):
+        # إذا تغيرت الإشارة من Skip/Wait إلى أي إشارة شراء
+        BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy"}
+        if previous_sig in ("Skip", "Wait") and current_sig in BUY_SIGNALS:
             changed_stocks.append({
                 "stock": stock,
                 "from": previous_sig,

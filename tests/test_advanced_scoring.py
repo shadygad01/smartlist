@@ -362,7 +362,7 @@ class TestCalcStoppingVolume:
 
     def test_insufficient_data_returns_false(self):
         df = make_ohlcv(10)
-        hit, score, desc = calc_stopping_volume(df, self.EQ, self.LO)
+        hit, score, desc, sv_price = calc_stopping_volume(df, self.EQ, self.LO)
         assert hit is False
         assert "Insufficient" in desc
 
@@ -376,7 +376,7 @@ class TestCalcStoppingVolume:
             "Close":  np.full(n, 110.0),
             "Volume": np.full(n, 300_000.0),
         })
-        hit, score, desc = calc_stopping_volume(df, self.EQ, self.LO)
+        hit, score, desc, sv_price = calc_stopping_volume(df, self.EQ, self.LO)
         assert hit is False
 
     def test_score_between_0_and_1_when_detected(self):
@@ -388,14 +388,14 @@ class TestCalcStoppingVolume:
         df.loc[50, "Low"]    = 94.9
         df.loc[50, "Open"]   = 95.0
 
-        hit, score, desc = calc_stopping_volume(df, self.EQ, self.LO)
+        hit, score, desc, sv_price = calc_stopping_volume(df, self.EQ, self.LO)
         if hit:
             assert 0.0 <= score <= 1.0
 
-    def test_returns_three_values(self):
+    def test_returns_four_values(self):
         df = make_ohlcv(60)
         result = calc_stopping_volume(df, self.EQ, self.LO)
-        assert len(result) == 3
+        assert len(result) == 4
 
     def test_sv_detected_with_high_volume_narrow_range(self):
         """
@@ -423,9 +423,10 @@ class TestCalcStoppingVolume:
 
         df = pd.DataFrame({"Open": open_, "High": high_,
                            "Low": low_, "Close": close_, "Volume": vol_})
-        hit, score, desc = calc_stopping_volume(df, self.EQ, self.LO)
+        hit, score, desc, sv_price = calc_stopping_volume(df, self.EQ, self.LO)
         assert hit is True
         assert "Stopping Volume" in desc
+        assert isinstance(sv_price, float)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -562,7 +563,7 @@ class TestScDemandZone:
         import unittest.mock as mock
         import main as m
 
-        with mock.patch.object(m, "calc_stopping_volume", return_value=(True, 0.8, "SV desc")), \
+        with mock.patch.object(m, "calc_stopping_volume", return_value=(True, 0.8, "SV desc", 95.0)), \
              mock.patch.object(m, "calc_volume_profile",  return_value=(False, 0.0, 0.0, "No HVN")):
             pts, desc = sc_demand_zone(make_ohlcv(60), self.EQ, self.LO, self.BUY_HI)
 
@@ -573,7 +574,7 @@ class TestScDemandZone:
         import unittest.mock as mock
         import main as m
 
-        with mock.patch.object(m, "calc_stopping_volume", return_value=(False, 0.0, "No SV")), \
+        with mock.patch.object(m, "calc_stopping_volume", return_value=(False, 0.0, "No SV", 0.0)), \
              mock.patch.object(m, "calc_volume_profile",  return_value=(True, 0.9, 92.0, "HVN desc")):
             pts, desc = sc_demand_zone(make_ohlcv(60), self.EQ, self.LO, self.BUY_HI)
 
@@ -584,7 +585,7 @@ class TestScDemandZone:
         import unittest.mock as mock
         import main as m
 
-        with mock.patch.object(m, "calc_stopping_volume", return_value=(True, 0.9, "SV desc")), \
+        with mock.patch.object(m, "calc_stopping_volume", return_value=(True, 0.9, "SV desc", 95.0)), \
              mock.patch.object(m, "calc_volume_profile",  return_value=(True, 0.95, 92.0, "HVN desc")):
             pts, desc = sc_demand_zone(make_ohlcv(60), self.EQ, self.LO, self.BUY_HI)
 

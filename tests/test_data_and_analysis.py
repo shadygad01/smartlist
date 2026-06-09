@@ -21,8 +21,6 @@ from main import (
     download_data,
     calc_entry_zones,
     analyze,
-    _oras_update_csv,
-    _oras_load_csv,
     W_PRICE, W_LIQ, W_OB, W_HTF, W_AVWAP, W_MACD, W_DIV, W_DZ,
     WHITELIST, PRICE_GATE_NORMAL, PRICE_GATE_WHITELIST,
 )
@@ -175,6 +173,7 @@ class TestDownloadData:
             }]}
         }
         resp = mock.MagicMock()
+        resp.status_code = 200
         resp.json.return_value = fallback_json
 
         with mock.patch("main.yf.Ticker", return_value=self._mock_ticker(empty_df)), \
@@ -207,6 +206,7 @@ class TestDownloadData:
             }]}
         }
         resp = mock.MagicMock()
+        resp.status_code = 200
         resp.json.return_value = fallback_json
 
         with mock.patch("main.yf.Ticker", side_effect=Exception("yfinance down")), \
@@ -228,52 +228,6 @@ class TestDownloadData:
             download_data("COMI.CA")
 
         assert captured["sym"] == "COMI.CA"
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# _oras_update_csv / _oras_load_csv — ORAS CSV I/O
-# ─────────────────────────────────────────────────────────────────────────────
-
-class TestOrasCsv:
-
-    QUOTE = {"open": 71.0, "high": 73.5, "low": 70.5, "close": 72.0, "volume": 500_000.0}
-
-    def test_update_creates_csv(self):
-        _oras_update_csv(date(2026, 1, 5), self.QUOTE)
-        assert os.path.exists(main.ORAS_CSV)
-
-    def test_update_appends_row(self):
-        _oras_update_csv(date(2026, 1, 5), self.QUOTE)
-        _oras_update_csv(date(2026, 1, 6), {**self.QUOTE, "close": 73.0})
-        df = pd.read_csv(main.ORAS_CSV)
-        assert len(df) == 2
-
-    def test_update_deduplicates_same_day(self):
-        _oras_update_csv(date(2026, 1, 5), self.QUOTE)
-        _oras_update_csv(date(2026, 1, 5), {**self.QUOTE, "close": 74.0})
-        df = pd.read_csv(main.ORAS_CSV)
-        assert len(df) == 1
-        assert df.iloc[-1]["Close"] == 74.0
-
-    def test_load_missing_returns_empty(self):
-        df = _oras_load_csv()
-        assert df.empty
-
-    def test_load_returns_dataframe(self):
-        _oras_update_csv(date(2026, 1, 5), self.QUOTE)
-        df = _oras_load_csv()
-        assert isinstance(df, pd.DataFrame)
-        assert "Close" in df.columns
-
-    def test_load_sets_date_as_index(self):
-        _oras_update_csv(date(2026, 1, 5), self.QUOTE)
-        df = _oras_load_csv(days=9999)  # large window to include Jan 2026
-        assert pd.api.types.is_datetime64_any_dtype(df.index)
-
-    def test_load_correct_close_value(self):
-        _oras_update_csv(date(2026, 1, 5), self.QUOTE)
-        df = _oras_load_csv(days=9999)  # large window to include Jan 2026
-        assert float(df["Close"].iloc[-1]) == 72.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -301,7 +255,7 @@ class TestCalcEntryZones:
             df = make_discount_df(100)
         if cur is None:
             cur = self.CUR
-        with mock.patch("main.calc_stopping_volume", return_value=(False, 0.0, "No SV")), \
+        with mock.patch("main.calc_stopping_volume", return_value=(False, 0.0, "No SV", 0.0)), \
              mock.patch("main.calc_volume_profile",  return_value=(False, 0.0, 0.0, "No HVN")):
             return calc_entry_zones(
                 df, cur,
@@ -376,7 +330,7 @@ class TestCalcEntryZones:
     def test_hvn_increases_confluence(self):
         # When HVN coincides with buy_mid (within 2%), its confluence count increases
         buy_mid = self.LO + (self.HI - self.LO) * 0.075
-        with mock.patch("main.calc_stopping_volume", return_value=(False, 0.0, "No SV")), \
+        with mock.patch("main.calc_stopping_volume", return_value=(False, 0.0, "No SV", 0.0)), \
              mock.patch("main.calc_volume_profile",
                         return_value=(True, 0.9, buy_mid, f"HVN @ {buy_mid:.1f}")):
             result = calc_entry_zones(

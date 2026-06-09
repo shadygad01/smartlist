@@ -11,12 +11,15 @@ import yfinance as yf
 import requests
 import traceback
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 CAIRO = ZoneInfo("Africa/Cairo")
+
+_tv_quote_cache: dict = {}   # populated by tv_prefetch_all_quotes() at the top of each scan
 
 # =========================================
 # GLOBAL STATE FOR MONITORING
@@ -257,10 +260,12 @@ def fmt_cairo(fmt="%A, %d %B %Y  |  %H:%M"): return now_cairo().strftime(fmt)
 
 def tv_get_quote(tv_symbol):
     """
-    Fetch latest close, open, high, low, volume for one symbol
-    from TradingView scanner API.
-    Returns dict or None.
+    Fetch latest quote for one symbol from TradingView scanner API.
+    Checks _tv_quote_cache first (populated by tv_prefetch_all_quotes).
+    Falls back to a single HTTP call if the cache is cold.
     """
+    if tv_symbol in _tv_quote_cache:
+        return _tv_quote_cache[tv_symbol]
     try:
         url = "https://scanner.tradingview.com/egypt/scan"
         payload = {
@@ -287,6 +292,43 @@ def tv_get_quote(tv_symbol):
     except Exception as e:
         print(f"  [TV] {tv_symbol} error: {e}")
         return None
+
+
+def tv_prefetch_all_quotes(symbols):
+    """
+    Fetch all stock quotes in ONE TradingView API call and store in _tv_quote_cache.
+    Reduces 26 serial HTTP requests to a single round-trip.
+    Falls back gracefully — individual calls via tv_get_quote() will still work.
+    """
+    global _tv_quote_cache
+    _tv_quote_cache = {}
+    tv_symbols = [f"EGX:{s.replace('.CA', '')}" for s in symbols]
+    try:
+        url = "https://scanner.tradingview.com/egypt/scan"
+        payload = {
+            "symbols": {"tickers": tv_symbols},
+            "columns": ["close", "volume", "change_abs", "high", "low", "open",
+                        "price_52_week_high", "price_52_week_low"]
+        }
+        r = requests.post(url, json=payload, headers=TV_HEADERS, timeout=30)
+        if r.status_code != 200:
+            print(f"  [TV Batch] HTTP {r.status_code} — falling back to per-stock calls")
+            return
+        for row in r.json().get("data", []):
+            sym = row.get("s", "")
+            d   = row.get("d", [])
+            if not d or d[0] is None:
+                continue
+            _tv_quote_cache[sym] = {
+                "close":  float(d[0]),
+                "volume": float(d[1]) if d[1] is not None else 0,
+                "high":   float(d[3]) if len(d) > 3 and d[3] is not None else float(d[0]),
+                "low":    float(d[4]) if len(d) > 4 and d[4] is not None else float(d[0]),
+                "open":   float(d[5]) if len(d) > 5 and d[5] is not None else float(d[0]),
+            }
+        print(f"  [TV Batch] {len(_tv_quote_cache)}/{len(tv_symbols)} quotes in one call")
+    except Exception as e:
+        print(f"  [TV Batch] Error: {e} — falling back to per-stock calls")
 
 
 # =========================================
@@ -457,46 +499,49 @@ def calc_stopping_volume(df, eq, lo, lookback=30, vol_mult=2.5, range_ratio=0.5)
     if not all(c in df.columns for c in needed) or len(df) < lookback + 5:
         return False, 0.0, "Insufficient data for SV scan", 0.0
 
-    d         = df[needed].dropna().tail(lookback + 20)
-    avg_vol   = d["Volume"].rolling(lookback).mean()
+    d          = df[needed].dropna().tail(lookback + 20)
+    avg_vol    = d["Volume"].rolling(lookback).mean()
     candle_rng = d["High"] - d["Low"]
-    avg_rng   = candle_rng.rolling(lookback).mean()
+    avg_rng    = candle_rng.rolling(lookback).mean()
 
-    sv_candles = []
-    for i in range(lookback, len(d)):
-        c_close = float(d["Close"].iloc[i])
-        c_vol   = float(d["Volume"].iloc[i])
-        c_rng   = float(candle_rng.iloc[i])
-        a_vol   = float(avg_vol.iloc[i])
-        a_rng   = float(avg_rng.iloc[i])
-        if a_vol <= 0 or a_rng <= 0:
-            continue
-        if c_close >= eq:                   # must be in discount zone
-            continue
-        if c_vol < vol_mult * a_vol:        # must be high volume
-            continue
-        if c_rng > range_ratio * a_rng:     # must be narrow range
-            continue
-        c_low     = float(d["Low"].iloc[i])
-        close_pos = (c_close - c_low) / c_rng if c_rng > 0 else 0
-        if close_pos < 0.40:                # close must be in upper 60% of range (buyers absorbed selling)
-            continue
-        discount_range = eq - lo
-        depth = (eq - c_close) / discount_range if discount_range > 0 else 0
-        sv_candles.append({"idx": i, "close": c_close,
-                            "vol_ratio": c_vol / a_vol, "depth": depth})
+    # extract scan-window arrays (after rolling warmup) — avoids repeated .iloc[i] overhead
+    c_close = d["Close"].values[lookback:]
+    c_vol   = d["Volume"].values[lookback:]
+    c_low   = d["Low"].values[lookback:]
+    c_rng   = candle_rng.values[lookback:]
+    a_vol   = avg_vol.values[lookback:]
+    a_rng   = avg_rng.values[lookback:]
 
-    if not sv_candles:
+    discount_range = eq - lo
+    with np.errstate(invalid="ignore", divide="ignore"):
+        close_pos = np.where(c_rng > 0, (c_close - c_low) / c_rng, 0.0)
+
+    mask = (
+        (a_vol > 0) & (a_rng > 0) &
+        (c_close < eq) &
+        (c_vol >= vol_mult * a_vol) &
+        (c_rng <= range_ratio * a_rng) &
+        (c_rng > 0) &
+        (close_pos >= 0.40)
+    )
+
+    idx = np.where(mask)[0]
+    if len(idx) == 0:
         return False, 0.0, "No Stopping Volume detected in discount zone", 0.0
 
-    best  = sorted(sv_candles,
-                   key=lambda x: x["depth"] * 0.6 + min(x["vol_ratio"] / 5, 1.0) * 0.4,
-                   reverse=True)[0]
-    score = min(1.0, best["depth"] * 0.6 + min(best["vol_ratio"] / 5, 1.0) * 0.4)
-    desc  = (f"Stopping Volume @ {best['close']:.1f} — "
-             f"vol {best['vol_ratio']:.1f}x avg — "
-             f"depth {best['depth']*100:.0f}% into discount")
-    return True, score, desc, float(best["close"])
+    vol_ratio = c_vol[idx] / a_vol[idx]
+    depth     = (eq - c_close[idx]) / discount_range if discount_range > 0 else np.zeros(len(idx))
+    scores    = depth * 0.6 + np.minimum(vol_ratio / 5, 1.0) * 0.4
+    best_i    = int(np.argmax(scores))
+
+    best_close     = float(c_close[idx[best_i]])
+    best_vol_ratio = float(vol_ratio[best_i])
+    best_depth     = float(depth[best_i])
+    score          = float(min(1.0, scores[best_i]))
+    desc = (f"Stopping Volume @ {best_close:.1f} — "
+            f"vol {best_vol_ratio:.1f}x avg — "
+            f"depth {best_depth*100:.0f}% into discount")
+    return True, score, desc, best_close
 
 
 def calc_volume_profile(df, eq, lo, buy_hi, bins=20, hvn_pct=0.70):
@@ -530,7 +575,8 @@ def calc_volume_profile(df, eq, lo, buy_hi, bins=20, hvn_pct=0.70):
         span = hi_bins[i] - lo_bins[i] + 1
         vol_bins[lo_bins[i]: hi_bins[i] + 1] += v_arr[i] / span
 
-    threshold     = np.max(vol_bins) * hvn_pct
+    max_vol       = np.max(vol_bins)
+    threshold     = max_vol * hvn_pct
     discount_hvns = []
     for b in range(bins):
         bin_price = (bin_edges[b] + bin_edges[b + 1]) / 2
@@ -546,23 +592,25 @@ def calc_volume_profile(df, eq, lo, buy_hi, bins=20, hvn_pct=0.70):
         return False, 0.0, 0.0, "No HVN in discount zone"
 
     best      = max(discount_hvns, key=lambda x: x["vol"])
-    hvn_score = min(1.0, best["vol"] / np.max(vol_bins))
+    hvn_score = min(1.0, best["vol"] / max_vol)
     desc      = (f"HVN @ {best['price']:.1f} — "
-                 f"{best['vol']/np.max(vol_bins)*100:.0f}% of peak vol — "
+                 f"{best['vol']/max_vol*100:.0f}% of peak vol — "
                  f"depth {best['depth']*100:.0f}% into discount")
     return True, hvn_score, best["price"], desc
 
 
-def sc_demand_zone(df, eq, lo, buy_hi):
+def sc_demand_zone(df, eq, lo, buy_hi, _sv=None, _hvn=None):
     """
     Demand Zone Confluence = Stopping Volume + Volume Profile HVN, both in discount.
     SV + HVN  → full W_DZ  (true institutional demand zone)
     SV only   → 60% W_DZ   (absorption present, no volume memory)
     HVN only  → 40% W_DZ   (volume memory, no absorption candle)
     Neither   → 0
+    _sv/_hvn: pre-computed tuples from calc_stopping_volume / calc_volume_profile
+              to avoid recomputing when called from analyze().
     """
-    sv_hit, sv_score, sv_desc, _sv_price = calc_stopping_volume(df, eq, lo)
-    hvn_hit, hvn_score, _, hvn_desc     = calc_volume_profile(df, eq, lo, buy_hi)
+    sv_hit, sv_score, sv_desc, _sv_price = _sv  if _sv  is not None else calc_stopping_volume(df, eq, lo)
+    hvn_hit, hvn_score, _, hvn_desc      = _hvn if _hvn is not None else calc_volume_profile(df, eq, lo, buy_hi)
 
     if sv_hit and hvn_hit:
         pts  = W_DZ
@@ -637,13 +685,18 @@ def sc_ob(df, cur, eq, lo, buy_hi):
 
     # ── بحث عن OB حقيقي في آخر 40 bar ───────────────────────────────────────
     ob_candidates = []
-    search = d.tail(40)
+    search   = d.tail(40)
+    s_open   = search["Open"].values
+    s_close  = search["Close"].values
+    s_low    = search["Low"].values
+    s_high   = search["High"].values
+    n_search = len(search)
 
-    for i in range(len(search) - 2):
-        c_open  = float(search["Open"].iloc[i])
-        c_close = float(search["Close"].iloc[i])
-        c_low   = float(search["Low"].iloc[i])
-        c_high  = float(search["High"].iloc[i])
+    for i in range(n_search - 2):
+        c_open  = s_open[i]
+        c_close = s_close[i]
+        c_low   = s_low[i]
+        c_high  = s_high[i]
 
         # OB candle: bearish (close < open)
         if c_close >= c_open:
@@ -651,9 +704,8 @@ def sc_ob(df, cur, eq, lo, buy_hi):
 
         # الـ 1-2 candles التالية لازم يكون فيها impulse صاعد قوي (≥ 1.5x avg range)
         has_impulse = False
-        for j in range(i + 1, min(i + 3, len(search))):
-            nxt_rng = float(search["High"].iloc[j]) - float(search["Low"].iloc[j])
-            if nxt_rng >= avg_rng * 1.5:
+        for j in range(i + 1, min(i + 3, n_search)):
+            if s_high[j] - s_low[j] >= avg_rng * 1.5:
                 has_impulse = True
                 break
         if not has_impulse:
@@ -891,9 +943,9 @@ def sc_avwap(cur, av, av_lo):
     if cur<av: return max(round(((av-cur)/(av-av_lo))*(W_AVWAP-1)),1), f"Below AVWAP {av:.1f}"
     return 0, f"Above AVWAP {av:.1f}"
 
-def sc_macd(close):
+def sc_macd(close, _macd=None):
     if len(close)<15: return 0,"Not enough data"
-    m,sg,h=calc_macd(close)
+    m,sg,h = _macd if _macd is not None else calc_macd(close)
     macd_now  = m.iloc[-1]
     macd_prev = m.iloc[-2]
     sig_now   = sg.iloc[-1]
@@ -993,7 +1045,7 @@ def sig_info(score):
 # ENTRY ZONES (Averaging Strategy)
 # =========================================
 
-def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
+def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo, _sv=None, _hvn=None):
     """
     Calculate 3 entry zones for averaging-down strategy.
     No stop loss — zones are designed for scaled entries with renewable liquidity.
@@ -1019,8 +1071,8 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
     if alo < eq:
         levels.append((alo, "AVWAP Lower Band", 1))
 
-    # HVN from volume profile
-    hvn_hit, _, hvn_price, _ = calc_volume_profile(df, eq, lo, buy_hi)
+    # HVN from volume profile (use pre-computed result when available)
+    hvn_hit, _, hvn_price, _ = _hvn if _hvn is not None else calc_volume_profile(df, eq, lo, buy_hi)
     if hvn_hit and hvn_price < eq:
         # check if it's close to an existing level (within 2%) — if so, add confluence
         merged = False
@@ -1032,8 +1084,8 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
         if not merged:
             levels.append((hvn_price, "Volume Profile HVN", 2))
 
-    # Stopping Volume candle level
-    sv_hit, _, _sv_desc, sv_price = calc_stopping_volume(df, eq, lo)
+    # Stopping Volume candle level (use pre-computed result when available)
+    sv_hit, _, _sv_desc, sv_price = _sv if _sv is not None else calc_stopping_volume(df, eq, lo)
     if sv_hit and sv_price > 0 and sv_price < eq:
         merged = False
         for i, (p, lbl, cnt) in enumerate(levels):
@@ -1103,9 +1155,8 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
                  if abs(p - z1_price) / z1_price > 0.005
                  and abs(p - z3_price) / z3_price > 0.005]
     if remaining:
-        z2_price = min(remaining, key=lambda x: abs(x[0] - mid))[0]
-        z2_label = min(remaining, key=lambda x: abs(x[0] - mid))[1]
-        z2_conf  = min(remaining, key=lambda x: abs(x[0] - mid))[2]
+        z2_item  = min(remaining, key=lambda x: abs(x[0] - mid))
+        z2_price, z2_label, z2_conf = z2_item
     else:
         z2_price = (z1_price + z3_price) / 2
         z2_label = "Midpoint Estimate"
@@ -1159,6 +1210,8 @@ def analyze(symbol):
         close            = df["Close"]
         hi,lo,eq,buy_hi,sell_lo = swings(df)
         av,alo                  = calc_avwap(df)   # always compute for display
+        sv_result  = None   # populated in discount-zone branch, reused by entry zones
+        hvn_result = None
 
         # ── GATE: Price must be strictly below EQ (< 0.50 level) ─────────────
         # At EQ or above → SMC setup does not exist → all scores locked at zero
@@ -1176,10 +1229,13 @@ def analyze(symbol):
             r3,l3  = sc_liquidity(df,cur)
             r4,l4  = sc_htf(df)
             r5,l5  = sc_avwap(cur,av,alo)
-            ml,_,_ = calc_macd(close)
-            r6,l6  = sc_macd(close)
+            macd_result = calc_macd(close)              # compute once, share with sc_macd + sc_div
+            ml          = macd_result[0]
+            r6,l6  = sc_macd(close, _macd=macd_result)
             r7,l7  = sc_div(close,ml)
-            r8,l8  = sc_demand_zone(df,eq,lo,buy_hi)   # Stopping Volume + Volume Profile
+            sv_result  = calc_stopping_volume(df,eq,lo) # compute once, share with sc_demand_zone + calc_entry_zones
+            hvn_result = calc_volume_profile(df,eq,lo,buy_hi)
+            r8,l8  = sc_demand_zone(df,eq,lo,buy_hi, _sv=sv_result, _hvn=hvn_result)
 
         total = min(r1+r2+r3+r4+r5+r6+r7+r8, 100)
 
@@ -1216,7 +1272,8 @@ def analyze(symbol):
 
         entry_zones = None
         if price_ok and liq_ok and r8 > 0 and total >= 35:
-            entry_zones = calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo)
+            entry_zones = calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo,
+                                           _sv=sv_result, _hvn=hvn_result)
 
         return {
             "ok":True,"price":round(cur,2),"last_dt":last_dt,
@@ -1374,10 +1431,16 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     if _cached_results is not None:
         results = _cached_results
     else:
+        tv_prefetch_all_quotes(STOCKS)   # one batch TV call instead of 26 serial calls
         results = {}
-        for s in STOCKS:
-            print(f"  Analyzing: {NAMES.get(s,s)} ...")
-            results[s] = analyze(s)
+        workers = min(8, len(STOCKS))
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            future_to_sym = {executor.submit(analyze, s): s for s in STOCKS}
+            for future in as_completed(future_to_sym):
+                s = future_to_sym[future]
+                results[s] = future.result()
+                print(f"  Done: {NAMES.get(s, s)}")
+        for s in STOCKS:               # save_history writes CSV — keep it sequential
             save_history(s, results[s])
 
     # ── Sort stocks by score descending for the entire report ────────────────

@@ -29,6 +29,11 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# منع تراكم الـ runs — لو run جديد جاي، يلغي القديم
+concurrency:
+  group: egx-scanner
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pages: write
@@ -55,8 +60,21 @@ jobs:
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          MANUAL_RUN: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.force_daily != 'true') && 'True' || 'False' }}
-          FORCE_DAILY: ${{ github.event.inputs.force_daily == 'true' && 'True' || 'False' }}
+          # FORCE_DAILY=True للـ morning crons بالظبط (السمر والشتا)
+          # بدون ده، لو الـ cron اتأخر ساعة بيعمل continuous scan بدل daily!
+          FORCE_DAILY: >-
+            ${{
+              (github.event.schedule == '0 6 * * 0-4' ||
+               github.event.schedule == '0 7 * * 0-4' ||
+               github.event.inputs.force_daily == 'true')
+              && 'True' || 'False'
+            }}
+          MANUAL_RUN: >-
+            ${{
+              (github.event_name == 'workflow_dispatch' &&
+               github.event.inputs.force_daily != 'true')
+              && 'True' || 'False'
+            }}
         run: python main.py
 
       - name: Save updated positions

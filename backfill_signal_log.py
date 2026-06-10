@@ -29,8 +29,11 @@ from datetime import date, timedelta
 # ── استيراد المؤشرات من pattern_engine ────────────────────────────────────────
 from pattern_engine import (
     _extract, _stoch_rsi, _atr, _rsi_series,
-    MIN_GAIN, STOP_LOSS, FORWARD_DAYS
+    FORWARD_DAYS
 )
+
+MIN_GAIN  = 0.07   # target gain for signal outcome evaluation
+STOP_LOSS = 0.06   # stop loss for signal outcome evaluation
 
 LOG_FILE = "signal_log.json"
 

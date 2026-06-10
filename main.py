@@ -1589,7 +1589,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
             pnl_str = (f'+{pnl_pct:.1f}%' if pnl_pct and pnl_pct >= 0 else f'{pnl_pct:.1f}%') if pnl_pct is not None else "—"
             pnl_col = "#155724" if (pnl_pct or 0) >= 0 else "#721c24"
             entry_date = p.get("entry_date", "")[:10]
-            entry_score = p.get("entry_score", 0)
+            entry_score = p.get("entry_pattern_score") or p.get("entry_score", 0)
             reinforced = p.get("reinforced", False)
             reinf_price = p.get("reinforcement_price")
             avg_price   = p.get("avg_price")
@@ -1619,7 +1619,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Current Price</th>
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Dynamic Target</th>
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Entry Date</th>
-    <th align="center" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Confidence</th>
+    <th align="center" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">🧠 Pattern</th>
   </tr>
   {open_pos_rows}
 </table>"""
@@ -1889,7 +1889,7 @@ def save_open_positions():
     except Exception as e:
         print(f"❌ Error saving positions: {e}")
 
-def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12, entry_score=0):
+def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12, entry_score=0, entry_pattern_score=0):
     """Add new position when entry signal is triggered"""
     global open_positions
 
@@ -1910,6 +1910,7 @@ def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12, en
         "target": fib_targets[0],
         "status": "open",
         "entry_score": entry_score,
+        "entry_pattern_score": entry_pattern_score,
     }
     save_open_positions()
     print(f"✅ Position added: {symbol} @ {entry_price:.2f} EGP")
@@ -2316,9 +2317,60 @@ def _register_new_positions(results):
         if stock not in positions:
             price = results[stock].get("price", 0)
             if price > 0:
+                pat = results[stock].get("pattern") or {}
                 add_position(stock, price, datetime.now(CAIRO).isoformat(),
-                             entry_score=results[stock].get("score", 0))
+                             entry_score=results[stock].get("score", 0),
+                             entry_pattern_score=round(pat.get("pattern_score", 0)))
                 print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {price}")
+
+def backfill_pattern_scores():
+    """
+    للمراكز المفتوحة التي لا تحتوي على entry_pattern_score،
+    يحسب الـ pattern_score على البيانات حتى تاريخ الدخول ويحدّثها.
+    """
+    positions = load_open_positions()
+    needs_backfill = [
+        (sym, p) for sym, p in positions.items()
+        if p.get("status") == "open" and not p.get("entry_pattern_score")
+    ]
+
+    if not needs_backfill:
+        return
+
+    print(f"\n🔄 Backfilling pattern scores for {len(needs_backfill)} positions...")
+    from pattern_engine import analyze_entry_patterns
+
+    updated = 0
+    for sym, p in needs_backfill:
+        try:
+            entry_date_str = str(p.get("entry_date", ""))[:10]
+            # نجلب 2 سنة من البيانات ثم نقطع عند تاريخ الدخول
+            df = download_data(sym, days=520)
+            if df is None or df.empty:
+                print(f"  ⚠️  {sym}: no data")
+                continue
+
+            entry_dt = pd.Timestamp(entry_date_str)
+            df_at_entry = df[df.index <= entry_dt]
+
+            if len(df_at_entry) < 80:
+                print(f"  ⚠️  {sym}: insufficient data at entry ({len(df_at_entry)} bars)")
+                continue
+
+            result = analyze_entry_patterns(df_at_entry, symbol=sym)
+            score = round(result.get("pattern_score", 0)) if result.get("ok") else 0
+            positions[sym]["entry_pattern_score"] = score
+            updated += 1
+            print(f"  ✅ {sym}: pattern_score at entry = {score}")
+
+        except Exception as e:
+            print(f"  ❌ {sym}: {e}")
+
+    if updated:
+        with open(POSITIONS_FILE, "w") as f:
+            json.dump(positions, f, indent=2)
+        print(f"✅ Backfilled {updated} positions\n")
+
 
 def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
     """
@@ -2330,6 +2382,9 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
     5. Save results + detect changes
     """
     previous_results = load_previous_results()
+
+    # Step 0: backfill missing pattern scores for existing positions
+    backfill_pattern_scores()
 
     # Step 1: fetch data
     html, results = build_report(holiday_mode=holiday_mode, last_trading=last_trading)

@@ -27,7 +27,7 @@ import os
 FORWARD_DAYS  = 30   # days to confirm a local low is unbroken
 BOUNCE_MIN    = 0.05  # minimum bounce from the low to count as real demand (5%)
 VOL_THRESHOLD = 0.80  # volume on low day must be > 80% of 20-day average
-BREAK_BUFFER  = 0.01  # low must be broken by > 1% to count as a real loss
+BREAK_BUFFER  = 0.02  # low must be broken by > 2% to count as a real loss
 MIN_HISTORY   = 80    # 50 for indicators + 30 for confirmation window
 MIN_REVERSALS = 3
 MIN_DECIDED   = 100   # أقل عدد إشارات محسومة لتحديث الأوزان

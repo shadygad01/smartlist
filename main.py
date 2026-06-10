@@ -1589,7 +1589,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
             pnl_str = (f'+{pnl_pct:.1f}%' if pnl_pct and pnl_pct >= 0 else f'{pnl_pct:.1f}%') if pnl_pct is not None else "—"
             pnl_col = "#155724" if (pnl_pct or 0) >= 0 else "#721c24"
             entry_date = p.get("entry_date", "")[:10]
-            entry_score = p.get("entry_score", 0)
+            entry_score = p.get("entry_pattern_score") or p.get("entry_score", 0)
             reinforced = p.get("reinforced", False)
             reinf_price = p.get("reinforcement_price")
             avg_price   = p.get("avg_price")
@@ -1619,7 +1619,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Current Price</th>
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Dynamic Target</th>
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Entry Date</th>
-    <th align="center" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Confidence</th>
+    <th align="center" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">🧠 Pattern</th>
   </tr>
   {open_pos_rows}
 </table>"""
@@ -1889,7 +1889,7 @@ def save_open_positions():
     except Exception as e:
         print(f"❌ Error saving positions: {e}")
 
-def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12, entry_score=0):
+def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12, entry_score=0, entry_pattern_score=0):
     """Add new position when entry signal is triggered"""
     global open_positions
 
@@ -1910,6 +1910,7 @@ def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12, en
         "target": fib_targets[0],
         "status": "open",
         "entry_score": entry_score,
+        "entry_pattern_score": entry_pattern_score,
     }
     save_open_positions()
     print(f"✅ Position added: {symbol} @ {entry_price:.2f} EGP")
@@ -2316,8 +2317,10 @@ def _register_new_positions(results):
         if stock not in positions:
             price = results[stock].get("price", 0)
             if price > 0:
+                pat = results[stock].get("pattern") or {}
                 add_position(stock, price, datetime.now(CAIRO).isoformat(),
-                             entry_score=results[stock].get("score", 0))
+                             entry_score=results[stock].get("score", 0),
+                             entry_pattern_score=round(pat.get("pattern_score", 0)))
                 print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {price}")
 
 def _run_scan_workflow(holiday_mode, last_trading, email_suffix):

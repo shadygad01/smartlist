@@ -2152,8 +2152,10 @@ def send_telegram_alerts(results):
         pat = r.get("pattern", {})
         if pat and pat.get("ok"):
             warn = "  ⚠️ _Low reliability_" if pat.get("low_reliability") else ""
+            _ev = pat['effective_score'] / 20
+            _el = "ممتاز" if _ev >= 3 else "قوي" if _ev >= 2 else "متوسط" if _ev >= 1 else "ضعيف"
             pi_line = (f"   🧠 Pattern: *{pat['pattern_score']:.0f}/100*"
-                       f"  |  Effective: *{pat['effective_score']/20:.1f}/5*"
+                       f"  |  Effective: *{_ev:.1f}/5* ({_el})"
                        f"  |  Win Rate: *{pat['win_rate']*100:.0f}%*{warn}\n"
                        f"   Avg Gain: *+{pat['avg_gain']:.1f}%*"
                        f"  ({pat['similar_count']} cases)\n")
@@ -2647,6 +2649,8 @@ def send_change_email(changed_stocks):
 
         pat = item.get("pattern", {})
         if pat and pat.get("ok"):
+            _pev = pat.get("effective_score", 0) / 20
+            _pel = "ممتاز" if _pev >= 3 else "قوي" if _pev >= 2 else "متوسط" if _pev >= 1 else "ضعيف"
             border_col = "#f59e0b" if pat.get("low_reliability") else "#7ee787"
             warn_row   = (
                 f'<tr><td colspan="4" style="padding-top:8px;">'
@@ -2670,8 +2674,8 @@ def send_change_email(changed_stocks):
                 f'</td>'
                 f'<td style="text-align:right;vertical-align:top;">'
                 f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Effective</p>'
-                f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0;">'
-                f'{pat.get("effective_score", 0)/20:.1f}/5</p>'
+                f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0 0 1px 0;">{_pev:.1f}/5</p>'
+                f'<p style="color:#94a3b8;font-size:10px;margin:0;">{_pel}</p>'
                 f'</td>'
                 f'<td style="text-align:right;vertical-align:top;">'
                 f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Win Rate</p>'

@@ -24,9 +24,7 @@ import os
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-MIN_GAIN      = 0.07
-STOP_LOSS     = 0.06
-FORWARD_DAYS  = 15
+FORWARD_DAYS  = 30   # days to confirm a local low is unbroken
 MIN_HISTORY   = 30
 MIN_REVERSALS = 3
 MIN_DECIDED   = 100   # أقل عدد إشارات محسومة لتحديث الأوزان
@@ -270,9 +268,8 @@ def _extract(df, idx):
 def _find_reversals(df):
     """
     Returns (wins, losses) at historical local lows.
-    win  = price hit +MIN_GAIN before -STOP_LOSS
-    loss = price hit -STOP_LOSS before +MIN_GAIN
-    neutral (neither within FORWARD_DAYS) = ignored
+    win  = no close below the low within FORWARD_DAYS (real bottom)
+    loss = at least one close below the low within FORWARD_DAYS (broken bottom)
     """
     close  = df["Close"].values
     n      = len(close)
@@ -282,18 +279,18 @@ def _find_reversals(df):
     for i in range(50, n - FORWARD_DAYS):
         if close[i] > min(close[max(0, i-5):i+1]) * 1.002:
             continue
-        future = close[i+1: i+FORWARD_DAYS+1]
-        gain   = (float(np.max(future)) - close[i]) / close[i]
-        loss   = (close[i] - float(np.min(future))) / close[i]
 
-        cond = _extract(df, i)
+        future = close[i+1: i+FORWARD_DAYS+1]
+        cond   = _extract(df, i)
         if cond is None:
             continue
 
-        if gain >= MIN_GAIN and loss < STOP_LOSS:
-            wins.append({"conditions": cond, "gain": round(gain, 4)})
-        elif loss >= STOP_LOSS:
-            losses.append({"conditions": cond, "loss": round(loss, 4)})
+        max_gain = (float(np.max(future)) - close[i]) / close[i]
+
+        if not any(c < close[i] for c in future):
+            wins.append({"conditions": cond, "gain": round(max_gain, 4)})
+        else:
+            losses.append({"conditions": cond})
 
     return wins, losses
 

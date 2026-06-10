@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 import json
 import os
+from egx_context import is_ramadan, get_season
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -114,11 +115,27 @@ def _calc_weights_from_signals(decided, min_count=30):
     return {k: round(v / total, 4) for k, v in correlations.items()}
 
 
+def _is_signal_ramadan(sig):
+    """يحدد إذا كانت الإشارة في رمضان من الـ context أو من تاريخها."""
+    ctx = sig.get("context", {})
+    if ctx.get("is_ramadan") is not None:
+        return bool(ctx["is_ramadan"])
+    try:
+        import datetime
+        d = datetime.date.fromisoformat(sig["signal_date"])
+        return is_ramadan(d)
+    except Exception:
+        return False
+
+
 def update_weights_from_log(log_file="signal_log.json"):
     """
-    يحسب أوزان global + per-stock من signal_log.json.
+    يحسب أوزان من signal_log.json:
+      - global      : كل الإشارات المحسومة
+      - normal      : خارج رمضان
+      - ramadan     : داخل رمضان (لو >= 30 إشارة)
+      - per_stock   : لكل سهم (لو >= 30 إشارة)
     يحفظ النتيجة في learned_weights.json.
-    يُرجع الأوزان الجديدة أو None لو البيانات مش كافية.
     """
     if not os.path.exists(log_file):
         return None
@@ -140,6 +157,13 @@ def update_weights_from_log(log_file="signal_log.json"):
     if global_weights is None:
         return None
 
+    # ── Context-aware weights: رمضان vs عادي ─────────────────────────
+    ramadan_sigs = [s for s in decided if _is_signal_ramadan(s)]
+    normal_sigs  = [s for s in decided if not _is_signal_ramadan(s)]
+
+    weights_ramadan = _calc_weights_from_signals(ramadan_sigs, min_count=30)
+    weights_normal  = _calc_weights_from_signals(normal_sigs,  min_count=MIN_DECIDED // 2)
+
     # ── Per-stock weights ─────────────────────────────────────────────
     from collections import defaultdict
     by_symbol = defaultdict(list)
@@ -155,33 +179,61 @@ def update_weights_from_log(log_file="signal_log.json"):
     # ── حفظ ──────────────────────────────────────────────────────────
     import datetime
     out = {
-        "weights":    global_weights,
-        "per_stock":  per_stock,
-        "based_on":   len(decided),
-        "updated_at": str(datetime.date.today()),
+        "weights":         global_weights,
+        "weights_normal":  weights_normal,
+        "weights_ramadan": weights_ramadan,
+        "per_stock":       per_stock,
+        "based_on":        len(decided),
+        "ramadan_signals": len(ramadan_sigs),
+        "normal_signals":  len(normal_sigs),
+        "updated_at":      str(datetime.date.today()),
     }
     with open(LEARNED_WEIGHTS_FILE, "w") as f:
         json.dump(out, f, indent=2)
 
-    print(f"  🔄 Global weights updated from {len(decided)} signals:")
+    print(f"  🔄 Global weights updated from {len(decided)} signals "
+          f"(ramadan={len(ramadan_sigs)}, normal={len(normal_sigs)}):")
     for k, v in sorted(global_weights.items(), key=lambda x: -x[1]):
         old = DEFAULT_WEIGHTS[k]
         arrow = "↑" if v > old else "↓" if v < old else "="
         print(f"     {k:<12} {old:.2f} → {v:.4f} {arrow}")
+    if weights_ramadan:
+        print(f"  🌙 Ramadan weights learned from {len(ramadan_sigs)} signals")
     print(f"  🔄 Per-stock weights learned for {len(per_stock)} stocks")
 
     return global_weights
 
 
-def _load_per_stock_weights(symbol):
-    """يُرجع الأوزان الخاصة بسهم معين، أو الـ global، أو الافتراضية."""
+def _load_per_stock_weights(symbol, context=None):
+    """
+    يُرجع الأوزان المناسبة بترتيب الأولوية:
+      per-stock  →  ramadan/normal global  →  global  →  default
+    context: dict من get_signal_context (اختياري)
+    """
+    is_ram = (context or {}).get("is_ramadan", False)
+
     if os.path.exists(LEARNED_WEIGHTS_FILE):
         try:
             with open(LEARNED_WEIGHTS_FILE) as f:
                 data = json.load(f)
+
+            # 1. per-stock (أعلى أولوية)
             per_stock = data.get("per_stock", {})
             if symbol in per_stock:
                 return per_stock[symbol]["weights"]
+
+            # 2. context-aware global
+            if is_ram and data.get("weights_ramadan"):
+                w = data["weights_ramadan"]
+                if set(w.keys()) == set(DEFAULT_WEIGHTS.keys()):
+                    return w
+
+            if not is_ram and data.get("weights_normal"):
+                w = data["weights_normal"]
+                if set(w.keys()) == set(DEFAULT_WEIGHTS.keys()):
+                    return w
+
+            # 3. global
             w = data.get("weights", {})
             if set(w.keys()) == set(DEFAULT_WEIGHTS.keys()):
                 return w
@@ -359,24 +411,33 @@ def _threshold_score(current_cond, wins, weights=None):
 
 # ── Main API ──────────────────────────────────────────────────────────────────
 
-def analyze_entry_patterns(df, symbol=None):
+def analyze_entry_patterns(df, symbol=None, context=None):
     """
     الدالة الرئيسية.
 
+    context: dict من get_signal_context — يُستخدم لاختيار الأوزان المناسبة
+             وحساب volume confidence.
+
     Returns:
     {
-        "ok":            bool
-        "pattern_score": 0-100
-        "win_rate":      0-1   (نسبة الارتدادات الناجحة في التاريخ)
-        "avg_gain":      float (متوسط الربح %)
-        "similar_count": int   (عدد الارتدادات التاريخية المستخدمة)
-        "detail":        dict  (نقطة كل مؤشر)
-        "label":         str
+        "ok":                   bool
+        "pattern_score":        0-100   (جودة الإعداد الحالي)
+        "effective_score":      0-100   (pattern × win_rate)
+        "volume_adjusted_score":0-100   (effective × volume_confidence)
+        "volume_confidence":    0-1     (نسبة الحجم للمتوسط، مقيّدة بـ 1)
+        "win_rate":             0-1
+        "avg_gain":             float   (متوسط الربح %)
+        "similar_count":        int
+        "low_reliability":      bool
+        "context_mode":         str     (ramadan | normal)
+        "detail":               dict
+        "label":                str
     }
     """
     empty = {"ok": False, "pattern_score": 0, "effective_score": 0,
+             "volume_adjusted_score": 0, "volume_confidence": 1.0,
              "win_rate": 0, "avg_gain": 0, "similar_count": 0,
-             "low_reliability": False, "detail": {},
+             "low_reliability": False, "context_mode": "normal", "detail": {},
              "label": "Insufficient history"}
 
     if df is None or len(df) < MIN_HISTORY:
@@ -392,7 +453,7 @@ def analyze_entry_patterns(df, symbol=None):
     if len(wins) < MIN_REVERSALS:
         return {**empty, "label": f"Limited history — {len(wins)} reversals found (need {MIN_REVERSALS})"}
 
-    weights = _load_per_stock_weights(symbol) if symbol else WEIGHTS
+    weights = _load_per_stock_weights(symbol, context) if symbol else WEIGHTS
     pattern_score, detail = _threshold_score(current_cond, wins, weights)
 
     total_decided = len(wins) + len(losses)
@@ -402,6 +463,14 @@ def analyze_entry_patterns(df, symbol=None):
     # Effective score = pattern quality × historical reliability
     effective_score = round(pattern_score * win_rate, 1)
     low_reliability = win_rate < 0.25
+
+    # Volume confidence: إشارة على حجم ضعيف أقل موثوقية
+    volume_vs_adv    = (context or {}).get("volume_vs_adv")
+    volume_confidence = float(min(1.0, volume_vs_adv)) if volume_vs_adv else 1.0
+    volume_adjusted_score = round(effective_score * volume_confidence, 1)
+
+    is_ram       = (context or {}).get("is_ramadan", False)
+    context_mode = "ramadan" if is_ram else "normal"
 
     # Label
     if pattern_score >= 70:
@@ -415,15 +484,22 @@ def analyze_entry_patterns(df, symbol=None):
 
     if low_reliability:
         label += f" | ⚠️ Low reliability ({win_rate*100:.0f}% win rate)"
+    if volume_confidence < 0.6:
+        label += f" | ⚠️ Low volume day ({volume_confidence*100:.0f}% of ADV)"
+    if is_ram:
+        label += " | 🌙 Ramadan weights applied"
 
     return {
-        "ok":              True,
-        "pattern_score":   pattern_score,
-        "effective_score": effective_score,
-        "win_rate":        round(win_rate, 3),
-        "avg_gain":        round(avg_gain * 100, 2),
-        "similar_count":   len(wins),
-        "low_reliability": low_reliability,
-        "detail":          detail,
-        "label":           label,
+        "ok":                    True,
+        "pattern_score":         pattern_score,
+        "effective_score":       effective_score,
+        "volume_adjusted_score": volume_adjusted_score,
+        "volume_confidence":     round(volume_confidence, 3),
+        "win_rate":              round(win_rate, 3),
+        "avg_gain":              round(avg_gain * 100, 2),
+        "similar_count":         len(wins),
+        "low_reliability":       low_reliability,
+        "context_mode":          context_mode,
+        "detail":                detail,
+        "label":                 label,
     }

@@ -31,6 +31,7 @@ from pattern_engine import (
     _extract, _stoch_rsi, _atr, _rsi_series,
     FORWARD_DAYS
 )
+from egx_context import get_signal_context
 
 MIN_GAIN  = 0.07   # target gain for signal outcome evaluation
 STOP_LOSS = 0.06   # stop loss for signal outcome evaluation
@@ -148,6 +149,10 @@ def _scan_stock_history(symbol, df):
         outcome_date = str(df.index[min(i + FORWARD_DAYS, n-1)].date())
         sig_id       = f"{symbol}_{sig_date}_hist"
 
+        today_vol = float(volume[i])
+        avg_vol20 = float(np.mean(volume[max(0, i-20):i])) if i >= 20 else None
+        ctx       = get_signal_context(sig_date, today_volume=today_vol, avg_volume=avg_vol20)
+
         signals.append({
             "id":            sig_id,
             "symbol":        symbol,
@@ -158,6 +163,7 @@ def _scan_stock_history(symbol, df):
             "price":         round(float(close[i]), 2),
             "target":        round(float(close[i]) * (1 + MIN_GAIN), 2),
             "indicators":    {k: round(float(v), 4) for k, v in cond.items()},
+            "context":       ctx,
             "outcome":       outcome,
             "outcome_date":  outcome_date,
             "outcome_price": round(float(close[i + FORWARD_DAYS]), 2),

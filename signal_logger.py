@@ -37,6 +37,7 @@ Signal Logger & Outcome Tracker
 import json
 import os
 from datetime import date, timedelta
+from egx_context import trading_days_between as _egx_days
 
 LOG_FILE     = "signal_log.json"
 FORWARD_DAYS = 15    # عدد أيام التداول للحكم على النتيجة
@@ -63,19 +64,8 @@ def _save(data):
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _trading_days_since(signal_date_str):
-    """عدد أيام التداول (الأحد-الخميس) من تاريخ الإشارة حتى اليوم."""
-    try:
-        start = date.fromisoformat(signal_date_str)
-        end   = date.today()
-        count = 0
-        d = start + timedelta(days=1)
-        while d <= end:
-            if d.weekday() < 5:   # 0=Mon..4=Fri — نستخدم Mon-Fri كتقريب
-                count += 1
-            d += timedelta(days=1)
-        return count
-    except Exception:
-        return 0
+    """عدد أيام التداول الفعلية في EGX (الأحد-الخميس + إجازات) من تاريخ الإشارة."""
+    return _egx_days(signal_date_str)
 
 
 # ── Log a new signal ──────────────────────────────────────────────────────────
@@ -114,6 +104,7 @@ def log_signal(symbol, result):
         "price":         result.get("price", 0),
         "target":        result.get("target", 0),
         "indicators":    indicators,
+        "context":       result.get("signal_context", {}),
         "outcome":       "pending",
         "outcome_date":  None,
         "outcome_price": None,

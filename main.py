@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pattern_engine import analyze_entry_patterns
 from signal_logger import log_signal, check_outcomes
 from backfill_signal_log import run_backfill
+from egx_context import get_signal_context
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from email.mime.multipart import MIMEMultipart
@@ -1291,6 +1292,17 @@ def analyze(symbol):
             entry_zones = calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo,
                                            _sv=sv_result, _hvn=hvn_result)
 
+        # ── Volume context ────────────────────────────────────────────────────
+        today_volume  = float(df["Volume"].iloc[-1]) if "Volume" in df.columns and len(df) >= 1 else None
+        avg_volume_20 = (float(df["Volume"].tail(21).iloc[:-1].mean())
+                         if "Volume" in df.columns and len(df) >= 21 else None)
+
+        signal_context = get_signal_context(
+            date.today().isoformat(),
+            today_volume=today_volume,
+            avg_volume=avg_volume_20,
+        )
+
         # ── Pattern Recognition + Historical Backtesting ──────────────────────
         # يشتغل فقط لو السعر في Discount Zone (أقل من EQ)
         if cur >= eq:
@@ -1301,8 +1313,9 @@ def analyze(symbol):
             # fallback للـ df الأصلي (110 يوم) لو 500 رجع فاضي أو قليل
             df_long = download_data(symbol, 500)
             if df_long.empty or len(df_long) < 30:
-                df_long = df   # df الأصلي مضمون شغال لكل الأسهم بما فيهم ORAS
-            pattern_data = analyze_entry_patterns(df_long, symbol=symbol)
+                df_long = df
+            pattern_data = analyze_entry_patterns(df_long, symbol=symbol,
+                                                  context=signal_context)
 
         return {
             "ok":True,"price":round(cur,2),"last_dt":last_dt,
@@ -1311,8 +1324,11 @@ def analyze(symbol):
             "eq":round(eq,2),"buy_hi":round(buy_hi,2),"sell_lo":round(sell_lo,2),
             "avwap":round(av,2),"avwap_l":round(alo,2),
             "score":total,"signal":sig,"tc":tc,"tbg":tbg,"tbr":tbr,"r1":r1,
-            "entry_zones": entry_zones,
-            "pattern": pattern_data,
+            "entry_zones":    entry_zones,
+            "pattern":        pattern_data,
+            "signal_context": signal_context,
+            "volume_today":   round(today_volume, 0) if today_volume else None,
+            "volume_avg_20d": round(avg_volume_20, 0) if avg_volume_20 else None,
             "rows":[
                 ("Price Position",      r1,W_PRICE,l1),
                 ("Liquidity Context",   r3,W_LIQ,  l3),

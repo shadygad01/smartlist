@@ -2533,6 +2533,7 @@ def detect_signal_changes(current_results, previous_results):
                 "price": current_price,
                 "target": current_target,
                 "entry_zones": current.get("entry_zones", None),
+                "pattern": current.get("pattern", {}),
             })
     
     return changed_stocks
@@ -2586,6 +2587,44 @@ def send_change_email(changed_stocks):
 
         hdr_bg    = "#b45309" if is_whitelist else "#1d4ed8"
         hdr_label = f"⭐ {stock} — WHITELIST" if is_whitelist else f"📈 {stock}"
+
+        pat = item.get("pattern", {})
+        if pat and pat.get("ok"):
+            pat_row = (
+                f'<tr><td style="padding:12px 16px 0;">'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+                f' style="background:#0d1117;border-radius:10px;border-left:4px solid #7ee787;">'
+                f'<tr><td style="padding:12px 15px;">'
+                f'<p style="color:#94a3b8;font-size:10px;text-transform:uppercase;'
+                f'letter-spacing:1px;margin:0 0 10px 0;">🧠 Pattern Intelligence</p>'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+                f'<tr>'
+                f'<td style="vertical-align:top;">'
+                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Pattern Score</p>'
+                f'<p style="color:#7ee787;font-size:22px;font-weight:bold;margin:0;">'
+                f'{pat["pattern_score"]:.0f}%</p>'
+                f'</td>'
+                f'<td style="text-align:right;vertical-align:top;">'
+                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Win Rate</p>'
+                f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0;">'
+                f'{pat["win_rate"]*100:.0f}%</p>'
+                f'</td>'
+                f'<td style="text-align:right;vertical-align:top;">'
+                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Avg Gain</p>'
+                f'<p style="color:#22c55e;font-size:14px;font-weight:bold;margin:0;">'
+                f'+{pat["avg_gain"]:.1f}%</p>'
+                f'</td>'
+                f'<td style="text-align:right;vertical-align:top;">'
+                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Cases</p>'
+                f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0;">'
+                f'{pat["similar_count"]}</p>'
+                f'</td>'
+                f'</tr></table>'
+                f'</td></tr></table>'
+                f'</td></tr>'
+            )
+        else:
+            pat_row = ""
 
         if z3_lo is not None:
             dv_row = (
@@ -2666,6 +2705,9 @@ def send_change_email(changed_stocks):
             f'</tr></table>'
             f'</td></tr></table>'
             f'</td></tr>'
+
+            # ── pattern intelligence ──
+            + pat_row +
 
             # ── entry price (Zone 1) ──
             f'<tr><td style="padding:12px 16px 0;">'

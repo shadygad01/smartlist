@@ -24,10 +24,11 @@ import os
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-MIN_GAIN      = 0.07
-STOP_LOSS     = 0.06
-FORWARD_DAYS  = 15
-MIN_HISTORY   = 30
+FORWARD_DAYS  = 30   # days to confirm a local low is unbroken
+BOUNCE_MIN    = 0.05  # minimum bounce from the low to count as real demand (5%)
+VOL_THRESHOLD = 0.80  # volume on low day must be > 80% of 20-day average
+BREAK_BUFFER  = 0.02  # low must be broken by > 2% to count as a real loss
+MIN_HISTORY   = 80    # 50 for indicators + 30 for confirmation window
 MIN_REVERSALS = 3
 MIN_DECIDED   = 100   # أقل عدد إشارات محسومة لتحديث الأوزان
 
@@ -268,23 +269,44 @@ def _extract(df, idx):
 # ── Find historical reversals ─────────────────────────────────────────────────
 
 def _find_reversals(df):
+    """
+    Returns (wins, losses) at historical local lows.
+    win  = low held (no close below within FORWARD_DAYS)
+           + bounced >= BOUNCE_MIN from the low
+           + volume on low day > 20-day average volume
+    loss = at least one close below the low within FORWARD_DAYS
+    neutral (held but weak bounce or low volume) = ignored
+    """
     close  = df["Close"].values
+    volume = df["Volume"].values
     n      = len(close)
-    result = []
+    wins   = []
+    losses = []
 
     for i in range(50, n - FORWARD_DAYS):
         if close[i] > min(close[max(0, i-5):i+1]) * 1.002:
             continue
+
         future = close[i+1: i+FORWARD_DAYS+1]
-        gain   = (float(np.max(future)) - close[i]) / close[i]
-        loss   = (close[i] - float(np.min(future))) / close[i]
+        cond   = _extract(df, i)
+        if cond is None:
+            continue
 
-        if gain >= MIN_GAIN and loss < STOP_LOSS:
-            cond = _extract(df, i)
-            if cond is not None:
-                result.append({"conditions": cond, "gain": round(gain, 4)})
+        low_broken = any(c < close[i] * (1 - BREAK_BUFFER) for c in future)
 
-    return result
+        if low_broken:
+            losses.append({"conditions": cond})
+        else:
+            max_gain = (float(np.max(future)) - close[i]) / close[i]
+            avg_vol  = float(np.mean(volume[i-20:i])) if i >= 20 else float(np.mean(volume[:i]))
+            vol_ok   = volume[i] > avg_vol * VOL_THRESHOLD
+            bounce_ok = max_gain >= BOUNCE_MIN
+
+            if bounce_ok and vol_ok:
+                wins.append({"conditions": cond, "gain": round(max_gain, 4)})
+            # else: neutral — held but no real demand confirmation
+
+    return wins, losses
 
 
 # ── Threshold Scoring ─────────────────────────────────────────────────────────
@@ -364,7 +386,7 @@ def analyze_entry_patterns(df, symbol=None):
     if current_cond is None:
         return {**empty, "label": "Could not extract current conditions"}
 
-    wins = _find_reversals(df.iloc[:-1])
+    wins, losses = _find_reversals(df.iloc[:-1])
 
     if len(wins) < MIN_REVERSALS:
         return {**empty, "label": f"Limited history — {len(wins)} reversals found (need {MIN_REVERSALS})"}
@@ -372,16 +394,15 @@ def analyze_entry_patterns(df, symbol=None):
     weights = _load_per_stock_weights(symbol) if symbol else WEIGHTS
     pattern_score, detail = _threshold_score(current_cond, wins, weights)
 
-    # Win rate = نسبة الارتدادات اللي وصلت +7% من كل القيعان المرصودة
-    # (المقام = wins + failures اللي مش عندنا — نستخدم wins فقط كمرجع)
-    win_rate  = 1.0   # كل الحالات اللي جمعناها هي wins بالتعريف
-    avg_gain  = float(np.mean([w["gain"] for w in wins]))
+    total_decided = len(wins) + len(losses)
+    win_rate = len(wins) / total_decided if total_decided > 0 else 0.0
+    avg_gain = float(np.mean([w["gain"] for w in wins]))
 
     # Label
     if pattern_score >= 70:
-        label = f"Strong setup — {len(wins)} historical reversals, avg +{avg_gain*100:.1f}%"
+        label = f"Strong setup — {len(wins)}/{total_decided} reversals won, avg +{avg_gain*100:.1f}%"
     elif pattern_score >= 50:
-        label = f"Moderate setup — {len(wins)} historical reversals, avg +{avg_gain*100:.1f}%"
+        label = f"Moderate setup — {len(wins)}/{total_decided} reversals won, avg +{avg_gain*100:.1f}%"
     elif pattern_score >= 35:
         label = f"Weak setup — conditions partially match historical reversals"
     else:

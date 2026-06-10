@@ -1457,23 +1457,48 @@ def build_pattern_html(r):
         )
 
     ps   = p["pattern_score"]
-    wr   = p["win_rate"] * 100
     gain = p["avg_gain"]
     cnt  = p["similar_count"]
     lbl  = p["label"]
+    detail = p.get("detail", {})
 
-    # Color based on pattern score
     if ps >= 70:
         bar_color = "#155724"; bg = "#d4edda"; border = "#c3e6cb"
-        badge_txt = "Strong Historical Match"
-    elif ps >= 45:
+        badge_txt = "Strong Setup"
+    elif ps >= 50:
         bar_color = "#856404"; bg = "#fff3cd"; border = "#ffeeba"
-        badge_txt = "Moderate Historical Match"
+        badge_txt = "Moderate Setup"
+    elif ps >= 35:
+        bar_color = "#5a6268"; bg = "#f8f9fa"; border = "#dee2e6"
+        badge_txt = "Weak Setup"
     else:
-        bar_color = "#6c757d"; bg = "#f8f9fa"; border = "#dee2e6"
-        badge_txt = "Weak Historical Match"
+        bar_color = "#721c24"; bg = "#fff5f5"; border = "#f5c6cb"
+        badge_txt = "Poor Setup"
 
     bar_w = max(4, min(100, int(ps)))
+
+    # مؤشرات mini bars
+    FEAT_LABELS = {
+        "stoch_rsi": "Stoch RSI",
+        "p_vs_ma20": "vs MA20",
+        "mom_10d":   "Mom 10d",
+        "mom_5d":    "Mom 5d",
+        "atr_ratio": "ATR",
+        "vol_trend": "Vol Trend",
+    }
+    mini_bars = ""
+    for feat, label in FEAT_LABELS.items():
+        sc = detail.get(feat, 0.5)
+        sc_pct = int(sc * 100)
+        fc = "#155724" if sc >= 0.65 else ("#856404" if sc >= 0.45 else "#721c24")
+        mini_bars += (
+            f'<td style="padding:2px 6px;font-family:Arial,sans-serif;font-size:10px;">'
+            f'<div style="color:#666;margin-bottom:2px;">{label}</div>'
+            f'<div style="background:#e0e0e0;border-radius:3px;height:5px;width:60px;">'
+            f'<div style="width:{sc_pct}%;background:{fc};height:5px;border-radius:3px;"></div></div>'
+            f'<div style="color:{fc};font-size:9px;margin-top:1px;">{sc_pct}%</div>'
+            f'</td>'
+        )
 
     return (
         header +
@@ -1482,28 +1507,26 @@ def build_pattern_html(r):
         f'<tr><td style="padding:10px 14px;">'
         f'<table width="100%" cellpadding="0" cellspacing="0"><tr>'
         # Pattern Score
-        f'<td width="28%" style="font-family:Arial,sans-serif;">'
+        f'<td width="22%" style="font-family:Arial,sans-serif;vertical-align:top;">'
         f'<div style="font-size:10px;color:#555;font-weight:bold;margin-bottom:4px;">PATTERN SCORE</div>'
-        f'<div style="font-size:22px;font-weight:bold;color:{bar_color};">{ps:.0f}<span style="font-size:13px;">/100</span></div>'
+        f'<div style="font-size:26px;font-weight:bold;color:{bar_color};">{ps:.0f}<span style="font-size:13px;">/100</span></div>'
         f'<div style="background:#e0e0e0;border-radius:4px;height:6px;margin-top:4px;">'
         f'<div style="width:{bar_w}%;background:{bar_color};height:6px;border-radius:4px;"></div></div>'
+        f'<div style="margin-top:6px;">'
+        f'<span style="display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;'
+        f'font-weight:bold;background:{bar_color};color:#fff;">{badge_txt}</span></div>'
         f'</td>'
-        # Win Rate
-        f'<td width="18%" style="font-family:Arial,sans-serif;padding-left:12px;">'
-        f'<div style="font-size:10px;color:#555;font-weight:bold;margin-bottom:4px;">WIN RATE</div>'
-        f'<div style="font-size:22px;font-weight:bold;color:{bar_color};">{wr:.0f}<span style="font-size:13px;">%</span></div>'
-        f'<div style="font-size:10px;color:#777;">{cnt} similar cases</div>'
+        # Avg Gain + count
+        f'<td width="18%" style="font-family:Arial,sans-serif;padding-left:12px;vertical-align:top;">'
+        f'<div style="font-size:10px;color:#555;font-weight:bold;margin-bottom:4px;">AVG HIST GAIN</div>'
+        f'<div style="font-size:22px;font-weight:bold;color:#155724;">+{gain:.1f}<span style="font-size:12px;">%</span></div>'
+        f'<div style="font-size:10px;color:#777;margin-top:4px;">{cnt} reversals in history</div>'
+        f'<div style="font-size:10px;color:#555;margin-top:6px;">{lbl}</div>'
         f'</td>'
-        # Avg Gain
-        f'<td width="18%" style="font-family:Arial,sans-serif;padding-left:12px;">'
-        f'<div style="font-size:10px;color:#555;font-weight:bold;margin-bottom:4px;">AVG GAIN</div>'
-        f'<div style="font-size:22px;font-weight:bold;color:#155724;">+{gain:.1f}<span style="font-size:13px;">%</span></div>'
-        f'</td>'
-        # Badge + label
-        f'<td style="font-family:Arial,sans-serif;padding-left:12px;vertical-align:middle;">'
-        f'<span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;'
-        f'font-weight:bold;background:{bar_color};color:#fff;">{badge_txt}</span>'
-        f'<div style="font-size:11px;color:#555;margin-top:6px;">{lbl}</div>'
+        # Mini indicator bars
+        f'<td style="padding-left:12px;vertical-align:top;">'
+        f'<div style="font-size:10px;color:#555;font-weight:bold;margin-bottom:6px;">INDICATOR BREAKDOWN</div>'
+        f'<table cellpadding="0" cellspacing="0"><tr>{mini_bars}</tr></table>'
         f'</td>'
         f'</tr></table>'
         f'</td></tr></table>'

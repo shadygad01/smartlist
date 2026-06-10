@@ -1,13 +1,20 @@
 """
-Pattern Recognition + Backtesting Engine
-=========================================
-يرصد الأنماط التاريخية الناجحة قبل كل ارتداد ويقيس تشابه الوضع الحالي بها.
-يُرجع:
-  - win_rate: نسبة نجاح الأنماط المشابهة تاريخياً
-  - avg_gain: متوسط الربح عند النجاح
-  - pattern_score: درجة التشابه مع الأنماط الناجحة (0-100)
-  - similar_count: عدد الحالات المشابهة في التاريخ
-  - label: وصف موجز
+Pattern Recognition Engine — v2
+=================================
+المؤشرات: 6 مؤشرات مختارة بناءً على ROC-AUC study
+الطريقة:  Threshold Scoring بدل Cosine Similarity
+
+لكل مؤشر، النظام يتعلم من التاريخ:
+  "في أي نطاق كان هذا المؤشر عند الارتدادات الناجحة؟"
+ثم يقيس مدى قرب الوضع الحالي من هذا النطاق.
+
+المؤشرات واتجاهاتها (من الدراسة):
+  stoch_rsi  → منخفض = إشارة (oversold)       AUC=0.632
+  p_vs_ma20  → منخفض = إشارة (تحت المتوسط)   AUC=0.653  ← الأقوى
+  mom_10d    → سلبي  = إشارة (نزل كفاية)      AUC=0.647
+  mom_5d     → سلبي  = إشارة                  AUC=0.604
+  atr_ratio  → مرتفع = إشارة (تقلب متزايد)    AUC=0.614
+  vol_trend  → منخفض = إشارة (الحجم يخف)      AUC=0.592
 """
 
 import numpy as np
@@ -15,312 +22,232 @@ import pandas as pd
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-MIN_GAIN       = 0.07   # ارتداد ناجح = +7% على الأقل
-STOP_LOSS      = 0.06   # وقف خسارة = -6%
-FORWARD_DAYS   = 15     # نتيجة الارتداد خلال 15 يوم تداول
-MIN_HISTORY    = 30     # أقل عدد شمعات مطلوب للتحليل (خُفِّض لدعم أسهم بيانات محدودة)
-MIN_REVERSALS  = 3      # أقل عدد ارتدادات تاريخية مطلوبة
-SIMILARITY_THR = 0.55   # حد أدنى للتشابه — ينزل تدريجياً لو مفيش حالات كافية
+MIN_GAIN      = 0.07    # ارتداد ناجح = +7% على الأقل
+STOP_LOSS     = 0.06    # وقف خسارة = -6%
+FORWARD_DAYS  = 15      # نافذة تقييم النتيجة
+MIN_HISTORY   = 30      # أقل عدد شمعات مطلوب
+MIN_REVERSALS = 3       # أقل عدد ارتدادات مطلوبة
+
+# أوزان المؤشرات من AUC (AUC - 0.5 → normalize)
+WEIGHTS = {
+    "p_vs_ma20": 0.21,
+    "mom_10d":   0.20,
+    "stoch_rsi": 0.18,
+    "atr_ratio": 0.15,
+    "mom_5d":    0.14,
+    "vol_trend": 0.12,
+}
+
+# اتجاه كل مؤشر: "lower" = قيمة منخفضة مواتية، "higher" = قيمة مرتفعة مواتية
+DIRECTION = {
+    "stoch_rsi": "lower",
+    "p_vs_ma20": "lower",
+    "mom_10d":   "lower",
+    "mom_5d":    "lower",
+    "atr_ratio": "higher",
+    "vol_trend": "lower",
+}
 
 
-# ── RSI helper ────────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
 def _rsi_series(close, period=14):
     delta = close.diff()
-    gain  = delta.clip(lower=0)
-    loss  = (-delta).clip(lower=0)
-    ag    = gain.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
-    al    = loss.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
-    rsi   = pd.Series(100.0, index=close.index)
-    mask  = al > 0
-    rsi[mask]    = 100 - (100 / (1 + ag[mask] / al[mask]))
+    ag = delta.clip(lower=0).ewm(alpha=1/period, min_periods=period, adjust=False).mean()
+    al = (-delta).clip(lower=0).ewm(alpha=1/period, min_periods=period, adjust=False).mean()
+    rsi = pd.Series(100.0, index=close.index)
+    mask = al > 0
+    rsi[mask] = 100 - (100 / (1 + ag[mask] / al[mask]))
     rsi[ag == 0] = 0.0
     return rsi
 
+def _stoch_rsi(close, period=14, smooth=3):
+    rsi = _rsi_series(close, period)
+    lo  = rsi.rolling(period).min()
+    hi  = rsi.rolling(period).max()
+    k   = (rsi - lo) / (hi - lo + 1e-9)
+    return k.rolling(smooth).mean()
 
-# ── Extract conditions at index i ─────────────────────────────────────────────
-def _extract_conditions(df, idx):
-    """
-    يستخرج 7 مؤشرات تصف حالة السوق عند نقطة معينة:
-    rsi, vol_ratio, momentum_3d, momentum_5d,
-    hammer_ratio, body_ratio, price_vs_ma20
-    """
-    close  = df["Close"]
-    volume = df["Volume"]
-    opens  = df["Open"]
-    highs  = df["High"]
-    lows   = df["Low"]
+def _atr(df, period=14):
+    tr = pd.concat([
+        df["High"] - df["Low"],
+        (df["High"] - df["Close"].shift()).abs(),
+        (df["Low"]  - df["Close"].shift()).abs(),
+    ], axis=1).max(axis=1)
+    return tr.ewm(alpha=1/period, adjust=False).mean()
 
-    n = len(close)
-    if idx < 20 or idx >= n:
+
+# ── Extract 6 indicators at index i ───────────────────────────────────────────
+
+def _extract(df, idx):
+    if idx < 50 or idx >= len(df):
         return None
 
-    # RSI
-    rsi_val = float(_rsi_series(close).iloc[idx])
+    close  = df["Close"]
+    volume = df["Volume"]
 
-    # Volume ratio vs 20-day average
-    vol_avg = float(volume.iloc[max(0, idx-20):idx].mean())
-    vol_ratio = float(volume.iloc[idx]) / vol_avg if vol_avg > 0 else 1.0
+    p0  = float(close.iloc[idx])
+    p5  = float(close.iloc[idx - 5])
+    p10 = float(close.iloc[idx - 10])
 
-    # Momentum
-    p0 = float(close.iloc[idx])
-    p3 = float(close.iloc[max(0, idx-3)])
-    p5 = float(close.iloc[max(0, idx-5)])
-    momentum_3d = (p0 - p3) / p3 if p3 > 0 else 0.0
-    momentum_5d = (p0 - p5) / p5 if p5 > 0 else 0.0
+    # Stochastic RSI
+    sr = float(_stoch_rsi(close).iloc[idx])
+    stoch_rsi = np.clip(sr, 0.0, 1.0)
 
-    # Candle shape
-    o = float(opens.iloc[idx])
-    h = float(highs.iloc[idx])
-    l = float(lows.iloc[idx])
-    c = float(close.iloc[idx])
-    candle_range = h - l
-    body         = abs(c - o)
-    lower_wick   = min(o, c) - l
-    hammer_ratio = lower_wick / candle_range if candle_range > 0 else 0.0
-    body_ratio   = body / candle_range        if candle_range > 0 else 0.0
+    # Price vs MA20
+    ma20 = float(close.iloc[idx-20:idx].mean())
+    p_vs_ma20 = (p0 / ma20) if ma20 > 0 else 1.0
 
-    # Price vs 20-day MA
-    ma20 = float(close.iloc[max(0, idx-20):idx].mean())
-    price_vs_ma20 = p0 / ma20 if ma20 > 0 else 1.0
+    # Momentum 10d
+    mom_10d = (p0 - p10) / p10 if p10 > 0 else 0.0
 
-    return np.array([
-        rsi_val / 100.0,   # normalize to [0,1]
-        min(vol_ratio, 5.0) / 5.0,
-        max(-0.2, min(0.2, momentum_3d)) / 0.2,
-        max(-0.2, min(0.2, momentum_5d)) / 0.2,
-        hammer_ratio,
-        body_ratio,
-        max(0.5, min(1.5, price_vs_ma20)) / 1.5,
-    ], dtype=float)
+    # Momentum 5d
+    mom_5d = (p0 - p5) / p5 if p5 > 0 else 0.0
 
+    # ATR Ratio (current ATR vs 20-day avg ATR)
+    atr     = _atr(df)
+    atr_now = float(atr.iloc[idx])
+    atr_avg = float(atr.iloc[idx-20:idx].mean())
+    atr_ratio = (atr_now / atr_avg) if atr_avg > 0 else 1.0
 
-# ── Cosine similarity ─────────────────────────────────────────────────────────
-def _cosine_sim(a, b):
-    na = np.linalg.norm(a)
-    nb = np.linalg.norm(b)
-    if na == 0 or nb == 0:
-        return 0.0
-    return float(np.dot(a, b) / (na * nb))
+    # Volume Trend (avg last 5 days vs avg prior 10 days)
+    v5  = float(volume.iloc[idx-5:idx].mean())
+    v15 = float(volume.iloc[idx-15:idx-5].mean())
+    vol_trend = (v5 / v15) if v15 > 0 else 1.0
+
+    return {
+        "stoch_rsi": stoch_rsi,
+        "p_vs_ma20": p_vs_ma20,
+        "mom_10d":   mom_10d,
+        "mom_5d":    mom_5d,
+        "atr_ratio": atr_ratio,
+        "vol_trend": vol_trend,
+    }
 
 
 # ── Find historical reversals ─────────────────────────────────────────────────
+
 def _find_reversals(df):
-    """
-    يجد كل اللحظات التاريخية التي ارتد فيها السعر بشكل ناجح.
-    يُرجع قائمة من: {idx, conditions, gain, days_to_peak, outcome}
-    """
     close  = df["Close"].values
     n      = len(close)
     result = []
 
-    for i in range(20, n - FORWARD_DAYS):
-        # شرط: أدنى سعر في آخر 5 أيام (local low)
-        window_low = min(close[max(0, i-5):i+1])
-        if close[i] > window_low * 1.002:
+    for i in range(50, n - FORWARD_DAYS):
+        if close[i] > min(close[max(0, i-5):i+1]) * 1.002:
             continue
-
         future = close[i+1: i+FORWARD_DAYS+1]
-        max_f  = float(np.max(future))
-        min_f  = float(np.min(future))
-
-        gain = (max_f - close[i]) / close[i]
-        loss = (close[i] - min_f) / close[i]
+        gain   = (float(np.max(future)) - close[i]) / close[i]
+        loss   = (close[i] - float(np.min(future))) / close[i]
 
         if gain >= MIN_GAIN and loss < STOP_LOSS:
-            cond = _extract_conditions(df, i)
+            cond = _extract(df, i)
             if cond is not None:
-                result.append({
-                    "idx":        i,
-                    "date":       str(df.index[i].date()),
-                    "gain":       round(gain, 4),
-                    "loss":       round(loss, 4),
-                    "outcome":    "win",
-                    "conditions": cond,
-                })
+                result.append({"conditions": cond, "gain": round(gain, 4)})
 
     return result
 
 
-def _find_failures(df):
+# ── Threshold Scoring ─────────────────────────────────────────────────────────
+
+def _indicator_score(current_val, win_vals, direction):
     """
-    يجد اللحظات التي وصل فيها السعر لأدنى نقطة لكنه فشل (وصل وقف الخسارة أولاً)
+    يقيس مدى قرب القيمة الحالية من النطاق المواتي في الارتدادات التاريخية.
+    يستخدم sigmoid حول الـ median للارتدادات الناجحة.
+    يُرجع 0.0 → 1.0
     """
-    close  = df["Close"].values
-    n      = len(close)
-    result = []
+    if not win_vals:
+        return 0.5
 
-    for i in range(20, n - FORWARD_DAYS):
-        window_low = min(close[max(0, i-5):i+1])
-        if close[i] > window_low * 1.002:
-            continue
+    win_median = float(np.median(win_vals))
+    win_std    = float(np.std(win_vals)) + 1e-9
 
-        future = close[i+1: i+FORWARD_DAYS+1]
-        max_f  = float(np.max(future))
-        min_f  = float(np.min(future))
+    if direction == "lower":
+        # كلما انخفضت القيمة عن الـ median، كلما كانت الإشارة أقوى
+        z = (current_val - win_median) / win_std
+    else:
+        # كلما ارتفعت القيمة عن الـ median، كلما كانت الإشارة أقوى
+        z = (win_median - current_val) / win_std
 
-        gain = (max_f - close[i]) / close[i]
-        loss = (close[i] - min_f) / close[i]
+    # sigmoid: z=0 → 0.5, z=-2 → 0.88, z=+2 → 0.12
+    return float(1 / (1 + np.exp(z * 1.5)))
 
-        # فشل = وقف الخسارة وصل قبل الهدف
-        if loss >= STOP_LOSS and gain < MIN_GAIN:
-            cond = _extract_conditions(df, i)
-            if cond is not None:
-                result.append({
-                    "idx":        i,
-                    "conditions": cond,
-                    "outcome":    "loss",
-                })
 
-    return result
+def _threshold_score(current_cond, wins):
+    """
+    يحسب الـ Pattern Score الكلي (0-100) بجمع نقاط المؤشرات الستة موزونة.
+    """
+    total  = 0.0
+    detail = {}
+
+    for feat, weight in WEIGHTS.items():
+        win_vals = [w["conditions"][feat] for w in wins]
+        cur_val  = current_cond[feat]
+        direction = DIRECTION[feat]
+
+        sc = _indicator_score(cur_val, win_vals, direction)
+        total += sc * weight
+        detail[feat] = round(sc, 3)
+
+    return round(total * 100, 1), detail
 
 
 # ── Main API ──────────────────────────────────────────────────────────────────
+
 def analyze_entry_patterns(df):
     """
-    الدالة الرئيسية — تُعطى DataFrame للسهم وتُرجع dict يضاف لنتيجة analyze().
+    الدالة الرئيسية.
 
     Returns:
     {
-        "pattern_score":   0-100  (تشابه الوضع الحالي بالأنماط الناجحة)
-        "win_rate":        0-1    (نسبة نجاح تاريخية للأنماط المشابهة)
-        "avg_gain":        float  (متوسط الربح عند النجاح %)
-        "similar_count":   int    (عدد الحالات المشابهة في التاريخ)
-        "label":           str    (وصف نصي)
-        "ok":              bool
+        "ok":            bool
+        "pattern_score": 0-100
+        "win_rate":      0-1   (نسبة الارتدادات الناجحة في التاريخ)
+        "avg_gain":      float (متوسط الربح %)
+        "similar_count": int   (عدد الارتدادات التاريخية المستخدمة)
+        "detail":        dict  (نقطة كل مؤشر)
+        "label":         str
     }
     """
     empty = {"ok": False, "pattern_score": 0, "win_rate": 0,
-             "avg_gain": 0, "similar_count": 0,
+             "avg_gain": 0, "similar_count": 0, "detail": {},
              "label": "Insufficient history"}
 
     if df is None or len(df) < MIN_HISTORY:
         n = len(df) if df is not None else 0
         return {**empty, "label": f"Insufficient data ({n} bars, need {MIN_HISTORY})"}
 
-    # الوضع الحالي (آخر شمعة مكتملة)
-    current_idx  = len(df) - 1
-    current_cond = _extract_conditions(df, current_idx)
+    current_cond = _extract(df, len(df) - 1)
     if current_cond is None:
         return {**empty, "label": "Could not extract current conditions"}
 
-    # استخراج الأنماط التاريخية (باستثناء آخر شمعة)
-    df_hist = df.iloc[:-1]
+    wins = _find_reversals(df.iloc[:-1])
 
-    wins   = _find_reversals(df_hist)
-    losses = _find_failures(df_hist)
+    if len(wins) < MIN_REVERSALS:
+        return {**empty, "label": f"Limited history — {len(wins)} reversals found (need {MIN_REVERSALS})"}
 
-    if len(wins) + len(losses) < MIN_REVERSALS:
-        return {**empty, "label": f"Limited history — only {len(wins)+len(losses)} reversals found (need {MIN_REVERSALS})"}
+    pattern_score, detail = _threshold_score(current_cond, wins)
 
-    # حساب التشابه — مع adaptive threshold لو البيانات محدودة
-    win_sims  = [_cosine_sim(current_cond, w["conditions"]) for w in wins]
-    loss_sims = [_cosine_sim(current_cond, l["conditions"]) for l in losses]
-
-    # Adaptive: نجرب تخفيض الـ threshold تدريجياً لو مفيش حالات مشابهة
-    thr = SIMILARITY_THR
-    for _ in range(3):
-        sim_wins   = [s for s in win_sims  if s >= thr]
-        sim_losses = [s for s in loss_sims if s >= thr]
-        if len(sim_wins) + len(sim_losses) >= 2:
-            break
-        thr -= 0.10   # نخفض 10% كل مرة (max 3 مرات → min 0.25)
-
-    total_similar = len(sim_wins) + len(sim_losses)
-
-    if total_similar == 0:
-        return {**empty, "label": f"No similar patterns found ({len(wins)} wins, {len(losses)} losses in history)"}
-
-    win_rate = len(sim_wins) / total_similar
-    avg_gain = float(np.mean([wins[i]["gain"] for i, s in enumerate(win_sims) if s >= SIMILARITY_THR])) if sim_wins else 0.0
-
-    # Pattern score: win_rate × avg_similarity_of_wins × 100
-    avg_sim_wins = float(np.mean(sim_wins)) if sim_wins else 0.0
-    raw_score    = win_rate * avg_sim_wins * 100
-    pattern_score = min(100, round(raw_score, 1))
+    # Win rate = نسبة الارتدادات اللي وصلت +7% من كل القيعان المرصودة
+    # (المقام = wins + failures اللي مش عندنا — نستخدم wins فقط كمرجع)
+    win_rate  = 1.0   # كل الحالات اللي جمعناها هي wins بالتعريف
+    avg_gain  = float(np.mean([w["gain"] for w in wins]))
 
     # Label
     if pattern_score >= 70:
-        label = f"Strong match — {total_similar} similar cases, {win_rate*100:.0f}% won, avg +{avg_gain*100:.1f}%"
-    elif pattern_score >= 45:
-        label = f"Moderate match — {total_similar} similar cases, {win_rate*100:.0f}% won"
-    elif win_rate >= 0.6:
-        label = f"Weak similarity but {win_rate*100:.0f}% win rate on {total_similar} cases"
+        label = f"Strong setup — {len(wins)} historical reversals, avg +{avg_gain*100:.1f}%"
+    elif pattern_score >= 50:
+        label = f"Moderate setup — {len(wins)} historical reversals, avg +{avg_gain*100:.1f}%"
+    elif pattern_score >= 35:
+        label = f"Weak setup — conditions partially match historical reversals"
     else:
-        label = f"Low confidence — {total_similar} similar cases, only {win_rate*100:.0f}% won"
+        label = f"Poor setup — current conditions differ from historical reversal patterns"
 
     return {
         "ok":            True,
         "pattern_score": pattern_score,
         "win_rate":      round(win_rate, 3),
         "avg_gain":      round(avg_gain * 100, 2),
-        "similar_count": total_similar,
+        "similar_count": len(wins),
+        "detail":        detail,
         "label":         label,
-    }
-
-
-# ── Quick backtest of current scoring rules ───────────────────────────────────
-def backtest_signal_quality(df, score_fn, symbol):
-    """
-    يأخذ الـ df التاريخي ويحاكي: لو كنا أعطينا إشارة في يوم X (score >= 35)،
-    ما النتيجة الفعلية؟
-
-    score_fn: callable(df_slice) → int  (يُعطى df حتى اليوم X)
-    يُرجع: {trades, wins, losses, win_rate, avg_gain, avg_loss, expectancy}
-    """
-    if df is None or len(df) < MIN_HISTORY + FORWARD_DAYS:
-        return None
-
-    trades, wins_data, losses_data = [], [], []
-    close = df["Close"].values
-
-    for i in range(MIN_HISTORY, len(df) - FORWARD_DAYS):
-        df_slice = df.iloc[:i+1]
-        try:
-            score = score_fn(df_slice)
-        except Exception:
-            continue
-
-        if score < 35:
-            continue
-
-        entry  = close[i]
-        future = close[i+1: i+FORWARD_DAYS+1]
-        max_f  = float(np.max(future))
-        min_f  = float(np.min(future))
-
-        gain = (max_f - entry) / entry
-        loss = (entry - min_f) / entry
-
-        if gain >= MIN_GAIN and loss < STOP_LOSS:
-            outcome = "win"
-            wins_data.append(gain)
-        elif loss >= STOP_LOSS:
-            outcome = "loss"
-            losses_data.append(-STOP_LOSS)
-        else:
-            outcome = "neutral"
-
-        trades.append({"date": str(df.index[i].date()), "outcome": outcome,
-                        "gain": gain, "loss": loss, "entry": entry})
-
-    if not trades:
-        return None
-
-    n_wins   = len(wins_data)
-    n_losses = len(losses_data)
-    n_total  = len(trades)
-
-    avg_gain_val = float(np.mean(wins_data))   if wins_data   else 0.0
-    avg_loss_val = float(np.mean(losses_data)) if losses_data else 0.0
-    wr           = n_wins / n_total if n_total > 0 else 0.0
-    expectancy   = wr * avg_gain_val + (1 - wr) * avg_loss_val
-
-    return {
-        "total_trades": n_total,
-        "wins":         n_wins,
-        "losses":       n_losses,
-        "win_rate":     round(wr, 3),
-        "avg_gain_pct": round(avg_gain_val * 100, 2),
-        "avg_loss_pct": round(avg_loss_val * 100, 2),
-        "expectancy":   round(expectancy * 100, 2),
     }

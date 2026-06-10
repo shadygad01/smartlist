@@ -2151,9 +2151,11 @@ def send_telegram_alerts(results):
         # Pattern Intelligence line
         pat = r.get("pattern", {})
         if pat and pat.get("ok"):
-            pi_line = (f"   🧠 Intelligence: *{pat['pattern_score']:.0f}/100*"
-                       f"  |  Win Rate: *{pat['win_rate']*100:.0f}%*"
-                       f"  |  Avg Gain: *+{pat['avg_gain']:.1f}%*"
+            warn = "  ⚠️ _Low reliability_" if pat.get("low_reliability") else ""
+            pi_line = (f"   🧠 Pattern: *{pat['pattern_score']:.0f}/100*"
+                       f"  |  Effective: *{pat['effective_score']:.0f}*"
+                       f"  |  Win Rate: *{pat['win_rate']*100:.0f}%*{warn}\n"
+                       f"   Avg Gain: *+{pat['avg_gain']:.1f}%*"
                        f"  ({pat['similar_count']} cases)\n")
         else:
             pi_line = ""
@@ -2645,19 +2647,31 @@ def send_change_email(changed_stocks):
 
         pat = item.get("pattern", {})
         if pat and pat.get("ok"):
+            border_col = "#f59e0b" if pat.get("low_reliability") else "#7ee787"
+            warn_row   = (
+                f'<tr><td colspan="4" style="padding-top:8px;">'
+                f'<p style="color:#f59e0b;font-size:10px;margin:0;">⚠️ Low reliability — '
+                f'هذا السهم نادراً ما يشكّل قاعاً حقيقياً ({pat["win_rate"]*100:.0f}% win rate)</p>'
+                f'</td></tr>'
+            ) if pat.get("low_reliability") else ""
             pat_row = (
                 f'<tr><td style="padding:12px 16px 0;">'
                 f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-                f' style="background:#0d1117;border-radius:10px;border-left:4px solid #7ee787;">'
+                f' style="background:#0d1117;border-radius:10px;border-left:4px solid {border_col};">'
                 f'<tr><td style="padding:12px 15px;">'
                 f'<p style="color:#94a3b8;font-size:10px;text-transform:uppercase;'
                 f'letter-spacing:1px;margin:0 0 10px 0;">🧠 Pattern Intelligence</p>'
                 f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
                 f'<tr>'
                 f'<td style="vertical-align:top;">'
-                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Pattern Score</p>'
+                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Pattern</p>'
                 f'<p style="color:#7ee787;font-size:22px;font-weight:bold;margin:0;">'
-                f'{pat["pattern_score"]:.0f}%</p>'
+                f'{pat["pattern_score"]:.0f}</p>'
+                f'</td>'
+                f'<td style="text-align:right;vertical-align:top;">'
+                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Effective</p>'
+                f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0;">'
+                f'{pat.get("effective_score", 0):.0f}</p>'
                 f'</td>'
                 f'<td style="text-align:right;vertical-align:top;">'
                 f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Win Rate</p>'
@@ -2669,12 +2683,9 @@ def send_change_email(changed_stocks):
                 f'<p style="color:#22c55e;font-size:14px;font-weight:bold;margin:0;">'
                 f'+{pat["avg_gain"]:.1f}%</p>'
                 f'</td>'
-                f'<td style="text-align:right;vertical-align:top;">'
-                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Cases</p>'
-                f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0;">'
-                f'{pat["similar_count"]}</p>'
-                f'</td>'
-                f'</tr></table>'
+                f'</tr>'
+                + warn_row +
+                f'</table>'
                 f'</td></tr></table>'
                 f'</td></tr>'
             )

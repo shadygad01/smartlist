@@ -374,8 +374,9 @@ def analyze_entry_patterns(df, symbol=None):
         "label":         str
     }
     """
-    empty = {"ok": False, "pattern_score": 0, "win_rate": 0,
-             "avg_gain": 0, "similar_count": 0, "detail": {},
+    empty = {"ok": False, "pattern_score": 0, "effective_score": 0,
+             "win_rate": 0, "avg_gain": 0, "similar_count": 0,
+             "low_reliability": False, "detail": {},
              "label": "Insufficient history"}
 
     if df is None or len(df) < MIN_HISTORY:
@@ -398,6 +399,10 @@ def analyze_entry_patterns(df, symbol=None):
     win_rate = len(wins) / total_decided if total_decided > 0 else 0.0
     avg_gain = float(np.mean([w["gain"] for w in wins]))
 
+    # Effective score = pattern quality × historical reliability
+    effective_score = round(pattern_score * win_rate, 1)
+    low_reliability = win_rate < 0.25
+
     # Label
     if pattern_score >= 70:
         label = f"Strong setup — {len(wins)}/{total_decided} reversals won, avg +{avg_gain*100:.1f}%"
@@ -408,12 +413,17 @@ def analyze_entry_patterns(df, symbol=None):
     else:
         label = f"Poor setup — current conditions differ from historical reversal patterns"
 
+    if low_reliability:
+        label += f" | ⚠️ Low reliability ({win_rate*100:.0f}% win rate)"
+
     return {
-        "ok":            True,
-        "pattern_score": pattern_score,
-        "win_rate":      round(win_rate, 3),
-        "avg_gain":      round(avg_gain * 100, 2),
-        "similar_count": len(wins),
-        "detail":        detail,
-        "label":         label,
+        "ok":              True,
+        "pattern_score":   pattern_score,
+        "effective_score": effective_score,
+        "win_rate":        round(win_rate, 3),
+        "avg_gain":        round(avg_gain * 100, 2),
+        "similar_count":   len(wins),
+        "low_reliability": low_reliability,
+        "detail":          detail,
+        "label":           label,
     }

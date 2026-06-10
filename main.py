@@ -2363,6 +2363,7 @@ def continuous_scan():
 
 def manual_scan():
     print(f"\n🔄 Manual scan at {fmt_cairo()}")
+    _ensure_backfill()
     holiday = not is_egx_trading_day(today_cairo())
     last_td = most_recent_trading_day(today_cairo()) if holiday else None
     suffix = f" — Manual Scan{' (Holiday)' if holiday else ''}"

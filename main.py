@@ -2323,6 +2323,55 @@ def _register_new_positions(results):
                              entry_pattern_score=round(pat.get("pattern_score", 0)))
                 print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {price}")
 
+def backfill_pattern_scores():
+    """
+    للمراكز المفتوحة التي لا تحتوي على entry_pattern_score،
+    يحسب الـ pattern_score على البيانات حتى تاريخ الدخول ويحدّثها.
+    """
+    positions = load_open_positions()
+    needs_backfill = [
+        (sym, p) for sym, p in positions.items()
+        if p.get("status") == "open" and not p.get("entry_pattern_score")
+    ]
+
+    if not needs_backfill:
+        return
+
+    print(f"\n🔄 Backfilling pattern scores for {len(needs_backfill)} positions...")
+    from pattern_engine import analyze_entry_patterns
+
+    updated = 0
+    for sym, p in needs_backfill:
+        try:
+            entry_date_str = str(p.get("entry_date", ""))[:10]
+            # نجلب 2 سنة من البيانات ثم نقطع عند تاريخ الدخول
+            df = download_data(sym, days=520)
+            if df is None or df.empty:
+                print(f"  ⚠️  {sym}: no data")
+                continue
+
+            entry_dt = pd.Timestamp(entry_date_str)
+            df_at_entry = df[df.index <= entry_dt]
+
+            if len(df_at_entry) < 80:
+                print(f"  ⚠️  {sym}: insufficient data at entry ({len(df_at_entry)} bars)")
+                continue
+
+            result = analyze_entry_patterns(df_at_entry, symbol=sym)
+            score = round(result.get("pattern_score", 0)) if result.get("ok") else 0
+            positions[sym]["entry_pattern_score"] = score
+            updated += 1
+            print(f"  ✅ {sym}: pattern_score at entry = {score}")
+
+        except Exception as e:
+            print(f"  ❌ {sym}: {e}")
+
+    if updated:
+        with open(POSITIONS_FILE, "w") as f:
+            json.dump(positions, f, indent=2)
+        print(f"✅ Backfilled {updated} positions\n")
+
+
 def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
     """
     Shared workflow for daily and manual scans:
@@ -2333,6 +2382,9 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
     5. Save results + detect changes
     """
     previous_results = load_previous_results()
+
+    # Step 0: backfill missing pattern scores for existing positions
+    backfill_pattern_scores()
 
     # Step 1: fetch data
     html, results = build_report(holiday_mode=holiday_mode, last_trading=last_trading)

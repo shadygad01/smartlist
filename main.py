@@ -13,6 +13,7 @@ import traceback
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pattern_engine import analyze_entry_patterns
+from signal_logger import log_signal, check_outcomes
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from email.mime.multipart import MIMEMultipart
@@ -2337,6 +2338,7 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
     cur_prices = _collect_current_prices(results)
     monitor_positions(cur_prices)
     monitor_reinforcement(cur_prices, results)
+    check_outcomes(cur_prices)
 
     # Step 3: rebuild HTML using cached prices (no extra HTTP calls)
     html, _ = build_report(holiday_mode=holiday_mode, last_trading=last_trading,
@@ -2349,6 +2351,11 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
     # Step 5: persist + change alerts
     save_scan_results(results)
     save_signal_history(results)
+
+    # Step 6: log signals for outcome tracking
+    for s in STOCKS:
+        if results.get(s, {}).get("ok"):
+            log_signal(s, results[s])
     changes = detect_signal_changes(results, previous_results)
     if changes:
         send_change_alert(changes)

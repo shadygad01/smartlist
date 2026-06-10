@@ -18,8 +18,9 @@ import pandas as pd
 MIN_GAIN       = 0.07   # ارتداد ناجح = +7% على الأقل
 STOP_LOSS      = 0.06   # وقف خسارة = -6%
 FORWARD_DAYS   = 15     # نتيجة الارتداد خلال 15 يوم تداول
-MIN_HISTORY    = 60     # أقل عدد شمعات مطلوب للتحليل
-SIMILARITY_THR = 0.55   # حد أدنى للتشابه لاعتبار الحالة "مشابهة"
+MIN_HISTORY    = 30     # أقل عدد شمعات مطلوب للتحليل (خُفِّض لدعم أسهم بيانات محدودة)
+MIN_REVERSALS  = 3      # أقل عدد ارتدادات تاريخية مطلوبة
+SIMILARITY_THR = 0.55   # حد أدنى للتشابه — ينزل تدريجياً لو مفيش حالات كافية
 
 
 # ── RSI helper ────────────────────────────────────────────────────────────────
@@ -193,35 +194,41 @@ def analyze_entry_patterns(df):
              "label": "Insufficient history"}
 
     if df is None or len(df) < MIN_HISTORY:
-        return empty
+        n = len(df) if df is not None else 0
+        return {**empty, "label": f"Insufficient data ({n} bars, need {MIN_HISTORY})"}
 
-    # الوضع الحالي (آخر شمعة مكتملة = قبل الأخيرة إن وجد اليوم الحالي)
-    current_idx = len(df) - 1
+    # الوضع الحالي (آخر شمعة مكتملة)
+    current_idx  = len(df) - 1
     current_cond = _extract_conditions(df, current_idx)
     if current_cond is None:
-        return empty
+        return {**empty, "label": "Could not extract current conditions"}
 
-    # استخراج الأنماط التاريخية (باستثناء آخر FORWARD_DAYS شمعة)
-    df_hist = df.iloc[:-1]   # نستثني آخر شمعة من البحث التاريخي
+    # استخراج الأنماط التاريخية (باستثناء آخر شمعة)
+    df_hist = df.iloc[:-1]
 
     wins   = _find_reversals(df_hist)
     losses = _find_failures(df_hist)
 
-    if len(wins) + len(losses) < 5:
-        return {**empty, "label": "Not enough historical reversals to evaluate"}
+    if len(wins) + len(losses) < MIN_REVERSALS:
+        return {**empty, "label": f"Limited history — only {len(wins)+len(losses)} reversals found (need {MIN_REVERSALS})"}
 
-    # حساب التشابه مع كل حالة
+    # حساب التشابه — مع adaptive threshold لو البيانات محدودة
     win_sims  = [_cosine_sim(current_cond, w["conditions"]) for w in wins]
     loss_sims = [_cosine_sim(current_cond, l["conditions"]) for l in losses]
 
-    # فقط الحالات المشابهة (فوق الحد الأدنى)
-    sim_wins   = [s for s in win_sims  if s >= SIMILARITY_THR]
-    sim_losses = [s for s in loss_sims if s >= SIMILARITY_THR]
+    # Adaptive: نجرب تخفيض الـ threshold تدريجياً لو مفيش حالات مشابهة
+    thr = SIMILARITY_THR
+    for _ in range(3):
+        sim_wins   = [s for s in win_sims  if s >= thr]
+        sim_losses = [s for s in loss_sims if s >= thr]
+        if len(sim_wins) + len(sim_losses) >= 2:
+            break
+        thr -= 0.10   # نخفض 10% كل مرة (max 3 مرات → min 0.25)
 
     total_similar = len(sim_wins) + len(sim_losses)
 
     if total_similar == 0:
-        return {**empty, "label": "No similar historical patterns found"}
+        return {**empty, "label": f"No similar patterns found ({len(wins)} wins, {len(losses)} losses in history)"}
 
     win_rate = len(sim_wins) / total_similar
     avg_gain = float(np.mean([wins[i]["gain"] for i, s in enumerate(win_sims) if s >= SIMILARITY_THR])) if sim_wins else 0.0

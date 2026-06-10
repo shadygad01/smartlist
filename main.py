@@ -1296,8 +1296,11 @@ def analyze(symbol):
                             "label": "Price in Premium Zone — pattern analysis inactive"}
         else:
             # استخدام 500 يوم (~2 سنة) للحصول على عينة تاريخية أكبر وأدق
-            df_long      = download_data(symbol, 500)
-            pattern_data = analyze_entry_patterns(df_long if not df_long.empty else df)
+            # fallback للـ df الأصلي (110 يوم) لو 500 رجع فاضي أو قليل
+            df_long = download_data(symbol, 500)
+            if df_long.empty or len(df_long) < 30:
+                df_long = df   # df الأصلي مضمون شغال لكل الأسهم بما فيهم ORAS
+            pattern_data = analyze_entry_patterns(df_long)
 
         return {
             "ok":True,"price":round(cur,2),"last_dt":last_dt,

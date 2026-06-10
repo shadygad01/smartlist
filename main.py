@@ -15,7 +15,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pattern_engine import analyze_entry_patterns
 from signal_logger import log_signal, check_outcomes
 from backfill_signal_log import run_backfill
-from egx_context import get_signal_context
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from email.mime.multipart import MIMEMultipart
@@ -1292,17 +1291,6 @@ def analyze(symbol):
             entry_zones = calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo,
                                            _sv=sv_result, _hvn=hvn_result)
 
-        # ── Volume context ────────────────────────────────────────────────────
-        today_volume  = float(df["Volume"].iloc[-1]) if "Volume" in df.columns and len(df) >= 1 else None
-        avg_volume_20 = (float(df["Volume"].tail(21).iloc[:-1].mean())
-                         if "Volume" in df.columns and len(df) >= 21 else None)
-
-        signal_context = get_signal_context(
-            date.today().isoformat(),
-            today_volume=today_volume,
-            avg_volume=avg_volume_20,
-        )
-
         # ── Pattern Recognition + Historical Backtesting ──────────────────────
         # يشتغل فقط لو السعر في Discount Zone (أقل من EQ)
         if cur >= eq:
@@ -1313,9 +1301,8 @@ def analyze(symbol):
             # fallback للـ df الأصلي (110 يوم) لو 500 رجع فاضي أو قليل
             df_long = download_data(symbol, 500)
             if df_long.empty or len(df_long) < 30:
-                df_long = df
-            pattern_data = analyze_entry_patterns(df_long, symbol=symbol,
-                                                  context=signal_context)
+                df_long = df   # df الأصلي مضمون شغال لكل الأسهم بما فيهم ORAS
+            pattern_data = analyze_entry_patterns(df_long, symbol=symbol)
 
         return {
             "ok":True,"price":round(cur,2),"last_dt":last_dt,
@@ -1324,11 +1311,8 @@ def analyze(symbol):
             "eq":round(eq,2),"buy_hi":round(buy_hi,2),"sell_lo":round(sell_lo,2),
             "avwap":round(av,2),"avwap_l":round(alo,2),
             "score":total,"signal":sig,"tc":tc,"tbg":tbg,"tbr":tbr,"r1":r1,
-            "entry_zones":    entry_zones,
-            "pattern":        pattern_data,
-            "signal_context": signal_context,
-            "volume_today":   round(today_volume, 0) if today_volume else None,
-            "volume_avg_20d": round(avg_volume_20, 0) if avg_volume_20 else None,
+            "entry_zones": entry_zones,
+            "pattern": pattern_data,
             "rows":[
                 ("Price Position",      r1,W_PRICE,l1),
                 ("Liquidity Context",   r3,W_LIQ,  l3),
@@ -1474,11 +1458,15 @@ def build_pattern_html(r):
             f'{msg}</td></tr></table>'
         )
 
-    ps   = p["pattern_score"]
-    gain = p["avg_gain"]
-    cnt  = p["similar_count"]
-    lbl  = p["label"]
-    detail = p.get("detail", {})
+    ps      = p["pattern_score"]
+    gain    = p["avg_gain"]
+    cnt     = p["similar_count"]
+    lbl     = p["label"]
+    detail  = p.get("detail", {})
+    eff_raw = p.get("effective_score", 0)
+    eff_v   = eff_raw / 20
+    eff_lbl = "Excellent" if eff_v >= 3 else "Strong" if eff_v >= 2 else "Moderate" if eff_v >= 1 else "Weak"
+    wr      = p.get("win_rate", 0)
 
     if ps >= 70:
         bar_color = "#155724"; bg = "#d4edda"; border = "#c3e6cb"
@@ -1508,11 +1496,11 @@ def build_pattern_html(r):
         f'<div style="background:#e0e0e0;border-radius:4px;height:6px;margin-top:4px;">'
         f'<div style="width:{bar_w}%;background:{bar_color};height:6px;border-radius:4px;"></div></div>'
         f'</td>'
-        # Avg Gain + count
+        # Effective Score
         f'<td width="22%" style="font-family:Arial,sans-serif;padding-left:12px;">'
-        f'<div style="font-size:10px;color:#555;font-weight:bold;margin-bottom:4px;">AVG HIST GAIN</div>'
-        f'<div style="font-size:22px;font-weight:bold;color:#155724;">+{gain:.1f}<span style="font-size:12px;">%</span></div>'
-        f'<div style="font-size:10px;color:#777;margin-top:2px;">{cnt} reversals in history</div>'
+        f'<div style="font-size:10px;color:#555;font-weight:bold;margin-bottom:4px;">EFFECTIVE SCORE</div>'
+        f'<div style="font-size:22px;font-weight:bold;color:{bar_color};">{eff_v:.1f}<span style="font-size:13px;">/5</span></div>'
+        f'<div style="font-size:10px;color:#777;margin-top:2px;">{eff_lbl} — {wr*100:.0f}% win rate</div>'
         f'</td>'
         # Badge + label
         f'<td style="font-family:Arial,sans-serif;padding-left:12px;vertical-align:middle;">'
@@ -1612,8 +1600,8 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
             if reinforced and reinf_price:
                 entry_cell = (
                     f"{entry:.2f} EGP<br>"
-                    f"<span style='font-size:11px;color:#c0392b;'>🔄 إعادة شراء: {reinf_price:.2f} EGP</span><br>"
-                    f"<span style='font-size:11px;color:#7d3c98;font-weight:bold;'>متوسط: {avg_price:.2f} EGP</span>"
+                    f"<span style='font-size:11px;color:#c0392b;'>🔄 Re-buy: {reinf_price:.2f} EGP</span><br>"
+                    f"<span style='font-size:11px;color:#7d3c98;font-weight:bold;'>Avg: {avg_price:.2f} EGP</span>"
                 )
             else:
                 entry_cell = f"{entry:.2f} EGP"
@@ -1820,17 +1808,17 @@ def send_telegram_zone3_reinforcement(symbol, entry_price, reinforcement_price, 
         f"🔄 *تعزيز Zone 3 — إضافة للمركز*\n\n"
         f"📊 السهم: *{name}* `{symbol}`\n\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🟢 *الشراء الأول*\n"
-        f"   سعر الدخول  : {entry_price:.2f} EGP\n"
+        f"🟢 *First Buy*\n"
+        f"   Entry Price  : {entry_price:.2f} EGP\n"
         f"{fib_levels_str(entry_price)}\n\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🔵 *التعزيز (Zone 3)*\n"
-        f"   سعر التعزيز : {reinforcement_price:.2f} EGP\n"
-        f"   ⚠️ إعادة شراء\n"
+        f"🔵 *Reinforcement (Zone 3)*\n"
+        f"   Reinf. Price : {reinforcement_price:.2f} EGP\n"
+        f"   ⚠️ Re-buy\n"
         f"{fib_levels_str(reinforcement_price)}\n\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📐 *متوسط السعر الجديد: {avg_price:.2f} EGP*\n\n"
-        f"⚠️ الخروج عند أول ضعف بعد 12%\n"
+        f"📐 *New Avg Price: {avg_price:.2f} EGP*\n\n"
+        f"⚠️ Exit on first weakness after 12%\n"
         f"   الهدف يرتفع تلقائياً بلا حد أقصى\n\n"
         f"📉 الهبوط من الدخول: *{drop_pct:.1f}%*\n"
         f"⏰ {now_cairo().strftime('%H:%M | %d-%m-%Y')}"
@@ -2093,8 +2081,8 @@ def send_telegram_alerts(results):
                 msg += f"\n📌 *{sym}* — {NAMES.get(sym, sym)}"
                 msg += f"\n   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*{score_str}"
                 if pos.get("reinforced") and pos.get("reinforcement_price"):
-                    msg += f"\n   🔄 إعادة شراء: {pos['reinforcement_price']:.2f} EGP"
-                    msg += f"\n   📐 متوسط السعر: *{pos['avg_price']:.2f} EGP*"
+                    msg += f"\n   🔄 Re-buy: {pos['reinforcement_price']:.2f} EGP"
+                    msg += f"\n   📐 Avg Price: *{pos['avg_price']:.2f} EGP*"
                 msg += "\n"
             msg += "━━━━━━━━━━━━━━━━━━━━━"
         try:
@@ -2141,8 +2129,8 @@ def send_telegram_alerts(results):
             pos_line = f"   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*{score_str}"
             lines.append(pos_line)
             if pos.get("reinforced") and pos.get("reinforcement_price"):
-                lines.append(f"   🔄 إعادة شراء: {pos['reinforcement_price']:.2f} EGP")
-                lines.append(f"   📐 متوسط السعر: *{pos['avg_price']:.2f} EGP*")
+                lines.append(f"   🔄 Re-buy: {pos['reinforcement_price']:.2f} EGP")
+                lines.append(f"   📐 Avg Price: *{pos['avg_price']:.2f} EGP*")
             lines.append("")
         lines.append("━━━━━━━━━━━━━━━━━━━━━\n")
 
@@ -2169,7 +2157,7 @@ def send_telegram_alerts(results):
         if pat and pat.get("ok"):
             warn = "  ⚠️ _Low reliability_" if pat.get("low_reliability") else ""
             _ev = pat['effective_score'] / 20
-            _el = "ممتاز" if _ev >= 3 else "قوي" if _ev >= 2 else "متوسط" if _ev >= 1 else "ضعيف"
+            _el = "Excellent" if _ev >= 3 else "Strong" if _ev >= 2 else "Moderate" if _ev >= 1 else "Weak"
             pi_line = (f"   🧠 Pattern: *{pat['pattern_score']:.0f}/100*"
                        f"  |  Effective: *{_ev:.1f}/5* ({_el})"
                        f"  |  Win Rate: *{pat['win_rate']*100:.0f}%*{warn}\n"
@@ -2415,15 +2403,16 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
     monitor_positions(cur_prices)
     monitor_reinforcement(cur_prices, results)
     resolved = check_outcomes(cur_prices)
-    if resolved:
-        try:
-            from pattern_engine import update_weights_from_log
-            import importlib, pattern_engine as _pe
-            new_w = update_weights_from_log()
-            if new_w:
-                _pe.WEIGHTS = new_w
-        except Exception:
-            pass
+
+    # Always refresh learned weights (uses backfill + live data)
+    try:
+        import pattern_engine as _pe
+        new_w = _pe.update_weights_from_log()
+        if new_w:
+            _pe.WEIGHTS = new_w
+            print(f"  🧠 Weights refreshed (alpha={_pe._load_learned_meta().get('alpha', 0):.0%})")
+    except Exception:
+        pass
 
     # Step 3: rebuild HTML using cached prices (no extra HTTP calls)
     html, _ = build_report(holiday_mode=holiday_mode, last_trading=last_trading,
@@ -2666,12 +2655,12 @@ def send_change_email(changed_stocks):
         pat = item.get("pattern", {})
         if pat and pat.get("ok"):
             _pev = pat.get("effective_score", 0) / 20
-            _pel = "ممتاز" if _pev >= 3 else "قوي" if _pev >= 2 else "متوسط" if _pev >= 1 else "ضعيف"
+            _pel = "Excellent" if _pev >= 3 else "Strong" if _pev >= 2 else "Moderate" if _pev >= 1 else "Weak"
             border_col = "#f59e0b" if pat.get("low_reliability") else "#7ee787"
             warn_row   = (
                 f'<tr><td colspan="4" style="padding-top:8px;">'
                 f'<p style="color:#f59e0b;font-size:10px;margin:0;">⚠️ Low reliability — '
-                f'هذا السهم نادراً ما يشكّل قاعاً حقيقياً ({pat["win_rate"]*100:.0f}% win rate)</p>'
+                f'This stock rarely forms a real bottom ({pat["win_rate"]*100:.0f}% win rate)</p>'
                 f'</td></tr>'
             ) if pat.get("low_reliability") else ""
             pat_row = (
@@ -2689,19 +2678,14 @@ def send_change_email(changed_stocks):
                 f'{pat["pattern_score"]:.0f}</p>'
                 f'</td>'
                 f'<td style="text-align:right;vertical-align:top;">'
-                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Effective</p>'
-                f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0 0 1px 0;">{_pev:.1f}/5</p>'
-                f'<p style="color:#94a3b8;font-size:10px;margin:0;">{_pel}</p>'
-                f'</td>'
-                f'<td style="text-align:right;vertical-align:top;">'
                 f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Win Rate</p>'
                 f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0;">'
                 f'{pat["win_rate"]*100:.0f}%</p>'
                 f'</td>'
                 f'<td style="text-align:right;vertical-align:top;">'
-                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Avg Gain</p>'
-                f'<p style="color:#22c55e;font-size:14px;font-weight:bold;margin:0;">'
-                f'+{pat["avg_gain"]:.1f}%</p>'
+                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Effective</p>'
+                f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0 0 1px 0;">{_pev:.1f}/5</p>'
+                f'<p style="color:#94a3b8;font-size:10px;margin:0;">{_pel}</p>'
                 f'</td>'
                 f'</tr>'
                 + warn_row +

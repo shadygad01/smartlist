@@ -37,15 +37,11 @@ Signal Logger & Outcome Tracker
 import json
 import os
 from datetime import date, timedelta
-from egx_context import trading_days_between as _egx_days
 
 LOG_FILE     = "signal_log.json"
-FORWARD_DAYS = 60    # أيام التداول قبل إغلاق الإشارة (كان 15 — مدّدناه لاستراتيجية بدون stop loss)
-
-# حدود تصنيف حجم الارتداد (مستوردة من pattern_engine للتوحيد)
-BOUNCE_LARGE  = 0.20
-BOUNCE_MEDIUM = 0.10
-BOUNCE_SMALL  = 0.04
+FORWARD_DAYS = 15    # عدد أيام التداول للحكم على النتيجة
+MIN_GAIN     = 0.07  # +7% = win
+STOP_LOSS    = 0.06  # -6% = loss
 
 
 # ── I/O ───────────────────────────────────────────────────────────────────────
@@ -67,8 +63,19 @@ def _save(data):
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _trading_days_since(signal_date_str):
-    """عدد أيام التداول الفعلية في EGX (الأحد-الخميس + إجازات) من تاريخ الإشارة."""
-    return _egx_days(signal_date_str)
+    """عدد أيام التداول (الأحد-الخميس) من تاريخ الإشارة حتى اليوم."""
+    try:
+        start = date.fromisoformat(signal_date_str)
+        end   = date.today()
+        count = 0
+        d = start + timedelta(days=1)
+        while d <= end:
+            if d.weekday() < 5:   # 0=Mon..4=Fri — نستخدم Mon-Fri كتقريب
+                count += 1
+            d += timedelta(days=1)
+        return count
+    except Exception:
+        return 0
 
 
 # ── Log a new signal ──────────────────────────────────────────────────────────
@@ -104,17 +111,13 @@ def log_signal(symbol, result):
         "signal":        signal,
         "smc_score":     score,
         "pattern_score": pattern.get("pattern_score", 0) if pattern.get("ok") else 0,
-        "expected_bounce": pattern.get("expected_bounce", 0) if pattern.get("ok") else 0,
         "price":         result.get("price", 0),
         "target":        result.get("target", 0),
         "indicators":    indicators,
-        "context":       result.get("signal_context", {}),
-        "peak_gain":     None,   # أقصى ارتداد شُوهد منذ الإشارة (يُحدَّث يومياً)
-        "peak_date":     None,
-        "peak_price":    None,
         "outcome":       "pending",
         "outcome_date":  None,
-        "outcome_gain":  None,   # الغين عند إغلاق الإشارة (بعد 60 يوم)
+        "outcome_price": None,
+        "outcome_gain":  None,
     }
 
     data["signals"].append(entry)
@@ -127,64 +130,49 @@ def log_signal(symbol, result):
 def check_outcomes(current_prices):
     """
     يُستدعى من monitor كل يوم مع أسعار اليوم الحالية.
-
-    لكل إشارة pending:
-      1. يُحدِّث peak_gain لو السعر الحالي أعلى من الـ peak السابق
-      2. بعد >= FORWARD_DAYS يُغلق الإشارة بتصنيف حجم الارتداد:
-         large / medium / small / flat
+    يفحص الإشارات pending اللي مضى عليها >= FORWARD_DAYS يوم تداول
+    ويسجل النتيجة.
 
     current_prices: dict {symbol: float}
     يُرجع: list of resolved signals (للإبلاغ عنها في Telegram)
     """
     data     = _load()
     resolved = []
-    today    = date.today().isoformat()
 
     for sig in data["signals"]:
         if sig["outcome"] != "pending":
+            continue
+
+        trading_days = _trading_days_since(sig["signal_date"])
+        if trading_days < FORWARD_DAYS:
             continue
 
         symbol = sig["symbol"]
         if symbol not in current_prices:
             continue
 
-        cur_price   = float(current_prices[symbol])
+        cur_price  = float(current_prices[symbol])
         entry_price = float(sig["price"])
         if entry_price <= 0:
             continue
 
-        cur_gain = (cur_price - entry_price) / entry_price
+        gain = (cur_price - entry_price) / entry_price
 
-        # ── تحديث peak_gain (يومياً بغض النظر عن المدة) ────────────────
-        prev_peak = sig.get("peak_gain") or -1.0
-        if cur_gain > prev_peak:
-            sig["peak_gain"]  = round(cur_gain, 4)
-            sig["peak_date"]  = today
-            sig["peak_price"] = round(cur_price, 2)
-
-        # ── إغلاق الإشارة بعد FORWARD_DAYS ─────────────────────────────
-        trading_days = _trading_days_since(sig["signal_date"])
-        if trading_days < FORWARD_DAYS:
-            continue
-
-        peak = sig.get("peak_gain") or cur_gain
-
-        if peak >= BOUNCE_LARGE:
-            outcome = "large"
-        elif peak >= BOUNCE_MEDIUM:
-            outcome = "medium"
-        elif peak >= BOUNCE_SMALL:
-            outcome = "small"
+        if gain >= MIN_GAIN:
+            outcome = "win"
+        elif gain <= -STOP_LOSS:
+            outcome = "loss"
         else:
-            outcome = "flat"
+            outcome = "neutral"
 
-        sig["outcome"]      = outcome
-        sig["outcome_date"] = today
-        sig["outcome_gain"] = round(cur_gain, 4)
+        sig["outcome"]       = outcome
+        sig["outcome_date"]  = date.today().isoformat()
+        sig["outcome_price"] = round(cur_price, 2)
+        sig["outcome_gain"]  = round(gain, 4)
         resolved.append(dict(sig))
 
-        print(f"  ✅ Outcome: {symbol} → {outcome} "
-              f"(peak +{peak*100:.1f}%, now {cur_gain*100:+.1f}% after {trading_days}d)")
+        print(f"  ✅ Outcome recorded: {symbol} → {outcome} "
+              f"({gain*100:+.1f}% after {trading_days} trading days)")
 
     _save(data)
     return resolved
@@ -204,47 +192,34 @@ def get_stats():
         return {"total": 0, "pending": 0, "win": 0, "loss": 0,
                 "neutral": 0, "win_rate": 0, "avg_gain": 0}
 
-    TIERS = ("large", "medium", "small", "flat", "win", "loss", "neutral", "pending")
-    by_outcome = {t: [] for t in TIERS}
-
+    by_outcome = {"win": [], "loss": [], "neutral": [], "pending": []}
     for s in signals:
-        o = s.get("outcome", "pending")
-        if o not in by_outcome:
-            o = "pending"
-        by_outcome[o].append(s.get("peak_gain") or s.get("outcome_gain") or 0)
+        by_outcome[s["outcome"]].append(s.get("outcome_gain") or 0)
 
-    large   = len(by_outcome["large"])
-    medium  = len(by_outcome["medium"])
-    small_  = len(by_outcome["small"])
-    flat    = len(by_outcome["flat"])
-    # backward compat
     wins    = len(by_outcome["win"])
-    decided = large + medium + small_ + flat + wins + len(by_outcome["loss"])
-    bounced = large + medium + wins   # counted as positive outcomes
+    losses  = len(by_outcome["loss"])
+    decided = wins + losses
 
-    bounce_rate = bounced / decided if decided > 0 else 0
+    win_rate = wins / decided if decided > 0 else 0
 
-    all_peaks = [g for lst in (by_outcome["large"], by_outcome["medium"],
-                               by_outcome["small"], by_outcome["win"]) for g in lst if g > 0]
-    avg_peak  = sum(all_peaks) / len(all_peaks) if all_peaks else 0
+    all_gains = [g for g in by_outcome["win"] + by_outcome["loss"] + by_outcome["neutral"] if g != 0]
+    avg_gain  = sum(all_gains) / len(all_gains) if all_gains else 0
 
+    # Per-symbol stats
     per_symbol = {}
     for s in signals:
         sym = s["symbol"]
         if sym not in per_symbol:
-            per_symbol[sym] = {t: 0 for t in TIERS}
-        o = s.get("outcome", "pending")
-        if o in per_symbol[sym]:
-            per_symbol[sym][o] += 1
+            per_symbol[sym] = {"win": 0, "loss": 0, "neutral": 0, "pending": 0}
+        per_symbol[sym][s["outcome"]] += 1
 
     return {
-        "total":       total,
-        "pending":     len(by_outcome["pending"]),
-        "large":       large,
-        "medium":      medium,
-        "small":       small_,
-        "flat":        flat,
-        "bounce_rate": round(bounce_rate * 100, 1),
-        "avg_peak":    round(avg_peak * 100, 2),
-        "per_symbol":  per_symbol,
+        "total":      total,
+        "pending":    len(by_outcome["pending"]),
+        "win":        wins,
+        "loss":       losses,
+        "neutral":    len(by_outcome["neutral"]),
+        "win_rate":   round(win_rate * 100, 1),
+        "avg_gain":   round(avg_gain * 100, 2),
+        "per_symbol": per_symbol,
     }

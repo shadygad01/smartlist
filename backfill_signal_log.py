@@ -29,9 +29,11 @@ from datetime import date, timedelta
 # ── استيراد المؤشرات من pattern_engine ────────────────────────────────────────
 from pattern_engine import (
     _extract, _stoch_rsi, _atr, _rsi_series,
-    FORWARD_DAYS, BOUNCE_LARGE, BOUNCE_MEDIUM, BOUNCE_SMALL
+    FORWARD_DAYS
 )
-from egx_context import get_signal_context
+
+MIN_GAIN  = 0.07   # target gain for signal outcome evaluation
+STOP_LOSS = 0.06   # stop loss for signal outcome evaluation
 
 LOG_FILE = "signal_log.json"
 
@@ -123,18 +125,19 @@ def _scan_stock_history(symbol, df):
         if close[i] > min(close[max(0, i-5):i+1]) * 1.002:
             continue
 
-        future    = close[i+1: i+FORWARD_DAYS+1]
-        peak_gain = (float(np.max(future)) - close[i]) / close[i]
+        future   = close[i+1: i+FORWARD_DAYS+1]
+        max_f    = float(np.max(future))
+        min_f    = float(np.min(future))
+        gain     = (max_f - close[i]) / close[i]
+        drawdown = (close[i] - min_f) / close[i]
 
-        # تصنيف حجم الارتداد (بدون stop loss — الوقت مش عامل)
-        if peak_gain >= BOUNCE_LARGE:
-            outcome = "large"
-        elif peak_gain >= BOUNCE_MEDIUM:
-            outcome = "medium"
-        elif peak_gain >= BOUNCE_SMALL:
-            outcome = "small"
+        # تحديد النتيجة
+        if gain >= MIN_GAIN and drawdown < STOP_LOSS:
+            outcome = "win"
+        elif drawdown >= STOP_LOSS and gain < MIN_GAIN:
+            outcome = "loss"
         else:
-            outcome = "flat"
+            outcome = "neutral"
 
         # استخراج المؤشرات
         cond = _extract(df, i)
@@ -145,26 +148,20 @@ def _scan_stock_history(symbol, df):
         outcome_date = str(df.index[min(i + FORWARD_DAYS, n-1)].date())
         sig_id       = f"{symbol}_{sig_date}_hist"
 
-        today_vol = float(volume[i])
-        avg_vol20 = float(np.mean(volume[max(0, i-20):i])) if i >= 20 else None
-        ctx       = get_signal_context(sig_date, today_volume=today_vol, avg_volume=avg_vol20)
-
         signals.append({
             "id":            sig_id,
             "symbol":        symbol,
             "signal_date":   sig_date,
-            "signal":        "BUY" if outcome in ("large", "medium") else "WATCH",
-            "smc_score":     0,
+            "signal":        "BUY" if outcome == "win" else "WATCH",
+            "smc_score":     0,      # غير محسوب في الباكتست التاريخي
             "pattern_score": 0,
             "price":         round(float(close[i]), 2),
-            "target":        round(float(close[i]) * (1 + BOUNCE_MEDIUM), 2),
+            "target":        round(float(close[i]) * (1 + MIN_GAIN), 2),
             "indicators":    {k: round(float(v), 4) for k, v in cond.items()},
-            "context":       ctx,
-            "peak_gain":     round(peak_gain, 4),
             "outcome":       outcome,
             "outcome_date":  outcome_date,
             "outcome_price": round(float(close[i + FORWARD_DAYS]), 2),
-            "outcome_gain":  round(peak_gain, 4),
+            "outcome_gain":  round(gain, 4),
             "source":        "backfill",
         })
 
@@ -220,17 +217,17 @@ def run_backfill(stocks=None, period="2y", skip_existing=True):
 
         data["signals"].extend(new_sigs)
 
-        large   = sum(1 for s in new_sigs if s["outcome"] == "large")
-        medium  = sum(1 for s in new_sigs if s["outcome"] == "medium")
-        small_  = sum(1 for s in new_sigs if s["outcome"] == "small")
-        flat    = sum(1 for s in new_sigs if s["outcome"] == "flat")
-        total_added += len(new_sigs)
-        total_wins  += large + medium
+        wins    = sum(1 for s in new_sigs if s["outcome"] == "win")
+        losses  = sum(1 for s in new_sigs if s["outcome"] == "loss")
+        neutral = sum(1 for s in new_sigs if s["outcome"] == "neutral")
+        total_added  += len(new_sigs)
+        total_wins   += wins
+        total_losses += losses
 
-        avg_pg = (sum(s["peak_gain"] for s in new_sigs) / len(new_sigs) * 100) if new_sigs else 0
+        wr = wins / (wins + losses) * 100 if (wins + losses) > 0 else 0
         print(f"✅  {len(new_sigs):3d} events  "
-              f"(L:{large} M:{medium} S:{small_} F:{flat})  "
-              f"avg_bounce={avg_pg:.1f}%  bars={len(df)}")
+              f"({wins}W / {losses}L / {neutral}N)  "
+              f"WR={wr:.0f}%  bars={len(df)}")
 
         # حفظ تدريجي بعد كل سهم (لو انقطع الإنترنت في النص)
         _save(data)
@@ -241,21 +238,18 @@ def run_backfill(stocks=None, period="2y", skip_existing=True):
     hist_sigs  = [s for s in all_sigs if s.get("source") == "backfill"]
     live_sigs  = [s for s in all_sigs if s.get("source") != "backfill"]
 
-    h_large  = sum(1 for s in hist_sigs if s["outcome"] == "large")
-    h_medium = sum(1 for s in hist_sigs if s["outcome"] == "medium")
-    h_small  = sum(1 for s in hist_sigs if s["outcome"] == "small")
-    h_flat   = sum(1 for s in hist_sigs if s["outcome"] == "flat")
-    h_peaks  = [s["peak_gain"] for s in hist_sigs if s.get("peak_gain")]
-    h_avg    = sum(h_peaks) / len(h_peaks) * 100 if h_peaks else 0
+    h_wins     = sum(1 for s in hist_sigs if s["outcome"] == "win")
+    h_losses   = sum(1 for s in hist_sigs if s["outcome"] == "loss")
+    h_decided  = h_wins + h_losses
+    h_wr       = h_wins / h_decided * 100 if h_decided > 0 else 0
 
     print(f"\n{'='*60}")
     print(f"  BACKFILL COMPLETE")
-    print(f"  Added this run    : {total_added} events")
-    print(f"  Total hist        : {len(hist_sigs)} events")
-    print(f"  Total live        : {len(live_sigs)} events")
-    print(f"  Bounce tiers      : L={h_large} M={h_medium} S={h_small} F={h_flat}")
-    print(f"  Avg peak bounce   : {h_avg:.1f}%")
-    print(f"  signal_log.json   : {len(all_sigs)} total records")
+    print(f"  Added this run : {total_added} events")
+    print(f"  Total hist     : {len(hist_sigs)} events")
+    print(f"  Total live     : {len(live_sigs)} events")
+    print(f"  Hist Win Rate  : {h_wr:.1f}%  ({h_wins}W / {h_losses}L)")
+    print(f"  signal_log.json: {len(all_sigs)} total records")
     print(f"{'='*60}\n")
 
 

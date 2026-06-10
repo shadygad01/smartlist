@@ -21,23 +21,16 @@ import numpy as np
 import pandas as pd
 import json
 import os
-from egx_context import is_ramadan, get_season
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-FORWARD_DAYS  = 60   # days to confirm bounce quality (was 30 — extended for no-SL strategy)
+FORWARD_DAYS  = 30   # days to confirm a local low is unbroken
 BOUNCE_MIN    = 0.05  # minimum bounce from the low to count as real demand (5%)
 VOL_THRESHOLD = 0.80  # volume on low day must be > 80% of 20-day average
 BREAK_BUFFER  = 0.02  # low must be broken by > 2% to count as a real loss
 MIN_HISTORY   = 80    # 50 for indicators + 30 for confirmation window
 MIN_REVERSALS = 3
 MIN_DECIDED   = 100   # أقل عدد إشارات محسومة لتحديث الأوزان
-
-# حدود الارتداد لتصنيف قوة الإشارة
-BOUNCE_LARGE  = 0.20  # >= 20% ارتداد كبير
-BOUNCE_MEDIUM = 0.10  # 10-20% ارتداد متوسط
-BOUNCE_SMALL  = 0.04  # 4-10%  ارتداد صغير
-# < 4%  → flat
 
 LEARNED_WEIGHTS_FILE = "learned_weights.json"
 
@@ -78,24 +71,10 @@ def _load_weights():
 WEIGHTS = _load_weights()
 
 
-def _outcome_is_positive(sig):
-    """هل الإشارة انتهت بارتداد حقيقي؟ (يدعم التصنيفات القديمة والجديدة)"""
-    o = sig.get("outcome", "")
-    return o in ("win", "large", "medium")
-
-
-def _get_peak_gain(sig):
-    """يُرجع أقصى ارتداد مسجّل للإشارة — يدعم الحقلين القديم والجديد."""
-    g = sig.get("peak_gain")
-    if g is None:
-        g = sig.get("outcome_gain")
-    return float(g) if g is not None else None
-
-
 def _calc_weights_from_signals(decided, min_count=30):
     """
-    Point-Biserial Correlation — يصنّف الإشارات إلى ناجح/غير ناجح.
-    يدعم تصنيفات win/loss (قديمة) و large/medium/small/flat (جديدة).
+    يحسب الأوزان من قائمة إشارات محسومة باستخدام Point-Biserial Correlation.
+    يُرجع dict أوزان أو None لو البيانات مش كافية.
     """
     if len(decided) < min_count:
         return None
@@ -110,7 +89,7 @@ def _calc_weights_from_signals(decided, min_count=30):
             if v is None:
                 continue
             vals.append(float(v))
-            labels.append(1 if _outcome_is_positive(s) else 0)
+            labels.append(1 if s["outcome"] == "win" else 0)
 
         if len(vals) < min_count:
             correlations[feat] = DEFAULT_WEIGHTS[feat]
@@ -135,63 +114,11 @@ def _calc_weights_from_signals(decided, min_count=30):
     return {k: round(v / total, 4) for k, v in correlations.items()}
 
 
-def _calc_gain_weights(signals, min_count=30):
-    """
-    Pearson Correlation بين كل مؤشر وحجم الارتداد الفعلي (peak_gain).
-    يتعلم أي مؤشرات ترتبط بأكبر ارتداد — مش بس الاحتمال.
-    """
-    if len(signals) < min_count:
-        return None
-
-    features = list(DEFAULT_WEIGHTS.keys())
-    correlations = {}
-
-    for feat in features:
-        gains, feat_vals = [], []
-        for s in signals:
-            g = _get_peak_gain(s)
-            if g is None:
-                continue
-            v = s["indicators"].get(feat)
-            if v is None:
-                continue
-            gains.append(max(0.0, g))
-            feat_vals.append(float(v))
-
-        if len(gains) < min_count:
-            correlations[feat] = DEFAULT_WEIGHTS[feat]
-            continue
-
-        g_arr = np.array(gains)
-        f_arr = np.array(feat_vals)
-        corr  = np.corrcoef(f_arr, g_arr)[0, 1]
-        correlations[feat] = float(abs(corr)) if not np.isnan(corr) else DEFAULT_WEIGHTS[feat]
-
-    total = sum(correlations.values()) + 1e-9
-    return {k: round(v / total, 4) for k, v in correlations.items()}
-
-
-def _is_signal_ramadan(sig):
-    """يحدد إذا كانت الإشارة في رمضان من الـ context أو من تاريخها."""
-    ctx = sig.get("context", {})
-    if ctx.get("is_ramadan") is not None:
-        return bool(ctx["is_ramadan"])
-    try:
-        import datetime
-        d = datetime.date.fromisoformat(sig["signal_date"])
-        return is_ramadan(d)
-    except Exception:
-        return False
-
-
 def update_weights_from_log(log_file="signal_log.json"):
     """
-    يحسب أوزان من signal_log.json:
-      - global      : كل الإشارات المحسومة
-      - normal      : خارج رمضان
-      - ramadan     : داخل رمضان (لو >= 30 إشارة)
-      - per_stock   : لكل سهم (لو >= 30 إشارة)
+    يحسب أوزان global + per-stock من signal_log.json.
     يحفظ النتيجة في learned_weights.json.
+    يُرجع الأوزان الجديدة أو None لو البيانات مش كافية.
     """
     if not os.path.exists(log_file):
         return None
@@ -203,8 +130,7 @@ def update_weights_from_log(log_file="signal_log.json"):
         return None
 
     decided = [s for s in data.get("signals", [])
-               if s.get("outcome") in ("win", "loss", "large", "medium", "small", "flat")
-               and s.get("indicators")]
+               if s.get("outcome") in ("win", "loss") and s.get("indicators")]
 
     if len(decided) < MIN_DECIDED:
         return None
@@ -214,16 +140,16 @@ def update_weights_from_log(log_file="signal_log.json"):
     if global_weights is None:
         return None
 
-    # ── Context-aware weights: رمضان vs عادي ─────────────────────────
-    ramadan_sigs = [s for s in decided if _is_signal_ramadan(s)]
-    normal_sigs  = [s for s in decided if not _is_signal_ramadan(s)]
-
-    weights_ramadan = _calc_weights_from_signals(ramadan_sigs, min_count=30)
-    weights_normal  = _calc_weights_from_signals(normal_sigs,  min_count=MIN_DECIDED // 2)
-
-    # ── Gain-magnitude weights (Pearson) ──────────────────────────────
-    gain_sigs    = [s for s in decided if _get_peak_gain(s) is not None]
-    weights_gain = _calc_gain_weights(gain_sigs, min_count=MIN_DECIDED)
+    # ── Blend global weights with DEFAULT_WEIGHTS ─────────────────────
+    # alpha = confidence in live data (0 → 0% live, 1 → 85% live)
+    alpha = min(0.85, len(decided) / 500)
+    blended_global = {
+        k: round(alpha * global_weights[k] + (1 - alpha) * DEFAULT_WEIGHTS[k], 4)
+        for k in DEFAULT_WEIGHTS
+    }
+    # normalize
+    total_bg = sum(blended_global.values()) + 1e-9
+    blended_global = {k: round(v / total_bg, 4) for k, v in blended_global.items()}
 
     # ── Per-stock weights ─────────────────────────────────────────────
     from collections import defaultdict
@@ -235,70 +161,59 @@ def update_weights_from_log(log_file="signal_log.json"):
     for sym, sigs in by_symbol.items():
         w = _calc_weights_from_signals(sigs, min_count=30)
         if w:
-            per_stock[sym] = {"weights": w, "based_on": len(sigs)}
+            n_sym = len(sigs)
+            alpha_sym = min(0.85, n_sym / 200)
+            blended_sym = {
+                k: round(alpha_sym * w[k] + (1 - alpha_sym) * blended_global[k], 4)
+                for k in DEFAULT_WEIGHTS
+            }
+            total_sym = sum(blended_sym.values()) + 1e-9
+            blended_sym = {k: round(v / total_sym, 4) for k, v in blended_sym.items()}
+            per_stock[sym] = {"weights": blended_sym, "based_on": n_sym, "alpha": round(alpha_sym, 2)}
 
     # ── حفظ ──────────────────────────────────────────────────────────
     import datetime
     out = {
-        "weights":         global_weights,
-        "weights_normal":  weights_normal,
-        "weights_ramadan": weights_ramadan,
-        "weights_gain":    weights_gain,
-        "per_stock":       per_stock,
-        "based_on":        len(decided),
-        "ramadan_signals": len(ramadan_sigs),
-        "normal_signals":  len(normal_sigs),
-        "gain_signals":    len(gain_sigs),
-        "updated_at":      str(datetime.date.today()),
+        "weights":    blended_global,
+        "per_stock":  per_stock,
+        "based_on":   len(decided),
+        "alpha":      round(alpha, 2),
+        "updated_at": str(datetime.date.today()),
     }
     with open(LEARNED_WEIGHTS_FILE, "w") as f:
         json.dump(out, f, indent=2)
 
-    print(f"  🔄 Global weights updated from {len(decided)} signals "
-          f"(ramadan={len(ramadan_sigs)}, normal={len(normal_sigs)}):")
-    for k, v in sorted(global_weights.items(), key=lambda x: -x[1]):
+    print(f"  🔄 Global weights updated from {len(decided)} signals (alpha={alpha:.0%}, blend={alpha:.0%} live + {1-alpha:.0%} default):")
+    for k, v in sorted(blended_global.items(), key=lambda x: -x[1]):
         old = DEFAULT_WEIGHTS[k]
         arrow = "↑" if v > old else "↓" if v < old else "="
         print(f"     {k:<12} {old:.2f} → {v:.4f} {arrow}")
-    if weights_ramadan:
-        print(f"  🌙 Ramadan weights learned from {len(ramadan_sigs)} signals")
-    if weights_gain:
-        print(f"  📈 Gain-magnitude weights learned from {len(gain_sigs)} signals")
     print(f"  🔄 Per-stock weights learned for {len(per_stock)} stocks")
 
-    return global_weights
+    return blended_global
 
 
-def _load_per_stock_weights(symbol, context=None):
-    """
-    يُرجع الأوزان المناسبة بترتيب الأولوية:
-      per-stock  →  ramadan/normal global  →  global  →  default
-    context: dict من get_signal_context (اختياري)
-    """
-    is_ram = (context or {}).get("is_ramadan", False)
+def _load_learned_meta():
+    """Reads metadata from learned_weights.json without raising."""
+    if os.path.exists(LEARNED_WEIGHTS_FILE):
+        try:
+            with open(LEARNED_WEIGHTS_FILE) as f:
+                d = json.load(f)
+            return {"alpha": d.get("alpha", 0), "based_on": d.get("based_on", 0), "updated_at": d.get("updated_at", "")}
+        except Exception:
+            pass
+    return {}
 
+
+def _load_per_stock_weights(symbol):
+    """يُرجع الأوزان الخاصة بسهم معين، أو الـ global، أو الافتراضية."""
     if os.path.exists(LEARNED_WEIGHTS_FILE):
         try:
             with open(LEARNED_WEIGHTS_FILE) as f:
                 data = json.load(f)
-
-            # 1. per-stock (أعلى أولوية)
             per_stock = data.get("per_stock", {})
             if symbol in per_stock:
                 return per_stock[symbol]["weights"]
-
-            # 2. context-aware global
-            if is_ram and data.get("weights_ramadan"):
-                w = data["weights_ramadan"]
-                if set(w.keys()) == set(DEFAULT_WEIGHTS.keys()):
-                    return w
-
-            if not is_ram and data.get("weights_normal"):
-                w = data["weights_normal"]
-                if set(w.keys()) == set(DEFAULT_WEIGHTS.keys()):
-                    return w
-
-            # 3. global
             w = data.get("weights", {})
             if set(w.keys()) == set(DEFAULT_WEIGHTS.keys()):
                 return w
@@ -476,34 +391,24 @@ def _threshold_score(current_cond, wins, weights=None):
 
 # ── Main API ──────────────────────────────────────────────────────────────────
 
-def analyze_entry_patterns(df, symbol=None, context=None):
+def analyze_entry_patterns(df, symbol=None):
     """
     الدالة الرئيسية.
 
-    context: dict من get_signal_context — يُستخدم لاختيار الأوزان المناسبة
-             وحساب volume confidence.
-
     Returns:
     {
-        "ok":                   bool
-        "pattern_score":        0-100   (جودة الإعداد الحالي)
-        "effective_score":      0-100   (pattern × win_rate)
-        "volume_adjusted_score":0-100   (effective × volume_confidence)
-        "volume_confidence":    0-1     (نسبة الحجم للمتوسط، مقيّدة بـ 1)
-        "win_rate":             0-1
-        "avg_gain":             float   (متوسط الربح %)
-        "similar_count":        int
-        "low_reliability":      bool
-        "context_mode":         str     (ramadan | normal)
-        "detail":               dict
-        "label":                str
+        "ok":            bool
+        "pattern_score": 0-100
+        "win_rate":      0-1   (نسبة الارتدادات الناجحة في التاريخ)
+        "avg_gain":      float (متوسط الربح %)
+        "similar_count": int   (عدد الارتدادات التاريخية المستخدمة)
+        "detail":        dict  (نقطة كل مؤشر)
+        "label":         str
     }
     """
     empty = {"ok": False, "pattern_score": 0, "effective_score": 0,
-             "volume_adjusted_score": 0, "volume_confidence": 1.0,
              "win_rate": 0, "avg_gain": 0, "similar_count": 0,
-             "expected_bounce": 0, "bounce_p75": 0, "bounce_best": 0,
-             "low_reliability": False, "context_mode": "normal", "detail": {},
+             "low_reliability": False, "detail": {},
              "label": "Insufficient history"}
 
     if df is None or len(df) < MIN_HISTORY:
@@ -519,30 +424,16 @@ def analyze_entry_patterns(df, symbol=None, context=None):
     if len(wins) < MIN_REVERSALS:
         return {**empty, "label": f"Limited history — {len(wins)} reversals found (need {MIN_REVERSALS})"}
 
-    weights = _load_per_stock_weights(symbol, context) if symbol else WEIGHTS
+    weights = _load_per_stock_weights(symbol) if symbol else WEIGHTS
     pattern_score, detail = _threshold_score(current_cond, wins, weights)
 
     total_decided = len(wins) + len(losses)
     win_rate = len(wins) / total_decided if total_decided > 0 else 0.0
-    all_gains = [w["gain"] for w in wins]
-    avg_gain  = float(np.mean(all_gains))
-
-    # ── Bounce statistics (أهم من win_rate للاستراتيجية بدون stop loss) ─────
-    expected_bounce = round(float(np.mean(all_gains))        * 100, 1)
-    bounce_p75      = round(float(np.percentile(all_gains, 75)) * 100, 1)
-    bounce_best     = round(float(np.percentile(all_gains, 90)) * 100, 1)
+    avg_gain = float(np.mean([w["gain"] for w in wins]))
 
     # Effective score = pattern quality × historical reliability
     effective_score = round(pattern_score * win_rate, 1)
     low_reliability = win_rate < 0.25
-
-    # Volume confidence: إشارة على حجم ضعيف أقل موثوقية
-    volume_vs_adv    = (context or {}).get("volume_vs_adv")
-    volume_confidence = float(min(1.0, volume_vs_adv)) if volume_vs_adv else 1.0
-    volume_adjusted_score = round(effective_score * volume_confidence, 1)
-
-    is_ram       = (context or {}).get("is_ramadan", False)
-    context_mode = "ramadan" if is_ram else "normal"
 
     # Label
     if pattern_score >= 70:
@@ -555,26 +446,16 @@ def analyze_entry_patterns(df, symbol=None, context=None):
         label = f"Poor setup — current conditions differ from historical reversal patterns"
 
     if low_reliability:
-        label += f" | ⚠️ Low reliability ({win_rate*100:.0f}% bounced)"
-    if volume_confidence < 0.6:
-        label += f" | ⚠️ Low volume day ({volume_confidence*100:.0f}% of ADV)"
-    if is_ram:
-        label += " | 🌙 Ramadan weights applied"
+        label += f" | ⚠️ Low reliability ({win_rate*100:.0f}% win rate)"
 
     return {
-        "ok":                    True,
-        "pattern_score":         pattern_score,
-        "effective_score":       effective_score,
-        "volume_adjusted_score": volume_adjusted_score,
-        "volume_confidence":     round(volume_confidence, 3),
-        "win_rate":              round(win_rate, 3),
-        "avg_gain":              round(avg_gain * 100, 2),
-        "expected_bounce":       expected_bounce,   # متوسط الارتداد من هذا المستوى
-        "bounce_p75":            bounce_p75,         # 75% من الحالات تصل لهذا
-        "bounce_best":           bounce_best,         # 90% من الحالات
-        "similar_count":         len(wins),
-        "low_reliability":       low_reliability,
-        "context_mode":          context_mode,
-        "detail":                detail,
-        "label":                 label,
+        "ok":              True,
+        "pattern_score":   pattern_score,
+        "effective_score": effective_score,
+        "win_rate":        round(win_rate, 3),
+        "avg_gain":        round(avg_gain * 100, 2),
+        "similar_count":   len(wins),
+        "low_reliability": low_reliability,
+        "detail":          detail,
+        "label":           label,
     }

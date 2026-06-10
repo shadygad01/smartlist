@@ -25,13 +25,19 @@ from egx_context import is_ramadan, get_season
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-FORWARD_DAYS  = 30   # days to confirm a local low is unbroken
+FORWARD_DAYS  = 60   # days to confirm bounce quality (was 30 — extended for no-SL strategy)
 BOUNCE_MIN    = 0.05  # minimum bounce from the low to count as real demand (5%)
 VOL_THRESHOLD = 0.80  # volume on low day must be > 80% of 20-day average
 BREAK_BUFFER  = 0.02  # low must be broken by > 2% to count as a real loss
 MIN_HISTORY   = 80    # 50 for indicators + 30 for confirmation window
 MIN_REVERSALS = 3
 MIN_DECIDED   = 100   # أقل عدد إشارات محسومة لتحديث الأوزان
+
+# حدود الارتداد لتصنيف قوة الإشارة
+BOUNCE_LARGE  = 0.20  # >= 20% ارتداد كبير
+BOUNCE_MEDIUM = 0.10  # 10-20% ارتداد متوسط
+BOUNCE_SMALL  = 0.04  # 4-10%  ارتداد صغير
+# < 4%  → flat
 
 LEARNED_WEIGHTS_FILE = "learned_weights.json"
 
@@ -72,10 +78,24 @@ def _load_weights():
 WEIGHTS = _load_weights()
 
 
+def _outcome_is_positive(sig):
+    """هل الإشارة انتهت بارتداد حقيقي؟ (يدعم التصنيفات القديمة والجديدة)"""
+    o = sig.get("outcome", "")
+    return o in ("win", "large", "medium")
+
+
+def _get_peak_gain(sig):
+    """يُرجع أقصى ارتداد مسجّل للإشارة — يدعم الحقلين القديم والجديد."""
+    g = sig.get("peak_gain")
+    if g is None:
+        g = sig.get("outcome_gain")
+    return float(g) if g is not None else None
+
+
 def _calc_weights_from_signals(decided, min_count=30):
     """
-    يحسب الأوزان من قائمة إشارات محسومة باستخدام Point-Biserial Correlation.
-    يُرجع dict أوزان أو None لو البيانات مش كافية.
+    Point-Biserial Correlation — يصنّف الإشارات إلى ناجح/غير ناجح.
+    يدعم تصنيفات win/loss (قديمة) و large/medium/small/flat (جديدة).
     """
     if len(decided) < min_count:
         return None
@@ -90,7 +110,7 @@ def _calc_weights_from_signals(decided, min_count=30):
             if v is None:
                 continue
             vals.append(float(v))
-            labels.append(1 if s["outcome"] == "win" else 0)
+            labels.append(1 if _outcome_is_positive(s) else 0)
 
         if len(vals) < min_count:
             correlations[feat] = DEFAULT_WEIGHTS[feat]
@@ -110,6 +130,42 @@ def _calc_weights_from_signals(decided, min_count=30):
         std = vals_arr.std() + 1e-9
         rpb = abs((m1 - m0) / std * np.sqrt(n1 * n0 / n**2))
         correlations[feat] = float(rpb)
+
+    total = sum(correlations.values()) + 1e-9
+    return {k: round(v / total, 4) for k, v in correlations.items()}
+
+
+def _calc_gain_weights(signals, min_count=30):
+    """
+    Pearson Correlation بين كل مؤشر وحجم الارتداد الفعلي (peak_gain).
+    يتعلم أي مؤشرات ترتبط بأكبر ارتداد — مش بس الاحتمال.
+    """
+    if len(signals) < min_count:
+        return None
+
+    features = list(DEFAULT_WEIGHTS.keys())
+    correlations = {}
+
+    for feat in features:
+        gains, feat_vals = [], []
+        for s in signals:
+            g = _get_peak_gain(s)
+            if g is None:
+                continue
+            v = s["indicators"].get(feat)
+            if v is None:
+                continue
+            gains.append(max(0.0, g))
+            feat_vals.append(float(v))
+
+        if len(gains) < min_count:
+            correlations[feat] = DEFAULT_WEIGHTS[feat]
+            continue
+
+        g_arr = np.array(gains)
+        f_arr = np.array(feat_vals)
+        corr  = np.corrcoef(f_arr, g_arr)[0, 1]
+        correlations[feat] = float(abs(corr)) if not np.isnan(corr) else DEFAULT_WEIGHTS[feat]
 
     total = sum(correlations.values()) + 1e-9
     return {k: round(v / total, 4) for k, v in correlations.items()}
@@ -147,7 +203,8 @@ def update_weights_from_log(log_file="signal_log.json"):
         return None
 
     decided = [s for s in data.get("signals", [])
-               if s.get("outcome") in ("win", "loss") and s.get("indicators")]
+               if s.get("outcome") in ("win", "loss", "large", "medium", "small", "flat")
+               and s.get("indicators")]
 
     if len(decided) < MIN_DECIDED:
         return None
@@ -163,6 +220,10 @@ def update_weights_from_log(log_file="signal_log.json"):
 
     weights_ramadan = _calc_weights_from_signals(ramadan_sigs, min_count=30)
     weights_normal  = _calc_weights_from_signals(normal_sigs,  min_count=MIN_DECIDED // 2)
+
+    # ── Gain-magnitude weights (Pearson) ──────────────────────────────
+    gain_sigs    = [s for s in decided if _get_peak_gain(s) is not None]
+    weights_gain = _calc_gain_weights(gain_sigs, min_count=MIN_DECIDED)
 
     # ── Per-stock weights ─────────────────────────────────────────────
     from collections import defaultdict
@@ -182,10 +243,12 @@ def update_weights_from_log(log_file="signal_log.json"):
         "weights":         global_weights,
         "weights_normal":  weights_normal,
         "weights_ramadan": weights_ramadan,
+        "weights_gain":    weights_gain,
         "per_stock":       per_stock,
         "based_on":        len(decided),
         "ramadan_signals": len(ramadan_sigs),
         "normal_signals":  len(normal_sigs),
+        "gain_signals":    len(gain_sigs),
         "updated_at":      str(datetime.date.today()),
     }
     with open(LEARNED_WEIGHTS_FILE, "w") as f:
@@ -199,6 +262,8 @@ def update_weights_from_log(log_file="signal_log.json"):
         print(f"     {k:<12} {old:.2f} → {v:.4f} {arrow}")
     if weights_ramadan:
         print(f"  🌙 Ramadan weights learned from {len(ramadan_sigs)} signals")
+    if weights_gain:
+        print(f"  📈 Gain-magnitude weights learned from {len(gain_sigs)} signals")
     print(f"  🔄 Per-stock weights learned for {len(per_stock)} stocks")
 
     return global_weights
@@ -437,6 +502,7 @@ def analyze_entry_patterns(df, symbol=None, context=None):
     empty = {"ok": False, "pattern_score": 0, "effective_score": 0,
              "volume_adjusted_score": 0, "volume_confidence": 1.0,
              "win_rate": 0, "avg_gain": 0, "similar_count": 0,
+             "expected_bounce": 0, "bounce_p75": 0, "bounce_best": 0,
              "low_reliability": False, "context_mode": "normal", "detail": {},
              "label": "Insufficient history"}
 
@@ -458,7 +524,13 @@ def analyze_entry_patterns(df, symbol=None, context=None):
 
     total_decided = len(wins) + len(losses)
     win_rate = len(wins) / total_decided if total_decided > 0 else 0.0
-    avg_gain = float(np.mean([w["gain"] for w in wins]))
+    all_gains = [w["gain"] for w in wins]
+    avg_gain  = float(np.mean(all_gains))
+
+    # ── Bounce statistics (أهم من win_rate للاستراتيجية بدون stop loss) ─────
+    expected_bounce = round(float(np.mean(all_gains))        * 100, 1)
+    bounce_p75      = round(float(np.percentile(all_gains, 75)) * 100, 1)
+    bounce_best     = round(float(np.percentile(all_gains, 90)) * 100, 1)
 
     # Effective score = pattern quality × historical reliability
     effective_score = round(pattern_score * win_rate, 1)
@@ -483,7 +555,7 @@ def analyze_entry_patterns(df, symbol=None, context=None):
         label = f"Poor setup — current conditions differ from historical reversal patterns"
 
     if low_reliability:
-        label += f" | ⚠️ Low reliability ({win_rate*100:.0f}% win rate)"
+        label += f" | ⚠️ Low reliability ({win_rate*100:.0f}% bounced)"
     if volume_confidence < 0.6:
         label += f" | ⚠️ Low volume day ({volume_confidence*100:.0f}% of ADV)"
     if is_ram:
@@ -497,6 +569,9 @@ def analyze_entry_patterns(df, symbol=None, context=None):
         "volume_confidence":     round(volume_confidence, 3),
         "win_rate":              round(win_rate, 3),
         "avg_gain":              round(avg_gain * 100, 2),
+        "expected_bounce":       expected_bounce,   # متوسط الارتداد من هذا المستوى
+        "bounce_p75":            bounce_p75,         # 75% من الحالات تصل لهذا
+        "bounce_best":           bounce_best,         # 90% من الحالات
         "similar_count":         len(wins),
         "low_reliability":       low_reliability,
         "context_mode":          context_mode,

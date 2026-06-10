@@ -19,6 +19,20 @@ from pattern_engine import update_weights_from_log
 LOG_FILE = "signal_log.json"
 
 
+BOUNCE_LARGE  = 0.20
+BOUNCE_MEDIUM = 0.10
+BOUNCE_SMALL  = 0.04
+
+
+def _gain_to_tier(g):
+    if g is None: return None
+    g = float(g)
+    if g >= BOUNCE_LARGE:  return "large"
+    if g >= BOUNCE_MEDIUM: return "medium"
+    if g >= BOUNCE_SMALL:  return "small"
+    return "flat"
+
+
 def enrich_contexts():
     if not os.path.exists(LOG_FILE):
         print("❌  signal_log.json not found")
@@ -27,49 +41,62 @@ def enrich_contexts():
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    signals = data["signals"]
-    updated = 0
+    signals   = data["signals"]
+    ctx_added = 0
+    peak_added = 0
+    tier_updated = 0
 
     for sig in signals:
-        if sig.get("context"):
-            continue  # already tagged
+        # 1. Context
+        if not sig.get("context"):
+            sig["context"] = get_signal_context(sig.get("signal_date", ""))
+            ctx_added += 1
 
-        sig_date = sig.get("signal_date", "")
-        ctx = get_signal_context(sig_date)   # بدون volume (غير محفوظ للتاريخي)
-        sig["context"] = ctx
-        updated += 1
+        # 2. peak_gain — استخدم outcome_gain كأفضل تقدير متاح
+        if sig.get("peak_gain") is None and sig.get("outcome_gain") is not None:
+            sig["peak_gain"] = sig["outcome_gain"]
+            peak_added += 1
 
-    if updated:
-        with open(LOG_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        # 3. تحديث تصنيف الإشارات القديمة (win/loss/neutral → large/medium/small/flat)
+        if sig.get("outcome") in ("win", "loss", "neutral"):
+            new_tier = _gain_to_tier(sig.get("peak_gain"))
+            if new_tier:
+                sig["outcome"] = new_tier
+                tier_updated += 1
 
-    return signals, updated
+    with open(LOG_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    return signals, ctx_added, peak_added, tier_updated
 
 
 def print_context_stats(signals):
-    total    = len(signals)
-    decided  = [s for s in signals if s.get("outcome") in ("win", "loss")]
-    ramadan  = [s for s in decided  if s.get("context", {}).get("is_ramadan")]
-    cbe_w    = [s for s in decided  if s.get("context", {}).get("cbe_window")]
-    seasons  = Counter(s.get("context", {}).get("season", "?") for s in decided)
+    total   = len(signals)
+    TIERS   = ("large", "medium", "small", "flat")
+    decided = [s for s in signals if s.get("outcome") in TIERS]
 
-    ram_wins    = sum(1 for s in ramadan if s["outcome"] == "win")
-    ram_decided = len(ramadan)
-    norm_sigs   = [s for s in decided if not s.get("context", {}).get("is_ramadan")]
-    norm_wins   = sum(1 for s in norm_sigs if s["outcome"] == "win")
+    by_tier = {t: [s for s in decided if s["outcome"] == t] for t in TIERS}
+    peaks   = [s["peak_gain"] for s in decided if s.get("peak_gain")]
+    avg_p   = sum(peaks)/len(peaks)*100 if peaks else 0
+
+    ramadan = [s for s in decided if s.get("context", {}).get("is_ramadan")]
+    normal  = [s for s in decided if not s.get("context", {}).get("is_ramadan")]
+
+    def avg_peak(lst):
+        ps = [s.get("peak_gain", 0) or 0 for s in lst]
+        return sum(ps)/len(ps)*100 if ps else 0
 
     print(f"\n{'─'*55}")
-    print(f"  📊  Context Stats ({total} total, {len(decided)} decided)")
+    print(f"  📊  Signal Stats ({total} total, {len(decided)} decided)")
     print(f"{'─'*55}")
-    print(f"  🌙  Ramadan signals : {len(ramadan):4d}  "
-          f"(WR={ram_wins/ram_decided*100:.1f}%)" if ram_decided else
-          f"  🌙  Ramadan signals : {len(ramadan):4d}")
-    print(f"  📅  Normal signals  : {len(norm_sigs):4d}  "
-          f"(WR={norm_wins/len(norm_sigs)*100:.1f}%)" if norm_sigs else
-          f"  📅  Normal signals  : {len(norm_sigs):4d}")
-    print(f"  🏦  CBE-window sigs : {len(cbe_w):4d}")
-    for season, cnt in sorted(seasons.items()):
-        print(f"  📆  {season:<10}        : {cnt:4d}")
+    print(f"  📈  Bounce tiers:")
+    for t in TIERS:
+        sigs = by_tier[t]
+        ap   = avg_peak(sigs)
+        print(f"      {t:<8} : {len(sigs):4d}  avg_peak={ap:5.1f}%")
+    print(f"  📊  Overall avg peak : {avg_p:.1f}%")
+    print(f"  🌙  Ramadan avg peak : {avg_peak(ramadan):.1f}%  (n={len(ramadan)})")
+    print(f"  📅  Normal  avg peak : {avg_peak(normal):.1f}%  (n={len(normal)})")
     print(f"{'─'*55}\n")
 
 
@@ -82,12 +109,11 @@ if __name__ == "__main__":
     if isinstance(result, int):
         exit(1)
 
-    signals, updated = result
+    signals, ctx_added, peak_added, tier_updated = result
 
-    if updated:
-        print(f"\n  ✅  Tagged {updated} signals with EGX context")
-    else:
-        print(f"\n  ℹ️   All signals already have context — skipping tagging")
+    print(f"\n  ✅  context tags added  : {ctx_added}")
+    print(f"  ✅  peak_gain populated : {peak_added}")
+    print(f"  ✅  outcome tiers updated: {tier_updated}")
 
     print_context_stats(signals)
 

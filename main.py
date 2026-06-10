@@ -14,6 +14,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pattern_engine import analyze_entry_patterns
 from signal_logger import log_signal, check_outcomes
+from backfill_signal_log import run_backfill
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from email.mime.multipart import MIMEMultipart
@@ -2361,8 +2362,27 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
         send_change_alert(changes)
 
 
+def _ensure_backfill():
+    """يشغّل الباكتست التاريخي مرة واحدة فقط لو السجل فاضي أو صغير."""
+    import os, json
+    log_file = "signal_log.json"
+    try:
+        if os.path.exists(log_file):
+            with open(log_file) as f:
+                data = json.load(f)
+            hist_count = sum(1 for s in data.get("signals", [])
+                             if s.get("source") == "backfill")
+            if hist_count >= 50:
+                return  # عنده بيانات كافية
+        print("  🔄 Running historical backfill (first time setup)...")
+        run_backfill(period="2y")
+    except Exception as e:
+        print(f"  ⚠️ Backfill skipped: {e}")
+
+
 def daily_scan():
     print(f"\n📅 Daily scan started at {fmt_cairo()}")
+    _ensure_backfill()
     if is_egx_trading_day(today_cairo()):
         _run_scan_workflow(holiday_mode=False, last_trading=None, email_suffix="")
     else:

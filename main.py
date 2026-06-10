@@ -12,6 +12,7 @@ import requests
 import traceback
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pattern_engine import analyze_entry_patterns
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from email.mime.multipart import MIMEMultipart
@@ -1275,6 +1276,9 @@ def analyze(symbol):
             entry_zones = calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo,
                                            _sv=sv_result, _hvn=hvn_result)
 
+        # ── Pattern Recognition + Historical Backtesting ──────────────────────
+        pattern_data = analyze_entry_patterns(df)
+
         return {
             "ok":True,"price":round(cur,2),"last_dt":last_dt,
             "is_fresh":is_fresh,"price_src":src,
@@ -1283,6 +1287,7 @@ def analyze(symbol):
             "avwap":round(av,2),"avwap_l":round(alo,2),
             "score":total,"signal":sig,"tc":tc,"tbg":tbg,"tbr":tbr,"r1":r1,
             "entry_zones": entry_zones,
+            "pattern": pattern_data,
             "rows":[
                 ("Price Position",      r1,W_PRICE,l1),
                 ("Liquidity Context",   r3,W_LIQ,  l3),
@@ -1402,6 +1407,68 @@ def build_ez_html(r):
             f'&nbsp;&nbsp;|&nbsp;&nbsp;<b>Conservative Target:</b> <span style="color:#155724;font-weight:bold;font-size:14px;">{ez["target"]} EGP</span>'
             f'&nbsp;&nbsp;|&nbsp;&nbsp;<b>Return from Avg:</b> <span style="color:{rc};font-weight:bold;font-size:14px;">+{ez["ret_from_avg"]}%</span>'
             f'</td></tr></table>')
+
+
+def build_pattern_html(r):
+    """Renders the Pattern Recognition + Backtesting block for a stock card."""
+    p = r.get("pattern")
+    if not p or not p.get("ok"):
+        return ""
+
+    ps   = p["pattern_score"]
+    wr   = p["win_rate"] * 100
+    gain = p["avg_gain"]
+    cnt  = p["similar_count"]
+    lbl  = p["label"]
+
+    # Color based on pattern score
+    if ps >= 70:
+        bar_color = "#155724"; bg = "#d4edda"; border = "#c3e6cb"
+        badge_txt = "Strong Historical Match"
+    elif ps >= 45:
+        bar_color = "#856404"; bg = "#fff3cd"; border = "#ffeeba"
+        badge_txt = "Moderate Historical Match"
+    else:
+        bar_color = "#6c757d"; bg = "#f8f9fa"; border = "#dee2e6"
+        badge_txt = "Weak Historical Match"
+
+    bar_w = max(4, min(100, int(ps)))
+
+    return (
+        f'<div style="margin:10px 0 4px 0;font-family:Arial,sans-serif;font-size:12px;'
+        f'font-weight:bold;color:#1C4587;letter-spacing:0.5px;border-left:4px solid #1C4587;'
+        f'padding-left:8px;">PATTERN INTELLIGENCE — HISTORICAL ANALYSIS</div>'
+        f'<table width="100%" cellpadding="0" cellspacing="0" border="0" '
+        f'style="border:1px solid {border};border-collapse:collapse;background:{bg};">'
+        f'<tr><td style="padding:10px 14px;">'
+        f'<table width="100%" cellpadding="0" cellspacing="0"><tr>'
+        # Pattern Score
+        f'<td width="28%" style="font-family:Arial,sans-serif;">'
+        f'<div style="font-size:10px;color:#555;font-weight:bold;margin-bottom:4px;">PATTERN SCORE</div>'
+        f'<div style="font-size:22px;font-weight:bold;color:{bar_color};">{ps:.0f}<span style="font-size:13px;">/100</span></div>'
+        f'<div style="background:#e0e0e0;border-radius:4px;height:6px;margin-top:4px;">'
+        f'<div style="width:{bar_w}%;background:{bar_color};height:6px;border-radius:4px;"></div></div>'
+        f'</td>'
+        # Win Rate
+        f'<td width="18%" style="font-family:Arial,sans-serif;padding-left:12px;">'
+        f'<div style="font-size:10px;color:#555;font-weight:bold;margin-bottom:4px;">WIN RATE</div>'
+        f'<div style="font-size:22px;font-weight:bold;color:{bar_color};">{wr:.0f}<span style="font-size:13px;">%</span></div>'
+        f'<div style="font-size:10px;color:#777;">{cnt} similar cases</div>'
+        f'</td>'
+        # Avg Gain
+        f'<td width="18%" style="font-family:Arial,sans-serif;padding-left:12px;">'
+        f'<div style="font-size:10px;color:#555;font-weight:bold;margin-bottom:4px;">AVG GAIN</div>'
+        f'<div style="font-size:22px;font-weight:bold;color:#155724;">+{gain:.1f}<span style="font-size:13px;">%</span></div>'
+        f'</td>'
+        # Badge + label
+        f'<td style="font-family:Arial,sans-serif;padding-left:12px;vertical-align:middle;">'
+        f'<span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;'
+        f'font-weight:bold;background:{bar_color};color:#fff;">{badge_txt}</span>'
+        f'<div style="font-size:11px;color:#555;margin-top:6px;">{lbl}</div>'
+        f'</td>'
+        f'</tr></table>'
+        f'</td></tr></table>'
+    )
 
 
 FIB_LABELS = {0: "12% Min", 1: "23.6%", 2: "38.2%", 3: "50%", 4: "61.8%", 5: "100%", 6: "150%", 7: "200%"}
@@ -1634,6 +1701,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
   {ind_rows}
 </table>
 {ez_html}
+{build_pattern_html(r)}
 """)
 
     parts.append(f"""
@@ -2041,6 +2109,16 @@ def send_telegram_alerts(results):
         in_portfolio = s in positions and positions[s].get("status") == "open"
         portfolio_tag = "  🔵 _In Portfolio_" if in_portfolio else ""
 
+        # Pattern Intelligence line
+        pat = r.get("pattern", {})
+        if pat and pat.get("ok"):
+            pi_line = (f"   🧠 Intelligence: *{pat['pattern_score']:.0f}/100*"
+                       f"  |  Win Rate: *{pat['win_rate']*100:.0f}%*"
+                       f"  |  Avg Gain: *+{pat['avg_gain']:.1f}%*"
+                       f"  ({pat['similar_count']} cases)\n")
+        else:
+            pi_line = ""
+
         if is_buy:
             # Full details for BUY / STRONG BUY
             # Use dynamic target if position is open, otherwise use static target
@@ -2058,6 +2136,7 @@ def send_telegram_alerts(results):
                 f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
                 f"   Signal: *{r['signal']}*  |  Score: *{r['score']}/100*\n"
                 f"   Price: *{r['price']} EGP*  →  Target: *{target_to_display} EGP*{upside}\n"
+                f"{pi_line}"
                 f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
             )
         else:
@@ -2066,6 +2145,7 @@ def send_telegram_alerts(results):
                 f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
                 f"   👀 Watch  |  Score: *{r['score']}/100*\n"
                 f"   Price: *{r['price']} EGP*\n"
+                f"{pi_line}"
                 f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
             )
 
@@ -2130,11 +2210,20 @@ def send_alert_for_high_score(stock, score, result):
             except:
                 pass
             
+            pat = result.get("pattern", {})
+            pi_line = ""
+            if pat and pat.get("ok"):
+                pi_line = (f"\n🧠 Intelligence: *{pat['pattern_score']:.0f}/100*"
+                           f"  |  Win Rate: *{pat['win_rate']*100:.0f}%*"
+                           f"  |  Avg Gain: *+{pat['avg_gain']:.1f}%*"
+                           f"  ({pat['similar_count']} cases)")
+
             msg = (
                 f"🚨 *ALERT* — {emoji} {NAMES.get(stock, stock)}\n"
                 f"Score: *{score}/100*  |  Signal: *{signal}*\n"
                 f"Price: *{result['price']} EGP*\n"
-                f"Target: *{result['target']} EGP*{upside}\n"
+                f"Target: *{result['target']} EGP*{upside}"
+                f"{pi_line}\n"
                 f"Time: {now_cairo().strftime('%H:%M:%S')}"
             )
             

@@ -25,6 +25,7 @@ import os
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 FORWARD_DAYS  = 30   # days to confirm a local low is unbroken
+BOUNCE_MIN    = 0.05  # minimum bounce from the low to count as real demand (5%)
 MIN_HISTORY   = 80    # 50 for indicators + 30 for confirmation window
 MIN_REVERSALS = 3
 MIN_DECIDED   = 100   # أقل عدد إشارات محسومة لتحديث الأوزان
@@ -268,10 +269,14 @@ def _extract(df, idx):
 def _find_reversals(df):
     """
     Returns (wins, losses) at historical local lows.
-    win  = no close below the low within FORWARD_DAYS (real bottom)
-    loss = at least one close below the low within FORWARD_DAYS (broken bottom)
+    win  = low held (no close below within FORWARD_DAYS)
+           + bounced >= BOUNCE_MIN from the low
+           + volume on low day > 20-day average volume
+    loss = at least one close below the low within FORWARD_DAYS
+    neutral (held but weak bounce or low volume) = ignored
     """
     close  = df["Close"].values
+    volume = df["Volume"].values
     n      = len(close)
     wins   = []
     losses = []
@@ -285,12 +290,19 @@ def _find_reversals(df):
         if cond is None:
             continue
 
-        max_gain = (float(np.max(future)) - close[i]) / close[i]
+        low_broken = any(c < close[i] for c in future)
 
-        if not any(c < close[i] for c in future):
-            wins.append({"conditions": cond, "gain": round(max_gain, 4)})
-        else:
+        if low_broken:
             losses.append({"conditions": cond})
+        else:
+            max_gain = (float(np.max(future)) - close[i]) / close[i]
+            avg_vol  = float(np.mean(volume[i-20:i])) if i >= 20 else float(np.mean(volume[:i]))
+            vol_ok   = volume[i] > avg_vol
+            bounce_ok = max_gain >= BOUNCE_MIN
+
+            if bounce_ok and vol_ok:
+                wins.append({"conditions": cond, "gain": round(max_gain, 4)})
+            # else: neutral — held but no real demand confirmation
 
     return wins, losses
 

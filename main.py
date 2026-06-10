@@ -1302,7 +1302,7 @@ def analyze(symbol):
             df_long = download_data(symbol, 500)
             if df_long.empty or len(df_long) < 30:
                 df_long = df   # df الأصلي مضمون شغال لكل الأسهم بما فيهم ORAS
-            pattern_data = analyze_entry_patterns(df_long)
+            pattern_data = analyze_entry_patterns(df_long, symbol=symbol)
 
         return {
             "ok":True,"price":round(cur,2),"last_dt":last_dt,

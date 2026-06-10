@@ -70,9 +70,52 @@ def _load_weights():
 WEIGHTS = _load_weights()
 
 
+def _calc_weights_from_signals(decided, min_count=30):
+    """
+    يحسب الأوزان من قائمة إشارات محسومة باستخدام Point-Biserial Correlation.
+    يُرجع dict أوزان أو None لو البيانات مش كافية.
+    """
+    if len(decided) < min_count:
+        return None
+
+    features = list(DEFAULT_WEIGHTS.keys())
+    correlations = {}
+
+    for feat in features:
+        vals, labels = [], []
+        for s in decided:
+            v = s["indicators"].get(feat)
+            if v is None:
+                continue
+            vals.append(float(v))
+            labels.append(1 if s["outcome"] == "win" else 0)
+
+        if len(vals) < min_count:
+            correlations[feat] = DEFAULT_WEIGHTS[feat]
+            continue
+
+        vals_arr   = np.array(vals)
+        labels_arr = np.array(labels)
+        n  = len(vals_arr)
+        n1 = int(labels_arr.sum())
+        n0 = n - n1
+        if n1 == 0 or n0 == 0:
+            correlations[feat] = DEFAULT_WEIGHTS[feat]
+            continue
+
+        m1  = vals_arr[labels_arr == 1].mean()
+        m0  = vals_arr[labels_arr == 0].mean()
+        std = vals_arr.std() + 1e-9
+        rpb = abs((m1 - m0) / std * np.sqrt(n1 * n0 / n**2))
+        correlations[feat] = float(rpb)
+
+    total = sum(correlations.values()) + 1e-9
+    return {k: round(v / total, 4) for k, v in correlations.items()}
+
+
 def update_weights_from_log(log_file="signal_log.json"):
     """
-    يحسب أوزان جديدة من signal_log.json باستخدام Point-Biserial Correlation.
+    يحسب أوزان global + per-stock من signal_log.json.
     يحفظ النتيجة في learned_weights.json.
     يُرجع الأوزان الجديدة أو None لو البيانات مش كافية.
     """
@@ -86,69 +129,64 @@ def update_weights_from_log(log_file="signal_log.json"):
         return None
 
     decided = [s for s in data.get("signals", [])
-               if s.get("outcome") in ("win", "loss")
-               and s.get("indicators")]
+               if s.get("outcome") in ("win", "loss") and s.get("indicators")]
 
     if len(decided) < MIN_DECIDED:
         return None
 
-    features = list(DEFAULT_WEIGHTS.keys())
-    correlations = {}
+    # ── Global weights ────────────────────────────────────────────────
+    global_weights = _calc_weights_from_signals(decided, min_count=MIN_DECIDED)
+    if global_weights is None:
+        return None
 
-    for feat in features:
-        vals   = []
-        labels = []
-        for s in decided:
-            v = s["indicators"].get(feat)
-            if v is None:
-                continue
-            vals.append(float(v))
-            labels.append(1 if s["outcome"] == "win" else 0)
+    # ── Per-stock weights ─────────────────────────────────────────────
+    from collections import defaultdict
+    by_symbol = defaultdict(list)
+    for s in decided:
+        by_symbol[s["symbol"]].append(s)
 
-        if len(vals) < MIN_DECIDED:
-            correlations[feat] = DEFAULT_WEIGHTS[feat]
-            continue
+    per_stock = {}
+    for sym, sigs in by_symbol.items():
+        w = _calc_weights_from_signals(sigs, min_count=30)
+        if w:
+            per_stock[sym] = {"weights": w, "based_on": len(sigs)}
 
-        vals_arr   = np.array(vals)
-        labels_arr = np.array(labels)
-
-        # Point-Biserial Correlation
-        n    = len(vals_arr)
-        n1   = labels_arr.sum()
-        n0   = n - n1
-        if n1 == 0 or n0 == 0:
-            correlations[feat] = DEFAULT_WEIGHTS[feat]
-            continue
-
-        m1   = vals_arr[labels_arr == 1].mean()
-        m0   = vals_arr[labels_arr == 0].mean()
-        s    = vals_arr.std() + 1e-9
-
-        # لو الاتجاه "lower"، القيم المنخفضة مواتية للـ win
-        # فالارتباط يكون سلبي = مؤشر قوي → نأخذ القيمة المطلقة
-        rpb = abs((m1 - m0) / s * np.sqrt(n1 * n0 / n**2))
-        correlations[feat] = float(rpb)
-
-    # Normalize عشان المجموع = 1
-    total = sum(correlations.values()) + 1e-9
-    new_weights = {k: round(v / total, 4) for k, v in correlations.items()}
-
-    # حفظ مع metadata
+    # ── حفظ ──────────────────────────────────────────────────────────
+    import datetime
     out = {
-        "weights":       new_weights,
-        "based_on":      len(decided),
-        "updated_at":    str(__import__("datetime").date.today()),
+        "weights":    global_weights,
+        "per_stock":  per_stock,
+        "based_on":   len(decided),
+        "updated_at": str(datetime.date.today()),
     }
     with open(LEARNED_WEIGHTS_FILE, "w") as f:
         json.dump(out, f, indent=2)
 
-    print(f"  🔄 Weights updated from {len(decided)} decided signals:")
-    for k, v in sorted(new_weights.items(), key=lambda x: -x[1]):
+    print(f"  🔄 Global weights updated from {len(decided)} signals:")
+    for k, v in sorted(global_weights.items(), key=lambda x: -x[1]):
         old = DEFAULT_WEIGHTS[k]
         arrow = "↑" if v > old else "↓" if v < old else "="
         print(f"     {k:<12} {old:.2f} → {v:.4f} {arrow}")
+    print(f"  🔄 Per-stock weights learned for {len(per_stock)} stocks")
 
-    return new_weights
+    return global_weights
+
+
+def _load_per_stock_weights(symbol):
+    """يُرجع الأوزان الخاصة بسهم معين، أو الـ global، أو الافتراضية."""
+    if os.path.exists(LEARNED_WEIGHTS_FILE):
+        try:
+            with open(LEARNED_WEIGHTS_FILE) as f:
+                data = json.load(f)
+            per_stock = data.get("per_stock", {})
+            if symbol in per_stock:
+                return per_stock[symbol]["weights"]
+            w = data.get("weights", {})
+            if set(w.keys()) == set(DEFAULT_WEIGHTS.keys()):
+                return w
+        except Exception:
+            pass
+    return DEFAULT_WEIGHTS.copy()
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -274,16 +312,20 @@ def _indicator_score(current_val, win_vals, direction):
     return float(1 / (1 + np.exp(z * 1.5)))
 
 
-def _threshold_score(current_cond, wins):
+def _threshold_score(current_cond, wins, weights=None):
     """
     يحسب الـ Pattern Score الكلي (0-100) بجمع نقاط المؤشرات الستة موزونة.
+    weights: لو None يستخدم الـ global WEIGHTS
     """
+    if weights is None:
+        weights = WEIGHTS
+
     total  = 0.0
     detail = {}
 
-    for feat, weight in WEIGHTS.items():
-        win_vals = [w["conditions"][feat] for w in wins]
-        cur_val  = current_cond[feat]
+    for feat, weight in weights.items():
+        win_vals  = [w["conditions"][feat] for w in wins]
+        cur_val   = current_cond[feat]
         direction = DIRECTION[feat]
 
         sc = _indicator_score(cur_val, win_vals, direction)
@@ -295,7 +337,7 @@ def _threshold_score(current_cond, wins):
 
 # ── Main API ──────────────────────────────────────────────────────────────────
 
-def analyze_entry_patterns(df):
+def analyze_entry_patterns(df, symbol=None):
     """
     الدالة الرئيسية.
 
@@ -327,7 +369,8 @@ def analyze_entry_patterns(df):
     if len(wins) < MIN_REVERSALS:
         return {**empty, "label": f"Limited history — {len(wins)} reversals found (need {MIN_REVERSALS})"}
 
-    pattern_score, detail = _threshold_score(current_cond, wins)
+    weights = _load_per_stock_weights(symbol) if symbol else WEIGHTS
+    pattern_score, detail = _threshold_score(current_cond, wins, weights)
 
     # Win rate = نسبة الارتدادات اللي وصلت +7% من كل القيعان المرصودة
     # (المقام = wins + failures اللي مش عندنا — نستخدم wins فقط كمرجع)

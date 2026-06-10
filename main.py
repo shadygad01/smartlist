@@ -2153,7 +2153,7 @@ def send_telegram_alerts(results):
         if pat and pat.get("ok"):
             warn = "  ⚠️ _Low reliability_" if pat.get("low_reliability") else ""
             pi_line = (f"   🧠 Pattern: *{pat['pattern_score']:.0f}/100*"
-                       f"  |  Effective: *{pat['effective_score']:.0f}*"
+                       f"  |  Effective: *{pat['effective_score']/20:.1f}/5*"
                        f"  |  Win Rate: *{pat['win_rate']*100:.0f}%*{warn}\n"
                        f"   Avg Gain: *+{pat['avg_gain']:.1f}%*"
                        f"  ({pat['similar_count']} cases)\n")
@@ -2671,7 +2671,7 @@ def send_change_email(changed_stocks):
                 f'<td style="text-align:right;vertical-align:top;">'
                 f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Effective</p>'
                 f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0;">'
-                f'{pat.get("effective_score", 0):.0f}</p>'
+                f'{pat.get("effective_score", 0)/20:.1f}/5</p>'
                 f'</td>'
                 f'<td style="text-align:right;vertical-align:top;">'
                 f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Win Rate</p>'

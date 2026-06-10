@@ -370,11 +370,24 @@ def download_data(symbol, days=110):
     # ORAS.CA is listed on Yahoo Finance and works identically to other EGX stocks.
     # TradingView patch (applied at the end) ensures today's price is always current.
     yf_symbol = symbol if symbol.endswith(".CA") else f"{symbol}.CA"
+
+    # Convert days to yfinance period string
+    if days <= 130:
+        period = "6mo"
+    elif days <= 260:
+        period = "1y"
+    elif days <= 520:
+        period = "2y"
+    else:
+        period = "5y"
+
+    range_param = period   # used by fallback Yahoo API too
+
     df = pd.DataFrame()
 
     try:
         ticker = yf.Ticker(yf_symbol)
-        df = ticker.history(period="6mo", interval="1d", auto_adjust=False, repair=True)
+        df = ticker.history(period=period, interval="1d", auto_adjust=False, repair=True)
         if not df.empty and len(df) > 5:
             df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
             df.index = df.index.tz_localize(None)
@@ -385,7 +398,7 @@ def download_data(symbol, days=110):
         # Fallback: direct Yahoo Finance chart API
         try:
             url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_symbol}"
-                   f"?range=6mo&interval=1d&includeAdjustedClose=false")
+                   f"?range={range_param}&interval=1d&includeAdjustedClose=false")
             r    = requests.get(url, headers=HEADERS, timeout=15)
             if r.status_code != 200:
                 print(f"  [{symbol}] Yahoo direct API: HTTP {r.status_code}")
@@ -1277,7 +1290,9 @@ def analyze(symbol):
                                            _sv=sv_result, _hvn=hvn_result)
 
         # ── Pattern Recognition + Historical Backtesting ──────────────────────
-        pattern_data = analyze_entry_patterns(df)
+        # استخدام 500 يوم (~2 سنة) للحصول على عينة تاريخية أكبر وأدق
+        df_long      = download_data(symbol, 500)
+        pattern_data = analyze_entry_patterns(df_long if not df_long.empty else df)
 
         return {
             "ok":True,"price":round(cur,2),"last_dt":last_dt,

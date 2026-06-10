@@ -268,9 +268,16 @@ def _extract(df, idx):
 # ── Find historical reversals ─────────────────────────────────────────────────
 
 def _find_reversals(df):
+    """
+    Returns (wins, losses) at historical local lows.
+    win  = price hit +MIN_GAIN before -STOP_LOSS
+    loss = price hit -STOP_LOSS before +MIN_GAIN
+    neutral (neither within FORWARD_DAYS) = ignored
+    """
     close  = df["Close"].values
     n      = len(close)
-    result = []
+    wins   = []
+    losses = []
 
     for i in range(50, n - FORWARD_DAYS):
         if close[i] > min(close[max(0, i-5):i+1]) * 1.002:
@@ -279,12 +286,16 @@ def _find_reversals(df):
         gain   = (float(np.max(future)) - close[i]) / close[i]
         loss   = (close[i] - float(np.min(future))) / close[i]
 
-        if gain >= MIN_GAIN and loss < STOP_LOSS:
-            cond = _extract(df, i)
-            if cond is not None:
-                result.append({"conditions": cond, "gain": round(gain, 4)})
+        cond = _extract(df, i)
+        if cond is None:
+            continue
 
-    return result
+        if gain >= MIN_GAIN and loss < STOP_LOSS:
+            wins.append({"conditions": cond, "gain": round(gain, 4)})
+        elif loss >= STOP_LOSS:
+            losses.append({"conditions": cond, "loss": round(loss, 4)})
+
+    return wins, losses
 
 
 # ── Threshold Scoring ─────────────────────────────────────────────────────────
@@ -364,7 +375,7 @@ def analyze_entry_patterns(df, symbol=None):
     if current_cond is None:
         return {**empty, "label": "Could not extract current conditions"}
 
-    wins = _find_reversals(df.iloc[:-1])
+    wins, losses = _find_reversals(df.iloc[:-1])
 
     if len(wins) < MIN_REVERSALS:
         return {**empty, "label": f"Limited history — {len(wins)} reversals found (need {MIN_REVERSALS})"}
@@ -372,16 +383,15 @@ def analyze_entry_patterns(df, symbol=None):
     weights = _load_per_stock_weights(symbol) if symbol else WEIGHTS
     pattern_score, detail = _threshold_score(current_cond, wins, weights)
 
-    # Win rate = نسبة الارتدادات اللي وصلت +7% من كل القيعان المرصودة
-    # (المقام = wins + failures اللي مش عندنا — نستخدم wins فقط كمرجع)
-    win_rate  = 1.0   # كل الحالات اللي جمعناها هي wins بالتعريف
-    avg_gain  = float(np.mean([w["gain"] for w in wins]))
+    total_decided = len(wins) + len(losses)
+    win_rate = len(wins) / total_decided if total_decided > 0 else 0.0
+    avg_gain = float(np.mean([w["gain"] for w in wins]))
 
     # Label
     if pattern_score >= 70:
-        label = f"Strong setup — {len(wins)} historical reversals, avg +{avg_gain*100:.1f}%"
+        label = f"Strong setup — {len(wins)}/{total_decided} reversals won, avg +{avg_gain*100:.1f}%"
     elif pattern_score >= 50:
-        label = f"Moderate setup — {len(wins)} historical reversals, avg +{avg_gain*100:.1f}%"
+        label = f"Moderate setup — {len(wins)}/{total_decided} reversals won, avg +{avg_gain*100:.1f}%"
     elif pattern_score >= 35:
         label = f"Weak setup — conditions partially match historical reversals"
     else:

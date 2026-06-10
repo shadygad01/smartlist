@@ -101,7 +101,8 @@ best_ret_ticker = next(
 # ── Buy signals (any signal containing "buy") ─────────────────────────────
 strong_buy = [
     {'ticker': t, 'score': d.get('score', 0), 'price': d.get('price', 0),
-     'signal': d.get('signal', '-'), 'r1': d.get('r1', 0)}
+     'signal': d.get('signal', '-'), 'r1': d.get('r1', 0),
+     'pattern': d.get('pattern') or {}}
     for t, d in scan_results.items()
     if 'buy' in d.get('signal', '').lower()
 ]
@@ -417,6 +418,8 @@ const TODAY_SC  = {js(today_scores)};
 const ALL_DATES = {js(all_dates)};
 const OPEN_POS  = new Set({js(list(positions.keys()))});
 const STRONG_BUY = new Set({js([s['ticker'] for s in strong_buy])});
+const STRONG_BUY_LIST = {js(strong_buy)};
+const BUY_MAP   = Object.fromEntries(STRONG_BUY_LIST.map(b => [b.ticker, b]));
 const PENDING   = new Set({js([p['ticker'] for p in pending])});
 const POS_DATA  = {js(pos_data)};
 const PEAK      = {js(peak_scores)};
@@ -650,7 +653,9 @@ function buildHeatmap() {{
         else if (hasPos) {{ cls = 'sn-open'; badgeText = 'open'; }}
         else if (isPend) {{ cls = 'sn-pend'; badgeText = 'pending'; }}
         else if ((todayInfo.score||0) >= 35) {{ cls = 'sn-sig'; badgeText = 'signal'; }}
-        nameTd.innerHTML = `<span class="sn-ticker ${{cls}}">${{ticker}}</span>${{badgeText?`<span class="sn-badge">${{badgeText}}</span>`:''}}`;
+        const buyPat = isBuy ? BUY_MAP[stock]?.pattern : null;
+        const patLabel = (buyPat?.ok) ? `<span class="sn-badge" style="color:#7ee787">🧠${{Math.round(buyPat.pattern_score)}}%</span>` : '';
+        nameTd.innerHTML = `<span class="sn-ticker ${{cls}}">${{ticker}}</span>${{badgeText?`<span class="sn-badge">${{badgeText}}</span>`:''}}<wbr>${{patLabel}}`;
         nameTd.title = stock;
         tr.appendChild(nameTd);
 

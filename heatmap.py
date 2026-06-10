@@ -654,7 +654,9 @@ function buildHeatmap() {{
         else if (isPend) {{ cls = 'sn-pend'; badgeText = 'pending'; }}
         else if ((todayInfo.score||0) >= 35) {{ cls = 'sn-sig'; badgeText = 'signal'; }}
         const buyPat = isBuy ? BUY_MAP[stock]?.pattern : null;
-        const patLabel = (buyPat?.ok) ? `<span class="sn-badge" style="color:#7ee787">🧠${{Math.round(buyPat.pattern_score)}}%</span>` : '';
+        const patColor = (buyPat?.low_reliability) ? '#f59e0b' : '#7ee787';
+        const patVal   = buyPat?.ok ? `${{Math.round(buyPat.effective_score)}}` : null;
+        const patLabel = patVal ? `<span class="sn-badge" style="color:${{patColor}}">🧠${{patVal}}</span>` : '';
         nameTd.innerHTML = `<span class="sn-ticker ${{cls}}">${{ticker}}</span>${{badgeText?`<span class="sn-badge">${{badgeText}}</span>`:''}}<wbr>${{patLabel}}`;
         nameTd.title = stock;
         tr.appendChild(nameTd);

@@ -2173,7 +2173,7 @@ def send_telegram_alerts(results):
             lines.append(
                 f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
                 f"   Signal: *{r['signal']}*  |  Score: *{r['score']}/100*\n"
-                f"   Price: *{r['price']} EGP*  →  Target: *{target_to_display} EGP*{upside}\n"
+                f"   Price: *{r['price']} EGP*  →  Target: *{round(float(target_to_display), 2)} EGP*{upside}\n"
                 f"{pi_line}"
                 f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
             )
@@ -2260,7 +2260,7 @@ def send_alert_for_high_score(stock, score, result):
                 f"🚨 *ALERT* — {emoji} {NAMES.get(stock, stock)}\n"
                 f"Score: *{score}/100*  |  Signal: *{signal}*\n"
                 f"Price: *{result['price']} EGP*\n"
-                f"Target: *{result['target']} EGP*{upside}"
+                f"Target: *{round(float(result['target']), 2)} EGP*{upside}"
                 f"{pi_line}\n"
                 f"Time: {now_cairo().strftime('%H:%M:%S')}"
             )

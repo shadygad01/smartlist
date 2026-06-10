@@ -656,7 +656,7 @@ function buildHeatmap() {{
         const buyPat = isBuy ? BUY_MAP[stock]?.pattern : null;
         const patColor = (buyPat?.low_reliability) ? '#f59e0b' : '#7ee787';
         const effV = buyPat?.ok ? buyPat.effective_score/20 : null;
-        const effLbl = effV === null ? '' : effV>=3?'ممتاز':effV>=2?'قوي':effV>=1?'متوسط':'ضعيف';
+        const effLbl = effV === null ? '' : effV>=3?'Excellent':effV>=2?'Strong':effV>=1?'Moderate':'Weak';
         const patVal   = effV !== null ? `${{effV.toFixed(1)}}/5 ${{effLbl}}` : null;
         const patLabel = patVal ? `<span class="sn-badge" style="color:${{patColor}}">🧠${{patVal}}</span>` : '';
         nameTd.innerHTML = `<span class="sn-ticker ${{cls}}">${{ticker}}</span>${{badgeText?`<span class="sn-badge">${{badgeText}}</span>`:''}}<wbr>${{patLabel}}`;

@@ -2339,7 +2339,16 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
     cur_prices = _collect_current_prices(results)
     monitor_positions(cur_prices)
     monitor_reinforcement(cur_prices, results)
-    check_outcomes(cur_prices)
+    resolved = check_outcomes(cur_prices)
+    if resolved:
+        try:
+            from pattern_engine import update_weights_from_log
+            import importlib, pattern_engine as _pe
+            new_w = update_weights_from_log()
+            if new_w:
+                _pe.WEIGHTS = new_w
+        except Exception:
+            pass
 
     # Step 3: rebuild HTML using cached prices (no extra HTTP calls)
     html, _ = build_report(holiday_mode=holiday_mode, last_trading=last_trading,
@@ -2376,6 +2385,12 @@ def _ensure_backfill():
                 return  # عنده بيانات كافية
         print("  🔄 Running historical backfill (first time setup)...")
         run_backfill(period="2y")
+        # بعد الـ backfill، حدّث الأوزان فوراً
+        try:
+            from pattern_engine import update_weights_from_log
+            update_weights_from_log()
+        except Exception:
+            pass
     except Exception as e:
         print(f"  ⚠️ Backfill skipped: {e}")
 

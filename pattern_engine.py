@@ -19,17 +19,22 @@ Pattern Recognition Engine — v2
 
 import numpy as np
 import pandas as pd
+import json
+import os
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-MIN_GAIN      = 0.07    # ارتداد ناجح = +7% على الأقل
-STOP_LOSS     = 0.06    # وقف خسارة = -6%
-FORWARD_DAYS  = 15      # نافذة تقييم النتيجة
-MIN_HISTORY   = 30      # أقل عدد شمعات مطلوب
-MIN_REVERSALS = 3       # أقل عدد ارتدادات مطلوبة
+MIN_GAIN      = 0.07
+STOP_LOSS     = 0.06
+FORWARD_DAYS  = 15
+MIN_HISTORY   = 30
+MIN_REVERSALS = 3
+MIN_DECIDED   = 100   # أقل عدد إشارات محسومة لتحديث الأوزان
 
-# أوزان المؤشرات من AUC (AUC - 0.5 → normalize)
-WEIGHTS = {
+LEARNED_WEIGHTS_FILE = "learned_weights.json"
+
+# الأوزان الافتراضية من AUC study
+DEFAULT_WEIGHTS = {
     "p_vs_ma20": 0.21,
     "mom_10d":   0.20,
     "stoch_rsi": 0.18,
@@ -38,7 +43,6 @@ WEIGHTS = {
     "vol_trend": 0.12,
 }
 
-# اتجاه كل مؤشر: "lower" = قيمة منخفضة مواتية، "higher" = قيمة مرتفعة مواتية
 DIRECTION = {
     "stoch_rsi": "lower",
     "p_vs_ma20": "lower",
@@ -47,6 +51,104 @@ DIRECTION = {
     "atr_ratio": "higher",
     "vol_trend": "lower",
 }
+
+
+def _load_weights():
+    """يحمّل الأوزان المحدّثة لو موجودة، وإلا يرجع الافتراضية."""
+    if os.path.exists(LEARNED_WEIGHTS_FILE):
+        try:
+            with open(LEARNED_WEIGHTS_FILE) as f:
+                data = json.load(f)
+            w = data.get("weights", {})
+            if set(w.keys()) == set(DEFAULT_WEIGHTS.keys()):
+                return w
+        except Exception:
+            pass
+    return DEFAULT_WEIGHTS.copy()
+
+
+WEIGHTS = _load_weights()
+
+
+def update_weights_from_log(log_file="signal_log.json"):
+    """
+    يحسب أوزان جديدة من signal_log.json باستخدام Point-Biserial Correlation.
+    يحفظ النتيجة في learned_weights.json.
+    يُرجع الأوزان الجديدة أو None لو البيانات مش كافية.
+    """
+    if not os.path.exists(log_file):
+        return None
+
+    try:
+        with open(log_file) as f:
+            data = json.load(f)
+    except Exception:
+        return None
+
+    decided = [s for s in data.get("signals", [])
+               if s.get("outcome") in ("win", "loss")
+               and s.get("indicators")]
+
+    if len(decided) < MIN_DECIDED:
+        return None
+
+    features = list(DEFAULT_WEIGHTS.keys())
+    correlations = {}
+
+    for feat in features:
+        vals   = []
+        labels = []
+        for s in decided:
+            v = s["indicators"].get(feat)
+            if v is None:
+                continue
+            vals.append(float(v))
+            labels.append(1 if s["outcome"] == "win" else 0)
+
+        if len(vals) < MIN_DECIDED:
+            correlations[feat] = DEFAULT_WEIGHTS[feat]
+            continue
+
+        vals_arr   = np.array(vals)
+        labels_arr = np.array(labels)
+
+        # Point-Biserial Correlation
+        n    = len(vals_arr)
+        n1   = labels_arr.sum()
+        n0   = n - n1
+        if n1 == 0 or n0 == 0:
+            correlations[feat] = DEFAULT_WEIGHTS[feat]
+            continue
+
+        m1   = vals_arr[labels_arr == 1].mean()
+        m0   = vals_arr[labels_arr == 0].mean()
+        s    = vals_arr.std() + 1e-9
+
+        # لو الاتجاه "lower"، القيم المنخفضة مواتية للـ win
+        # فالارتباط يكون سلبي = مؤشر قوي → نأخذ القيمة المطلقة
+        rpb = abs((m1 - m0) / s * np.sqrt(n1 * n0 / n**2))
+        correlations[feat] = float(rpb)
+
+    # Normalize عشان المجموع = 1
+    total = sum(correlations.values()) + 1e-9
+    new_weights = {k: round(v / total, 4) for k, v in correlations.items()}
+
+    # حفظ مع metadata
+    out = {
+        "weights":       new_weights,
+        "based_on":      len(decided),
+        "updated_at":    str(__import__("datetime").date.today()),
+    }
+    with open(LEARNED_WEIGHTS_FILE, "w") as f:
+        json.dump(out, f, indent=2)
+
+    print(f"  🔄 Weights updated from {len(decided)} decided signals:")
+    for k, v in sorted(new_weights.items(), key=lambda x: -x[1]):
+        old = DEFAULT_WEIGHTS[k]
+        arrow = "↑" if v > old else "↓" if v < old else "="
+        print(f"     {k:<12} {old:.2f} → {v:.4f} {arrow}")
+
+    return new_weights
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

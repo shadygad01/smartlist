@@ -1290,9 +1290,14 @@ def analyze(symbol):
                                            _sv=sv_result, _hvn=hvn_result)
 
         # ── Pattern Recognition + Historical Backtesting ──────────────────────
-        # استخدام 500 يوم (~2 سنة) للحصول على عينة تاريخية أكبر وأدق
-        df_long      = download_data(symbol, 500)
-        pattern_data = analyze_entry_patterns(df_long if not df_long.empty else df)
+        # يشتغل فقط لو السعر في Discount Zone (أقل من EQ)
+        if cur >= eq:
+            pattern_data = {"ok": False, "reason": "premium",
+                            "label": "Price in Premium Zone — pattern analysis inactive"}
+        else:
+            # استخدام 500 يوم (~2 سنة) للحصول على عينة تاريخية أكبر وأدق
+            df_long      = download_data(symbol, 500)
+            pattern_data = analyze_entry_patterns(df_long if not df_long.empty else df)
 
         return {
             "ok":True,"price":round(cur,2),"last_dt":last_dt,
@@ -1427,8 +1432,26 @@ def build_ez_html(r):
 def build_pattern_html(r):
     """Renders the Pattern Recognition + Backtesting block for a stock card."""
     p = r.get("pattern")
+    header = (
+        '<div style="margin:10px 0 4px 0;font-family:Arial,sans-serif;font-size:12px;'
+        'font-weight:bold;color:#1C4587;letter-spacing:0.5px;border-left:4px solid #1C4587;'
+        'padding-left:8px;">PATTERN INTELLIGENCE — HISTORICAL ANALYSIS</div>'
+    )
     if not p or not p.get("ok"):
-        return ""
+        reason = p.get("reason", "") if p else ""
+        if reason == "premium":
+            msg = "⛔ Price in Premium Zone — pattern analysis inactive (only runs in Discount Zone)"
+            bg, border = "#fff3cd", "#ffeeba"
+        else:
+            msg = f"⚠️ {p.get('label', 'Insufficient historical data for pattern analysis') if p else 'Insufficient historical data for pattern analysis'}"
+            bg, border = "#f8f9fa", "#dee2e6"
+        return (
+            header +
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0" '
+            f'style="border:1px solid {border};background:{bg};margin-bottom:8px;">'
+            f'<tr><td style="padding:10px 14px;font-family:Arial,sans-serif;font-size:12px;color:#555;">'
+            f'{msg}</td></tr></table>'
+        )
 
     ps   = p["pattern_score"]
     wr   = p["win_rate"] * 100
@@ -1450,9 +1473,7 @@ def build_pattern_html(r):
     bar_w = max(4, min(100, int(ps)))
 
     return (
-        f'<div style="margin:10px 0 4px 0;font-family:Arial,sans-serif;font-size:12px;'
-        f'font-weight:bold;color:#1C4587;letter-spacing:0.5px;border-left:4px solid #1C4587;'
-        f'padding-left:8px;">PATTERN INTELLIGENCE — HISTORICAL ANALYSIS</div>'
+        header +
         f'<table width="100%" cellpadding="0" cellspacing="0" border="0" '
         f'style="border:1px solid {border};border-collapse:collapse;background:{bg};">'
         f'<tr><td style="padding:10px 14px;">'

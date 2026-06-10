@@ -25,7 +25,7 @@ import os
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 FORWARD_DAYS  = 30   # days to confirm a local low is unbroken
-MIN_HISTORY   = 30
+MIN_HISTORY   = 80    # 50 for indicators + 30 for confirmation window
 MIN_REVERSALS = 3
 MIN_DECIDED   = 100   # أقل عدد إشارات محسومة لتحديث الأوزان
 

@@ -1418,7 +1418,6 @@ def build_pattern_html(r):
     ps   = p["pattern_score"]
     wr   = p["win_rate"] * 100
     gain = p["avg_gain"]
-    days = p["avg_days"]
     cnt  = p["similar_count"]
     lbl  = p["label"]
 
@@ -1460,7 +1459,6 @@ def build_pattern_html(r):
         f'<td width="18%" style="font-family:Arial,sans-serif;padding-left:12px;">'
         f'<div style="font-size:10px;color:#555;font-weight:bold;margin-bottom:4px;">AVG GAIN</div>'
         f'<div style="font-size:22px;font-weight:bold;color:#155724;">+{gain:.1f}<span style="font-size:13px;">%</span></div>'
-        f'<div style="font-size:10px;color:#777;">in ~{days} days</div>'
         f'</td>'
         # Badge + label
         f'<td style="font-family:Arial,sans-serif;padding-left:12px;vertical-align:middle;">'

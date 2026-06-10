@@ -128,15 +128,13 @@ def _find_reversals(df):
         if gain >= MIN_GAIN and loss < STOP_LOSS:
             cond = _extract_conditions(df, i)
             if cond is not None:
-                days_to_peak = int(np.argmax(future)) + 1
                 result.append({
-                    "idx":          i,
-                    "date":         str(df.index[i].date()),
-                    "gain":         round(gain, 4),
-                    "loss":         round(loss, 4),
-                    "days_to_peak": days_to_peak,
-                    "outcome":      "win",
-                    "conditions":   cond,
+                    "idx":        i,
+                    "date":       str(df.index[i].date()),
+                    "gain":       round(gain, 4),
+                    "loss":       round(loss, 4),
+                    "outcome":    "win",
+                    "conditions": cond,
                 })
 
     return result
@@ -185,14 +183,13 @@ def analyze_entry_patterns(df):
         "pattern_score":   0-100  (تشابه الوضع الحالي بالأنماط الناجحة)
         "win_rate":        0-1    (نسبة نجاح تاريخية للأنماط المشابهة)
         "avg_gain":        float  (متوسط الربح عند النجاح %)
-        "avg_days":        int    (متوسط عدد الأيام للوصول للهدف)
         "similar_count":   int    (عدد الحالات المشابهة في التاريخ)
         "label":           str    (وصف نصي)
         "ok":              bool
     }
     """
     empty = {"ok": False, "pattern_score": 0, "win_rate": 0,
-             "avg_gain": 0, "avg_days": 0, "similar_count": 0,
+             "avg_gain": 0, "similar_count": 0,
              "label": "Insufficient history"}
 
     if df is None or len(df) < MIN_HISTORY:
@@ -226,9 +223,8 @@ def analyze_entry_patterns(df):
     if total_similar == 0:
         return {**empty, "label": "No similar historical patterns found"}
 
-    win_rate  = len(sim_wins) / total_similar
-    avg_gain  = float(np.mean([wins[i]["gain"]         for i, s in enumerate(win_sims)  if s >= SIMILARITY_THR])) if sim_wins else 0.0
-    avg_days  = int(np.mean([wins[i]["days_to_peak"]   for i, s in enumerate(win_sims)  if s >= SIMILARITY_THR])) if sim_wins else 0
+    win_rate = len(sim_wins) / total_similar
+    avg_gain = float(np.mean([wins[i]["gain"] for i, s in enumerate(win_sims) if s >= SIMILARITY_THR])) if sim_wins else 0.0
 
     # Pattern score: win_rate × avg_similarity_of_wins × 100
     avg_sim_wins = float(np.mean(sim_wins)) if sim_wins else 0.0
@@ -237,7 +233,7 @@ def analyze_entry_patterns(df):
 
     # Label
     if pattern_score >= 70:
-        label = f"Strong match — {total_similar} similar cases, {win_rate*100:.0f}% won, avg +{avg_gain*100:.1f}% in {avg_days}d"
+        label = f"Strong match — {total_similar} similar cases, {win_rate*100:.0f}% won, avg +{avg_gain*100:.1f}%"
     elif pattern_score >= 45:
         label = f"Moderate match — {total_similar} similar cases, {win_rate*100:.0f}% won"
     elif win_rate >= 0.6:
@@ -250,7 +246,6 @@ def analyze_entry_patterns(df):
         "pattern_score": pattern_score,
         "win_rate":      round(win_rate, 3),
         "avg_gain":      round(avg_gain * 100, 2),
-        "avg_days":      avg_days,
         "similar_count": total_similar,
         "label":         label,
     }

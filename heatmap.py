@@ -110,7 +110,8 @@ strong_buy.sort(key=lambda x: x['score'], reverse=True)
 # ── Pending signals (score > 0, excluding buy signals) ───────────────────
 pending = [
     {'ticker': t, 'score': d.get('score', 0), 'price': d.get('price', 0),
-     'signal': d.get('signal', '-'), 'r1': d.get('r1', 0)}
+     'signal': d.get('signal', '-'), 'r1': d.get('r1', 0),
+     'buy_hi': d.get('buy_hi', 0)}
     for t, d in scan_results.items()
     if d.get('score', 0) > 0 and 'buy' not in d.get('signal', '').lower()
 ]
@@ -857,7 +858,7 @@ function buildPending() {{
             <div class="pend-score" style="color:${{sc}}">${{p.score}}</div>
           </div>
           <div class="pend-meta">
-            EGP ${{p.price.toFixed(2)}} &nbsp;·&nbsp; R1: ${{Math.round(Math.min(p.r1/30,1)*100)}}% &nbsp;·&nbsp;
+            EGP ${{p.price.toFixed(2)}} &nbsp;·&nbsp; R1: ${{(p.buy_hi > 0 && p.price > 0) ? Math.min(100, Math.round((p.buy_hi / p.price) * 100)) : 0}}% &nbsp;·&nbsp;
             <span style="color:${{sc}}">Pending</span>
           </div>
         `;

@@ -1747,19 +1747,16 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 {open_positions_block}""")
 
     wr=""
-    for s in sorted_stocks:
+    for idx, s in enumerate(sorted_stocks):
         r=results[s]
-        if not r["ok"] or r["score"]<35: continue
-        if r.get("signal","").lower() in ("skip",""): continue
-        _pg = PRICE_GATE_WHITELIST if s in WHITELIST else PRICE_GATE_NORMAL
-        if r.get("r1", 0) < _pg: continue
+        if not r["ok"]: continue
         _,tc,tbg,tbr=sig_info(r["score"])
         in_portfolio = s in positions and positions[s].get("status") == "open"
         portfolio_badge = ' <span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:bold;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;">🔵 In Portfolio</span>' if in_portfolio else ""
         raw_s = r.get("raw_score", r["score"])
         raw_tag_s = f'<span style="font-size:10px;color:#aaa;margin-left:4px;">raw {raw_s}</span>' if raw_s != r["score"] else ""
         ctx_tag_s = f'<span style="font-size:10px;color:#888;background:#f4f4f4;padding:1px 6px;border-radius:8px;margin-left:6px;">{r["ctx_label"]}</span>' if r.get("ctx_label") else ""
-        row_bg = "#fff" if sorted_stocks.index(s) % 2 == 0 else "#f9fafb"
+        row_bg = "#fff" if idx % 2 == 0 else "#f9fafb"
         wr+=f"""
 <tr style="background:{row_bg};border-bottom:1px solid #edf0f3;">
   <td style="padding:12px 14px;font-family:Arial,sans-serif;">
@@ -1788,7 +1785,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">SMC Score</th>
     <th align="right" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Target</th>
   </tr>
-  {wr or '<tr><td colspan="5" style="padding:16px 14px;font-family:Arial,sans-serif;font-size:13px;color:#888;">No setups reached the Watch threshold today.</td></tr>'}
+  {wr or '<tr><td colspan="5" style="padding:16px 14px;font-family:Arial,sans-serif;font-size:13px;color:#888;">No data available.</td></tr>'}
 </table>""")
 
     for s in sorted_stocks:

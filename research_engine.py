@@ -58,7 +58,7 @@ MIN_PER_STOCK     = 20   # إشارات ناضجة لتفعيل تحليل per-s
 MIN_PER_STOCK_ML  = 30   # إشارات ناضجة لتفعيل ML model per-stock
 TOP_MFE_PERCENTILE= 0.75 # الربع الأعلى = "نماذج الفائزة"
 
-# المتغيرات الكاملة بعد إضافة sv/hvn/macd/vol_spike
+# المتغيرات الكاملة — 75 متغير بعد إضافة الـ 18 الجديدة
 ALL_FEATURE_COLS = [
     "raw_score", "adj_score",
     "r1_price", "r2_ob", "r3_liquidity", "r4_htf",
@@ -70,6 +70,14 @@ ALL_FEATURE_COLS = [
     "sv_hit", "sv_score", "hvn_hit", "hvn_score",
     "macd_val", "vol_spike",
     "is_ramadan", "is_cbe", "stock_tier",
+    # 18 extended variables
+    "rsi_val", "macd_hist", "macd_signal",
+    "rsi_div", "macd_div",
+    "ob_quality", "ob_dist",
+    "htf_hh", "htf_hl", "avwap_gap",
+    "sweep_detected", "wick_rejection", "equal_lows",
+    "ctx_mult", "stock_mult", "price_gate", "price_ok",
+    "sv_depth",
 ]
 
 # ── المتغيرات المستخدمة في الـ ML ─────────────────────────────────────────────

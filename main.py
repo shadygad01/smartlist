@@ -1287,6 +1287,9 @@ def analyze(symbol):
         sv_result   = None   # populated in discount-zone branch, reused by entry zones
         hvn_result  = None
         macd_result = None   # populated in discount-zone branch
+        # Research variable placeholders — filled in discount-zone branch only
+        _rsi_val = None; _macd_hist = None; _macd_signal = None
+        _avwap_gap = 0.0; _sv_depth = 0.0
 
         # ── GATE: Price must be strictly below EQ (< 0.50 level) ─────────────
         # At EQ or above → SMC setup does not exist → all scores locked at zero
@@ -1311,6 +1314,15 @@ def analyze(symbol):
             sv_result  = calc_stopping_volume(df,eq,lo) # compute once, share with sc_demand_zone + calc_entry_zones
             hvn_result = calc_volume_profile(df,eq,lo,buy_hi)
             r8,l8  = sc_demand_zone(df,eq,lo,buy_hi, _sv=sv_result, _hvn=hvn_result)
+
+            # ── Extra research variables (discount zone only) ─────────────────
+            _rsi_s       = _calc_rsi(close)
+            _rsi_val     = round(float(_rsi_s.iloc[-1]), 2) if len(_rsi_s) >= 14 else None
+            _macd_hist   = round(float(macd_result[2].iloc[-1]), 4) if len(macd_result[2]) > 0 else None
+            _macd_signal = round(float(macd_result[1].iloc[-1]), 4) if len(macd_result[1]) > 0 else None
+            _avwap_gap   = round((av - cur) / max(av - alo, 0.001), 4) if av > cur else 0.0
+            _sv_depth    = round((eq - sv_result[3]) / max(eq - lo, 0.001), 4) \
+                           if sv_result and sv_result[0] and sv_result[3] else 0.0
 
         total = min(r1+r2+r3+r4+r5+r6+r7+r8, 100)
 
@@ -1401,6 +1413,21 @@ def analyze(symbol):
         except Exception:
             _vol_spike = None
 
+        # ── Parse OB label → ob_quality / ob_dist ────────────────────────────
+        _ob_qm      = re.search(r'quality\s+(\d+)%', l2)
+        _ob_quality = round(int(_ob_qm.group(1)) / 100, 2) if _ob_qm else None
+        _ob_dm      = re.search(r'far\s*\((\d+(?:\.\d+)?)%\s*away\)', l2, re.IGNORECASE)
+        if _ob_dm:
+            _ob_dist = round(float(_ob_dm.group(1)) / 100, 4)
+        elif l2.startswith("At OB"):
+            _ob_dist = 0.01
+        elif l2.startswith("Near OB"):
+            _ob_dist = 0.035
+        elif "moderate distance" in l2:
+            _ob_dist = 0.075
+        else:
+            _ob_dist = None
+
         return {
             "ok":True,"price":round(cur,2),"last_dt":last_dt,
             "is_fresh":is_fresh,"price_src":src,
@@ -1429,6 +1456,25 @@ def analyze(symbol):
             "hvn_price": round(float(hvn_result[2]),2) if hvn_result and hvn_result[2] else None,
             "macd_val":  round(float(macd_result[0].iloc[-1]),4) if macd_result is not None and len(macd_result[0]) > 0 else None,
             "vol_spike": _vol_spike,
+            # 18 extended research variables
+            "rsi_val":        _rsi_val,
+            "macd_hist":      _macd_hist,
+            "macd_signal":    _macd_signal,
+            "rsi_div":        bool("RSI div" in l7),
+            "macd_div":       bool("MACD div" in l7),
+            "ob_quality":     _ob_quality,
+            "ob_dist":        _ob_dist,
+            "htf_hh":         bool("HH+HL" in l4 or "HH:True" in l4),
+            "htf_hl":         bool("HH+HL" in l4 or "HL:True" in l4),
+            "avwap_gap":      _avwap_gap,
+            "sweep_detected": bool("Sweep" in l3),
+            "wick_rejection": bool("wick" in l3.lower()),
+            "equal_lows":     bool("Equal Lows" in l3),
+            "ctx_mult":       round(ctx_mult, 3),
+            "stock_mult":     round(stock_mult, 3),
+            "price_gate":     PRICE_GATE,
+            "price_ok":       bool(price_ok),
+            "sv_depth":       _sv_depth,
         }
     except Exception as e:
         return {"ok":False,"error":str(e)}

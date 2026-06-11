@@ -88,6 +88,25 @@ def _migrate_schema(conn: sqlite3.Connection):
         if col not in existing:
             conn.execute(f"ALTER TABLE signals ADD COLUMN {col} {defn}")
 
+    # Migrate bottom_quality table
+    bq_existing = {r[1] for r in conn.execute("PRAGMA table_info(bottom_quality)").fetchall()}
+    bq_new_cols = {
+        "r1d":          "REAL",
+        "r3d":          "REAL",
+        "r40d":         "REAL",
+        "r60d":         "REAL",
+        "mfe_40d":      "REAL",
+        "mfe_60d":      "REAL",
+        "mae_40d":      "REAL",
+        "mae_60d":      "REAL",
+        "days_to_peak":   "INTEGER",
+        "days_to_trough": "INTEGER",
+        "classification": "TEXT",
+    }
+    for col, defn in bq_new_cols.items():
+        if col not in bq_existing:
+            conn.execute(f"ALTER TABLE bottom_quality ADD COLUMN {col} {defn}")
+
 
 def init_db(db_path: str = DB_PATH):
     """ينشئ الجداول إن لم تكن موجودة."""
@@ -217,10 +236,21 @@ def init_db(db_path: str = DB_PATH):
             bq_volume       REAL,
             mfe_20d         REAL,
             mae_20d         REAL,
+            r1d             REAL,
+            r3d             REAL,
             r5d             REAL,
             r10d            REAL,
             r20d            REAL,
             days_to_7pct    INTEGER,
+            r40d            REAL,
+            r60d            REAL,
+            mfe_40d         REAL,
+            mfe_60d         REAL,
+            mae_40d         REAL,
+            mae_60d         REAL,
+            days_to_peak    INTEGER,
+            days_to_trough  INTEGER,
+            classification  TEXT,
             computed_at     TEXT,
             FOREIGN KEY(signal_id) REFERENCES signals(id)
         );
@@ -491,22 +521,60 @@ def upsert_bottom_quality(signal_id: str, bq: dict, db_path: str = DB_PATH):
     conn = get_conn(db_path)
     with conn:
         conn.execute("""
-            INSERT OR REPLACE INTO bottom_quality
+            INSERT INTO bottom_quality
             (signal_id, bq_score, bq_gain, bq_drawdown, bq_recovery,
              bq_reversal, bq_volume, mfe_20d, mae_20d,
-             r5d, r10d, r20d, days_to_7pct, computed_at)
-            VALUES (:sid, :bq, :g, :d, :r, :rv, :v,
-                    :mfe, :mae, :r5, :r10, :r20, :days, :now)
+             r1d, r3d, r5d, r10d, r20d, days_to_7pct,
+             r40d, r60d, mfe_40d, mfe_60d, mae_40d, mae_60d,
+             days_to_peak, days_to_trough, classification, computed_at)
+            VALUES
+            (:sid, :bq, :g, :d, :r, :rv, :v,
+             :mfe, :mae,
+             :r1, :r3, :r5, :r10, :r20, :days,
+             :r40, :r60, :mfe40, :mfe60, :mae40, :mae60,
+             :dtp, :dtt, :cls, :now)
+            ON CONFLICT(signal_id) DO UPDATE SET
+              bq_score      = excluded.bq_score,
+              bq_gain       = excluded.bq_gain,
+              bq_drawdown   = excluded.bq_drawdown,
+              bq_recovery   = excluded.bq_recovery,
+              bq_reversal   = excluded.bq_reversal,
+              bq_volume     = excluded.bq_volume,
+              mfe_20d       = excluded.mfe_20d,
+              mae_20d       = excluded.mae_20d,
+              r1d           = excluded.r1d,
+              r3d           = excluded.r3d,
+              r5d           = excluded.r5d,
+              r10d          = excluded.r10d,
+              r20d          = excluded.r20d,
+              days_to_7pct  = excluded.days_to_7pct,
+              r40d          = COALESCE(excluded.r40d,    r40d),
+              r60d          = COALESCE(excluded.r60d,    r60d),
+              mfe_40d       = COALESCE(excluded.mfe_40d, mfe_40d),
+              mfe_60d       = COALESCE(excluded.mfe_60d, mfe_60d),
+              mae_40d       = COALESCE(excluded.mae_40d, mae_40d),
+              mae_60d       = COALESCE(excluded.mae_60d, mae_60d),
+              days_to_peak   = excluded.days_to_peak,
+              days_to_trough = excluded.days_to_trough,
+              classification = excluded.classification,
+              computed_at   = excluded.computed_at
         """, {
             "sid": signal_id,
-            "bq":  bq.get("bq_score"),   "g":  bq.get("bq_gain"),
-            "d":   bq.get("bq_drawdown"),"r":  bq.get("bq_recovery"),
-            "rv":  bq.get("bq_reversal"),"v":  bq.get("bq_volume"),
-            "mfe": bq.get("mfe_20d"),    "mae": bq.get("mae_20d"),
-            "r5":  bq.get("r5d"),        "r10": bq.get("r10d"),
+            "bq":  bq.get("bq_score"),    "g":   bq.get("bq_gain"),
+            "d":   bq.get("bq_drawdown"), "r":   bq.get("bq_recovery"),
+            "rv":  bq.get("bq_reversal"), "v":   bq.get("bq_volume"),
+            "mfe": bq.get("mfe_20d"),     "mae": bq.get("mae_20d"),
+            "r1":  bq.get("r1d"),         "r3":  bq.get("r3d"),
+            "r5":  bq.get("r5d"),         "r10": bq.get("r10d"),
             "r20": bq.get("r20d"),
             "days": bq.get("days_to_7pct"),
-            "now": datetime.now().isoformat(),
+            "r40":  bq.get("r40d"),       "r60":  bq.get("r60d"),
+            "mfe40": bq.get("mfe_40d"),   "mfe60": bq.get("mfe_60d"),
+            "mae40": bq.get("mae_40d"),   "mae60": bq.get("mae_60d"),
+            "dtp":  bq.get("days_to_peak"),
+            "dtt":  bq.get("days_to_trough"),
+            "cls":  bq.get("classification"),
+            "now":  datetime.now().isoformat(),
         })
     conn.close()
 
@@ -560,12 +628,35 @@ def get_mature_signals(db_path: str = DB_PATH) -> list:
     rows = conn.execute("""
         SELECT s.*, b.bq_score, b.bq_gain, b.bq_drawdown,
                b.bq_recovery, b.bq_reversal, b.bq_volume,
-               b.mfe_20d, b.mae_20d, b.r5d, b.r10d, b.r20d,
-               b.days_to_7pct
+               b.mfe_20d, b.mae_20d,
+               b.r1d, b.r3d, b.r5d, b.r10d, b.r20d, b.days_to_7pct,
+               b.r40d, b.r60d, b.mfe_40d, b.mfe_60d, b.mae_40d, b.mae_60d,
+               b.days_to_peak, b.days_to_trough, b.classification
         FROM signals s
         JOIN bottom_quality b ON s.id = b.signal_id
         ORDER BY s.signal_date
     """).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_signals_for_bq_update(db_path: str = DB_PATH) -> list:
+    """
+    إشارات لديها BQ لكن تحتاج تحديث للمقاييس الموسّعة (r40d أو r60d).
+    تُستدعى من run_bq_scoring() بعد الحسابات الأولية.
+    """
+    init_db(db_path)
+    cutoff_40d = (date.today() - timedelta(days=56)).isoformat()
+    cutoff_60d = (date.today() - timedelta(days=84)).isoformat()
+    conn = get_conn(db_path)
+    rows = conn.execute("""
+        SELECT s.*
+        FROM signals s
+        JOIN bottom_quality b ON s.id = b.signal_id
+        WHERE (b.r40d IS NULL AND s.signal_date <= :c40)
+           OR (b.r60d IS NULL AND s.signal_date <= :c60)
+        ORDER BY s.signal_date
+    """, {"c40": cutoff_40d, "c60": cutoff_60d}).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 

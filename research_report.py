@@ -28,7 +28,7 @@ from signal_db import (
     DB_PATH, get_stats, get_mature_signals, get_active_signals,
     get_last_report_date, log_report_sent, init_db,
 )
-from research_engine import run_research, MIN_SAMPLES, MIN_PER_STOCK_ML
+from research_engine import run_research, MIN_SAMPLES, MIN_PER_STOCK_ML, TRAIN_SPLIT_PCT
 
 # ── Email Config ───────────────────────────────────────────────────────────────
 EMAIL_FROM    = os.getenv("REPORT_EMAIL_FROM", "")
@@ -758,6 +758,177 @@ def _build_per_stock_pattern_section(res: dict) -> str:
     return html
 
 
+def _build_mutual_info_section(res: dict) -> str:
+    mi = res.get("mutual_information", {})
+    if not mi:
+        return ""
+
+    html = (
+        '<div class="section">'
+        '<h2>Mutual Information — ارتباط غير خطي مع MFE و BQ</h2>'
+        '<p style="font-size:.85em;color:#666">'
+        'يقيس قوة الارتباط بأي شكل (خطي أو غير خطي) — '
+        '1.0 = أقوى متغير، 0 = لا ارتباط. يُكمّل Spearman.</p>'
+    )
+
+    mfe_mi = mi.get("mfe_20d", {})
+    bq_mi  = mi.get("bq_score", {})
+    all_feats = list(dict.fromkeys(list(mfe_mi.keys()) + list(bq_mi.keys())))
+
+    if all_feats:
+        html += (
+            '<table><thead><tr>'
+            '<th>المتغير</th><th>MI ↔ MFE</th><th>MI ↔ BQ</th>'
+            '</tr></thead><tbody>'
+        )
+        for feat in all_feats[:20]:
+            mfe_v = mfe_mi.get(feat)
+            bq_v  = bq_mi.get(feat)
+
+            def _bar(v):
+                if v is None: return "—"
+                pct = min(int(v * 100), 100)
+                color = "#1a6e3c" if v >= 0.5 else ("#2a6496" if v >= 0.25 else "#888")
+                return (f'<div style="background:{color};height:10px;'
+                        f'width:{pct}%;border-radius:3px;display:inline-block"></div> '
+                        f'{v:.3f}')
+
+            html += (
+                f"<tr><td><code>{feat}</code></td>"
+                f"<td>{_bar(mfe_v)}</td>"
+                f"<td>{_bar(bq_v)}</td></tr>"
+            )
+        html += "</tbody></table>"
+
+    html += "</div>"
+    return html
+
+
+def _build_probability_section(res: dict) -> str:
+    pa = res.get("probability_analysis", {})
+    if not pa or "error" in pa:
+        err = pa.get("error", "") if pa else ""
+        if err:
+            return (
+                '<div class="section">'
+                f'<h2>Probability Score</h2>'
+                f'<div class="warn">⚠ {err}</div>'
+                '</div>'
+            )
+        return ""
+
+    auc       = pa.get("auc", 0)
+    n_train   = pa.get("n_train", 0)
+    n_test    = pa.get("n_test", 0)
+    base_wr   = pa.get("base_win_rate", 0)
+    hc_n      = pa.get("high_conf_n", 0)
+    hc_wins   = pa.get("high_conf_wins", 0)
+    hc_prec   = pa.get("high_conf_precision", 0)
+    win_thr   = pa.get("win_threshold_pct", 8)
+    top5      = pa.get("top5_features", [])
+
+    auc_color = "green" if auc >= 0.60 else ("orange" if auc >= 0.55 else "red")
+    hc_color  = "green" if hc_prec >= 0.70 else ("orange" if hc_prec >= 0.55 else "red")
+
+    def kpi(val, lbl):
+        return f'<div class="kpi"><div class="val">{val}</div><div class="lbl">{lbl}</div></div>'
+
+    html = (
+        '<div class="section">'
+        '<h2>Probability Score — احتمالية النجاح (MFE ≥ ' + f'{win_thr:.0f}%)</h2>'
+        f'<p style="font-size:.85em;color:#666">'
+        f'RandomForest Classifier — تقسيم زمني {int(TRAIN_SPLIT_PCT*100)}/{100-int(TRAIN_SPLIT_PCT*100)}% '
+        f'| target: MFE ≥ {win_thr:.0f}%</p>'
+        '<div class="kpi-row">'
+        + kpi(f'<span style="color:{auc_color}">{auc}</span>', "AUC Score")
+        + kpi(n_train,  "إشارات تدريب")
+        + kpi(n_test,   "إشارات اختبار")
+        + kpi(f"{base_wr:.1%}", "معدل الفوز الأساسي")
+        + kpi(hc_n,     "إشارات عالية الثقة (≥65%)")
+        + kpi(f'<span style="color:{hc_color}">{hc_prec:.1%}</span>',
+              "دقة التنبؤات عالية الثقة")
+        + '</div>'
+    )
+
+    if top5:
+        top5_str = " | ".join(f"<code>{k}</code> ({v:.4f})" for k, v in top5)
+        html += f'<p style="font-size:.85em;color:#555">أهم المتغيرات: {top5_str}</p>'
+
+    auc_note = ""
+    if auc < 0.55:
+        auc_note = "AUC قريب من 0.5 يعني النموذج لا يتجاوز التخمين العشوائي — بيانات أكثر مطلوبة."
+    elif auc >= 0.60:
+        auc_note = "AUC ≥ 0.60 — النموذج يمتلك قدرة تنبؤية حقيقية. الإشارات عالية الثقة تستحق اهتماماً."
+
+    if auc_note:
+        html += f'<div class="warn">{auc_note}</div>'
+
+    html += (
+        '<div class="warn" style="background:#e8f4f8;border-color:#bee5eb">'
+        'Probability Score هو مقياس بحثي فقط — لا يُعدّل الإشارات تلقائياً. '
+        'استخدمه لترتيب الإشارات المتزامنة بناءً على احتمالية التحقق.'
+        '</div>'
+        '</div>'
+    )
+    return html
+
+
+def _build_edge_discovery_section(res: dict) -> str:
+    edges = res.get("edge_discovery", [])
+    if not edges:
+        return ""
+
+    from edge_discovery import WIN_MFE_THRESHOLD
+
+    html = (
+        '<div class="section">'
+        '<h2>Hidden Edge Discovery — أفضل مجموعات الشروط</h2>'
+        f'<p style="font-size:.85em;color:#666">'
+        f'اختبار إحصائي (binomtest) لمجموعات 1-3 شروط — '
+        f'target: MFE ≥ {WIN_MFE_THRESHOLD*100:.0f}% | '
+        f'مرتّبة بـ lift × log₂(n+1) / (1 + p×5)</p>'
+        '<table><thead><tr>'
+        '<th>القاعدة</th><th>N</th><th>فائزون</th>'
+        '<th>Win Rate</th><th>Avg MFE</th><th>Avg BQ</th>'
+        '<th>Lift</th><th>P-Value</th><th>Score</th>'
+        '</tr></thead><tbody>'
+    )
+
+    for i, e in enumerate(edges):
+        wr_pct   = f"{e['win_rate']*100:.1f}%"
+        mfe_pct  = f"{e['avg_mfe']*100:.1f}%"
+        bq_str   = f"{e['avg_bq']:.1f}" if e.get("avg_bq") is not None else "—"
+        p_color  = "green" if e["p_value"] <= 0.05 else ("orange" if e["p_value"] <= 0.10 else "#888")
+        lift_color = "green" if e["lift"] >= 1.5 else ("orange" if e["lift"] >= 1.2 else "#888")
+        n_conds  = e.get("n_conditions", 1)
+        cond_badge = f'<span class="badge b-high">{n_conds} شرط</span>' if n_conds > 1 else ""
+
+        html += (
+            f"<tr>"
+            f"<td style='font-size:.82em'>{e['rule']} {cond_badge}</td>"
+            f"<td>{e['n']}</td>"
+            f"<td>{e['wins']}</td>"
+            f"<td>{wr_pct}</td>"
+            f"<td>{_mfe_badge(e['avg_mfe'])}</td>"
+            f"<td>{bq_str}</td>"
+            f"<td style='color:{lift_color};font-weight:600'>{e['lift']:.2f}x</td>"
+            f"<td style='color:{p_color};font-weight:600'>{e['p_value']:.3f}</td>"
+            f"<td>{e['score']:.2f}</td>"
+            f"</tr>"
+        )
+
+    html += (
+        '</tbody></table>'
+        '<div class="warn" style="margin-top:8px">'
+        '⚠ هذه قواعد بحثية مستخرجة من البيانات التاريخية — '
+        'تحتاج تحقق forward-looking قبل الاعتماد عليها. '
+        'p≤0.05 = دلالة إحصائية قوية، p≤0.10 = مشجّع، p>0.10 = استكشافي فقط.'
+        '</div>'
+        '</div>'
+    )
+    return html
+
+
 def _build_warnings_section(warnings: list) -> str:
     if not warnings:
         return ""
@@ -806,7 +977,10 @@ def build_report(db_path: str = DB_PATH) -> str:
   {_build_warnings_section(res.get("warnings", []))}
   {_build_kpi_section(stats, res)}
   {_build_active_signals_section(db_path)}
+  {_build_probability_section(res)}
+  {_build_edge_discovery_section(res)}
   {_build_correlation_section(res)}
+  {_build_mutual_info_section(res)}
   {_build_model_section(res)}
   {_build_weight_suggestions_section(res)}
   {_build_pattern_section(res)}

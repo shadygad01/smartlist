@@ -2418,14 +2418,19 @@ _BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy"}
 
 def _register_new_positions(results):
     """
-    Register positions for qualifying stocks not already tracked.
-    يشترط إشارة شراء فعلية (يعني بوابة السيولة Sweep & Reverse عدّت) —
-    سابقاً كان يسجّل مراكز لإشارات "Wait" بما يناقض تصميم الـ Dual Gate.
+    سياسة الدخول المبكر (قرار صاحب النظام 2026-06-11):
+    الدخول أول ما يصبح السهم رخيصاً — عبور بوابتي Score + r1 فقط،
+    بدون انتظار تأكيد Sweep & Reverse (إشارة Buy).
+
+    الأساس: تحليل متعدد الآفاق على السجل الحي (فبراير→يونيو 2026):
+      أفق 15 يوم: دخول مبكر +5.27% مقابل +3.80% بانتظار التأكيد
+      أفق 50 يوم: دخول مبكر +17.4% مقابل +13.9%
+      وفي الشهر الهابط الوحيد (فبراير) لم يُظهر التأكيد أي قيمة حمائية.
+    بوابة السيولة تبقى مستخدمة في تصنيف الإشارة المعروضة فقط.
     """
     qualifying = {
         s for s in STOCKS
         if results[s].get("ok")
-        and results[s].get("signal") in _BUY_SIGNALS
         and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
         and results[s].get("r1", 0) >= (PRICE_GATE_WHITELIST if s in WHITELIST else PRICE_GATE_NORMAL)
     }
@@ -2439,7 +2444,11 @@ def _register_new_positions(results):
                              entry_score=results[stock].get("score", 0),
                              entry_pattern_score=round(pat.get("pattern_score", 0)),
                              entry_effective_score=round(pat.get("effective_score", 0)))
-                print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {price}")
+                print(f"📌 تسجيل مركز جديد (دخول مبكر): {NAMES.get(stock, stock)} @ {price}")
+                # تنبيه فوري — الدخول المبكر قد يحدث والإشارة المعروضة "Wait"
+                # فلا يصدر تنبيه تحول إلى BUY، لذا ننبّه هنا مباشرة
+                if results[stock].get("signal") not in _BUY_SIGNALS:
+                    send_alert_for_high_score(stock, results[stock].get("score", 0), results[stock])
 
 def backfill_pattern_scores():
     """

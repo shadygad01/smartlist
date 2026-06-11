@@ -44,6 +44,14 @@ except ImportError:
 
 from signal_db import DB_PATH, get_mature_signals, CURRENT_WEIGHTS, WEIGHT_LABELS
 
+try:
+    from pattern_engine import DEFAULT_WEIGHTS as PATTERN_DEFAULT_WEIGHTS
+except ImportError:
+    PATTERN_DEFAULT_WEIGHTS = {
+        "p_vs_ma20": 0.21, "mom_10d": 0.20, "stoch_rsi": 0.18,
+        "atr_ratio": 0.15, "mom_5d":  0.14, "vol_trend": 0.12,
+    }
+
 MIN_SAMPLES     = 30     # حد أدنى للتدريب
 TRAIN_SPLIT_PCT = 0.70   # تقسيم زمني — أول 70% للتدريب
 
@@ -64,6 +72,30 @@ FEATURE_COLS = [
 TARGET_MFE = "mfe_20d"     # الأساسي: أقصى ربح غير محقق
 TARGET_BQ  = "bq_score"   # الشامل: تقييم جودة الـ bottom
 TARGET_MAE = "mae_20d"     # سالب: نريد تقليله (ندخله كـ abs)
+
+# ── Pattern Engine — ارتباط بـ DB columns ─────────────────────────────────────
+PATTERN_INDICATOR_COLS = [
+    "ind_stoch_rsi", "ind_p_vs_ma20", "ind_mom_10d",
+    "ind_mom_5d",    "ind_atr_ratio", "ind_vol_trend",
+]
+# الاتجاه المتوقع لكل مؤشر (lower = قيمة منخفضة تعني إشارة أفضل)
+PATTERN_EXPECTED_DIR = {
+    "ind_stoch_rsi": "lower",   # oversold = جيد
+    "ind_p_vs_ma20": "lower",   # تحت MA20 = جيد
+    "ind_mom_10d":   "lower",   # نزل كفاية = جيد
+    "ind_mom_5d":    "lower",   # نزل كفاية = جيد
+    "ind_atr_ratio": "higher",  # تقلب متزايد = جيد
+    "ind_vol_trend": "lower",   # الحجم يخف = جيد
+}
+# ربط عمود DB بمفتاح pattern_engine.DEFAULT_WEIGHTS
+INDICATOR_ENGINE_KEY = {
+    "ind_stoch_rsi": "stoch_rsi",
+    "ind_p_vs_ma20": "p_vs_ma20",
+    "ind_mom_10d":   "mom_10d",
+    "ind_mom_5d":    "mom_5d",
+    "ind_atr_ratio": "atr_ratio",
+    "ind_vol_trend": "vol_trend",
+}
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -334,6 +366,171 @@ def _segment_analysis(df: pd.DataFrame) -> dict:
     return results
 
 
+# ── Pattern Analysis ──────────────────────────────────────────────────────────
+
+def _pattern_analysis(df: pd.DataFrame) -> dict:
+    """
+    تحليل Pattern Recognition Engine بالكامل — يستخدم MFE و BQ كـ target.
+
+    المشكلة المعالَجة:
+      الـ AUC study الأصلية في pattern_engine استخدمت win/loss (7% = win) كـ target.
+      هذا النظام بحثي يستخدم MFE و BQ Score — أدق وأنسب لاستراتيجية الـ bottom fishing.
+      النتيجة: قد نكتشف أن ترتيب أهمية المؤشرات مختلف عند القياس بـ MFE.
+
+    المخرجات:
+      indicator_correlations    ← Spearman(كل مؤشر, MFE) و Spearman(كل مؤشر, BQ)
+      direction_validation      ← هل اتجاه كل مؤشر يتوافق مع البيانات الفعلية؟
+      pattern_score_buckets     ← MFE و BQ عند pattern_score 0-30 / 30-50 / 50-70 / 70+
+      effective_score_buckets   ← نفس الشيء مع effective_score
+      combined_smc_pattern      ← هل pattern يضيف قيمة فوق SMC وحده؟
+      entry_zone_analysis       ← أي منطقة دخول (z1/z2/z3) تُنتج MFE أعلى؟
+      indicator_weight_suggestions ← أوزان مقترحة مبنية على MFE (لا تُطبَّق تلقائياً)
+    """
+    result = {
+        "indicator_correlations":       {},
+        "direction_validation":         {},
+        "pattern_score_buckets":        {},
+        "effective_score_buckets":      {},
+        "combined_smc_pattern":         {},
+        "entry_zone_analysis":          {},
+        "indicator_weight_suggestions": {},
+        "n_used": 0,
+    }
+
+    base = df.dropna(subset=["mfe_20d", "bq_score"])
+    if len(base) < 5:
+        return result
+    result["n_used"] = len(base)
+
+    def _agg(sub):
+        if len(sub) < 2:
+            return {"n": len(sub)}
+        out = {"n": len(sub)}
+        for col in ["mfe_20d", "bq_score", "mae_20d"]:
+            if col in sub.columns:
+                c = sub[col].dropna()
+                if len(c):
+                    out[f"{col}_mean"] = round(float(c.mean()), 4)
+                    out[f"{col}_med"]  = round(float(c.median()), 4)
+        return out
+
+    # ── 1. Spearman لكل مؤشر مع MFE و BQ ─────────────────────────────────
+    ind_corr = {}
+    for col in PATTERN_INDICATOR_COLS:
+        if col not in base.columns:
+            continue
+        c = base[[col, "mfe_20d", "bq_score"]].dropna()
+        if len(c) < 5:
+            continue
+        corr_mfe = float(c[col].corr(c["mfe_20d"], method="spearman"))
+        corr_bq  = float(c[col].corr(c["bq_score"], method="spearman"))
+        ind_corr[col] = {"corr_mfe": round(corr_mfe, 3), "corr_bq": round(corr_bq, 3)}
+    result["indicator_correlations"] = ind_corr
+
+    # ── 2. Direction Validation ───────────────────────────────────────────
+    # "lower" يعني نتوقع corr سالب مع MFE (قيمة منخفضة = نتيجة أفضل)
+    dir_val = {}
+    for col, exp_dir in PATTERN_EXPECTED_DIR.items():
+        if col not in ind_corr:
+            continue
+        corr      = ind_corr[col]["corr_mfe"]
+        exp_sign  = -1 if exp_dir == "lower" else +1
+        confirmed = ((corr < 0) == (exp_sign < 0))
+        strength  = abs(corr)
+
+        if strength < 0.05:
+            verdict = "إشارة ضعيفة — بيانات غير كافية"
+        elif confirmed and strength >= 0.15:
+            verdict = "مؤكَّد"
+        elif confirmed:
+            verdict = "مؤكَّد جزئياً"
+        else:
+            verdict = "تعارض في الاتجاه — يحتاج مراجعة"
+
+        dir_val[col] = {
+            "expected":  exp_dir,
+            "corr_mfe":  round(corr, 3),
+            "confirmed": confirmed,
+            "verdict":   verdict,
+        }
+    result["direction_validation"] = dir_val
+
+    # ── 3. Pattern Score Buckets ──────────────────────────────────────────
+    if "pattern_score" in base.columns:
+        ps = {}
+        for lo, hi in [(0, 30), (30, 50), (50, 70), (70, 101)]:
+            sub = base[(base["pattern_score"] >= lo) & (base["pattern_score"] < hi)]
+            ps[f"{lo}-{hi-1}"] = _agg(sub)
+        result["pattern_score_buckets"] = ps
+
+    # ── 4. Effective Score Buckets ────────────────────────────────────────
+    if "pattern_eff" in base.columns:
+        eff = {}
+        for lo, hi in [(0, 20), (20, 40), (40, 60), (60, 101)]:
+            sub = base[(base["pattern_eff"] >= lo) & (base["pattern_eff"] < hi)]
+            eff[f"{lo}-{hi-1}"] = _agg(sub)
+        result["effective_score_buckets"] = eff
+
+    # ── 5. Combined SMC + Pattern ─────────────────────────────────────────
+    # هل الجمع بين SMC عالي + Pattern عالي يُنتج MFE أعلى؟
+    if "raw_score" in base.columns and "pattern_score" in base.columns:
+        hs = base["raw_score"]    >= 60
+        hp = base["pattern_score"] >= 50
+        result["combined_smc_pattern"] = {
+            "high_smc_high_pattern": _agg(base[hs & hp]),
+            "high_smc_low_pattern":  _agg(base[hs & ~hp]),
+            "low_smc_high_pattern":  _agg(base[~hs & hp]),
+            "low_smc_low_pattern":   _agg(base[~hs & ~hp]),
+        }
+
+    # ── 6. Entry Zone Analysis ────────────────────────────────────────────
+    if all(c in base.columns for c in ["zone1", "zone2", "zone3", "price"]):
+        def _nearest(row):
+            p = row["price"]
+            dists = {}
+            for z, col in [("z1", "zone1"), ("z2", "zone2"), ("z3", "zone3")]:
+                v = row[col]
+                if v and v > 0:
+                    dists[z] = abs(p - v)
+            return min(dists, key=dists.get) if dists else "unknown"
+
+        base = base.copy()
+        base["nearest_zone"] = base.apply(_nearest, axis=1)
+        result["entry_zone_analysis"] = {
+            z: _agg(base[base["nearest_zone"] == z])
+            for z in ["z1", "z2", "z3"]
+        }
+
+    # ── 7. Indicator Weight Suggestions (مبنية على MFE لا AUC win/loss) ───
+    if len(ind_corr) >= 4:
+        # نجمع |corr_mfe| + 0.5×|corr_bq| كمقياس لأهمية كل مؤشر
+        scores = {
+            col: abs(v["corr_mfe"]) + 0.5 * abs(v["corr_bq"])
+            for col, v in ind_corr.items()
+        }
+        total = sum(scores.values()) or 1
+        ws = {}
+        for col, score in scores.items():
+            eng_key = INDICATOR_ENGINE_KEY.get(col)
+            if not eng_key:
+                continue
+            cur_w  = PATTERN_DEFAULT_WEIGHTS.get(eng_key, 1/6)
+            sug_w  = score / total
+            # نُحدّد التغيير بحد أقصى 50% من الوزن الحالي
+            delta  = max(-cur_w * 0.50, min(cur_w * 0.50, sug_w - cur_w))
+            final  = round(cur_w + delta, 4)
+            ws[eng_key] = {
+                "current":          cur_w,
+                "suggested":        final,
+                "change":           round(final - cur_w, 4),
+                "combined_corr":    round(score, 4),
+                "note":             "MFE+BQ Spearman — لا AUC(win/loss)",
+            }
+        result["indicator_weight_suggestions"] = ws
+
+    return result
+
+
 # ── Main API ───────────────────────────────────────────────────────────────────
 
 def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
@@ -363,6 +560,7 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
         "gbm_mfe": None, "gbm_bq": None,
         "weight_suggestions": {},
         "segment_analysis": {},
+        "pattern_analysis": {},
         "warnings": [],
     }
 
@@ -442,6 +640,15 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
     # ── Segment Analysis (always) ─────────────────────────────────────────
     if n >= 5:
         result["segment_analysis"] = _segment_analysis(df)
+
+    # ── Pattern Engine Analysis ───────────────────────────────────────────
+    if n >= 5:
+        result["pattern_analysis"] = _pattern_analysis(df)
+        if verbose and result["pattern_analysis"].get("n_used"):
+            ws = result["pattern_analysis"].get("indicator_weight_suggestions", {})
+            changed = [k for k, v in ws.items() if abs(v.get("change", 0)) > 0.005]
+            if changed:
+                print(f"  [Pattern] Weight changes suggested for: {', '.join(changed)}")
 
     # ── Low R² Warning ────────────────────────────────────────────────────
     for key in ["rf_mfe", "rf_bq"]:

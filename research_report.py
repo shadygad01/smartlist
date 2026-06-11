@@ -355,6 +355,165 @@ def _build_mature_signals_section(db_path: str) -> str:
     )
 
 
+def _build_pattern_section(res: dict) -> str:
+    pat = res.get("pattern_analysis", {})
+    if not pat or not pat.get("n_used"):
+        return ""
+
+    n = pat["n_used"]
+    html = (
+        '<div class="section">'
+        '<h2>تحليل Pattern Recognition Engine</h2>'
+        f'<p style="font-size:.85em;color:#666">مبني على {n} إشارة ناضجة — '
+        'Target: MFE و BQ Score (لا win/loss)</p>'
+    )
+
+    # ── ارتباط المؤشرات ──────────────────────────────────────────────────
+    ind_corr = pat.get("indicator_correlations", {})
+    dir_val  = pat.get("direction_validation",   {})
+    if ind_corr:
+        html += (
+            '<h3 style="color:#2a6496">ارتباط كل مؤشر مع MFE و BQ Score</h3>'
+            '<table><thead><tr>'
+            '<th>المؤشر</th><th>↔ MFE</th><th>↔ BQ</th>'
+            '<th>الاتجاه المتوقع</th><th>حالة التحقق</th>'
+            '</tr></thead><tbody>'
+        )
+        for col, v in ind_corr.items():
+            dv = dir_val.get(col, {})
+            verdict = dv.get("verdict", "—")
+            color = ("green" if verdict == "مؤكَّد"
+                     else "orange" if "جزئياً" in verdict
+                     else "red" if "تعارض" in verdict
+                     else "#888")
+            html += (
+                f"<tr><td><code>{col}</code></td>"
+                f"<td>{_f(v['corr_mfe'], 3)}</td>"
+                f"<td>{_f(v['corr_bq'],  3)}</td>"
+                f"<td>{dv.get('expected','—')}</td>"
+                f"<td style='color:{color};font-weight:600'>{verdict}</td></tr>"
+            )
+        html += "</tbody></table>"
+
+    # ── Pattern Score Buckets ─────────────────────────────────────────────
+    ps_buckets = pat.get("pattern_score_buckets", {})
+    if ps_buckets:
+        html += '<h3 style="color:#2a6496">أداء حسب نطاق Pattern Score</h3>'
+        html += (
+            '<table><thead><tr>'
+            '<th>Pattern Score</th><th>عدد</th>'
+            '<th>MFE (متوسط)</th><th>BQ (متوسط)</th><th>MAE (متوسط)</th>'
+            '</tr></thead><tbody>'
+        )
+        for bucket, v in sorted(ps_buckets.items()):
+            html += (
+                f"<tr><td>{bucket}</td><td>{v.get('n',0)}</td>"
+                f"<td>{_mfe_badge(v.get('mfe_20d_mean'))}</td>"
+                f"<td>{_bq_badge(v.get('bq_score_mean'))}</td>"
+                f"<td>{_pct(v.get('mae_20d_mean'))}</td></tr>"
+            )
+        html += "</tbody></table>"
+
+    # ── Effective Score Buckets ───────────────────────────────────────────
+    eff_buckets = pat.get("effective_score_buckets", {})
+    if eff_buckets:
+        html += '<h3 style="color:#2a6496">أداء حسب نطاق Effective Score</h3>'
+        html += (
+            '<table><thead><tr>'
+            '<th>Effective Score</th><th>عدد</th>'
+            '<th>MFE (متوسط)</th><th>BQ (متوسط)</th>'
+            '</tr></thead><tbody>'
+        )
+        for bucket, v in sorted(eff_buckets.items()):
+            html += (
+                f"<tr><td>{bucket}</td><td>{v.get('n',0)}</td>"
+                f"<td>{_mfe_badge(v.get('mfe_20d_mean'))}</td>"
+                f"<td>{_bq_badge(v.get('bq_score_mean'))}</td></tr>"
+            )
+        html += "</tbody></table>"
+
+    # ── Combined SMC + Pattern ─────────────────────────────────────────────
+    combined = pat.get("combined_smc_pattern", {})
+    if combined:
+        labels_ar = {
+            "high_smc_high_pattern": "SMC ≥60 + Pattern ≥50",
+            "high_smc_low_pattern":  "SMC ≥60 + Pattern <50",
+            "low_smc_high_pattern":  "SMC <60  + Pattern ≥50",
+            "low_smc_low_pattern":   "كلاهما منخفض",
+        }
+        html += (
+            '<h3 style="color:#2a6496">SMC Score + Pattern Score مجتمعَين</h3>'
+            '<p style="font-size:.83em;color:#666">هل Pattern يضيف قيمة فوق SMC وحده؟</p>'
+            '<table><thead><tr>'
+            '<th>الحالة</th><th>عدد</th>'
+            '<th>MFE (متوسط)</th><th>BQ (متوسط)</th><th>MAE (متوسط)</th>'
+            '</tr></thead><tbody>'
+        )
+        for key, v in combined.items():
+            html += (
+                f"<tr><td>{labels_ar.get(key, key)}</td><td>{v.get('n',0)}</td>"
+                f"<td>{_mfe_badge(v.get('mfe_20d_mean'))}</td>"
+                f"<td>{_bq_badge(v.get('bq_score_mean'))}</td>"
+                f"<td>{_pct(v.get('mae_20d_mean'))}</td></tr>"
+            )
+        html += "</tbody></table>"
+
+    # ── Entry Zone Analysis ───────────────────────────────────────────────
+    zone_res = pat.get("entry_zone_analysis", {})
+    if zone_res:
+        zone_labels = {
+            "z1": "Z1 — المنطقة الأولى (أقرب للسعر)",
+            "z2": "Z2 — المنطقة الثانية",
+            "z3": "Z3 — الأعمق (أكثر خصماً)",
+        }
+        html += (
+            '<h3 style="color:#2a6496">أداء حسب منطقة الدخول</h3>'
+            '<table><thead><tr>'
+            '<th>المنطقة</th><th>عدد</th>'
+            '<th>MFE (متوسط)</th><th>BQ (متوسط)</th><th>MAE (متوسط)</th>'
+            '</tr></thead><tbody>'
+        )
+        for zone, v in zone_res.items():
+            html += (
+                f"<tr><td>{zone_labels.get(zone,zone)}</td><td>{v.get('n',0)}</td>"
+                f"<td>{_mfe_badge(v.get('mfe_20d_mean'))}</td>"
+                f"<td>{_bq_badge(v.get('bq_score_mean'))}</td>"
+                f"<td>{_pct(v.get('mae_20d_mean'))}</td></tr>"
+            )
+        html += "</tbody></table>"
+
+    # ── Weight Suggestions ────────────────────────────────────────────────
+    ws = pat.get("indicator_weight_suggestions", {})
+    if ws:
+        has_change = any(abs(v.get("change", 0)) > 0.005 for v in ws.values())
+        html += '<h3 style="color:#2a6496">اقتراح أوزان Pattern Engine (مبنية على MFE)</h3>'
+        if has_change:
+            html += (
+                '<div class="warn">⚠ الأوزان الحالية محسوبة من AUC(win/loss). '
+                'الأوزان المقترحة مبنية على MFE و BQ Score — أنسب لاستراتيجية الـ bottom fishing. '
+                'تحتاج مراجعة يدوية قبل التطبيق في <code>pattern_engine.py</code></div>'
+                '<table><thead><tr>'
+                '<th>المؤشر</th><th>الوزن الحالي</th><th>الوزن المقترح</th><th>التغيير</th><th>قوة الارتباط</th>'
+                '</tr></thead><tbody>'
+            )
+            for key, v in sorted(ws.items(), key=lambda x: -abs(x[1]["change"])):
+                chg   = v["change"]
+                color = "green" if chg > 0 else "red"
+                html += (
+                    f"<tr><td><code>{key}</code></td>"
+                    f"<td>{v['current']:.4f}</td>"
+                    f"<td>{v['suggested']:.4f}</td>"
+                    f"<td style='color:{color};font-weight:600'>{chg:+.4f}</td>"
+                    f"<td>{v['combined_corr']:.4f}</td></tr>"
+                )
+            html += "</tbody></table>"
+        else:
+            html += '<p style="color:#155724;font-weight:600">أوزان Pattern Engine تبدو مناسبة — لا تغييرات ذات أهمية مقترحة.</p>'
+
+    html += "</div>"
+    return html
+
+
 def _build_warnings_section(warnings: list) -> str:
     if not warnings:
         return ""
@@ -406,6 +565,7 @@ def build_report(db_path: str = DB_PATH) -> str:
   {_build_correlation_section(res)}
   {_build_model_section(res)}
   {_build_weight_suggestions_section(res)}
+  {_build_pattern_section(res)}
   {_build_segment_section(res)}
   {_build_mature_signals_section(db_path)}
 

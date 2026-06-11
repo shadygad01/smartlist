@@ -45,7 +45,8 @@ def score_on_day(df_full: pd.DataFrame, as_of: date):
     close = df["Close"].squeeze()   # ensure 1-D Series
     cur   = float(close.iloc[-1])
 
-    hi, lo, eq, buy_hi, sell_lo = swings(close)
+    # swings() يتوقع DataFrame فيه High/Low — تمرير Series كان يكسر السكربت
+    hi, lo, eq, buy_hi, sell_lo = swings(df)
     av, alo                     = calc_avwap(df)
 
     if cur >= eq:

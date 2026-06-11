@@ -251,6 +251,10 @@ def _load_learned_meta():
 
 def _load_per_stock_weights(symbol):
     """يُرجع (weights, directions) الخاصة بسهم معين، أو الـ global، أو الافتراضية."""
+    # FREEZE_WEIGHTS يجب أن يجمّد كل المسارات — سابقاً كان المسار per-stock
+    # يتجاوز التجميد ويحمّل أوزاناً متعلَّمة موصوفة في التحليل بأنها noise.
+    if FREEZE_WEIGHTS:
+        return DEFAULT_WEIGHTS.copy(), DIRECTION.copy()
     if os.path.exists(LEARNED_WEIGHTS_FILE):
         try:
             with open(LEARNED_WEIGHTS_FILE) as f:

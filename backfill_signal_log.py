@@ -128,13 +128,16 @@ def _scan_stock_history(symbol, df):
         future   = close[i+1: i+FORWARD_DAYS+1]
         max_f    = float(np.max(future))
         min_f    = float(np.min(future))
-        gain     = (max_f - close[i]) / close[i]
-        drawdown = (close[i] - min_f) / close[i]
+        # peak_gain: أقصى ربح ممكن نظرياً (خروج عند القمة المستقبلية — متفائل، للعرض فقط)
+        # real_gain: العائد الفعلي close-to-close بعد FORWARD_DAYS — هذا أساس أي تقييم أداء
+        peak_gain = (max_f - close[i]) / close[i]
+        drawdown  = (close[i] - min_f) / close[i]
+        real_gain = (float(close[i + FORWARD_DAYS]) - close[i]) / close[i]
 
-        # تحديد النتيجة
-        if gain >= MIN_GAIN and drawdown < STOP_LOSS:
+        # تصنيف النتيجة من العائد الفعلي (وليس من قمة المستقبل)
+        if real_gain >= MIN_GAIN:
             outcome = "win"
-        elif drawdown >= STOP_LOSS and gain < MIN_GAIN:
+        elif real_gain <= -STOP_LOSS:
             outcome = "loss"
         else:
             outcome = "neutral"
@@ -152,7 +155,10 @@ def _scan_stock_history(symbol, df):
             "id":            sig_id,
             "symbol":        symbol,
             "signal_date":   sig_date,
-            "signal":        "BUY" if outcome == "win" else "WATCH",
+            # ⚠️ كان سابقاً "BUY" if outcome == "win" — تسمية مبنية على المستقبل
+            # (look-ahead leakage) جعلت أي تحليل "نسبة نجاح إشارات BUY" دائرياً.
+            # الأحداث التاريخية ليست إشارات من الماسح — تُوسم كحدث تاريخي محايد.
+            "signal":        "HIST_EVENT",
             "smc_score":     0,      # غير محسوب في الباكتست التاريخي
             "pattern_score": 0,
             "price":         round(float(close[i]), 2),
@@ -161,7 +167,9 @@ def _scan_stock_history(symbol, df):
             "outcome":       outcome,
             "outcome_date":  outcome_date,
             "outcome_price": round(float(close[i + FORWARD_DAYS]), 2),
-            "outcome_gain":  round(gain, 4),
+            "outcome_gain":  round(real_gain, 4),
+            "peak_gain":     round(peak_gain, 4),
+            "max_drawdown":  round(drawdown, 4),
             "source":        "backfill",
         })
 

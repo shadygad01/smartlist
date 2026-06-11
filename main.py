@@ -50,7 +50,6 @@ STOCKS = [
 # WHITELIST - Price Gate Threshold >= 12
 # =========================================
 WHITELIST = [
-    "COMI.CA",  # Commercial International Bank — large-cap, rarely hits deep discount
     "FWRY.CA",  # Fawry for Banking Technology
     "EAST.CA",  # Eastern Company
     "ETEL.CA",  # Telecom Egypt

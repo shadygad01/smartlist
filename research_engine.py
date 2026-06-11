@@ -58,6 +58,9 @@ MIN_PER_STOCK     = 20   # إشارات ناضجة لتفعيل تحليل per-s
 MIN_PER_STOCK_ML  = 30   # إشارات ناضجة لتفعيل ML model per-stock
 TOP_MFE_PERCENTILE= 0.75 # الربع الأعلى = "نماذج الفائزة"
 
+# أنواع الإشارات التي تمثّل قرار دخول فعلي — Wait يُسجَّل للمراقبة فقط
+ML_SIGNAL_TYPES = {"Early Buy", "Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy"}
+
 # المتغيرات الكاملة — 49 متغير (مطابقة لـ FEATURE_COLS تماماً)
 ALL_FEATURE_COLS = [
     "raw_score", "adj_score",
@@ -915,7 +918,14 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
       warnings      ← تحذيرات (حجم البيانات، جودة النموذج)
     """
     signals = get_mature_signals(db_path=db_path)
-    df      = _to_df(signals)
+    df_all  = _to_df(signals)
+
+    # ML يتدرب على إشارات الدخول الفعلي فقط (Early Buy / Buy / …)
+    # Wait يبقى مسجّل للمراقبة البحثية لكن لا يدخل التدريب
+    if "signal_type" in df_all.columns and not df_all.empty:
+        df = df_all[df_all["signal_type"].isin(ML_SIGNAL_TYPES)].reset_index(drop=True)
+    else:
+        df = df_all
 
     result = {
         "generated_at": date.today().isoformat(),
@@ -932,9 +942,13 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
     }
 
     # ── Dataset Meta ───────────────────────────────────────────────────────
-    n = len(df)
+    n       = len(df)
+    n_total = len(df_all)
+    n_wait  = n_total - n
     result["meta"] = {
-        "n_signals":   n,
+        "n_signals":   n,        # إشارات الدخول الفعلي — للـ ML
+        "n_total":     n_total,  # كل الإشارات (شاملة Wait)
+        "n_wait":      n_wait,   # إشارات Wait (مراقبة فقط)
         "date_range":  [
             str(df["signal_date"].min()) if n else None,
             str(df["signal_date"].max()) if n else None,
@@ -1004,11 +1018,12 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
                     bq_imp[k] = (bq_imp.get(k, 0) + v) / 2
             result["weight_suggestions"] = _suggest_weights(mfe_imp, bq_imp)
 
-    # ── Segment Analysis (always) ─────────────────────────────────────────
-    if n >= 5:
-        result["segment_analysis"] = _segment_analysis(df)
+    # ── Segment Analysis — يستخدم كل الإشارات (شاملة Wait) للمقارنة ─────
+    n_all = len(df_all)
+    if n_all >= 5:
+        result["segment_analysis"] = _segment_analysis(df_all)
 
-    # ── Pattern Engine Analysis ───────────────────────────────────────────
+    # ── Pattern Engine Analysis — إشارات الدخول فقط ──────────────────────
     if n >= 5:
         result["pattern_analysis"] = _pattern_analysis(df)
 

@@ -108,21 +108,23 @@ def _mfe_badge(mfe):
 # ── Section Builders ───────────────────────────────────────────────────────────
 
 def _build_kpi_section(stats: dict, res: dict) -> str:
-    meta  = res.get("meta", {})
-    n_mat = meta.get("n_signals", 0)
-    mfe_m = meta.get("mfe_mean")
-    bq_m  = meta.get("bq_mean")
-    mae_m = meta.get("mae_mean")
+    meta   = res.get("meta", {})
+    n_ml   = meta.get("n_signals",  0)   # إشارات الدخول الفعلي (للـ ML)
+    n_wait = meta.get("n_wait",     0)   # Wait (مراقبة فقط)
+    mfe_m  = meta.get("mfe_mean")
+    bq_m   = meta.get("bq_mean")
+    mae_m  = meta.get("mae_mean")
 
     def kpi(val, lbl):
         return f'<div class="kpi"><div class="val">{val}</div><div class="lbl">{lbl}</div></div>'
 
     cards = [
         kpi(stats.get("total_signals", 0),    "إجمالي الإشارات"),
-        kpi(n_mat,                             "إشارات ناضجة (BQ)"),
+        kpi(n_ml,                              "إشارات ML (دخول فعلي)"),
+        kpi(n_wait,                            "إشارات Wait (مراقبة)"),
         kpi(stats.get("tracking_records", 0), "سجلات المتابعة"),
         kpi(f"{mfe_m*100:.1f}%" if mfe_m else "—", "متوسط MFE"),
-        kpi(f"{bq_m:.1f}" if bq_m else "—",  "متوسط BQ Score"),
+        kpi(f"{bq_m:.1f}" if bq_m else "—",   "متوسط BQ Score"),
         kpi(f"{mae_m*100:.1f}%" if mae_m else "—", "متوسط MAE"),
     ]
     return (

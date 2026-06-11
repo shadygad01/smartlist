@@ -85,7 +85,7 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git add open_positions.json positions_history.json scan_results.json signal_history.json signal_log.json learned_weights.json || true
+          git add open_positions.json positions_history.json scan_results.json signal_history.json signal_log.json learned_weights.json egx_research.db || true
           git diff --staged --quiet || git commit -m "Auto-update positions [skip ci]"
           git push || true
 
@@ -102,6 +102,16 @@ jobs:
           python research_report.py --no-email --force || true
           cp research_report_*.html web_deploy/research_report.html 2>/dev/null || true
           cp manifest.json sw.js icon.svg web_deploy/
+
+      - name: Save research results
+        if: always()
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git pull --rebase || true
+          git add egx_research.db research_results.json || true
+          git diff --staged --quiet || git commit -m "Auto-update research DB [skip ci]"
+          git push || true
 
       - name: Deploy to GitHub Pages
         if: always()

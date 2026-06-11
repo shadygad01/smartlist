@@ -233,7 +233,9 @@ def init_db(db_path: str = DB_PATH):
         );
 
         """)
-        _migrate_schema(conn)
+    # executescript() does an implicit COMMIT, so _migrate_schema runs
+    # outside that transaction — each ALTER TABLE commits independently (correct).
+    _migrate_schema(conn)
     conn.close()
 
 

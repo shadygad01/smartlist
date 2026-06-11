@@ -58,13 +58,13 @@ MIN_PER_STOCK     = 20   # إشارات ناضجة لتفعيل تحليل per-s
 MIN_PER_STOCK_ML  = 30   # إشارات ناضجة لتفعيل ML model per-stock
 TOP_MFE_PERCENTILE= 0.75 # الربع الأعلى = "نماذج الفائزة"
 
-# المتغيرات الكاملة — 75 متغير بعد إضافة الـ 18 الجديدة
+# المتغيرات الكاملة — 49 متغير (مطابقة لـ FEATURE_COLS تماماً)
 ALL_FEATURE_COLS = [
     "raw_score", "adj_score",
     "r1_price", "r2_ob", "r3_liquidity", "r4_htf",
     "r5_avwap", "r6_macd", "r7_div", "r8_demand",
     "discount_depth",
-    "pattern_score", "pattern_eff", "pattern_wr", "pattern_gain",
+    "pattern_score", "pattern_eff", "pattern_wr", "pattern_gain", "pattern_n",
     "ind_stoch_rsi", "ind_p_vs_ma20", "ind_mom_10d",
     "ind_mom_5d", "ind_atr_ratio", "ind_vol_trend",
     "sv_hit", "sv_score", "hvn_hit", "hvn_score",
@@ -607,9 +607,13 @@ def _best_conditions_profile(df: pd.DataFrame) -> dict:
 
             t_mean  = float(t_vals.mean())
             b_mean  = float(b_vals.mean())
-            t_std   = float(sub[feat].std()) or 1.0
-            # effect size (Cohen's d simplified)
-            effect  = (t_mean - b_mean) / t_std
+            # Cohen's d: pooled within-group std (not total std which inflates for boolean features)
+            pooled_var = (
+                (len(t_vals) - 1) * float(t_vals.std()) ** 2 +
+                (len(b_vals) - 1) * float(b_vals.std()) ** 2
+            ) / max(len(t_vals) + len(b_vals) - 2, 1)
+            pooled_std = max(pooled_var ** 0.5, 1e-6)
+            effect  = (t_mean - b_mean) / pooled_std
             conditions[feat] = {
                 "top_mean":    round(t_mean, 4),
                 "bottom_mean": round(b_mean, 4),

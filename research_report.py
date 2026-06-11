@@ -28,7 +28,7 @@ from signal_db import (
     DB_PATH, get_stats, get_mature_signals, get_active_signals,
     get_last_report_date, log_report_sent, init_db,
 )
-from research_engine import run_research, MIN_SAMPLES
+from research_engine import run_research, MIN_SAMPLES, MIN_PER_STOCK_ML
 
 # ── Email Config ───────────────────────────────────────────────────────────────
 EMAIL_FROM    = os.getenv("REPORT_EMAIL_FROM", "")
@@ -584,7 +584,7 @@ def _build_per_stock_ml_section(res: dict) -> str:
         '<div class="section">'
         '<h2>نماذج ML مستقلة — لكل سهم بشكل منفصل</h2>'
         '<p style="font-size:.85em;color:#666">'
-        f'الحد الأدنى: {30} إشارة ناضجة لكل سهم — '
+        f'الحد الأدنى: {MIN_PER_STOCK_ML} إشارة ناضجة لكل سهم — '
         'Target: MFE (أولاً) و BQ Score (ثانياً) — تقسيم زمني 70/30%'
         '</p>'
     )

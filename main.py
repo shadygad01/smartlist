@@ -1318,11 +1318,15 @@ def analyze(symbol):
             # ── Extra research variables (discount zone only) ─────────────────
             _rsi_s       = _calc_rsi(close)
             _rsi_val     = round(float(_rsi_s.iloc[-1]), 2) if len(_rsi_s) >= 14 else None
-            _macd_hist   = round(float(macd_result[2].iloc[-1]), 4) if len(macd_result[2]) > 0 else None
-            _macd_signal = round(float(macd_result[1].iloc[-1]), 4) if len(macd_result[1]) > 0 else None
-            _avwap_gap   = round((av - cur) / max(av - alo, 0.001), 4) if av > cur else 0.0
+            _mh          = macd_result[2].dropna()
+            _ms          = macd_result[1].dropna()
+            _macd_hist   = round(float(_mh.iloc[-1]), 4) if len(_mh) > 0 else None
+            _macd_signal = round(float(_ms.iloc[-1]), 4) if len(_ms) > 0 else None
+            # cap at 2.0 — prevents outlier explosion on flat-price / new-listing stocks
+            _raw_gap     = (av - cur) / max(av - alo, 0.001) if av > cur else 0.0
+            _avwap_gap   = round(min(_raw_gap, 2.0), 4)
             _sv_depth    = round((eq - sv_result[3]) / max(eq - lo, 0.001), 4) \
-                           if sv_result and sv_result[0] and sv_result[3] else 0.0
+                           if sv_result and sv_result[0] else 0.0
 
         total = min(r1+r2+r3+r4+r5+r6+r7+r8, 100)
 
@@ -1415,7 +1419,16 @@ def analyze(symbol):
 
         # ── Parse OB label → ob_quality / ob_dist ────────────────────────────
         _ob_qm      = re.search(r'quality\s+(\d+)%', l2)
-        _ob_quality = round(int(_ob_qm.group(1)) / 100, 2) if _ob_qm else None
+        if _ob_qm:
+            _ob_quality = round(int(_ob_qm.group(1)) / 100, 2)
+        elif l2.startswith("OB zone") and "far" in l2 and r2 > 0:
+            # "far" label omits quality — back-calculate: pts = round(W_OB * qual * 0.15)
+            _ob_quality = round(min(r2 / max(W_OB * 0.15, 0.1), 1.0), 2)
+        elif "moderate distance" in l2 and r2 > 0:
+            # moderate: pts = round(W_OB * qual * 0.30)
+            _ob_quality = round(min(r2 / max(W_OB * 0.30, 0.1), 1.0), 2)
+        else:
+            _ob_quality = None
         _ob_dm      = re.search(r'far\s*\((\d+(?:\.\d+)?)%\s*away\)', l2, re.IGNORECASE)
         if _ob_dm:
             _ob_dist = round(float(_ob_dm.group(1)) / 100, 4)
@@ -1450,10 +1463,10 @@ def analyze(symbol):
             ],
             "sv_hit":    bool(sv_result[0])         if sv_result   else False,
             "sv_score":  round(float(sv_result[1]),3) if sv_result else 0.0,
-            "sv_price":  round(float(sv_result[3]),2) if sv_result and sv_result[3] else None,
+            "sv_price":  round(float(sv_result[3]),2) if sv_result and sv_result[0] else None,
             "hvn_hit":   bool(hvn_result[0])          if hvn_result else False,
             "hvn_score": round(float(hvn_result[1]),3) if hvn_result else 0.0,
-            "hvn_price": round(float(hvn_result[2]),2) if hvn_result and hvn_result[2] else None,
+            "hvn_price": round(float(hvn_result[2]),2) if hvn_result and hvn_result[0] else None,
             "macd_val":  round(float(macd_result[0].iloc[-1]),4) if macd_result is not None and len(macd_result[0]) > 0 else None,
             "vol_spike": _vol_spike,
             # 18 extended research variables

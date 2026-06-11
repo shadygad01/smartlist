@@ -68,19 +68,36 @@ def _load_weights():
     return DEFAULT_WEIGHTS.copy()
 
 
-WEIGHTS = _load_weights()
+def _load_directions():
+    """يحمّل الاتجاهات المتعلَّمة لو موجودة، وإلا يرجع الافتراضية."""
+    if os.path.exists(LEARNED_WEIGHTS_FILE):
+        try:
+            with open(LEARNED_WEIGHTS_FILE) as f:
+                data = json.load(f)
+            d = data.get("directions", {})
+            if set(d.keys()) == set(DEFAULT_WEIGHTS.keys()):
+                return d
+        except Exception:
+            pass
+    return DIRECTION.copy()
+
+
+WEIGHTS    = _load_weights()
+DIRECTIONS = _load_directions()
 
 
 def _calc_weights_from_signals(decided, min_count=30):
     """
-    يحسب الأوزان من قائمة إشارات محسومة باستخدام Point-Biserial Correlation.
-    يُرجع dict أوزان أو None لو البيانات مش كافية.
+    يحسب الأوزان والاتجاهات من إشارات محسومة باستخدام Point-Biserial Correlation.
+    الاتجاه يُحدَّد من البيانات: إذا الإشارات الرابحة عندها متوسط أعلى → "higher".
+    يُرجع (weights_dict, directions_dict) أو (None, None) لو البيانات مش كافية.
     """
     if len(decided) < min_count:
-        return None
+        return None, None
 
     features = list(DEFAULT_WEIGHTS.keys())
     correlations = {}
+    directions   = {}
 
     for feat in features:
         vals, labels = [], []
@@ -93,6 +110,7 @@ def _calc_weights_from_signals(decided, min_count=30):
 
         if len(vals) < min_count:
             correlations[feat] = DEFAULT_WEIGHTS[feat]
+            directions[feat]   = DIRECTION[feat]
             continue
 
         vals_arr   = np.array(vals)
@@ -102,6 +120,7 @@ def _calc_weights_from_signals(decided, min_count=30):
         n0 = n - n1
         if n1 == 0 or n0 == 0:
             correlations[feat] = DEFAULT_WEIGHTS[feat]
+            directions[feat]   = DIRECTION[feat]
             continue
 
         m1  = vals_arr[labels_arr == 1].mean()
@@ -109,9 +128,11 @@ def _calc_weights_from_signals(decided, min_count=30):
         std = vals_arr.std() + 1e-9
         rpb = abs((m1 - m0) / std * np.sqrt(n1 * n0 / n**2))
         correlations[feat] = float(rpb)
+        directions[feat]   = "higher" if m1 > m0 else "lower"
 
     total = sum(correlations.values()) + 1e-9
-    return {k: round(v / total, 4) for k, v in correlations.items()}
+    weights = {k: round(v / total, 4) for k, v in correlations.items()}
+    return weights, directions
 
 
 def update_weights_from_log(log_file="signal_log.json"):
@@ -136,8 +157,8 @@ def update_weights_from_log(log_file="signal_log.json"):
     if len(decided) < MIN_DECIDED:
         return None
 
-    # ── Global weights ────────────────────────────────────────────────
-    global_weights = _calc_weights_from_signals(decided, min_count=MIN_DECIDED)
+    # ── Global weights + directions ───────────────────────────────────
+    global_weights, global_directions = _calc_weights_from_signals(decided, min_count=MIN_DECIDED)
     if global_weights is None:
         return None
 
@@ -152,7 +173,7 @@ def update_weights_from_log(log_file="signal_log.json"):
     total_bg = sum(blended_global.values()) + 1e-9
     blended_global = {k: round(v / total_bg, 4) for k, v in blended_global.items()}
 
-    # ── Per-stock weights ─────────────────────────────────────────────
+    # ── Per-stock weights + directions ────────────────────────────────
     from collections import defaultdict
     by_symbol = defaultdict(list)
     for s in decided:
@@ -160,7 +181,7 @@ def update_weights_from_log(log_file="signal_log.json"):
 
     per_stock = {}
     for sym, sigs in by_symbol.items():
-        w = _calc_weights_from_signals(sigs, min_count=30)
+        w, d = _calc_weights_from_signals(sigs, min_count=30)
         if w:
             n_sym = len(sigs)
             alpha_sym = min(0.85, n_sym / 200)
@@ -170,12 +191,18 @@ def update_weights_from_log(log_file="signal_log.json"):
             }
             total_sym = sum(blended_sym.values()) + 1e-9
             blended_sym = {k: round(v / total_sym, 4) for k, v in blended_sym.items()}
-            per_stock[sym] = {"weights": blended_sym, "based_on": n_sym, "alpha": round(alpha_sym, 2)}
+            per_stock[sym] = {
+                "weights":   blended_sym,
+                "directions": d,
+                "based_on":  n_sym,
+                "alpha":     round(alpha_sym, 2),
+            }
 
     # ── حفظ ──────────────────────────────────────────────────────────
     import datetime
     out = {
         "weights":    blended_global,
+        "directions": global_directions,
         "per_stock":  per_stock,
         "based_on":   len(decided),
         "alpha":      round(alpha, 2),
@@ -188,8 +215,11 @@ def update_weights_from_log(log_file="signal_log.json"):
     for k, v in sorted(blended_global.items(), key=lambda x: -x[1]):
         old = DEFAULT_WEIGHTS[k]
         arrow = "↑" if v > old else "↓" if v < old else "="
-        print(f"     {k:<12} {old:.2f} → {v:.4f} {arrow}")
-    print(f"  🔄 Per-stock weights learned for {len(per_stock)} stocks")
+        d_old = DIRECTION[k]
+        d_new = global_directions.get(k, d_old)
+        d_mark = "" if d_new == d_old else f"  dir: {d_old}→{d_new} ⚠️"
+        print(f"     {k:<12} {old:.2f} → {v:.4f} {arrow}{d_mark}")
+    print(f"  🔄 Per-stock weights+directions learned for {len(per_stock)} stocks")
 
     return blended_global
 
@@ -207,20 +237,22 @@ def _load_learned_meta():
 
 
 def _load_per_stock_weights(symbol):
-    """يُرجع الأوزان الخاصة بسهم معين، أو الـ global، أو الافتراضية."""
+    """يُرجع (weights, directions) الخاصة بسهم معين، أو الـ global، أو الافتراضية."""
     if os.path.exists(LEARNED_WEIGHTS_FILE):
         try:
             with open(LEARNED_WEIGHTS_FILE) as f:
                 data = json.load(f)
             per_stock = data.get("per_stock", {})
             if symbol in per_stock:
-                return per_stock[symbol]["weights"]
+                entry = per_stock[symbol]
+                return entry["weights"], entry.get("directions", DIRECTIONS)
             w = data.get("weights", {})
+            d = data.get("directions", {})
             if set(w.keys()) == set(DEFAULT_WEIGHTS.keys()):
-                return w
+                return w, d if set(d.keys()) == set(DEFAULT_WEIGHTS.keys()) else DIRECTIONS
         except Exception:
             pass
-    return DEFAULT_WEIGHTS.copy()
+    return DEFAULT_WEIGHTS.copy(), DIRECTION.copy()
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -367,13 +399,16 @@ def _indicator_score(current_val, win_vals, direction):
     return float(1 / (1 + np.exp(z * 1.5)))
 
 
-def _threshold_score(current_cond, wins, weights=None):
+def _threshold_score(current_cond, wins, weights=None, directions=None):
     """
     يحسب الـ Pattern Score الكلي (0-100) بجمع نقاط المؤشرات الستة موزونة.
-    weights: لو None يستخدم الـ global WEIGHTS
+    weights:    لو None يستخدم الـ global WEIGHTS
+    directions: لو None يستخدم الـ DIRECTIONS المتعلَّمة
     """
     if weights is None:
         weights = WEIGHTS
+    if directions is None:
+        directions = DIRECTIONS
 
     total  = 0.0
     detail = {}
@@ -381,7 +416,7 @@ def _threshold_score(current_cond, wins, weights=None):
     for feat, weight in weights.items():
         win_vals  = [w["conditions"][feat] for w in wins]
         cur_val   = current_cond[feat]
-        direction = DIRECTION[feat]
+        direction = directions.get(feat, DIRECTION[feat])
 
         sc = _indicator_score(cur_val, win_vals, direction)
         total += sc * weight
@@ -425,8 +460,8 @@ def analyze_entry_patterns(df, symbol=None):
     if len(wins) < MIN_REVERSALS:
         return {**empty, "label": f"Limited history — {len(wins)} reversals found (need {MIN_REVERSALS})"}
 
-    weights = _load_per_stock_weights(symbol) if symbol else WEIGHTS
-    pattern_score, detail = _threshold_score(current_cond, wins, weights)
+    weights, directions = _load_per_stock_weights(symbol) if symbol else (WEIGHTS, DIRECTIONS)
+    pattern_score, detail = _threshold_score(current_cond, wins, weights, directions)
 
     total_decided = len(wins) + len(losses)
     win_rate = len(wins) / total_decided if total_decided > 0 else 0.0

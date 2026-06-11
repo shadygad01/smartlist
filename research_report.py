@@ -514,6 +514,125 @@ def _build_pattern_section(res: dict) -> str:
     return html
 
 
+def _build_best_conditions_section(res: dict) -> str:
+    bc = res.get("best_conditions", {})
+    if not bc:
+        return ""
+
+    html = (
+        '<div class="section">'
+        '<h2>بصمة الـ Bottom المثالي — لكل سهم بشكل منفصل</h2>'
+        '<p style="font-size:.85em;color:#666">'
+        'مقارنة أفضل 25% إشارة بـ MFE (Top Quartile) مع باقي الإشارات — '
+        'الهدف: اكتشاف الأنماط المشتركة اللي تسبق أفضل النتائج لكل سهم'
+        '</p>'
+    )
+
+    for sym, data in sorted(bc.items()):
+        n         = data["n"]
+        n_top     = data["n_top"]
+        mfe_t     = data["mfe_threshold"]
+        conditions= data["conditions"]
+        summary   = data.get("top5_summary", [])
+
+        html += (
+            f'<div class="rec-box">'
+            f'<h3>{sym} — أفضل {n_top} من {n} إشارة (MFE ≥ {mfe_t*100:.1f}%)</h3>'
+        )
+
+        if summary:
+            items = "".join(f"<li>{s}</li>" for s in summary)
+            html += f'<p style="font-size:.85em;margin:4px 0 8px"><strong>أهم 5 شروط للـ top signals:</strong><ul style="margin:4px 0">{items}</ul></p>'
+
+        if conditions:
+            html += (
+                '<table style="font-size:.82em"><thead><tr>'
+                '<th>المتغير</th>'
+                '<th>Top 25% (متوسط)</th>'
+                '<th>باقي الإشارات</th>'
+                '<th>الفرق</th>'
+                '<th>Effect Size</th>'
+                '</tr></thead><tbody>'
+            )
+            for feat, v in list(conditions.items())[:12]:
+                diff     = v["diff"]
+                eff      = v["effect_size"]
+                d_color  = "green" if diff > 0 else "red"
+                eff_label= "قوي" if abs(eff) >= 0.5 else ("متوسط" if abs(eff) >= 0.2 else "ضعيف")
+                eff_color= "green" if abs(eff) >= 0.5 else ("orange" if abs(eff) >= 0.2 else "#888")
+                html += (
+                    f"<tr><td><code>{feat}</code></td>"
+                    f"<td>{v['top_mean']:.4f}</td>"
+                    f"<td>{v['bottom_mean']:.4f}</td>"
+                    f"<td style='color:{d_color};font-weight:600'>{diff:+.4f}</td>"
+                    f"<td style='color:{eff_color}'>{eff:+.3f} ({eff_label})</td></tr>"
+                )
+            html += "</tbody></table>"
+
+        html += "</div>"
+
+    html += "</div>"
+    return html
+
+
+def _build_per_stock_ml_section(res: dict) -> str:
+    ps_ml = res.get("per_stock_ml", {})
+    if not ps_ml:
+        return ""
+
+    html = (
+        '<div class="section">'
+        '<h2>نماذج ML مستقلة — لكل سهم بشكل منفصل</h2>'
+        '<p style="font-size:.85em;color:#666">'
+        f'الحد الأدنى: {30} إشارة ناضجة لكل سهم — '
+        'Target: MFE (أولاً) و BQ Score (ثانياً) — تقسيم زمني 70/30%'
+        '</p>'
+    )
+
+    for sym, data in sorted(ps_ml.items()):
+        n        = data["n"]
+        mfe_m    = data.get("mfe_model")
+        bq_m     = data.get("bq_model")
+
+        html += f'<div class="rec-box"><h3>{sym} — {n} إشارة ناضجة</h3>'
+
+        for model_data, label, target_label in [
+            (mfe_m, "MFE Model", "Target: MFE"),
+            (bq_m,  "BQ Model",  "Target: BQ Score"),
+        ]:
+            if not model_data:
+                continue
+            if "error" in model_data:
+                html += f'<p style="color:red">{label}: {model_data["error"]}</p>'
+                continue
+
+            r2       = model_data.get("r2", 0)
+            n_train  = model_data.get("n_train", 0)
+            n_test   = model_data.get("n_test",  0)
+            top5     = model_data.get("top5", [])
+            r2_color = "green" if r2 >= 0.10 else ("orange" if r2 >= 0.05 else "red")
+
+            html += (
+                f'<p style="margin:8px 0 4px"><strong>{label}</strong> ({target_label}) — '
+                f'R²=<span style="color:{r2_color};font-weight:700">{r2}</span> '
+                f'| train={n_train} | test={n_test}</p>'
+            )
+            if top5:
+                top5_str = " | ".join(f"<code>{k}</code> ({v:.4f})" for k, v in top5)
+                html += f'<p style="font-size:.83em;color:#555">أهم المتغيرات: {top5_str}</p>'
+
+        html += "</div>"
+
+    html += (
+        '<div class="warn" style="margin-top:8px">'
+        'R² منخفض (< 0.05) يعني البيانات مش كافية بعد للتنبؤ — '
+        'النماذج ستتحسن تلقائياً مع تراكم الإشارات.'
+        '</div>'
+        '</div>'
+    )
+    return html
+
+
 def _build_per_stock_pattern_section(res: dict) -> str:
     pat      = res.get("pattern_analysis", {})
     ps_data  = pat.get("per_stock_analysis", {})
@@ -690,6 +809,8 @@ def build_report(db_path: str = DB_PATH) -> str:
   {_build_weight_suggestions_section(res)}
   {_build_pattern_section(res)}
   {_build_per_stock_pattern_section(res)}
+  {_build_best_conditions_section(res)}
+  {_build_per_stock_ml_section(res)}
   {_build_segment_section(res)}
   {_build_mature_signals_section(db_path)}
 

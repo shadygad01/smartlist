@@ -52,9 +52,25 @@ except ImportError:
         "atr_ratio": 0.15, "mom_5d":  0.14, "vol_trend": 0.12,
     }
 
-MIN_SAMPLES     = 30     # حد أدنى للتدريب
-TRAIN_SPLIT_PCT = 0.70   # تقسيم زمني — أول 70% للتدريب
-MIN_PER_STOCK   = 20     # إشارات ناضجة لتفعيل التحليل per-stock لسهم معين
+MIN_SAMPLES       = 30   # حد أدنى للتدريب global
+TRAIN_SPLIT_PCT   = 0.70 # تقسيم زمني — أول 70% للتدريب
+MIN_PER_STOCK     = 20   # إشارات ناضجة لتفعيل تحليل per-stock
+MIN_PER_STOCK_ML  = 30   # إشارات ناضجة لتفعيل ML model per-stock
+TOP_MFE_PERCENTILE= 0.75 # الربع الأعلى = "نماذج الفائزة"
+
+# المتغيرات الكاملة بعد إضافة sv/hvn/macd/vol_spike
+ALL_FEATURE_COLS = [
+    "raw_score", "adj_score",
+    "r1_price", "r2_ob", "r3_liquidity", "r4_htf",
+    "r5_avwap", "r6_macd", "r7_div", "r8_demand",
+    "discount_depth",
+    "pattern_score", "pattern_eff", "pattern_wr", "pattern_gain",
+    "ind_stoch_rsi", "ind_p_vs_ma20", "ind_mom_10d",
+    "ind_mom_5d", "ind_atr_ratio", "ind_vol_trend",
+    "sv_hit", "sv_score", "hvn_hit", "hvn_score",
+    "macd_val", "vol_spike",
+    "is_ramadan", "is_cbe", "stock_tier",
+]
 
 # ── المتغيرات المستخدمة في الـ ML ─────────────────────────────────────────────
 # كلها من وقت الإشارة (صفر تسرّب مستقبلي)
@@ -537,6 +553,147 @@ def _pattern_analysis(df: pd.DataFrame) -> dict:
     return result
 
 
+# ── Best Conditions Profile ───────────────────────────────────────────────────
+
+def _best_conditions_profile(df: pd.DataFrame) -> dict:
+    """
+    لكل سهم عنده ≥ 10 إشارات ناضجة:
+      - يفصل أفضل 25% بـ MFE (Top Quartile) عن الباقي
+      - لكل متغير يحسب: متوسط في الـ Top vs الباقي، والفرق
+      - يُرتّب المتغيرات حسب قوة التمييز
+      - ينتج "بصمة الـ bottom المثالي" لكل سهم
+
+    الهدف: "لسهم ETEL — الإشارات اللي أدّت لـ MFE > 18% كانت دايماً عندها هذه الشروط"
+    """
+    result = {}
+    base   = df.dropna(subset=["mfe_20d", "symbol"])
+    feats  = [c for c in ALL_FEATURE_COLS if c in base.columns]
+
+    for sym in sorted(base["symbol"].unique()):
+        sub = base[base["symbol"] == sym].dropna(subset=["mfe_20d"])
+        n   = len(sub)
+        if n < 10:
+            continue
+
+        mfe_thresh = float(sub["mfe_20d"].quantile(TOP_MFE_PERCENTILE))
+        top    = sub[sub["mfe_20d"] >= mfe_thresh]
+        bottom = sub[sub["mfe_20d"] <  mfe_thresh]
+        n_top  = len(top)
+
+        conditions = {}
+        for feat in feats:
+            t_vals = top[feat].dropna()
+            b_vals = bottom[feat].dropna()
+            if len(t_vals) < 2 or len(b_vals) < 2:
+                continue
+
+            t_mean  = float(t_vals.mean())
+            b_mean  = float(b_vals.mean())
+            t_std   = float(sub[feat].std()) or 1.0
+            # effect size (Cohen's d simplified)
+            effect  = (t_mean - b_mean) / t_std
+            conditions[feat] = {
+                "top_mean":    round(t_mean, 4),
+                "bottom_mean": round(b_mean, 4),
+                "diff":        round(t_mean - b_mean, 4),
+                "effect_size": round(effect, 3),
+            }
+
+        # ترتيب حسب |effect_size|
+        ranked = dict(sorted(
+            conditions.items(),
+            key=lambda x: abs(x[1]["effect_size"]),
+            reverse=True,
+        ))
+
+        # ── وصف نصي لأهم 5 شروط ─────────────────────────────────────────
+        top5_desc = []
+        for feat, v in list(ranked.items())[:5]:
+            direction = "أعلى" if v["diff"] > 0 else "أقل"
+            top5_desc.append(
+                f"{feat}: {direction} ({v['top_mean']:.3f} vs {v['bottom_mean']:.3f})"
+            )
+
+        result[sym] = {
+            "n":           n,
+            "n_top":       n_top,
+            "mfe_threshold": round(mfe_thresh, 4),
+            "conditions":  ranked,
+            "top5_summary": top5_desc,
+        }
+
+    return result
+
+
+# ── Per-Stock ML Models ────────────────────────────────────────────────────────
+
+def _per_stock_ml(df: pd.DataFrame) -> dict:
+    """
+    لكل سهم عنده ≥ MIN_PER_STOCK_ML إشارة ناضجة:
+      - يدرّب RandomForest مستقل على مجموعة المتغيرات الكاملة
+      - يستخدم MFE كـ target الأساسي
+      - يستخدم BQ Score كـ target ثانوي
+      - يُرجع feature importance + R² + أهم 5 متغيرات لكل نموذج
+
+    يُطبَّق time-split: أول 70% تدريب، آخر 30% اختبار (ترتيب زمني).
+    """
+    if not SKLEARN_OK:
+        return {"error": "scikit-learn not installed"}
+
+    result = {}
+    base   = df.dropna(subset=["mfe_20d", "symbol"])
+    feats  = [c for c in ALL_FEATURE_COLS if c in base.columns]
+
+    for sym in sorted(base["symbol"].unique()):
+        sub = base[base["symbol"] == sym].sort_values("signal_date")
+        n   = len(sub)
+        if n < MIN_PER_STOCK_ML:
+            continue
+
+        sym_result = {"n": n, "mfe_model": None, "bq_model": None}
+
+        for target, key in [(TARGET_MFE, "mfe_model"), (TARGET_BQ, "bq_model")]:
+            valid = sub[feats + [target]].dropna()
+            if len(valid) < MIN_PER_STOCK_ML:
+                continue
+
+            X = valid[feats]
+            y = valid[target]
+            split = max(10, int(len(valid) * TRAIN_SPLIT_PCT))
+            X_tr, X_te = X.iloc[:split], X.iloc[split:]
+            y_tr, y_te = y.iloc[:split], y.iloc[split:]
+
+            if len(X_te) < 3:
+                continue
+
+            try:
+                model = RandomForestRegressor(
+                    n_estimators=150, max_depth=5,
+                    min_samples_leaf=2, random_state=42, n_jobs=-1,
+                )
+                model.fit(X_tr.values, y_tr.values)
+                y_pred = model.predict(X_te.values)
+                r2     = round(r2_score(y_te.values, y_pred), 3)
+
+                imp  = dict(zip(feats, model.feature_importances_))
+                top5 = sorted(imp.items(), key=lambda x: x[1], reverse=True)[:5]
+
+                sym_result[key] = {
+                    "r2":       r2,
+                    "n_train":  len(y_tr),
+                    "n_test":   len(y_te),
+                    "top5":     [(k, round(v, 4)) for k, v in top5],
+                    "importance": {k: round(v, 4) for k, v in imp.items()},
+                }
+            except Exception as e:
+                sym_result[key] = {"error": str(e)}
+
+        if sym_result["mfe_model"] or sym_result["bq_model"]:
+            result[sym] = sym_result
+
+    return result
+
+
 # ── Per-Stock Hybrid Analysis ──────────────────────────────────────────────────
 
 def _per_stock_pattern_analysis(df: pd.DataFrame, global_corr: dict) -> dict:
@@ -747,6 +904,8 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
         "weight_suggestions": {},
         "segment_analysis": {},
         "pattern_analysis": {},
+        "best_conditions": {},
+        "per_stock_ml": {},
         "warnings": [],
     }
 
@@ -830,6 +989,20 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
     # ── Pattern Engine Analysis ───────────────────────────────────────────
     if n >= 5:
         result["pattern_analysis"] = _pattern_analysis(df)
+
+    # ── Best Conditions Profile (per-stock) ───────────────────────────────
+    if n >= 10:
+        result["best_conditions"] = _best_conditions_profile(df)
+        n_profiled = len(result["best_conditions"])
+        if verbose and n_profiled:
+            print(f"  [BestCond] Profiled {n_profiled} stocks (top-25% MFE analysis)")
+
+    # ── Per-Stock ML Models ───────────────────────────────────────────────
+    if SKLEARN_OK and n >= MIN_PER_STOCK_ML:
+        result["per_stock_ml"] = _per_stock_ml(df)
+        n_ml = len(result["per_stock_ml"])
+        if verbose and n_ml:
+            print(f"  [StockML]  Trained models for {n_ml} stocks")
         if verbose and result["pattern_analysis"].get("n_used"):
             ws = result["pattern_analysis"].get("indicator_weight_suggestions", {})
             changed = [k for k, v in ws.items() if abs(v.get("change", 0)) > 0.005]

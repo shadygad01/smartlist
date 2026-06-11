@@ -1284,8 +1284,9 @@ def analyze(symbol):
         close            = df["Close"]
         hi,lo,eq,buy_hi,sell_lo = swings(df)
         av,alo                  = calc_avwap(df)   # always compute for display
-        sv_result  = None   # populated in discount-zone branch, reused by entry zones
-        hvn_result = None
+        sv_result   = None   # populated in discount-zone branch, reused by entry zones
+        hvn_result  = None
+        macd_result = None   # populated in discount-zone branch
 
         # ── GATE: Price must be strictly below EQ (< 0.50 level) ─────────────
         # At EQ or above → SMC setup does not exist → all scores locked at zero
@@ -1394,6 +1395,12 @@ def analyze(symbol):
                 df_long = df   # df الأصلي مضمون شغال لكل الأسهم بما فيهم ORAS
             pattern_data = analyze_entry_patterns(df_long, symbol=symbol)
 
+        try:
+            _vol = df["Volume"]
+            _vol_spike = round(float(_vol.iloc[-1]) / max(float(_vol.iloc[-21:-1].mean()), 1), 2) if len(_vol) > 21 else None
+        except Exception:
+            _vol_spike = None
+
         return {
             "ok":True,"price":round(cur,2),"last_dt":last_dt,
             "is_fresh":is_fresh,"price_src":src,
@@ -1414,6 +1421,14 @@ def analyze(symbol):
                 ("MACD vs Zero",        r6,W_MACD, l6),
                 ("Divergence",          r7,W_DIV,  l7),
             ],
+            "sv_hit":    bool(sv_result[0])         if sv_result   else False,
+            "sv_score":  round(float(sv_result[1]),3) if sv_result else 0.0,
+            "sv_price":  round(float(sv_result[3]),2) if sv_result and sv_result[3] else None,
+            "hvn_hit":   bool(hvn_result[0])          if hvn_result else False,
+            "hvn_score": round(float(hvn_result[1]),3) if hvn_result else 0.0,
+            "hvn_price": round(float(hvn_result[2]),2) if hvn_result and hvn_result[2] else None,
+            "macd_val":  round(float(macd_result[0].iloc[-1]),4) if macd_result is not None and len(macd_result[0]) > 0 else None,
+            "vol_spike": _vol_spike,
         }
     except Exception as e:
         return {"ok":False,"error":str(e)}

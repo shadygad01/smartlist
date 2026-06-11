@@ -53,6 +53,24 @@ def get_conn(db_path: str = DB_PATH) -> sqlite3.Connection:
 
 # ── Schema ─────────────────────────────────────────────────────────────────────
 
+def _migrate_schema(conn: sqlite3.Connection):
+    """يضيف الأعمدة الجديدة للجداول القائمة بدون فقدان البيانات."""
+    existing = {r[1] for r in conn.execute("PRAGMA table_info(signals)").fetchall()}
+    new_cols = {
+        "sv_hit":    "INTEGER DEFAULT 0",
+        "sv_score":  "REAL",
+        "sv_price":  "REAL",
+        "hvn_hit":   "INTEGER DEFAULT 0",
+        "hvn_score": "REAL",
+        "hvn_price": "REAL",
+        "macd_val":  "REAL",
+        "vol_spike": "REAL",
+    }
+    for col, defn in new_cols.items():
+        if col not in existing:
+            conn.execute(f"ALTER TABLE signals ADD COLUMN {col} {defn}")
+
+
 def init_db(db_path: str = DB_PATH):
     """ينشئ الجداول إن لم تكن موجودة."""
     conn = get_conn(db_path)
@@ -118,6 +136,15 @@ def init_db(db_path: str = DB_PATH):
             desc_ob         TEXT,
             desc_htf        TEXT,
 
+            sv_hit          INTEGER,
+            sv_score        REAL,
+            sv_price        REAL,
+            hvn_hit         INTEGER,
+            hvn_score       REAL,
+            hvn_price       REAL,
+            macd_val        REAL,
+            vol_spike       REAL,
+
             created_at      TEXT
         );
 
@@ -169,6 +196,7 @@ def init_db(db_path: str = DB_PATH):
         );
 
         """)
+        _migrate_schema(conn)
     conn.close()
 
 
@@ -291,6 +319,9 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
                     zone1, zone2, zone3, avg_entry,
                     desc_price, desc_liquidity, desc_demand,
                     desc_ob, desc_htf,
+                    sv_hit, sv_score, sv_price,
+                    hvn_hit, hvn_score, hvn_price,
+                    macd_val, vol_spike,
                     created_at
                 ) VALUES (
                     :id, :symbol, :signal_date, :signal_type,
@@ -304,6 +335,9 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
                     :mr, :et,
                     :z1, :z2, :z3, :ze,
                     :dp, :dl, :dd, :dob, :dhtf,
+                    :sv_hit, :sv_score, :sv_price,
+                    :hvn_hit, :hvn_score, :hvn_price,
+                    :macd_val, :vol_spike,
                     :now
                 )
             """, {
@@ -345,6 +379,14 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
                 "dd":   p.get("desc_demand"),
                 "dob":  p.get("desc_ob"),
                 "dhtf": p.get("desc_htf"),
+                "sv_hit":   int(r.get("sv_hit",  False) or False),
+                "sv_score": r.get("sv_score", 0.0),
+                "sv_price": r.get("sv_price"),
+                "hvn_hit":  int(r.get("hvn_hit", False) or False),
+                "hvn_score":r.get("hvn_score", 0.0),
+                "hvn_price":r.get("hvn_price"),
+                "macd_val": r.get("macd_val"),
+                "vol_spike":r.get("vol_spike"),
                 "now": datetime.now().isoformat(),
             })
             added += 1

@@ -1664,7 +1664,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
             pnl_str = (f'+{pnl_pct:.1f}%' if pnl_pct and pnl_pct >= 0 else f'{pnl_pct:.1f}%') if pnl_pct is not None else "—"
             pnl_col = "#155724" if (pnl_pct or 0) >= 0 else "#721c24"
             entry_date = p.get("entry_date", "")[:10]
-            entry_score = p.get("entry_pattern_score") or p.get("entry_score", 0)
+            entry_score = p.get("entry_effective_score") or p.get("entry_pattern_score") or p.get("entry_score", 0)
             reinforced = p.get("reinforced", False)
             reinf_price = p.get("reinforcement_price")
             avg_price   = p.get("avg_price")
@@ -1984,7 +1984,7 @@ def suggested_position_size(portfolio_value: float, entry_score: int) -> dict:
     return {"pct": pct, "amount": round(amount, 2), "tier": tier}
 
 
-def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12, entry_score=0, entry_pattern_score=0):
+def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12, entry_score=0, entry_pattern_score=0, entry_effective_score=0):
     """Add new position when entry signal is triggered"""
     global open_positions
 
@@ -2006,6 +2006,7 @@ def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12, en
         "status": "open",
         "entry_score": entry_score,
         "entry_pattern_score": entry_pattern_score,
+        "entry_effective_score": entry_effective_score,
         "suggested_risk_pct": FULL_POSITION_PCT if entry_score >= 70 else MAX_RISK_PER_TRADE_PCT,
     }
     save_open_positions()
@@ -2431,7 +2432,8 @@ def _register_new_positions(results):
                 pat = results[stock].get("pattern") or {}
                 add_position(stock, price, datetime.now(CAIRO).isoformat(),
                              entry_score=results[stock].get("score", 0),
-                             entry_pattern_score=round(pat.get("pattern_score", 0)))
+                             entry_pattern_score=round(pat.get("pattern_score", 0)),
+                             entry_effective_score=round(pat.get("effective_score", 0)))
                 print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {price}")
 
 def backfill_pattern_scores():

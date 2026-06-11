@@ -89,13 +89,18 @@ jobs:
           git diff --staged --quiet || git commit -m "Auto-update positions [skip ci]"
           git push || true
 
-      - name: Generate Heatmap
+      - name: Generate Heatmap and Research Report
         if: always()
         env:
           WEB_OUT: ./web_deploy
+          REPORT_EMAIL_FROM: ${{ secrets.EMAIL_USER }}
+          REPORT_EMAIL_TO: ${{ secrets.REPORT_EMAIL_TO }}
+          REPORT_EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
         run: |
           mkdir -p web_deploy
           python heatmap.py
+          python research_report.py --no-email --force || true
+          cp research_report_*.html web_deploy/research_report.html 2>/dev/null || true
           cp manifest.json sw.js icon.svg web_deploy/
 
       - name: Deploy to GitHub Pages
@@ -105,4 +110,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./web_deploy
           force_orphan: true
-          commit_message: "Deploy heatmap [skip ci]"
+          commit_message: "Deploy heatmap + research report [skip ci]"

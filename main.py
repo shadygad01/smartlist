@@ -18,6 +18,10 @@ socket.setdefaulttimeout(60)
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pattern_engine import analyze_entry_patterns
 from signal_logger import log_signal, check_outcomes
+try:
+    from snapshot_engine import compute_snapshot_features as _snap_features
+except ImportError:
+    _snap_features = None
 from backfill_signal_log import run_backfill
 from egx_context import is_ramadan, is_cbe_window
 from signal_db import log_signals as db_log_signals
@@ -1441,6 +1445,9 @@ def analyze(symbol):
         else:
             _ob_dist = None
 
+        # ── Snapshot Features — لا يُغيّر منطق الدخول ───────────────────────
+        _snap = _snap_features(df, cur, eq, lo, hi) if (_snap_features and cur < eq) else {}
+
         return {
             "ok":True,"price":round(cur,2),"last_dt":last_dt,
             "is_fresh":is_fresh,"price_src":src,
@@ -1488,6 +1495,7 @@ def analyze(symbol):
             "price_gate":     PRICE_GATE,
             "price_ok":       bool(price_ok),
             "sv_depth":       _sv_depth,
+            **_snap,
         }
     except Exception as e:
         return {"ok":False,"error":str(e)}

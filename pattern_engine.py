@@ -34,10 +34,10 @@ MIN_DECIDED   = 100   # أقل عدد إشارات محسومة لتحديث ا�
 
 LEARNED_WEIGHTS_FILE = "learned_weights.json"
 
-# Statistical analysis showed all 6 indicators have near-zero Spearman correlation
-# with outcome magnitude within BUY signals (all p > 0.09, rho < 0.06).
-# Learned weights from signal_log overfit noise — freeze to AUC-derived defaults.
-FREEZE_WEIGHTS = True
+# Auto-update enabled: weights are updated by research_engine.py after each
+# research run with sufficient data (≥30 mature signals).
+# Set to True to lock weights to AUC-derived defaults.
+FREEZE_WEIGHTS = False
 
 # الأوزان الافتراضية من AUC study
 DEFAULT_WEIGHTS = {

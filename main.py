@@ -20,7 +20,9 @@ from pattern_engine import analyze_entry_patterns
 from signal_logger import log_signal, check_outcomes
 from backfill_signal_log import run_backfill
 from egx_context import is_ramadan, is_cbe_window
-from extended_logger import log_extended_signals
+from signal_db import log_signals as db_log_signals
+from daily_tracker import run_all as tracker_run_all
+from research_report import maybe_run_weekly_report
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from email.mime.multipart import MIMEMultipart
@@ -2640,8 +2642,10 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
         if results.get(s, {}).get("ok"):
             log_signal(s, results[s])
 
-    # Step 7: extended logging — كل المتغيرات للدراسة والتحليل
-    log_extended_signals(results, SECTORS, STOCK_QUALITY, is_ramadan(), is_cbe_window())
+    # Step 7: research platform — تسجيل + متابعة + تقرير أسبوعي
+    db_log_signals(results, SECTORS, STOCK_QUALITY, is_ramadan(), is_cbe_window())
+    tracker_run_all(verbose=False)
+    maybe_run_weekly_report()
     changes = detect_signal_changes(results, previous_results)
     if changes:
         send_change_alert(changes)

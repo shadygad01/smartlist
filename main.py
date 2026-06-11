@@ -1750,7 +1750,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     for s in sorted_stocks:
         r=results[s]
         if not r["ok"] or r["score"]<35: continue
-        if r.get("signal","").lower() in ("skip","wait",""): continue
+        if r.get("signal","").lower() in ("skip",""): continue
         _pg = PRICE_GATE_WHITELIST if s in WHITELIST else PRICE_GATE_NORMAL
         if r.get("r1", 0) < _pg: continue
         _,tc,tbg,tbr=sig_info(r["score"])
@@ -1800,7 +1800,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     <b style="color:#721c24;font-size:16px;">{NAMES.get(s,s)}</b> <span style="font-size:12px;color:#999;margin-left:8px;">{s}</span><br>
     <span style="color:#721c24;font-size:13px;">Error: {_html.escape(r.get("error","unknown"))}</span>
   </td></tr></table>"""); continue
-        if r.get("signal","").lower() in ("skip","wait",""): continue
+        if r.get("signal","").lower() in ("skip",""): continue
 
         _,tc,tbg,tbr=sig_info(r["score"])
         ind_rows=""

@@ -89,7 +89,7 @@ def _calc_weights_from_signals(decided, min_count=30):
             if v is None:
                 continue
             vals.append(float(v))
-            labels.append(1 if s["outcome"] == "win" else 0)
+            labels.append(1 if s["outcome"] in ("win", "medium", "large") else 0)
 
         if len(vals) < min_count:
             correlations[feat] = DEFAULT_WEIGHTS[feat]
@@ -130,7 +130,8 @@ def update_weights_from_log(log_file="signal_log.json"):
         return None
 
     decided = [s for s in data.get("signals", [])
-               if s.get("outcome") in ("win", "loss") and s.get("indicators")]
+               if s.get("outcome") in ("win", "loss", "medium", "large", "small", "flat")
+               and s.get("indicators")]
 
     if len(decided) < MIN_DECIDED:
         return None

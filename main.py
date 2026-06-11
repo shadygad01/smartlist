@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pattern_engine import analyze_entry_patterns
 from signal_logger import log_signal, check_outcomes
 from backfill_signal_log import run_backfill
+from egx_context import is_ramadan, is_cbe_window
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from email.mime.multipart import MIMEMultipart
@@ -213,6 +214,27 @@ W_AVWAP  =  8
 W_MACD   =  4
 W_DIV    =  3
 W_DZ     = 15   # Demand Zone Confluence (Stopping Volume + Volume Profile)
+
+# ── Stock Quality Tiers ────────────────────────────────────────────────────────
+# Derived from historical BUY signal outcomes (large% = gain>20%):
+#   Tier A (>35% large):  MCQE 50%, RAYA 43%, ORHD 40%, ARCC 35%  → ×1.15
+#   Tier B (20-35% large): ETEL 31%, PHDC 29%, CCAP 27%, EFID 26%  → ×1.07
+#   Tier C (10-20% large): most stocks                               → ×1.00
+#   Tier D (<10% large):  JUFO 2%, HRHO 4%, EAST 5%, EFIH 6%       → ×0.88
+STOCK_QUALITY: dict[str, float] = {
+    # Tier A
+    "MCQE.CA": 1.15, "RAYA.CA": 1.15, "ORHD.CA": 1.15, "ARCC.CA": 1.15,
+    # Tier B
+    "ETEL.CA": 1.07, "PHDC.CA": 1.07, "CCAP.CA": 1.07, "EFID.CA": 1.07,
+    # Tier D
+    "JUFO.CA": 0.88, "HRHO.CA": 0.88, "EAST.CA": 0.88, "EFIH.CA": 0.88,
+}
+
+# Context multipliers (from BUY signal outcome analysis):
+#   Ramadan: large% = 27.4% vs 20.4% baseline  → +15%
+#   CBE window: large% = 12.9% vs 20.4%        → -15%
+CTX_RAMADAN_MULT = 1.15
+CTX_CBE_MULT     = 0.85
 
 # =========================================
 # EGX HOLIDAY CALENDAR (2026+)
@@ -1271,6 +1293,21 @@ def analyze(symbol):
         price_ok = (r1 >= PRICE_GATE)
         liq_ok   = (r3 >= LIQ_GATE)
 
+        # ── Adjusted score: Stock Quality Tier × Context Multiplier ──────
+        # Gate logic uses raw `total`. Signal label + display use `score`.
+        ctx_mult   = 1.0
+        ctx_labels = []
+        if is_ramadan():
+            ctx_mult  *= CTX_RAMADAN_MULT
+            ctx_labels.append("📿 Ramadan +15%")
+        if is_cbe_window():
+            ctx_mult  *= CTX_CBE_MULT
+            ctx_labels.append("🏦 CBE Window −15%")
+        stock_mult = STOCK_QUALITY.get(symbol, 1.0)
+        ctx_labels.append({1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,""))
+        ctx_label  = " · ".join(x for x in ctx_labels if x)
+        score = min(int(round(total * stock_mult * ctx_mult)), 100)
+
         if total < 35:
             sig = "Skip"
             tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
@@ -1284,7 +1321,7 @@ def analyze(symbol):
             tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
             l3  = l3 + " ⏳ Liquidity gate pending — waiting for Sweep & Reverse (need 20/20)"
         else:
-            sig,tc,tbg,tbr = sig_info(total)
+            sig,tc,tbg,tbr = sig_info(score)
 
         entry_zones = None
         if price_ok and liq_ok and r8 > 0 and total >= 35:
@@ -1310,7 +1347,8 @@ def analyze(symbol):
             "target":round(cur*1.12,2),
             "eq":round(eq,2),"buy_hi":round(buy_hi,2),"sell_lo":round(sell_lo,2),
             "avwap":round(av,2),"avwap_l":round(alo,2),
-            "score":total,"signal":sig,"tc":tc,"tbg":tbg,"tbr":tbr,"r1":r1,
+            "score":score,"raw_score":total,"ctx_label":ctx_label,
+            "signal":sig,"tc":tc,"tbg":tbg,"tbr":tbr,"r1":r1,
             "entry_zones": entry_zones,
             "pattern": pattern_data,
             "rows":[
@@ -1715,7 +1753,8 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
   <tr>
     <td style="padding:14px 16px;">
       <div style="font-family:Arial,sans-serif;font-size:17px;font-weight:bold;color:{tc};">{r["signal"]}</div>
-      <div style="font-family:Arial,sans-serif;font-size:13px;color:#444;margin-top:6px;">SMC Score: &nbsp;{bar(r["score"])}</div>
+      <div style="font-family:Arial,sans-serif;font-size:13px;color:#444;margin-top:6px;">SMC Score: &nbsp;{bar(r["score"])}{"&nbsp; <span style='font-size:11px;color:#555;'>" + r["ctx_label"] + "</span>" if r.get("ctx_label") else ""}</div>
+      {"<div style='font-family:Arial,sans-serif;font-size:11px;color:#888;margin-top:2px;'>Raw SMC: " + str(r.get("raw_score",r["score"])) + "/100</div>" if r.get("raw_score") and r["raw_score"] != r["score"] else ""}
     </td>
     <td align="right" style="padding:14px 16px;">
       <div style="font-family:Arial,sans-serif;font-size:24px;font-weight:bold;color:#222;">{r["price"]} EGP</div>
@@ -2179,18 +2218,22 @@ def send_telegram_alerts(results):
                 upside = f" (+{pct:.1f}%)"
             except Exception:
                 pass
+            ctx_str = f"   {r['ctx_label']}\n" if r.get("ctx_label") else ""
             lines.append(
                 f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
                 f"   Signal: *{r['signal']}*  |  Score: *{r['score']}/100*\n"
+                f"{ctx_str}"
                 f"   Price: *{r['price']} EGP*  →  Target: *{round(float(target_to_display), 2)} EGP*{upside}\n"
                 f"{pi_line}"
                 f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
             )
         else:
             # WATCH only — no target, no buy mention
+            ctx_str = f"   {r['ctx_label']}\n" if r.get("ctx_label") else ""
             lines.append(
                 f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
                 f"   👀 Watch  |  Score: *{r['score']}/100*\n"
+                f"{ctx_str}"
                 f"   Price: *{r['price']} EGP*\n"
                 f"{pi_line}"
                 f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"

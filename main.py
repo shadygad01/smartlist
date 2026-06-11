@@ -228,9 +228,14 @@ MIN_TIER_SIGNALS = 10   # minimum SMC-scored signals needed to override baseline
 
 def _compute_stock_tiers(log_path: str = "signal_log.json") -> "dict[str, float]":
     """
-    Derive STOCK_QUALITY multipliers from signal_log.json using only signals
-    that have a real SMC score (> 0). Falls back to _TIER_BASELINE for stocks
-    with fewer than MIN_TIER_SIGNALS qualifying signals.
+    Derive STOCK_QUALITY multipliers from signal_log.json.
+
+    Mode A (preferred) — signals with real SMC score (> 0):
+      Used once the backfill has been run with scorer=compute_smc_score.
+    Mode B (fallback) — all backfill signals with decided outcomes:
+      Used immediately with existing data when no SMC-scored signals exist yet.
+      The outcome data (peak_gain → large/medium/small/flat) is real regardless
+      of whether the smc_score field is populated.
 
     Tier thresholds (large = peak_gain >= 20%):
       > 35% large  → Tier A  ×1.15
@@ -250,10 +255,23 @@ def _compute_stock_tiers(log_path: str = "signal_log.json") -> "dict[str, float]
         return result
 
     decided = {"large", "medium", "small", "flat"}
-    by_sym: dict[str, list] = defaultdict(list)
-    for s in data.get("signals", []):
+    all_signals = data.get("signals", [])
+
+    # Mode A: prefer signals with a real SMC score
+    smc_by_sym: dict[str, list] = defaultdict(list)
+    for s in all_signals:
         if s.get("smc_score", 0) > 0 and s.get("outcome") in decided:
-            by_sym[s["symbol"]].append(s)
+            smc_by_sym[s["symbol"]].append(s)
+
+    # Mode B: fall back to all backfill signals when Mode A has no data
+    use_all = not smc_by_sym
+    all_by_sym: dict[str, list] = defaultdict(list)
+    if use_all:
+        for s in all_signals:
+            if s.get("source") == "backfill" and s.get("outcome") in decided:
+                all_by_sym[s["symbol"]].append(s)
+
+    by_sym = all_by_sym if use_all else smc_by_sym
 
     for sym, sigs in by_sym.items():
         if len(sigs) < MIN_TIER_SIGNALS:

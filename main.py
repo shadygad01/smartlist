@@ -2606,6 +2606,8 @@ def _ensure_backfill():
 def daily_scan():
     print(f"\n📅 Daily scan started at {fmt_cairo()}")
     _ensure_backfill()
+    global STOCK_QUALITY
+    STOCK_QUALITY = _compute_stock_tiers()
     if is_egx_trading_day(today_cairo()):
         _run_scan_workflow(holiday_mode=False, last_trading=None, email_suffix="")
     else:

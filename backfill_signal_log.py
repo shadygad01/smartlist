@@ -108,12 +108,14 @@ def _save(data):
 
 # ── رصد الأحداث التاريخية ─────────────────────────────────────────────────────
 
-def _scan_stock_history(symbol, df):
+def _scan_stock_history(symbol, df, scorer=None):
     """
     يمشي على كل يوم في التاريخ ويرصد:
       - لحظات القيعان المحلية (local lows)
       - يحسب النتيجة الفعلية بعد FORWARD_DAYS
       - يستخرج المؤشرات وقتها
+      - لو scorer متاح: يحسب SMC score حقيقي لكل نقطة
+
     يُرجع: list of signal dicts
     """
     close  = df["Close"].values
@@ -144,6 +146,14 @@ def _scan_stock_history(symbol, df):
         if cond is None:
             continue
 
+        # حساب SMC score حقيقي بنفس منطق السيستم الحالي
+        smc_total = 0
+        if scorer is not None:
+            try:
+                smc_total, _, _ = scorer(df.iloc[:i + 1], symbol)
+            except Exception:
+                smc_total = 0
+
         sig_date     = str(df.index[i].date())
         outcome_date = str(df.index[min(i + FORWARD_DAYS, n-1)].date())
         sig_id       = f"{symbol}_{sig_date}_hist"
@@ -153,7 +163,7 @@ def _scan_stock_history(symbol, df):
             "symbol":        symbol,
             "signal_date":   sig_date,
             "signal":        "BUY" if outcome == "win" else "WATCH",
-            "smc_score":     0,      # غير محسوب في الباكتست التاريخي
+            "smc_score":     smc_total,
             "pattern_score": 0,
             "price":         round(float(close[i]), 2),
             "target":        round(float(close[i]) * (1 + MIN_GAIN), 2),
@@ -170,11 +180,13 @@ def _scan_stock_history(symbol, df):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def run_backfill(stocks=None, period="2y", skip_existing=True):
+def run_backfill(stocks=None, period="2y", skip_existing=True, scorer=None):
     """
     يشغّل الباكتست على كل الأسهم ويحفظ النتائج في signal_log.json
 
     skip_existing: لو True، يتخطى الأسهم اللي عندها بيانات تاريخية مسجّلة
+    scorer:        دالة اختيارية (df, symbol) → (smc_score, price_ok, liq_ok)
+                   لو متاحة، بتحسب SMC score حقيقي لكل نقطة تاريخية
     """
     stocks = stocks or STOCKS
     data   = _load()
@@ -208,7 +220,7 @@ def run_backfill(stocks=None, period="2y", skip_existing=True):
             print(f"⚠️  no data ({len(df)} bars)")
             continue
 
-        signals = _scan_stock_history(symbol, df)
+        signals = _scan_stock_history(symbol, df, scorer=scorer)
 
         # حذف المكررات
         new_sigs = [s for s in signals if s["id"] not in existing_ids]

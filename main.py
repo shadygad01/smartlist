@@ -14,7 +14,6 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pattern_engine import analyze_entry_patterns
 from signal_logger import log_signal, check_outcomes
-from backfill_signal_log import run_backfill
 from egx_context import is_ramadan, is_cbe_window
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
@@ -216,19 +215,63 @@ W_DIV    =  3
 W_DZ     = 15   # Demand Zone Confluence (Stopping Volume + Volume Profile)
 
 # ── Stock Quality Tiers ────────────────────────────────────────────────────────
-# Derived from historical BUY signal outcomes (large% = gain>20%):
-#   Tier A (>35% large):  MCQE 50%, RAYA 43%, ORHD 40%, ARCC 35%  → ×1.15
-#   Tier B (20-35% large): ETEL 31%, PHDC 29%, CCAP 27%, EFID 26%  → ×1.07
-#   Tier C (10-20% large): most stocks                               → ×1.00
-#   Tier D (<10% large):  JUFO 2%, HRHO 4%, EAST 5%, EFIH 6%       → ×0.88
-STOCK_QUALITY: dict[str, float] = {
-    # Tier A
+# Hardcoded baseline used as fallback when signal_log.json has < MIN_TIER_SIGNALS
+# SMC-scored signals per stock. After running backfill with the scorer, tiers are
+# recomputed automatically from real signal outcomes on every startup.
+_TIER_BASELINE: dict[str, float] = {
     "MCQE.CA": 1.15, "RAYA.CA": 1.15, "ORHD.CA": 1.15, "ARCC.CA": 1.15,
-    # Tier B
     "ETEL.CA": 1.07, "PHDC.CA": 1.07, "CCAP.CA": 1.07, "EFID.CA": 1.07,
-    # Tier D
     "JUFO.CA": 0.88, "HRHO.CA": 0.88, "EAST.CA": 0.88, "EFIH.CA": 0.88,
 }
+MIN_TIER_SIGNALS = 10   # minimum SMC-scored signals needed to override baseline
+
+
+def _compute_stock_tiers(log_path: str = "signal_log.json") -> "dict[str, float]":
+    """
+    Derive STOCK_QUALITY multipliers from signal_log.json using only signals
+    that have a real SMC score (> 0). Falls back to _TIER_BASELINE for stocks
+    with fewer than MIN_TIER_SIGNALS qualifying signals.
+
+    Tier thresholds (large = peak_gain >= 20%):
+      > 35% large  → Tier A  ×1.15
+      > 20% large  → Tier B  ×1.07
+      >= 10% large → Tier C  ×1.00
+      < 10% large  → Tier D  ×0.88
+    """
+    from collections import defaultdict
+    result: dict[str, float] = _TIER_BASELINE.copy()
+
+    if not os.path.exists(log_path):
+        return result
+    try:
+        with open(log_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return result
+
+    decided = {"large", "medium", "small", "flat"}
+    by_sym: dict[str, list] = defaultdict(list)
+    for s in data.get("signals", []):
+        if s.get("smc_score", 0) > 0 and s.get("outcome") in decided:
+            by_sym[s["symbol"]].append(s)
+
+    for sym, sigs in by_sym.items():
+        if len(sigs) < MIN_TIER_SIGNALS:
+            continue
+        large_pct = sum(1 for s in sigs if s["outcome"] == "large") / len(sigs)
+        if large_pct > 0.35:
+            result[sym] = 1.15
+        elif large_pct > 0.20:
+            result[sym] = 1.07
+        elif large_pct >= 0.10:
+            result[sym] = 1.00
+        else:
+            result[sym] = 0.88
+
+    return result
+
+
+STOCK_QUALITY: dict[str, float] = _compute_stock_tiers()
 
 # Context multipliers (from BUY signal outcome analysis):
 #   Ramadan: large% = 27.4% vs 20.4% baseline  → +15%
@@ -1226,6 +1269,45 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo, _sv=None, _h
         "target":        target,
         "ret_from_avg":  ret_from_avg,
     }
+
+
+# =========================================
+# SMC SCORE HELPER (used by backfill)
+# =========================================
+
+def compute_smc_score(df: "pd.DataFrame", symbol: str) -> "tuple[int, bool, bool]":
+    """
+    Compute the raw SMC score for the last row of df without downloading data.
+    Used by the historical backfill so every past signal carries a real score.
+
+    Returns: (total_score, price_ok, liq_ok)
+    Returns (0, False, False) when price is not in the discount zone or
+    data is insufficient for a meaningful calculation.
+    """
+    if df.empty or len(df) < 50:
+        return 0, False, False
+    try:
+        close = df["Close"]
+        hi, lo, eq, buy_hi, sell_lo = swings(df)
+        cur = float(close.iloc[-1])
+        if cur >= eq:
+            return 0, False, False
+        av, alo        = calc_avwap(df)
+        macd_result    = calc_macd(close)
+        ml             = macd_result[0]
+        r1, _  = sc_price(cur, lo, hi, eq, buy_hi, sell_lo)
+        r2, _  = sc_ob(df, cur, eq, lo, buy_hi)
+        r3, _  = sc_liquidity(df, cur)
+        r4, _  = sc_htf(df)
+        r5, _  = sc_avwap(cur, av, alo)
+        r6, _  = sc_macd(close, _macd=macd_result)
+        r7, _  = sc_div(close, ml)
+        r8, _  = sc_demand_zone(df, eq, lo, buy_hi)
+        total  = min(r1 + r2 + r3 + r4 + r5 + r6 + r7 + r8, 100)
+        gate   = PRICE_GATE_WHITELIST if symbol in WHITELIST else PRICE_GATE_NORMAL
+        return total, r1 >= gate, r3 >= W_LIQ
+    except Exception:
+        return 0, False, False
 
 
 # =========================================
@@ -2491,7 +2573,8 @@ def _ensure_backfill():
             if hist_count >= 50:
                 return  # عنده بيانات كافية
         print("  🔄 Running historical backfill (first time setup)...")
-        run_backfill(period="2y")
+        from backfill_signal_log import run_backfill
+        run_backfill(period="2y", scorer=compute_smc_score)
         # بعد الـ backfill، حدّث الأوزان فوراً
         try:
             from pattern_engine import update_weights_from_log

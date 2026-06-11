@@ -2137,10 +2137,13 @@ def send_telegram_alerts(results):
     positions = load_open_positions()
 
     # Collect qualifying stocks sorted by score descending
+    # Skip مستبعدة — الجودة الخام تحت 35 ليست إشارة حتى لو المضاعفات رفعت الـ score
     alerts = [
         (s, results[s])
         for s in STOCKS
-        if results[s].get("ok") and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
+        if results[s].get("ok")
+        and results[s].get("signal") != "Skip"
+        and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
     ]
     alerts.sort(key=lambda x: x[1].get("score", 0), reverse=True)
 
@@ -2283,10 +2286,13 @@ def send_telegram_alerts(results):
                 pass
             ctx_str = f"   {r['ctx_label']}\n" if r.get("ctx_label") else ""
 
-            # Score-proportional position sizing
-            score_val = r.get("score", 0)
-            sizing = suggested_position_size(1, score_val)
-            size_line = f"   💼 Position Size: *{sizing['pct']:.1f}%* of portfolio ({sizing['tier']})\n"
+            # Score-proportional position sizing — لا يُقترح حجم لمركز قائم بالفعل
+            if in_portfolio:
+                size_line = "   🔵 مركز قائم — التنبيه للمتابعة، لا إضافة جديدة\n"
+            else:
+                score_val = r.get("score", 0)
+                sizing = suggested_position_size(1, score_val)
+                size_line = f"   💼 Position Size: *{sizing['pct']:.1f}%* of portfolio ({sizing['tier']})\n"
 
             lines.append(
                 f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"

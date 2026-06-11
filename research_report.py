@@ -46,7 +46,7 @@ REPORT_JSON_PATH     = "research_results.json"
 _CSS = """
 <style>
   body { font-family: 'Segoe UI', Arial, sans-serif; background:#f0f2f5;
-         color:#222; direction:rtl; }
+         color:#222; direction:rtl; margin:0; }
   .container { max-width:900px; margin:20px auto; background:#fff;
                border-radius:10px; box-shadow:0 2px 12px #0002;
                overflow:hidden; }
@@ -62,9 +62,10 @@ _CSS = """
               border-radius:8px; padding:14px 16px; text-align:center; }
   .kpi .val { font-size:1.9em; font-weight:700; color:#1a3c5e; }
   .kpi .lbl { font-size:.78em; color:#666; margin-top:4px; }
+  .tbl-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
   table     { width:100%; border-collapse:collapse; font-size:.88em; }
   th        { background:#1a3c5e; color:#fff; padding:8px 10px;
-              text-align:right; }
+              text-align:right; white-space:nowrap; }
   td        { padding:7px 10px; border-bottom:1px solid #eee; }
   tr:nth-child(even) td { background:#f9f9f9; }
   .badge    { display:inline-block; padding:2px 8px; border-radius:12px;
@@ -80,6 +81,16 @@ _CSS = """
   .rec-box h3 { margin:0 0 8px; color:#0c5460; font-size:1em; }
   .footer   { background:#f7f9fb; padding:14px 30px;
               font-size:.8em; color:#888; text-align:center; }
+  @media(max-width:640px){
+    .container { margin:0; border-radius:0; }
+    .header { padding:18px 16px; }
+    .header h1 { font-size:1.25em; }
+    .section { padding:14px 12px; }
+    .kpi { min-width:90px; padding:10px 8px; }
+    .kpi .val { font-size:1.4em; }
+    table { font-size:.78em; }
+    th, td { padding:6px 7px; }
+  }
 </style>
 """
 
@@ -997,6 +1008,8 @@ def build_report(db_path: str = DB_PATH) -> str:
 </div>
 </body>
 </html>"""
+    # wrap all tables for horizontal scroll on mobile
+    html = html.replace('<table', '<div class="tbl-wrap"><table').replace('</table>', '</table></div>')
     return html
 
 

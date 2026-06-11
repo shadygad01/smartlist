@@ -34,11 +34,13 @@ CUTOFF_DATE     = TODAY - timedelta(days=MIN_DAYS_OLD)
 def _insert_minimal_signal(conn: sqlite3.Connection, sig_id: str, symbol: str,
                             sig_date: str, signal_type: str, raw_score: int,
                             price: float, r1_price: int | None = None):
-    """Insert a minimal signals row — skip if already exists."""
+    """Insert a minimal signals row, or update r1_price if already exists."""
     conn.execute("""
-        INSERT OR IGNORE INTO signals
+        INSERT INTO signals
           (id, symbol, signal_date, signal_type, raw_score, r1_price, price, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          r1_price = excluded.r1_price
     """, (sig_id, symbol, sig_date, signal_type, raw_score, r1_price, price,
           datetime.utcnow().isoformat()))
 

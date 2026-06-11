@@ -150,8 +150,10 @@ def update_weights_from_log(log_file="signal_log.json"):
     except Exception:
         return None
 
+    # small (4-10%) مستبعدة من التدريب — إشاراتها تشبه flat في المؤشرات
+    # فوجودها مع flat يُضعف قدرة النظام على تمييز الإشارات الحقيقية
     decided = [s for s in data.get("signals", [])
-               if s.get("outcome") in ("win", "loss", "medium", "large", "small", "flat")
+               if s.get("outcome") in ("win", "loss", "medium", "large", "flat")
                and s.get("indicators")]
 
     if len(decided) < MIN_DECIDED:

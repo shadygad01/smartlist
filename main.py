@@ -1876,34 +1876,32 @@ def send_telegram_zone3_reinforcement(symbol, entry_price, reinforcement_price, 
 
     def fib_levels_str(ep):
         levels = [
-            (12.0,  ep * 1.120),
-            (23.6,  ep * 1.236),
-            (38.2,  ep * 1.382),
-            (50.0,  ep * 1.500),
+            (12.0, ep * 1.120),
+            (23.6, ep * 1.236),
+            (38.2, ep * 1.382),
+            (50.0, ep * 1.500),
         ]
         return "\n".join(
-            f"   {'حد أدنى 12%' if pct == 12.0 else f'🎯 {pct}%':14}: {price:.2f} EGP"
+            f"   {'Min +12.0%':10}  {price:.2f} EGP" if pct == 12.0
+            else f"   Fib {pct:.1f}%   {price:.2f} EGP"
             for pct, price in levels
         )
 
     message = (
-        f"🔄 *تعزيز Zone 3 — إضافة للمركز*\n\n"
-        f"📊 السهم: *{name}* `{symbol}`\n\n"
+        f"🔄 *Zone 3 Reinforcement — Adding to Position*\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🟢 *First Buy*\n"
-        f"   Entry Price  : {entry_price:.2f} EGP\n"
+        f"*{name}*  `{symbol}`\n\n"
+        f"🟢 *Initial Entry*\n"
+        f"   Price       {entry_price:.2f} EGP\n"
         f"{fib_levels_str(entry_price)}\n\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🔵 *Reinforcement (Zone 3)*\n"
-        f"   Reinf. Price : {reinforcement_price:.2f} EGP\n"
-        f"   ⚠️ Re-buy\n"
+        f"🔵 *Zone 3 Re-entry*\n"
+        f"   Price       {reinforcement_price:.2f} EGP\n"
+        f"   Drop        *{drop_pct:.1f}%* from initial entry\n"
         f"{fib_levels_str(reinforcement_price)}\n\n"
+        f"📐 *New Avg Entry:  {avg_price:.2f} EGP*\n"
+        f"⚠️  Exit on first weakness after +12%\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📐 *New Avg Price: {avg_price:.2f} EGP*\n\n"
-        f"⚠️ Exit on first weakness after 12%\n"
-        f"   الهدف يرتفع تلقائياً بلا حد أقصى\n\n"
-        f"📉 الهبوط من الدخول: *{drop_pct:.1f}%*\n"
-        f"⏰ {now_cairo().strftime('%H:%M | %d-%m-%Y')}"
+        f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}"
     )
 
     try:
@@ -1930,14 +1928,16 @@ def send_telegram_target_update(symbol, entry_price, old_target, new_target, cur
     new_pct = ((new_target - entry_price) / entry_price) * 100
 
     message = (
-        f"🚀 *تحديث التارجت الديناميكي*\n\n"
-        f"📊 السهم: *{NAMES.get(symbol, symbol)}* `{symbol}`\n"
-        f"💰 سعر الدخول: {entry_price:.2f} EGP\n"
-        f"📈 السعر الحالي: {current_price:.2f} EGP\n\n"
-        f"🎯 التارجت القديم: {old_target:.2f} (*{old_pct:.2f}%*)\n"
-        f"⬆️ التارجت الجديد: {new_target:.2f} (*{new_pct:.2f}%*)\n"
-        f"📍 مستوى Fibonacci: *{fib_level:.1f}%*\n\n"
-        f"⏰ الوقت: {now_cairo().strftime('%H:%M:%S')}"
+        f"🚀 *Dynamic Target Updated*\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"*{NAMES.get(symbol, symbol)}*  `{symbol}`\n\n"
+        f"   Entry         {entry_price:.2f} EGP\n"
+        f"   Current       {current_price:.2f} EGP\n\n"
+        f"   Old Target    {old_target:.2f} EGP  (*+{old_pct:.1f}%*)\n"
+        f"   New Target    *{new_target:.2f} EGP*  (*+{new_pct:.1f}%*) ⬆️\n\n"
+        f"   Fib Level     *{fib_level:.1f}%*\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}"
     )
 
     try:
@@ -2157,7 +2157,8 @@ def send_telegram_alerts(results):
         # Send a "nothing today" summary so you know the scan ran
         msg = (
             f"📊 *EGX Daily Scan — {now_cairo().strftime('%d %b %Y')}*\n"
-            f"No stocks reached the Watch threshold (≥35) today."
+            f"━━━━━━━━━━━━━━━━━━━━━\n"
+            f"No setups reached the Watch threshold (≥35) today."
         )
         open_pos = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
         open_pos.sort(key=lambda x: (
@@ -2167,7 +2168,7 @@ def send_telegram_alerts(results):
         ), reverse=True)
         if open_pos:
             msg += f"\n\n━━━━━━━━━━━━━━━━━━━━━"
-            msg += f"\n📂 *Open Positions ({len(open_pos)})*\n"
+            msg += f"\n📂 *Open Positions  ({len(open_pos)})*\n"
             for sym, pos in open_pos:
                 entry = pos["entry_price"]
                 tgt   = pos["target"]
@@ -2179,16 +2180,18 @@ def send_telegram_alerts(results):
                     cur_price = "—"
                 if cur_price != "—":
                     pnl_pct = ((float(cur_price) - entry) / entry * 100)
-                    pnl = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
-                    cur_str = f"{cur_price} EGP ({pnl})"
+                    pnl_str = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
+                    cur_str = f"{cur_price} EGP  ({pnl_str})"
                 else:
                     cur_str = "—"
-                score_str = f" | Score {pos.get('entry_score', 0)}" if pos.get('entry_score') else ""
-                msg += f"\n📌 *{sym}* — {NAMES.get(sym, sym)}"
-                msg += f"\n   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*{score_str}"
+                score_tag = f"  |  Entry Score {pos['entry_score']}" if pos.get('entry_score') else ""
+                msg += f"\n📌 *{sym}*  {NAMES.get(sym, sym)}"
+                msg += f"\n   Entry   {entry:.2f} EGP"
+                msg += f"\n   Now     {cur_str}"
+                msg += f"\n   Target  *{tgt:.2f} EGP*{score_tag}"
                 if pos.get("reinforced") and pos.get("reinforcement_price"):
-                    msg += f"\n   🔄 Re-buy: {pos['reinforcement_price']:.2f} EGP"
-                    msg += f"\n   📐 Avg Price: *{pos['avg_price']:.2f} EGP*"
+                    msg += f"\n   Re-buy  {pos['reinforcement_price']:.2f} EGP"
+                    msg += f"\n   Avg     *{pos['avg_price']:.2f} EGP*"
                 msg += "\n"
             msg += "━━━━━━━━━━━━━━━━━━━━━"
         try:
@@ -2203,7 +2206,11 @@ def send_telegram_alerts(results):
 
     # Build one summary message with all qualifying stocks
     date_str = now_cairo().strftime("%d %b %Y")
-    lines = [f"📊 *EGX Daily Scan — {date_str}*\n_{len(alerts)} stock(s) above threshold_"]
+    lines = [
+        f"📊 *EGX Daily Scan — {date_str}*",
+        f"━━━━━━━━━━━━━━━━━━━━━",
+        f"_{len(alerts)} setup(s) above threshold_\n",
+    ]
 
     # Add open positions section if any exist
     open_positions_list = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
@@ -2213,8 +2220,8 @@ def send_telegram_alerts(results):
         ((x[1].get("current_price", x[1]["entry_price"]) - x[1]["entry_price"]) / x[1]["entry_price"])
     ), reverse=True)
     if open_positions_list:
-        lines.append("\n━━━━━━━━━━━━━━━━━━━━━")
-        lines.append(f"📂 *Open Positions ({len(open_positions_list)})*\n")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(f"📂 *Open Positions  ({len(open_positions_list)})*\n")
         for sym, pos in open_positions_list:
             entry = pos["entry_price"]
             tgt   = pos["target"]
@@ -2226,17 +2233,18 @@ def send_telegram_alerts(results):
                 cur_price = "—"
             if cur_price != "—":
                 pnl_pct = ((float(cur_price) - entry) / entry * 100)
-                pnl = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
-                cur_str = f"{cur_price} EGP ({pnl})"
+                pnl_str = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
+                cur_str = f"{cur_price} EGP  ({pnl_str})"
             else:
                 cur_str = "—"
-            score_str = f" | Score {pos.get('entry_score', 0)}" if pos.get('entry_score') else ""
-            lines.append(f"📌 *{sym}* — {NAMES.get(sym, sym)}")
-            pos_line = f"   Entry {entry:.2f} | Now {cur_str} | Target *{tgt:.2f} EGP*{score_str}"
-            lines.append(pos_line)
+            score_tag = f"  |  Entry Score {pos['entry_score']}" if pos.get('entry_score') else ""
+            lines.append(f"📌 *{sym}*  {NAMES.get(sym, sym)}")
+            lines.append(f"   Entry   {entry:.2f} EGP")
+            lines.append(f"   Now     {cur_str}")
+            lines.append(f"   Target  *{tgt:.2f} EGP*{score_tag}")
             if pos.get("reinforced") and pos.get("reinforcement_price"):
-                lines.append(f"   🔄 Re-buy: {pos['reinforcement_price']:.2f} EGP")
-                lines.append(f"   📐 Avg Price: *{pos['avg_price']:.2f} EGP*")
+                lines.append(f"   Re-buy  {pos['reinforcement_price']:.2f} EGP")
+                lines.append(f"   Avg     *{pos['avg_price']:.2f} EGP*")
             lines.append("")
         lines.append("━━━━━━━━━━━━━━━━━━━━━\n")
 
@@ -2269,68 +2277,59 @@ def send_telegram_alerts(results):
             warn = "  ⚠️ _Low reliability_" if pat.get("low_reliability") else ""
             _ev = pat['effective_score'] / 20
             _el = "Excellent" if _ev >= 3 else "Strong" if _ev >= 2 else "Moderate" if _ev >= 1 else "Weak"
-            pi_line = (f"   🧠 Pattern: *{pat['pattern_score']:.0f}/100*"
-                       f"  |  Effective: *{_ev:.1f}/5* ({_el})"
-                       f"  |  Win Rate: *{pat['win_rate']*100:.0f}%*{warn}\n"
-                       f"   Avg Gain: *+{pat['avg_gain']:.1f}%*"
-                       f"  ({pat['similar_count']} cases)\n")
+            pi_line = (
+                f"   🧠 Pattern    *{pat['pattern_score']:.0f}/100*  |  Effective *{_ev:.1f}/5* ({_el}){warn}\n"
+                f"      Win Rate   *{pat['win_rate']*100:.0f}%*  |  Avg Gain *+{pat['avg_gain']:.1f}%*"
+                f"  ({pat['similar_count']} cases)\n"
+            )
         else:
             pi_line = ""
 
+        raw = r.get("raw_score", r["score"])
+        adj_tag = f"  _(raw {raw})_" if raw != r["score"] else ""
+        ctx_str = f"   {r['ctx_label']}\n" if r.get("ctx_label") else ""
+
         if is_buy:
-            # Full details for BUY / STRONG BUY
-            # Use dynamic target if position is open, otherwise use static target
             target_to_display = r["target"]
             if in_portfolio:
                 target_to_display = positions[s]["target"]
 
             upside = ""
             try:
-                pct    = (float(target_to_display) - float(r["price"])) / float(r["price"]) * 100
-                upside = f" (+{pct:.1f}%)"
+                pct = (float(target_to_display) - float(r["price"])) / float(r["price"]) * 100
+                upside = f"  (+{pct:.1f}%)"
             except Exception:
                 pass
-            ctx_str = f"   {r['ctx_label']}\n" if r.get("ctx_label") else ""
 
-            # Score-proportional position sizing — لا يُقترح حجم لمركز قائم بالفعل
             if in_portfolio:
-                size_line = "   🔵 مركز قائم — التنبيه للمتابعة، لا إضافة جديدة\n"
+                size_line = "   💼 _Monitoring open position — no new entry_\n"
             else:
                 score_val = r.get("score", 0)
                 sizing = suggested_position_size(1, score_val)
-                size_line = f"   💼 Position Size: *{sizing['pct']:.1f}%* of portfolio ({sizing['tier']})\n"
+                size_line = f"   💼 Position Size  *{sizing['pct']:.1f}%* of portfolio  ({sizing['tier']})\n"
 
-            raw = r.get("raw_score", r["score"])
-            score_line = (
-                f"   Signal: *{r['signal']}*  |  SMC المعدل: *{r['score']}/100*"
-                + (f"  (أصلي: {raw})" if raw != r["score"] else "")
-                + "\n"
-            )
             lines.append(
-                f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
-                f"{score_line}"
+                f"{'─'*25}\n"
+                f"{emoji} *{NAMES.get(s, s)}*  `{s}`{portfolio_tag}\n"
+                f"   Signal     *{r['signal']}*\n"
+                f"   SMC Score  *{r['score']}/100*{adj_tag}\n"
                 f"{ctx_str}"
-                f"   Price: *{r['price']} EGP*  →  Target: *{round(float(target_to_display), 2)} EGP*{upside}\n"
+                f"   Price      *{r['price']} EGP*\n"
+                f"   Target     *{round(float(target_to_display), 2)} EGP*{upside}\n"
                 f"{size_line}"
                 f"{pi_line}"
-                f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
+                f"   Data       {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
             )
         else:
-            # WATCH only — no target, no buy mention
-            ctx_str = f"   {r['ctx_label']}\n" if r.get("ctx_label") else ""
-            raw_w = r.get("raw_score", r["score"])
-            watch_score_line = (
-                f"   👀 Watch  |  SMC المعدل: *{r['score']}/100*"
-                + (f"  (أصلي: {raw_w})" if raw_w != r["score"] else "")
-                + "\n"
-            )
             lines.append(
-                f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
-                f"{watch_score_line}"
+                f"{'─'*25}\n"
+                f"{emoji} *{NAMES.get(s, s)}*  `{s}`{portfolio_tag}\n"
+                f"   Signal     👀 Watch\n"
+                f"   SMC Score  *{r['score']}/100*{adj_tag}\n"
                 f"{ctx_str}"
-                f"   Price: *{r['price']} EGP*\n"
+                f"   Price      *{r['price']} EGP*\n"
                 f"{pi_line}"
-                f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
+                f"   Data       {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
             )
 
     full_msg = "\n".join(lines)
@@ -2371,7 +2370,7 @@ def send_alert_for_high_score(stock, score, result):
     """
     إرسال تنبيه فوري عندما يصل score إلى 35+
     """
-    print(f"\n🚨 ALERT: {NAMES.get(stock, stock)} ({stock}) وصل score {score}/100!")
+    print(f"\n🚨 ALERT: {NAMES.get(stock, stock)} ({stock}) score {score}/100!")
     
     # إرسال Telegram
     token = os.getenv("TELEGRAM_TOKEN")
@@ -2397,24 +2396,28 @@ def send_alert_for_high_score(stock, score, result):
             pat = result.get("pattern", {})
             pi_line = ""
             if pat and pat.get("ok"):
-                pi_line = (f"\n🧠 Intelligence: *{pat['pattern_score']:.0f}/100*"
-                           f"  |  Win Rate: *{pat['win_rate']*100:.0f}%*"
-                           f"  |  Avg Gain: *+{pat['avg_gain']:.1f}%*"
-                           f"  ({pat['similar_count']} cases)")
+                _ev = pat['effective_score'] / 20
+                _el = "Excellent" if _ev >= 3 else "Strong" if _ev >= 2 else "Moderate" if _ev >= 1 else "Weak"
+                pi_line = (
+                    f"\n   🧠 Pattern    *{pat['pattern_score']:.0f}/100*  |  Effective *{_ev:.1f}/5* ({_el})"
+                    f"\n      Win Rate   *{pat['win_rate']*100:.0f}%*  |  Avg Gain *+{pat['avg_gain']:.1f}%*"
+                    f"  ({pat['similar_count']} cases)"
+                )
 
             raw_alert = result.get("raw_score", score)
-            score_display = (
-                f"SMC المعدل: *{score}/100*" +
-                (f"  (أصلي: {raw_alert})" if raw_alert != score else "")
-            )
-            ctx_alert = f"\n{result['ctx_label']}" if result.get("ctx_label") else ""
+            adj_tag = f"  _(raw {raw_alert})_" if raw_alert != score else ""
+            ctx_alert = f"\n   {result['ctx_label']}" if result.get("ctx_label") else ""
             msg = (
-                f"🚨 *ALERT* — {emoji} {NAMES.get(stock, stock)}\n"
-                f"{score_display}  |  Signal: *{signal}*{ctx_alert}\n"
-                f"Price: *{result['price']} EGP*\n"
-                f"Target: *{round(float(result['target']), 2)} EGP*{upside}"
+                f"🚨 *Real-Time Alert*\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"{emoji} *{NAMES.get(stock, stock)}*  `{stock}`\n\n"
+                f"   Signal     *{signal}*\n"
+                f"   SMC Score  *{score}/100*{adj_tag}{ctx_alert}\n"
+                f"   Price      *{result['price']} EGP*\n"
+                f"   Target     *{round(float(result['target']), 2)} EGP*{upside}"
                 f"{pi_line}\n"
-                f"Time: {now_cairo().strftime('%H:%M:%S')}"
+                f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}"
             )
             
             requests.post(
@@ -3052,58 +3055,59 @@ def send_change_email(changed_stocks):
 
 
 def send_change_alert(changed_stocks):
-    """
-    إرسال تنبيه Telegram فوري عند تغيير الإشارة
-    مع علامة مميزة ⭐ للأسهم من قائمة الـ whitelist
-    + Email للجميع مع التمييز
-    """
+    """Send instant Telegram alert when a signal flips to BUY."""
     if not changed_stocks:
         return
-    
+
     token = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    
+
     if not token or not chat_id:
-        print("⚠️ Telegram config missing")
+        print("Telegram config missing")
         return
-    
-    message = "🚨 **إشارة تغير إلى BUY!**\n\n"
+
+    date_str = now_cairo().strftime("%d %b %Y  %H:%M")
+    lines = [
+        f"🚨 *Signal Change — BUY Triggered*",
+        f"━━━━━━━━━━━━━━━━━━━━━",
+        f"_{date_str}_\n",
+    ]
+
     for item in changed_stocks:
-        stock = item['stock']
-        price = item.get('price', 'N/A')
+        stock  = item['stock']
+        price  = item.get('price', 'N/A')
         target = item.get('target', 'N/A')
-        
-        # ⭐ علامة مميزة للأسهم من الـ whitelist
-        whitelist_badge = "⭐ **WHITELIST** ⭐" if stock in WHITELIST else ""
-        
-        message += f"📈 {stock}"
-        if whitelist_badge:
-            message += f" {whitelist_badge}\n"
-        else:
-            message += "\n"
-        
-        raw_c = item.get("raw_score", item["score"])
-        score_str = f"SMC المعدل: {item['score']:.0f}/100"
-        if raw_c != item["score"]:
-            score_str += f"  (أصلي: {raw_c:.0f})"
-        ctx_c = f"\n  └─ {item['ctx_label']}" if item.get("ctx_label") else ""
-        message += f"  └─ {item['from']} → {item['to']}\n"
-        message += f"  └─ {score_str}{ctx_c}\n"
-        message += f"  └─ السعر الحالي: {price} EGP\n"
-        message += f"  └─ السعر المستهدف: {target} EGP\n\n"
-    
-    # إرسال Telegram
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
-    
+        raw_c  = item.get("raw_score", item["score"])
+        adj_tag = f"  _(raw {raw_c:.0f})_" if raw_c != item["score"] else ""
+        ctx_line = f"\n   {item['ctx_label']}" if item.get("ctx_label") else ""
+        wl_tag  = "  ⭐ _Watchlist_" if stock in WHITELIST else ""
+
+        try:
+            upside = f"  (+{(float(target) - float(price)) / float(price) * 100:.1f}%)"
+        except Exception:
+            upside = ""
+
+        lines.append(f"{'─'*25}")
+        lines.append(f"📈 *{NAMES.get(stock, stock)}*  `{stock}`{wl_tag}")
+        lines.append(f"   {item['from']}  →  *{item['to']}*")
+        lines.append(f"   SMC Score  *{item['score']:.0f}/100*{adj_tag}{ctx_line}")
+        lines.append(f"   Price      *{price} EGP*")
+        lines.append(f"   Target     *{target} EGP*{upside}\n")
+
+    message = "\n".join(lines)
+
     try:
-        response = requests.post(url, json=payload, timeout=10)
+        response = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
+            timeout=10,
+        )
         if response.status_code == 200:
-            print(f"✅ Signal change alert sent to Telegram")
+            print("Signal change alert sent to Telegram")
         else:
-            print(f"❌ Telegram error: {response.text}")
+            print(f"Telegram error: {response.text}")
     except Exception as e:
-        print(f"❌ Error sending Telegram alert: {e}")
+        print(f"Error sending Telegram alert: {e}")
     
     # إرسال Email للجميع مع التمييز
     send_change_email(changed_stocks)

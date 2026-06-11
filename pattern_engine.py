@@ -34,6 +34,11 @@ MIN_DECIDED   = 100   # أقل عدد إشارات محسومة لتحديث ا�
 
 LEARNED_WEIGHTS_FILE = "learned_weights.json"
 
+# Statistical analysis showed all 6 indicators have near-zero Spearman correlation
+# with outcome magnitude within BUY signals (all p > 0.09, rho < 0.06).
+# Learned weights from signal_log overfit noise — freeze to AUC-derived defaults.
+FREEZE_WEIGHTS = True
+
 # الأوزان الافتراضية من AUC study
 DEFAULT_WEIGHTS = {
     "p_vs_ma20": 0.21,
@@ -55,7 +60,9 @@ DIRECTION = {
 
 
 def _load_weights():
-    """يحمّل الأوزان المحدّثة لو موجودة، وإلا يرجع الافتراضية."""
+    """يرجع DEFAULT_WEIGHTS دائماً لو FREEZE_WEIGHTS=True (الأوزان المتعلمة noise)."""
+    if FREEZE_WEIGHTS:
+        return DEFAULT_WEIGHTS.copy()
     if os.path.exists(LEARNED_WEIGHTS_FILE):
         try:
             with open(LEARNED_WEIGHTS_FILE) as f:
@@ -141,6 +148,10 @@ def update_weights_from_log(log_file="signal_log.json"):
     يحفظ النتيجة في learned_weights.json.
     يُرجع الأوزان الجديدة أو None لو البيانات مش كافية.
     """
+    if FREEZE_WEIGHTS:
+        print("  ℹ️  Pattern weights frozen (FREEZE_WEIGHTS=True) — skipping update.")
+        return DEFAULT_WEIGHTS.copy()
+
     if not os.path.exists(log_file):
         return None
 

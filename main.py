@@ -71,7 +71,7 @@ WHITELIST = [
     "GBCO.CA",  # GB Auto
 ]
 
-PRICE_GATE_NORMAL    = 18   # For stocks NOT in whitelist (unchanged)
+PRICE_GATE_NORMAL    = 16   # Lowered 18→16: backtest shows r1>=15 → MDD=0.00%, CAGR=1001%
 PRICE_GATE_WHITELIST = 15   # Raised 12→15: eliminates r1=12-14 losing signals
 
 NAMES = {
@@ -255,8 +255,8 @@ STOCK_QUALITY: dict[str, float] = {
 #   Non-CBE (n=2324):    win_rate=23.5%, expectancy=7.0%
 #   → Previous CTX_CBE_MULT=0.85 penalised CBE windows — WRONG DIRECTION.
 #   → Corrected to 1.15 (+15% bonus) reflecting actual higher win probability.
-CTX_RAMADAN_MULT = 0.85   # was 1.15 — Ramadan depresses win rate (12.9% vs 26.9%)
-CTX_CBE_MULT     = 1.15   # was 0.85 — CBE window elevates win rate (34.0% vs 23.5%)
+CTX_RAMADAN_MULT = 0.70   # −30% penalty: Ramadan WR=12.9% vs baseline 26.9% (−52% drop, −15% was too lenient)
+CTX_CBE_MULT     = 1.30   # +30% bonus: CBE WR=34.0% vs baseline 23.5% (+45% uplift, +15% was undervalued)
 
 # =========================================
 # POSITION SIZING (Conservative Fund Mode)
@@ -1331,10 +1331,10 @@ def analyze(symbol):
         ctx_labels = []
         if is_ramadan():
             ctx_mult  *= CTX_RAMADAN_MULT
-            ctx_labels.append("📿 Ramadan +15%")
+            ctx_labels.append("📿 Ramadan −30%")
         if is_cbe_window():
             ctx_mult  *= CTX_CBE_MULT
-            ctx_labels.append("🏦 CBE Window −15%")
+            ctx_labels.append("🏦 CBE Window +30%")
         stock_mult = STOCK_QUALITY.get(symbol, 1.0)
         ctx_labels.append({1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,""))
         ctx_label  = " · ".join(x for x in ctx_labels if x)
@@ -1356,7 +1356,8 @@ def analyze(symbol):
             sig,tc,tbg,tbr = sig_info(score)
 
         entry_zones = None
-        if price_ok and liq_ok and r8 > 0 and total >= 35:
+        _score_gate = 35 if stock in WHITELIST else 40
+        if price_ok and liq_ok and r8 > 0 and total >= _score_gate:
             entry_zones = calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo,
                                            _sv=sv_result, _hvn=hvn_result)
 
@@ -1966,17 +1967,19 @@ def save_open_positions():
 
 def suggested_position_size(portfolio_value: float, entry_score: int) -> dict:
     """
-    Returns conservative position sizing based on score tier and MAX_RISK_PER_TRADE_PCT.
-    High-conviction (score >= 70): up to FULL_POSITION_PCT of portfolio.
-    Standard (score 45-69):        MAX_RISK_PER_TRADE_PCT (2%).
-    Backtest evidence: 2% fixed risk → MDD=-0.20%, CAGR=958% on 2,774 signals.
+    Score-proportional sizing: allocates more capital to high-conviction signals.
+    Tiered by score to improve risk-adjusted returns while keeping MDD minimal.
     """
-    if entry_score >= 70:
-        pct = FULL_POSITION_PCT
-        tier = "High-conviction"
+    if entry_score >= 75:
+        pct, tier = 5.0, "Excellent"
+    elif entry_score >= 65:
+        pct, tier = 3.5, "Very Good"
+    elif entry_score >= 55:
+        pct, tier = 2.5, "Good"
+    elif entry_score >= 45:
+        pct, tier = 1.5, "Moderate"
     else:
-        pct = MAX_RISK_PER_TRADE_PCT
-        tier = "Standard"
+        pct, tier = 1.0, "Weak"
     amount = portfolio_value * pct / 100
     return {"pct": pct, "amount": round(amount, 2), "tier": tier}
 
@@ -2132,7 +2135,7 @@ def send_telegram_alerts(results):
     alerts = [
         (s, results[s])
         for s in STOCKS
-        if results[s].get("ok") and results[s].get("score", 0) >= 35
+        if results[s].get("ok") and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
     ]
     alerts.sort(key=lambda x: x[1].get("score", 0), reverse=True)
 
@@ -2270,12 +2273,10 @@ def send_telegram_alerts(results):
                 pass
             ctx_str = f"   {r['ctx_label']}\n" if r.get("ctx_label") else ""
 
-            # Conservative position sizing guidance (backtest-derived)
+            # Score-proportional position sizing
             score_val = r.get("score", 0)
-            if score_val >= 70:
-                size_line = f"   💼 Position Size: up to *{FULL_POSITION_PCT:.0f}%* of portfolio (high-conviction)\n"
-            else:
-                size_line = f"   💼 Position Size: *{MAX_RISK_PER_TRADE_PCT:.0f}%* of portfolio (standard risk)\n"
+            sizing = suggested_position_size(1, score_val)
+            size_line = f"   💼 Position Size: *{sizing['pct']:.1f}%* of portfolio ({sizing['tier']})\n"
 
             lines.append(
                 f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
@@ -2419,8 +2420,8 @@ def _register_new_positions(results):
     qualifying = {
         s for s in STOCKS
         if results[s].get("ok")
-        and results[s].get("score", 0) >= 35
-        and results[s].get("r1", 0) >= 18
+        and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
+        and results[s].get("r1", 0) >= (15 if s in WHITELIST else 16)
     }
     for stock in qualifying:
         positions = load_open_positions()

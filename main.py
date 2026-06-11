@@ -1341,6 +1341,15 @@ def analyze(symbol):
         ctx_label  = " · ".join(x for x in ctx_labels if x)
         score = min(int(round(total * stock_mult * ctx_mult)), 100)
 
+        # ══ سلم الإشارات الصارم (مصدر حقيقة واحد) ══════════════════════════
+        #   Skip      : الجودة الخام < 35           → لا يُشترى أبداً
+        #   Wait      : السعر غير عميق (r1 < البوابة) أو الـ score المعدّل
+        #               تحت بوابة الدخول (35/40)     → لا شراء بعد
+        #   Early Buy : كل البوابات عدّت، التأكيد غائب → يُشترى فوراً
+        #   Buy…      : كل البوابات + Sweep & Reverse → يُشترى فوراً
+        # التسجيل في _register_new_positions يقرأ هذا التصنيف فقط —
+        # فلا يمكن أن يُشترى سهم معروض Skip/Wait أو يُعرض Buy دون شراء.
+        _entry_score_gate = 35 if symbol in WHITELIST else 40
         if total < 35:
             sig = "Skip"
             tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
@@ -1349,19 +1358,16 @@ def analyze(symbol):
             tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
             if cur < eq:
                 l1  = l1 + f" ⛔ Price gate failed — not in Deep Discount (need >= {PRICE_GATE}/{W_PRICE})"
+        elif score < _entry_score_gate:
+            sig = "Wait"
+            tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
+            l3  = l3 + f" ⏳ Adjusted score {score} below entry gate ({_entry_score_gate}) — quality pending"
         elif not liq_ok:
-            # سياسة الدخول المبكر: السعر رخيص بما يكفي (بوابة r1 عدّت) والجودة كافية
-            # → "Early Buy" يُشترى فوراً دون انتظار Sweep & Reverse (قرار صاحب النظام).
-            # لو الجودة أقل من بوابة الدخول (35/40 على الـ score المعدّل) → يبقى Wait.
-            _entry_score_gate = 35 if symbol in WHITELIST else 40
-            if score >= _entry_score_gate:
-                sig = "Early Buy"
-                tc  = "#084298"; tbg = "#cfe2ff"; tbr = "#b6d4fe"
-                l3  = l3 + " 🟦 Early entry — دخول مبكر دون انتظار Sweep & Reverse (سياسة معتمدة)"
-            else:
-                sig = "Wait"
-                tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
-                l3  = l3 + " ⏳ Liquidity gate pending — waiting for Sweep & Reverse (need 20/20)"
+            # سياسة الدخول المبكر: السعر عميق والجودة كافية → شراء فوري
+            # دون انتظار Sweep & Reverse (قرار صاحب النظام)
+            sig = "Early Buy"
+            tc  = "#084298"; tbg = "#cfe2ff"; tbr = "#b6d4fe"
+            l3  = l3 + " 🟦 Early entry — دخول مبكر دون انتظار Sweep & Reverse (سياسة معتمدة)"
         else:
             sig,tc,tbg,tbr = sig_info(score)
 
@@ -2445,11 +2451,11 @@ def _register_new_positions(results):
       وفي الشهر الهابط الوحيد (فبراير) لم يُظهر التأكيد أي قيمة حمائية.
     بوابة السيولة تبقى مستخدمة في تصنيف الإشارة المعروضة فقط.
     """
+    # مصدر الحقيقة الوحيد هو تصنيف الإشارة — السلم في analyze() يضمن أن
+    # Early Buy/Buy تعني أن كل البوابات (جودة خام + عمق سعر + score معدّل) عدّت
     qualifying = {
         s for s in STOCKS
-        if results[s].get("ok")
-        and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
-        and results[s].get("r1", 0) >= (PRICE_GATE_WHITELIST if s in WHITELIST else PRICE_GATE_NORMAL)
+        if results[s].get("ok") and results[s].get("signal") in _BUY_SIGNALS
     }
     for stock in qualifying:
         positions = load_open_positions()
@@ -2461,12 +2467,7 @@ def _register_new_positions(results):
                              entry_score=results[stock].get("score", 0),
                              entry_pattern_score=round(pat.get("pattern_score", 0)),
                              entry_effective_score=round(pat.get("effective_score", 0)))
-                print(f"📌 تسجيل مركز جديد (دخول مبكر): {NAMES.get(stock, stock)} @ {price}")
-                # الإشارة المعروضة الآن "Early Buy" أو من عائلة الشراء — تنبيهات
-                # التحول والملخص اليومي تغطيها. التنبيه المباشر هنا للحالة
-                # النادرة فقط (مثل Skip بمضاعف سياق رفع الـ score فوق البوابة)
-                if results[stock].get("signal") not in _BUY_SIGNALS:
-                    send_alert_for_high_score(stock, results[stock].get("score", 0), results[stock])
+                print(f"📌 تسجيل مركز جديد ({results[stock].get('signal')}): {NAMES.get(stock, stock)} @ {price}")
 
 def backfill_pattern_scores():
     """

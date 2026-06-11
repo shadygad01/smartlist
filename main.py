@@ -1652,8 +1652,22 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
         for s in STOCKS:               # save_history writes CSV — keep it sequential
             save_history(s, results[s])
 
-    # ── Sort stocks by score descending for the entire report ────────────────
-    sorted_stocks = sorted(STOCKS, key=lambda s: results[s].get("score", 0), reverse=True)
+    # ── Sort stocks: BUY family → Wait/Early Buy → Skip, each group by score desc
+    BUY_FAMILY   = {"buy", "strong buy", "very strong buy", "institutional buy"}
+    WAIT_FAMILY  = {"wait", "early buy", "watch"}
+
+    def _sort_key(s):
+        sig = results[s].get("signal", "").lower()
+        score = results[s].get("score", 0)
+        if sig in BUY_FAMILY:
+            group = 0
+        elif sig in WAIT_FAMILY:
+            group = 1
+        else:
+            group = 2
+        return (group, -score)
+
+    sorted_stocks = sorted(STOCKS, key=_sort_key)
 
     fresh_n=sum(1 for s in STOCKS if results[s].get("ok") and results[s].get("is_fresh"))
     stale  =[NAMES.get(s,s) for s in STOCKS if results[s].get("ok") and not results[s].get("is_fresh")]
@@ -1773,8 +1787,8 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
   <td style="padding:12px 14px;">
     {bar(r["score"])}{raw_tag_s}{ctx_tag_s}
   </td>
-  <td align="right" style="padding:12px 14px;font-family:Arial,sans-serif;font-size:14px;font-weight:700;color:#1a7340;white-space:nowrap;">
-    {f'{positions[s]["target"]:.2f} <span style="font-size:11px;font-weight:400;color:#999;">EGP</span> <span style="font-size:10px;color:#0B5394;">🎯 {FIB_LABELS.get(positions[s].get("current_level",0),"")}</span>' if s in positions and positions[s].get("status")=="open" else f'{r["target"]} <span style="font-size:11px;font-weight:400;color:#999;">EGP</span>'}
+  <td style="padding:12px 14px;text-align:right;font-family:Arial,sans-serif;white-space:nowrap;">
+    {"<div style='font-size:14px;font-weight:700;color:#1a7340;'>" + f'{positions[s]["target"]:.2f}' + " <span style='font-size:11px;font-weight:400;color:#999;'>EGP</span></div><div style='font-size:10px;color:#0B5394;margin-top:2px;'>🎯 " + FIB_LABELS.get(positions[s].get("current_level",0),"") + "</div>" if s in positions and positions[s].get("status")=="open" else "<div style='font-size:14px;font-weight:700;color:#1a7340;'>" + str(r["target"]) + " <span style='font-size:11px;font-weight:400;color:#999;'>EGP</span></div>"}
   </td>
 </tr>"""
 

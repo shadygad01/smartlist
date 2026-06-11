@@ -33,13 +33,13 @@ CUTOFF_DATE     = TODAY - timedelta(days=MIN_DAYS_OLD)
 
 def _insert_minimal_signal(conn: sqlite3.Connection, sig_id: str, symbol: str,
                             sig_date: str, signal_type: str, raw_score: int,
-                            price: float):
+                            price: float, r1_price: int | None = None):
     """Insert a minimal signals row — skip if already exists."""
     conn.execute("""
         INSERT OR IGNORE INTO signals
-          (id, symbol, signal_date, signal_type, raw_score, price, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (sig_id, symbol, sig_date, signal_type, raw_score, price,
+          (id, symbol, signal_date, signal_type, raw_score, r1_price, price, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (sig_id, symbol, sig_date, signal_type, raw_score, r1_price, price,
           datetime.utcnow().isoformat()))
 
 
@@ -74,6 +74,7 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
                 "signal_type": signal,
                 "raw_score":   int(entry.get("score", 0)),
                 "price":       float(entry.get("price", 0)),
+                "r1_price":    int(entry.get("r1", 0)) if entry.get("r1") is not None else None,
             })
 
     print(f"Eligible Buy/Strong Buy signals (≥{MIN_DAYS_OLD}d old): {len(eligible)}")
@@ -145,6 +146,7 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
                     signal_type = sig["signal_type"],
                     raw_score   = sig["raw_score"],
                     price       = sig["price"],
+                    r1_price    = sig.get("r1_price"),
                 )
 
             upsert_bottom_quality(sig["id"], bq, db_path=db_path)

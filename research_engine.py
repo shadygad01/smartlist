@@ -181,9 +181,10 @@ def _to_df(signals: list) -> pd.DataFrame:
 
 
 def _get_feature_cols(df: pd.DataFrame) -> list:
-    """Returns FEATURE_COLS + available SNAP_FEATURE_COLS."""
-    base = [c for c in FEATURE_COLS if c in df.columns]
-    snap = [c for c in SNAP_FEATURE_COLS if c in df.columns]
+    """Returns FEATURE_COLS + available SNAP_FEATURE_COLS that have enough non-NULL values."""
+    threshold = min(10, MIN_SAMPLES)
+    base = [c for c in FEATURE_COLS      if c in df.columns and df[c].notna().sum() >= threshold]
+    snap = [c for c in SNAP_FEATURE_COLS if c in df.columns and df[c].notna().sum() >= threshold]
     return list(dict.fromkeys(base + snap))
 
 
@@ -399,17 +400,18 @@ def _correlation_analysis(df: pd.DataFrame) -> dict:
 
     results = {}
     for tname, tcol in targets.items():
-        valid = df[cols + [tcol]].dropna()
-        if len(valid) < 10:
+        target_mask = df[tcol].notna()
+        if target_mask.sum() < 10:
             continue
         corr = {}
         for col in cols:
-            c = valid[[col, tcol]].dropna()
+            c = df[[col, tcol]][target_mask & df[col].notna()]
             if len(c) >= 10:
                 r = float(c[col].corr(c[tcol], method="spearman"))
                 corr[col] = round(r, 3)
-        # ترتيب تنازلي حسب القيمة المطلقة
-        results[tname] = dict(sorted(corr.items(), key=lambda x: abs(x[1]), reverse=True))
+        if corr:
+            # ترتيب تنازلي حسب القيمة المطلقة
+            results[tname] = dict(sorted(corr.items(), key=lambda x: abs(x[1]), reverse=True))
 
     return results
 

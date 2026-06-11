@@ -1356,7 +1356,7 @@ def analyze(symbol):
             sig,tc,tbg,tbr = sig_info(score)
 
         entry_zones = None
-        _score_gate = 35 if stock in WHITELIST else 40
+        _score_gate = 35 if symbol in WHITELIST else 40
         if price_ok and liq_ok and r8 > 0 and total >= _score_gate:
             entry_zones = calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo,
                                            _sv=sv_result, _hvn=hvn_result)

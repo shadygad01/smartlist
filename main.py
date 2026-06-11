@@ -1437,17 +1437,36 @@ def save_history(stock, r):
 # HTML HELPERS
 # =========================================
 
-def pill(sc,mx):
-    pct=int(sc/mx*100) if mx else 0
-    bg,fg=(("#d4edda","#155724") if pct>=70 else (("#fff3cd","#856404") if pct>=40 else ("#f8d7da","#721c24")))
-    return f'<span style="display:inline-block;padding:2px 9px;border-radius:10px;font-size:12px;font-weight:bold;background:{bg};color:{fg};">{sc}/{mx}</span>'
+def pill(sc, mx):
+    pct = int(sc / mx * 100) if mx else 0
+    if pct >= 70:
+        bg, fg = "#d1f0dd", "#1a7340"
+    elif pct >= 40:
+        bg, fg = "#fef3c7", "#7a5c00"
+    else:
+        bg, fg = "#fde8e8", "#a02020"
+    return (
+        f'<span style="display:inline-block;padding:3px 10px;border-radius:10px;'
+        f'font-family:Arial,sans-serif;font-size:11px;font-weight:700;'
+        f'background:{bg};color:{fg};">{sc}/{mx}</span>'
+    )
 
 def bar(score):
-    fg="#1e7e34" if score>=70 else ("#856404" if score>=45 else "#b02a2a")
-    f=max(2,score); e=100-f
-    return (f'<table cellpadding="0" cellspacing="0" border="0" style="display:inline-table;vertical-align:middle;margin-right:6px;">'
-            f'<tr><td width="{f}" height="10" bgcolor="{fg}"></td><td width="{e}" height="10" bgcolor="#e0e0e0"></td></tr></table>'
-            f'<span style="font-weight:bold;color:{fg};font-size:14px;">{score}/100</span>')
+    if score >= 70:
+        fg, bg_track = "#1a7340", "#c8ecd8"
+    elif score >= 45:
+        fg, bg_track = "#7a5c00", "#fdefc3"
+    else:
+        fg, bg_track = "#a02020", "#f9d5d5"
+    fill = max(2, score)
+    return (
+        f'<span style="display:inline-flex;align-items:center;gap:8px;vertical-align:middle;">'
+        f'<span style="display:inline-block;width:100px;height:8px;border-radius:4px;background:{bg_track};overflow:hidden;">'
+        f'<span style="display:block;width:{fill}%;height:100%;background:{fg};border-radius:4px;"></span>'
+        f'</span>'
+        f'<span style="font-family:Arial,sans-serif;font-weight:700;font-size:14px;color:{fg};">{score}<span style="font-size:11px;font-weight:400;color:#888;">/100</span></span>'
+        f'</span>'
+    )
 
 def fresh_badge(is_fresh, last_dt):
     if is_fresh:
@@ -1713,10 +1732,10 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 
     parts.append(f"""
 {holiday_banner}
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0B5394;">
-  <tr><td style="padding:20px 24px;">
-    <div style="font-family:Arial,sans-serif;color:#fff;font-size:22px;font-weight:bold;">EGX Institutional Swing Scanner</div>
-    <div style="font-family:Arial,sans-serif;color:#bdd7f5;font-size:13px;margin-top:5px;">{fmt_cairo("%A, %d %B %Y  |  %H:%M")} Cairo</div>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a3a5c;">
+  <tr><td style="padding:22px 28px;">
+    <div style="font-family:Arial,sans-serif;color:#fff;font-size:20px;font-weight:700;letter-spacing:0.3px;">EGX Institutional Swing Scanner</div>
+    <div style="font-family:Arial,sans-serif;color:#8fb8d8;font-size:12px;margin-top:6px;letter-spacing:0.3px;">{fmt_cairo("%A, %d %B %Y  ·  %H:%M")} Cairo</div>
   </td></tr>
 </table>
 {dow_banner}
@@ -1736,30 +1755,39 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
         _,tc,tbg,tbr=sig_info(r["score"])
         in_portfolio = s in positions and positions[s].get("status") == "open"
         portfolio_badge = ' <span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:bold;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;">🔵 In Portfolio</span>' if in_portfolio else ""
+        raw_s = r.get("raw_score", r["score"])
+        raw_tag_s = f'<span style="font-size:10px;color:#aaa;margin-left:4px;">raw {raw_s}</span>' if raw_s != r["score"] else ""
+        ctx_tag_s = f'<span style="font-size:10px;color:#888;background:#f4f4f4;padding:1px 6px;border-radius:8px;margin-left:6px;">{r["ctx_label"]}</span>' if r.get("ctx_label") else ""
+        row_bg = "#fff" if sorted_stocks.index(s) % 2 == 0 else "#f9fafb"
         wr+=f"""
-<tr style="border-bottom:1px solid #e0e0e0;">
-  <td style="padding:10px 12px;font-family:Arial,sans-serif;">
-    <b style="font-size:14px;">{NAMES.get(s,s)}</b> {fresh_badge(r["is_fresh"],r["last_dt"])}{portfolio_badge}<br>
-    <span style="font-size:11px;color:#888;">{s} · {SECTORS.get(s,"")}</span></td>
-  <td style="padding:10px 12px;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">{r["price"]} EGP</td>
-  <td style="padding:10px 12px;">
-    <span style="font-family:Arial,sans-serif;display:inline-block;padding:4px 12px;border-radius:14px;font-size:12px;font-weight:bold;background:{tbg};color:{tc};border:1px solid {tbr};">{r["signal"]}</span></td>
-  <td style="padding:10px 12px;">{bar(r["score"])}</td>
-  <td style="padding:10px 12px;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;color:#155724;">
-    {f'{positions[s]["target"]:.2f} EGP <span style="font-size:10px;color:#0B5394;">🎯 {FIB_LABELS.get(positions[s].get("current_level",0),"")}</span>' if s in positions and positions[s].get("status")=="open" else f'{r["target"]} EGP'}
+<tr style="background:{row_bg};border-bottom:1px solid #edf0f3;">
+  <td style="padding:12px 14px;font-family:Arial,sans-serif;">
+    <div style="font-size:14px;font-weight:600;color:#111;">{NAMES.get(s,s)}</div>
+    <div style="font-size:11px;color:#999;margin-top:2px;">{s} · {SECTORS.get(s,"")}</div>
+    <div style="margin-top:4px;">{fresh_badge(r["is_fresh"],r["last_dt"])}{portfolio_badge}</div>
+  </td>
+  <td align="right" style="padding:12px 14px;font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:#111;white-space:nowrap;">{r["price"]}<span style="font-size:11px;font-weight:400;color:#999;margin-left:3px;">EGP</span></td>
+  <td style="padding:12px 14px;">
+    <span style="font-family:Arial,sans-serif;display:inline-block;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:0.3px;background:{tbg};color:{tc};border:1px solid {tbr};">{r["signal"]}</span>
+  </td>
+  <td style="padding:12px 14px;">
+    {bar(r["score"])}{raw_tag_s}{ctx_tag_s}
+  </td>
+  <td align="right" style="padding:12px 14px;font-family:Arial,sans-serif;font-size:14px;font-weight:700;color:#1a7340;white-space:nowrap;">
+    {f'{positions[s]["target"]:.2f} <span style="font-size:11px;font-weight:400;color:#999;">EGP</span> <span style="font-size:10px;color:#0B5394;">🎯 {FIB_LABELS.get(positions[s].get("current_level",0),"")}</span>' if s in positions and positions[s].get("status")=="open" else f'{r["target"]} <span style="font-size:11px;font-weight:400;color:#999;">EGP</span>'}
   </td>
 </tr>"""
 
     parts.append(f"""
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;border:1px solid #c3e6cb;background:#f8fff8;">
-  <tr style="background:#2e6b20;">
-    <th align="left" style="padding:9px 12px;font-family:Arial,sans-serif;color:#fff;font-size:12px;">Company</th>
-    <th align="left" style="padding:9px 12px;font-family:Arial,sans-serif;color:#fff;font-size:12px;">Price</th>
-    <th align="left" style="padding:9px 12px;font-family:Arial,sans-serif;color:#fff;font-size:12px;">Signal</th>
-    <th align="left" style="padding:9px 12px;font-family:Arial,sans-serif;color:#fff;font-size:12px;">SMC Score</th>
-    <th align="left" style="padding:9px 12px;font-family:Arial,sans-serif;color:#fff;font-size:12px;">Target</th>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;border:1px solid #dde3ea;border-radius:6px;overflow:hidden;border-collapse:separate;">
+  <tr style="background:#1a3a5c;">
+    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Company</th>
+    <th align="right" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Price</th>
+    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Signal</th>
+    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">SMC Score</th>
+    <th align="right" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Target</th>
   </tr>
-  {wr or '<tr><td colspan="5" style="padding:14px;font-family:Arial,sans-serif;color:#856404;">No stocks reached Watch threshold today.</td></tr>'}
+  {wr or '<tr><td colspan="5" style="padding:16px 14px;font-family:Arial,sans-serif;font-size:13px;color:#888;">No setups reached the Watch threshold today.</td></tr>'}
 </table>""")
 
     for s in sorted_stocks:
@@ -1774,33 +1802,38 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 
         _,tc,tbg,tbr=sig_info(r["score"])
         ind_rows=""
-        for nm,sc,mx,lb in r["rows"]:
-            bg="#f0fff4" if sc==mx else ("#fff8f8" if sc==0 else "#fffdf0")
+        for i,(nm,sc,mx,lb) in enumerate(r["rows"]):
+            row_bg = "#fff" if i % 2 == 0 else "#f9fafb"
             ind_rows+=f"""
-<tr style="background:{bg};border-bottom:1px solid #eee;">
-  <td width="175" style="padding:9px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#444;border-right:1px solid #eee;">{nm}</td>
-  <td width="65" style="padding:9px 12px;text-align:center;">{pill(sc,mx)}</td>
-  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;color:#333;">{lb}</td>
+<tr style="background:{row_bg};border-bottom:1px solid #edf0f3;">
+  <td width="170" style="padding:9px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:600;color:#444;border-right:1px solid #eee;">{nm}</td>
+  <td width="70" style="padding:9px 12px;text-align:center;border-right:1px solid #eee;">{pill(sc,mx)}</td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:12px;color:#555;">{lb}</td>
 </tr>"""
 
         ez_html = build_ez_html(r)
         parts.append(f"""
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:32px;border-top:3px solid #0B5394;">
-  <tr><td style="padding:12px 0 2px 0;">
-    <span style="font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:#1C4587;">{NAMES.get(s,s)}</span>
-    <span style="font-family:Arial,sans-serif;font-size:12px;color:#aaa;margin-left:8px;">{s} · {SECTORS.get(s,"")}</span>
-    {fresh_badge(r["is_fresh"],r["last_dt"])}
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:36px;border-top:3px solid #1a3a5c;">
+  <tr><td style="padding:14px 0 4px 0;">
+    <span style="font-family:Arial,sans-serif;font-size:20px;font-weight:700;color:#1a3a5c;">{NAMES.get(s,s)}</span>
+    <span style="font-family:Arial,sans-serif;font-size:12px;color:#bbb;margin-left:10px;font-weight:400;">{s}</span>
+    <span style="font-family:Arial,sans-serif;font-size:12px;color:#ccc;margin-left:4px;">· {SECTORS.get(s,"")}</span>
+    <span style="margin-left:10px;">{fresh_badge(r["is_fresh"],r["last_dt"])}</span>
   </td></tr>
 </table>
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{tbg};border:1px solid {tbr};margin:8px 0;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{tbg};border:1px solid {tbr};border-radius:6px;margin:8px 0;">
   <tr>
-    <td style="padding:14px 16px;">
-      <div style="font-family:Arial,sans-serif;font-size:17px;font-weight:bold;color:{tc};">{r["signal"]}</div>
-      <div style="font-family:Arial,sans-serif;font-size:13px;color:#444;margin-top:6px;">SMC المعدل: &nbsp;{bar(r["score"])}{"&nbsp; <span style='font-size:11px;color:#555;'>" + r["ctx_label"] + "</span>" if r.get("ctx_label") else ""}</div>
-      {"<div style='font-family:Arial,sans-serif;font-size:11px;color:#888;margin-top:2px;'>SMC الأصلي: " + str(r.get("raw_score",r["score"])) + "/100</div>" if r.get("raw_score") and r["raw_score"] != r["score"] else ""}
+    <td style="padding:16px 20px;">
+      <div style="font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:{tc};letter-spacing:0.3px;">{r["signal"]}</div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+        {bar(r["score"])}
+        {"<span style='font-family:Arial,sans-serif;font-size:11px;color:#666;background:#f0f0f0;padding:2px 8px;border-radius:10px;margin-left:8px;'>" + r["ctx_label"] + "</span>" if r.get("ctx_label") else ""}
+        {"<span style='font-family:Arial,sans-serif;font-size:11px;color:#999;margin-left:6px;'>raw&nbsp;" + str(r.get("raw_score","")) + "</span>" if r.get("raw_score") and r["raw_score"] != r["score"] else ""}
+      </div>
     </td>
-    <td align="right" style="padding:14px 16px;">
-      <div style="font-family:Arial,sans-serif;font-size:24px;font-weight:bold;color:#222;">{r["price"]} EGP</div>
+    <td align="right" style="padding:16px 20px;white-space:nowrap;">
+      <div style="font-family:Arial,sans-serif;font-size:26px;font-weight:bold;color:#111;">{r["price"]}</div>
+      <div style="font-family:Arial,sans-serif;font-size:12px;color:#888;margin-top:2px;">EGP</div>
     </td>
   </tr>
 </table>
@@ -1815,12 +1848,12 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     </td>
   </tr>
 </table>
-<div style="font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#555;margin:12px 0 5px 0;letter-spacing:0.5px;">SMC INDICATOR BREAKDOWN</div>
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-collapse:collapse;">
-  <tr style="background:#f5f5f5;border-bottom:1px solid #ddd;">
-    <th width="175" align="left" style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;border-right:1px solid #eee;">Indicator</th>
-    <th width="65" align="center" style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;">Score</th>
-    <th align="left" style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;">Reading</th>
+<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#888;margin:16px 0 6px 0;letter-spacing:1px;text-transform:uppercase;">SMC Indicator Breakdown</div>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e8eaed;border-collapse:collapse;border-radius:4px;overflow:hidden;">
+  <tr style="background:#f6f7f9;">
+    <th width="170" align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#777;font-weight:600;border-right:1px solid #eee;letter-spacing:0.4px;">Indicator</th>
+    <th width="70" align="center" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#777;font-weight:600;border-right:1px solid #eee;">Score</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#777;font-weight:600;">Reading</th>
   </tr>
   {ind_rows}
 </table>
@@ -1829,8 +1862,10 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 """)
 
     parts.append(f"""
-<table width="100%" cellpadding="12" cellspacing="0" border="0" style="margin-top:30px;background:#f0f0f0;border-top:1px solid #ddd;">
-  <tr><td align="center" style="font-family:Arial,sans-serif;font-size:11px;color:#999;">EGX Institutional Scanner · TradingView Data Engine</td></tr>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:40px;border-top:1px solid #e8eaed;">
+  <tr><td align="center" style="padding:16px;font-family:Arial,sans-serif;font-size:11px;color:#bbb;letter-spacing:0.4px;">
+    EGX Institutional Scanner &nbsp;·&nbsp; TradingView Data Engine
+  </td></tr>
 </table>""")
 
     html = f"""<!DOCTYPE html><html><body style="margin:0;padding:20px;background:#eef2f7;"><table width="680" cellpadding="0" cellspacing="0" border="0" align="center" style="background:#ffffff;border:1px solid #d0d7e2;"><tr><td style="padding:0 24px 24px 24px;">{"".join(parts)}</td></tr></table></body></html>"""

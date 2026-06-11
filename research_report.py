@@ -940,6 +940,200 @@ def _build_edge_discovery_section(res: dict) -> str:
     return html
 
 
+def _build_distribution_section(res: dict) -> str:
+    pd = res.get("pattern_discovery", {})
+    if not pd:
+        return ""
+    mfe_dist = pd.get("mfe_distribution", {})
+    mae_dist = pd.get("mae_distribution", {})
+    if not mfe_dist and not mae_dist:
+        return ""
+
+    def _bar_row(label, count, total, color):
+        pct = (count / total * 100) if total else 0
+        bar = (f'<div style="background:{color};height:14px;width:{min(pct,100):.0f}%;'
+               f'border-radius:3px;display:inline-block;vertical-align:middle"></div>')
+        return (f"<tr><td style='white-space:nowrap'>{label}</td>"
+                f"<td style='width:60%'>{bar}</td>"
+                f"<td style='text-align:center'>{count}</td>"
+                f"<td style='text-align:center'>{pct:.1f}%</td></tr>")
+
+    html = '<div class="section"><h2>توزيع MFE و MAE — بصمة الجودة الكلية</h2>'
+
+    if mfe_dist:
+        total = sum(mfe_dist.values())
+        html += '<h3 style="color:#2a6496">توزيع MFE (الحركة القصوى لصالحنا)</h3>'
+        html += '<table><thead><tr><th>الفئة</th><th>التوزيع</th><th>عدد</th><th>%</th></tr></thead><tbody>'
+        colors = {"<0%": "#dc3545", "0–5%": "#fd7e14", "5–10%": "#ffc107",
+                  "10–20%": "#20c997", "20–30%": "#0d6efd", ">30%": "#198754"}
+        for bucket in ["<0%", "0–5%", "5–10%", "10–20%", "20–30%", ">30%"]:
+            count = mfe_dist.get(bucket, 0)
+            html += _bar_row(bucket, count, total, colors.get(bucket, "#888"))
+        html += "</tbody></table>"
+
+    if mae_dist:
+        total = sum(mae_dist.values())
+        html += '<h3 style="color:#2a6496">توزيع MAE (الحركة القصوى ضدنا)</h3>'
+        html += '<table><thead><tr><th>الفئة</th><th>التوزيع</th><th>عدد</th><th>%</th></tr></thead><tbody>'
+        colors = {">0%": "#198754", "0–(-5%)": "#20c997", "(-5%)–(-10%)": "#ffc107",
+                  "(-10%)–(-20%)": "#fd7e14", "<-20%": "#dc3545"}
+        for bucket in [">0%", "0–(-5%)", "(-5%)–(-10%)", "(-10%)–(-20%)", "<-20%"]:
+            count = mae_dist.get(bucket, 0)
+            html += _bar_row(bucket, count, total, colors.get(bucket, "#888"))
+        html += "</tbody></table>"
+
+    html += "</div>"
+    return html
+
+
+def _build_pattern_clusters_section(res: dict) -> str:
+    pd = res.get("pattern_discovery", {})
+    if not pd:
+        return ""
+    clusters = pd.get("clusters", {})
+    top_feats = pd.get("top_discriminating_features", [])
+    n_total = pd.get("n_signals", 0)
+    if not clusters:
+        return ""
+
+    html = (
+        '<div class="section">'
+        '<h2>Pattern Clusters — K-Means اكتشاف أنماط تلقائي</h2>'
+        f'<p style="font-size:.85em;color:#666">'
+        f'مبني على {n_total} إشارة — مُرتَّبة بـ MFE تنازلياً</p>'
+    )
+
+    if top_feats:
+        feats_str = " | ".join(f"<code>{f}</code>" for f in top_feats[:8])
+        html += f'<p style="font-size:.83em;color:#555">أكثر المتغيرات تمييزاً بين الـ clusters: {feats_str}</p>'
+
+    html += (
+        '<table><thead><tr>'
+        '<th>Cluster</th><th>عدد</th><th>MFE (متوسط)</th>'
+        '<th>MAE (متوسط)</th><th>BQ (متوسط)</th>'
+        '<th>أبرز خصائص الـ Cluster</th>'
+        '</tr></thead><tbody>'
+    )
+
+    sorted_clusters = sorted(clusters.items(),
+                             key=lambda x: x[1].get("mfe_mean", 0), reverse=True)
+    for cid, cv in sorted_clusters:
+        n = cv.get("n", 0)
+        mfe_m = cv.get("mfe_mean")
+        mae_m = cv.get("mae_mean")
+        bq_m = cv.get("bq_mean")
+        profile = cv.get("profile", {})
+
+        top_profile = sorted(profile.items(), key=lambda x: abs(x[1]), reverse=True)[:4]
+        profile_str = " | ".join(
+            f"<code>{k}</code>: {v:+.2f}" for k, v in top_profile
+        )
+
+        html += (
+            f"<tr><td><strong>C{cid}</strong></td>"
+            f"<td>{n}</td>"
+            f"<td>{_mfe_badge(mfe_m)}</td>"
+            f"<td>{_pct(mae_m)}</td>"
+            f"<td>{_bq_badge(bq_m)}</td>"
+            f"<td style='font-size:.80em'>{profile_str}</td></tr>"
+        )
+
+    html += (
+        '</tbody></table>'
+        '<div class="warn" style="margin-top:8px">'
+        'الـ Clusters مُحسَّنة تلقائياً عند كل تشغيل للبحث — '
+        'الـ Cluster الأعلى MFE يمثّل "بصمة القاع المثالية" التي يبحث عنها النظام.'
+        '</div>'
+        '</div>'
+    )
+    return html
+
+
+def _build_model_comparison_section(res: dict) -> str:
+    mc_mfe = res.get("model_comparison_mfe", {})
+    mc_bq  = res.get("model_comparison_bq",  {})
+    if not mc_mfe and not mc_bq:
+        return ""
+
+    html = (
+        '<div class="section">'
+        '<h2>مقارنة النماذج — RF vs GBM vs XGBoost + SHAP</h2>'
+        '<p style="font-size:.85em;color:#666">'
+        'مقارنة شاملة بين ثلاثة نماذج ML — الأفضل R² هو المُعتمَد للأوزان التلقائية</p>'
+    )
+
+    for mc, target_label in [(mc_mfe, "MFE"), (mc_bq, "BQ Score")]:
+        if not mc:
+            continue
+        best_name  = mc.get("best_model", "—")
+        best_r2    = mc.get("best_r2", 0)
+        ensemble   = mc.get("ensemble_importance", {})
+        shap_vals  = mc.get("shap_importance", {})
+        top20      = mc.get("top20_features", [])
+        all_models = mc.get("all_models", {})
+
+        r2_color = "green" if best_r2 >= 0.10 else ("orange" if best_r2 >= 0.05 else "red")
+        html += (
+            f'<h3 style="color:#2a6496">Target: {target_label} — '
+            f'أفضل نموذج: <strong>{best_name}</strong> '
+            f'(R²=<span style="color:{r2_color}">{best_r2}</span>)</h3>'
+        )
+
+        if all_models:
+            html += (
+                '<table><thead><tr>'
+                '<th>النموذج</th><th>R²</th><th>تدريب</th><th>اختبار</th>'
+                '</tr></thead><tbody>'
+            )
+            for mname, mdata in all_models.items():
+                mr2 = mdata.get("r2", 0)
+                mc_color = "green" if mr2 >= 0.10 else ("orange" if mr2 >= 0.05 else "#888")
+                is_best = "★ " if mname == best_name else ""
+                html += (
+                    f"<tr><td>{is_best}{mname}</td>"
+                    f"<td style='color:{mc_color};font-weight:600'>{mr2}</td>"
+                    f"<td>{mdata.get('n_train','—')}</td>"
+                    f"<td>{mdata.get('n_test','—')}</td></tr>"
+                )
+            html += "</tbody></table>"
+
+        if top20 or ensemble:
+            html += (
+                '<h4 style="color:#444;margin:12px 0 6px">'
+                'أهمية المتغيرات (Ensemble + SHAP مدمجَين)</h4>'
+                '<table><thead><tr>'
+                '<th>#</th><th>المتغير</th><th>Ensemble</th><th>SHAP</th>'
+                '</tr></thead><tbody>'
+            )
+            shown = top20 if top20 else list(ensemble.items())[:20]
+            for rank, item in enumerate(shown[:20], 1):
+                if isinstance(item, (list, tuple)):
+                    feat, ens_v = item[0], item[1]
+                else:
+                    feat, ens_v = item, ensemble.get(item, 0)
+                shap_v = shap_vals.get(feat)
+                shap_str = f"{shap_v:.4f}" if shap_v is not None else "—"
+                bar_w = min(int(ens_v * 300), 100)
+                bar = (f'<div style="background:#2a6496;height:8px;width:{bar_w}%;'
+                       f'border-radius:2px;display:inline-block;vertical-align:middle"></div>')
+                html += (
+                    f"<tr><td>{rank}</td>"
+                    f"<td><code>{feat}</code></td>"
+                    f"<td>{bar} {ens_v:.4f}</td>"
+                    f"<td>{shap_str}</td></tr>"
+                )
+            html += "</tbody></table>"
+
+    html += (
+        '<div class="warn" style="margin-top:8px;background:#e8f4f8;border-color:#bee5eb">'
+        'الأوزان التلقائية محسوبة من ensemble importance — '
+        'محفوظة في <code>learned_weights.json</code> ومُطبَّقة على pattern_engine تلقائياً.'
+        '</div>'
+        '</div>'
+    )
+    return html
+
+
 def _build_warnings_section(warnings: list) -> str:
     if not warnings:
         return ""
@@ -990,6 +1184,9 @@ def build_report(db_path: str = DB_PATH) -> str:
   {_build_active_signals_section(db_path)}
   {_build_probability_section(res)}
   {_build_edge_discovery_section(res)}
+  {_build_distribution_section(res)}
+  {_build_pattern_clusters_section(res)}
+  {_build_model_comparison_section(res)}
   {_build_correlation_section(res)}
   {_build_mutual_info_section(res)}
   {_build_model_section(res)}

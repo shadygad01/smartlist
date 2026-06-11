@@ -88,6 +88,28 @@ def _migrate_schema(conn: sqlite3.Connection):
         if col not in existing:
             conn.execute(f"ALTER TABLE signals ADD COLUMN {col} {defn}")
 
+    # Migrate signals — snapshot engine columns (Phase 3)
+    snap_cols = {
+        "snap_atr":         "REAL",
+        "snap_wick_ratio":  "REAL",
+        "snap_compression": "REAL",
+        "snap_consol_len":  "INTEGER",
+        "snap_bos":         "INTEGER DEFAULT 0",
+        "snap_bos_dist":    "REAL",
+        "snap_choch":       "INTEGER DEFAULT 0",
+        "snap_pivot_str":   "REAL",
+        "snap_num_touches": "INTEGER",
+        "snap_sweep_size":  "REAL",
+        "snap_vol_exp":     "REAL",
+        "snap_reclaim_spd": "REAL",
+        "snap_dist_lo":     "REAL",
+        "snap_prem_disc":   "REAL",
+    }
+    for col, defn in snap_cols.items():
+        if col not in existing:
+            conn.execute(f"ALTER TABLE signals ADD COLUMN {col} {defn}")
+
+
     # Migrate bottom_quality table
     bq_existing = {r[1] for r in conn.execute("PRAGMA table_info(bottom_quality)").fetchall()}
     bq_new_cols = {
@@ -397,6 +419,10 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
                     htf_hh, htf_hl, avwap_gap,
                     sweep_detected, wick_rejection, equal_lows,
                     ctx_mult, stock_mult, price_gate, price_ok, sv_depth,
+                    snap_atr, snap_wick_ratio, snap_compression, snap_consol_len,
+                    snap_bos, snap_bos_dist, snap_choch, snap_pivot_str,
+                    snap_num_touches, snap_sweep_size, snap_vol_exp,
+                    snap_reclaim_spd, snap_dist_lo, snap_prem_disc,
                     created_at
                 ) VALUES (
                     :id, :symbol, :signal_date, :signal_type,
@@ -419,6 +445,10 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
                     :htf_hh, :htf_hl, :avwap_gap,
                     :sweep_detected, :wick_rejection, :equal_lows,
                     :ctx_mult, :stock_mult, :price_gate, :price_ok, :sv_depth,
+                    :snap_atr, :snap_wick_ratio, :snap_compression, :snap_consol_len,
+                    :snap_bos, :snap_bos_dist, :snap_choch, :snap_pivot_str,
+                    :snap_num_touches, :snap_sweep_size, :snap_vol_exp,
+                    :snap_reclaim_spd, :snap_dist_lo, :snap_prem_disc,
                     :now
                 )
             """, {
@@ -486,6 +516,20 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
                 "price_gate":    r.get("price_gate"),
                 "price_ok":      int(bool(r.get("price_ok",      False))),
                 "sv_depth":      r.get("sv_depth"),
+                "snap_atr":         r.get("snap_atr"),
+                "snap_wick_ratio":  r.get("snap_wick_ratio"),
+                "snap_compression": r.get("snap_compression"),
+                "snap_consol_len":  r.get("snap_consol_len"),
+                "snap_bos":         int(bool(r.get("snap_bos", 0))),
+                "snap_bos_dist":    r.get("snap_bos_dist"),
+                "snap_choch":       int(bool(r.get("snap_choch", 0))),
+                "snap_pivot_str":   r.get("snap_pivot_str"),
+                "snap_num_touches": r.get("snap_num_touches"),
+                "snap_sweep_size":  r.get("snap_sweep_size"),
+                "snap_vol_exp":     r.get("snap_vol_exp"),
+                "snap_reclaim_spd": r.get("snap_reclaim_spd"),
+                "snap_dist_lo":     r.get("snap_dist_lo"),
+                "snap_prem_disc":   r.get("snap_prem_disc"),
                 "now":           datetime.now().isoformat(),
             })
             added += 1

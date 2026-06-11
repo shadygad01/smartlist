@@ -46,6 +46,18 @@ try:
 except ImportError:
     LGBM_OK = False
 
+try:
+    import xgboost as xgb
+    XGB_OK = True
+except ImportError:
+    XGB_OK = False
+
+try:
+    import shap
+    SHAP_OK = True
+except ImportError:
+    SHAP_OK = False
+
 from signal_db import DB_PATH, get_mature_signals, CURRENT_WEIGHTS, WEIGHT_LABELS
 
 WIN_MFE_THRESHOLD = 0.08   # نفس قيمة edge_discovery
@@ -57,6 +69,13 @@ except ImportError:
         "p_vs_ma20": 0.21, "mom_10d": 0.20, "stoch_rsi": 0.18,
         "atr_ratio": 0.15, "mom_5d":  0.14, "vol_trend": 0.12,
     }
+
+SNAP_FEATURE_COLS = [
+    "snap_atr", "snap_wick_ratio", "snap_compression", "snap_consol_len",
+    "snap_bos", "snap_bos_dist", "snap_choch", "snap_pivot_str",
+    "snap_num_touches", "snap_sweep_size", "snap_vol_exp",
+    "snap_reclaim_spd", "snap_dist_lo", "snap_prem_disc",
+]
 
 MIN_SAMPLES       = 30   # حد أدنى للتدريب global
 TRAIN_SPLIT_PCT   = 0.70 # تقسيم زمني — أول 70% للتدريب
@@ -87,6 +106,11 @@ ALL_FEATURE_COLS = [
     "sweep_detected", "wick_rejection", "equal_lows",
     "ctx_mult", "stock_mult", "price_gate", "price_ok",
     "sv_depth",
+    # Snapshot features (Phase 3)
+    "snap_wick_ratio", "snap_compression", "snap_consol_len",
+    "snap_bos", "snap_bos_dist", "snap_choch", "snap_pivot_str",
+    "snap_num_touches", "snap_sweep_size", "snap_vol_exp",
+    "snap_reclaim_spd", "snap_dist_lo", "snap_prem_disc",
 ]
 
 # ── المتغيرات المستخدمة في الـ ML و Correlation ───────────────────────────────
@@ -156,12 +180,19 @@ def _to_df(signals: list) -> pd.DataFrame:
     return df
 
 
+def _get_feature_cols(df: pd.DataFrame) -> list:
+    """Returns FEATURE_COLS + available SNAP_FEATURE_COLS."""
+    base = [c for c in FEATURE_COLS if c in df.columns]
+    snap = [c for c in SNAP_FEATURE_COLS if c in df.columns]
+    return list(dict.fromkeys(base + snap))
+
+
 def _prepare(df: pd.DataFrame, target: str) -> tuple:
     """
     يُحضّر X, y مع إزالة الصفوف التي تحتوي على NaN في الفيتشرز أو الهدف.
     يُرجع (X_df, y_series) أو (None, None).
     """
-    cols  = [c for c in FEATURE_COLS if c in df.columns]
+    cols  = _get_feature_cols(df)
     valid = df[cols + [target]].dropna()
     if len(valid) < MIN_SAMPLES:
         return None, None
@@ -224,6 +255,136 @@ def _feat_importance_gbm(X_tr, y_tr, X_te, y_te, feature_names) -> dict:
     mae = mean_absolute_error(y_te, y_pred)
     return {"model": label, "r2": round(r2, 3), "mae": round(mae, 4),
             "importance": imp, "n_train": len(y_tr), "n_test": len(y_te)}
+
+
+# ── XGBoost Model ─────────────────────────────────────────────────────────────
+
+def _feat_importance_xgb(X_tr, y_tr, X_te, y_te, feature_names) -> dict:
+    if not XGB_OK:
+        return {}
+    try:
+        model = xgb.XGBRegressor(
+            n_estimators=300, max_depth=4, learning_rate=0.05,
+            subsample=0.8, colsample_bytree=0.8,
+            random_state=42, verbosity=0,
+            early_stopping_rounds=30,
+            eval_metric="rmse",
+        )
+        model.fit(X_tr, y_tr, eval_set=[(X_te, y_te)], verbose=False)
+        imp = dict(zip(feature_names,
+                       model.feature_importances_ / max(model.feature_importances_.sum(), 1)))
+        y_pred = model.predict(X_te)
+        r2  = r2_score(y_te, y_pred)
+        mae = mean_absolute_error(y_te, y_pred)
+        return {"model": "XGBoost", "r2": round(r2, 3), "mae": round(mae, 4),
+                "importance": imp, "n_train": len(y_tr), "n_test": len(y_te),
+                "_fitted": model}
+    except Exception as e:
+        return {"model": "XGBoost", "error": str(e)}
+
+
+# ── SHAP Values ────────────────────────────────────────────────────────────────
+
+def _compute_shap(model, X_te, feature_names) -> dict:
+    """
+    يحسب SHAP values من أفضل نموذج.
+    يُرجع mean |SHAP| per feature (أهمية عالمية).
+    """
+    if not SHAP_OK or model is None:
+        return {}
+    try:
+        explainer = shap.TreeExplainer(model)
+        shap_vals = explainer.shap_values(X_te)
+        if hasattr(shap_vals, "__len__") and len(shap_vals) > 0:
+            mean_abs = np.abs(shap_vals).mean(axis=0)
+            total = mean_abs.sum()
+            if total > 0:
+                mean_abs = mean_abs / total
+            return {f: round(float(v), 4) for f, v in zip(feature_names, mean_abs)}
+    except Exception:
+        pass
+    return {}
+
+
+# ── Model Comparison ──────────────────────────────────────────────────────────
+
+def _model_comparison(X_tr, y_tr, X_te, y_te, feature_names, target_label: str) -> dict:
+    """
+    يُدرّب RF + GBM/LightGBM + XGBoost ويقارن الأداء.
+    يحسب SHAP من أفضل نموذج.
+    """
+    results = {}
+
+    # Random Forest
+    try:
+        rf_res = _feat_importance_rf(X_tr, y_tr, X_te, y_te, feature_names)
+        results["rf"] = rf_res
+    except Exception:
+        pass
+
+    # GBM / LightGBM
+    try:
+        gbm_res = _feat_importance_gbm(X_tr, y_tr, X_te, y_te, feature_names)
+        results["gbm"] = gbm_res
+    except Exception:
+        pass
+
+    # XGBoost
+    try:
+        xgb_res = _feat_importance_xgb(X_tr, y_tr, X_te, y_te, feature_names)
+        results["xgb"] = xgb_res
+    except Exception:
+        pass
+
+    # أفضل نموذج بناءً على R²
+    best_model_name = None
+    best_r2 = -999
+    best_fitted = None
+    for name, res in results.items():
+        if res.get("r2", -999) > best_r2:
+            best_r2 = res.get("r2", -999)
+            best_model_name = res.get("model", name)
+            best_fitted = res.pop("_fitted", None)
+
+    # SHAP من أفضل نموذج
+    shap_imp = {}
+    if best_fitted is not None:
+        shap_imp = _compute_shap(best_fitted, X_te, feature_names)
+
+    # تجميع الأهمية من كل النماذج (ensemble importance)
+    all_imps = {}
+    model_count = 0
+    for name, res in results.items():
+        imp = res.get("importance", {})
+        if imp:
+            model_count += 1
+            for feat, val in imp.items():
+                all_imps[feat] = all_imps.get(feat, 0.0) + val
+    if model_count > 0:
+        ensemble_imp = {f: round(v / model_count, 4) for f, v in all_imps.items()}
+    else:
+        ensemble_imp = {}
+
+    # أهم 20 متغير (من ensemble + SHAP)
+    combined = {}
+    for feat in set(list(ensemble_imp.keys()) + list(shap_imp.keys())):
+        e = ensemble_imp.get(feat, 0.0)
+        s = shap_imp.get(feat, 0.0)
+        combined[feat] = round((e + s) / 2, 4) if (e and s) else (e or s)
+
+    top20 = sorted(combined.items(), key=lambda x: -x[1])[:20]
+
+    return {
+        "target":       target_label,
+        "best_model":   best_model_name,
+        "best_r2":      round(best_r2, 3),
+        "rf":           results.get("rf", {}),
+        "gbm":          results.get("gbm", {}),
+        "xgb":          results.get("xgb", {}),
+        "shap_importance": shap_imp,
+        "ensemble_importance": ensemble_imp,
+        "top20_features": top20,
+    }
 
 
 # ── Correlation Analysis ───────────────────────────────────────────────────────
@@ -1013,6 +1174,49 @@ def export_per_stock_weights(research_result: dict,
     return True
 
 
+# ── Auto-Weight Update ────────────────────────────────────────────────────────
+
+def _auto_update_pattern_weights(pattern_result: dict, db_path: str = DB_PATH):
+    """
+    يحدّث learned_weights.json تلقائياً بناءً على نتائج Pattern Analysis.
+    يُشغَّل بعد كل research run إذا كان عدد الإشارات كافياً.
+    الأوزان الجديدة تُطبَّق في pattern_engine.py (FREEZE_WEIGHTS=False).
+    """
+    ws = pattern_result.get("indicator_weight_suggestions", {})
+    if not ws:
+        return
+
+    has_significant = any(abs(v.get("change", 0)) > 0.005 for v in ws.values())
+    if not has_significant:
+        return
+
+    new_weights = {
+        INDICATOR_ENGINE_KEY.get(k, k): round(v["suggested"], 6)
+        for k, v in ws.items()
+        if INDICATOR_ENGINE_KEY.get(k, k) is not None
+    }
+    if not new_weights:
+        return
+
+    import os
+    lw_file = "learned_weights.json"
+    old_data = {}
+    if os.path.exists(lw_file):
+        try:
+            with open(lw_file) as f:
+                old_data = json.load(f)
+        except Exception:
+            pass
+
+    old_data["weights"]    = new_weights
+    old_data["updated_at"] = date.today().isoformat()
+    old_data["n_signals"]  = pattern_result.get("n_used", 0)
+    old_data["source"]     = "research_engine_auto"
+
+    with open(lw_file, "w") as f:
+        json.dump(old_data, f, indent=2)
+
+
 # ── Main API ───────────────────────────────────────────────────────────────────
 
 def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
@@ -1049,9 +1253,12 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
         "probability_analysis": {},
         "rf_mfe": None, "rf_bq": None,
         "gbm_mfe": None, "gbm_bq": None,
+        "model_comparison_mfe": {},
+        "model_comparison_bq": {},
         "weight_suggestions": {},
         "segment_analysis": {},
         "pattern_analysis": {},
+        "pattern_discovery": {},
         "best_conditions": {},
         "per_stock_ml": {},
         "edge_discovery": [],
@@ -1128,16 +1335,43 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
             except Exception as e:
                 result["warnings"].append(f"GBM({target_key}) failed: {e}")
 
+        # ── Model Comparison: RF + GBM + XGBoost ──────────────────────────
+        for target_key, cmp_key in [(TARGET_MFE, "model_comparison_mfe"),
+                                     (TARGET_BQ,  "model_comparison_bq")]:
+            X, y = _prepare(df, target_key)
+            if X is not None:
+                X_tr, X_te, y_tr, y_te = _time_split(X, y)
+                fn = list(X.columns)
+                try:
+                    cmp = _model_comparison(X_tr.values, y_tr.values,
+                                            X_te.values, y_te.values,
+                                            fn, target_key)
+                    result[cmp_key] = cmp
+                    if verbose:
+                        print(f"  [ModelCmp] {target_key}: best={cmp.get('best_model')} "
+                              f"R²={cmp.get('best_r2')} "
+                              f"SHAP_features={len(cmp.get('shap_importance', {}))}")
+                except Exception as e:
+                    result["warnings"].append(f"ModelComparison({target_key}) failed: {e}")
+
         # ── Weight Suggestions ─────────────────────────────────────────────
         if result["rf_mfe"] and result["rf_bq"]:
             mfe_imp = result["rf_mfe"]["importance"]
             bq_imp  = result["rf_bq"]["importance"]
-            # ندمج مع GBM إن كان متاحاً
+            # ندمج مع GBM و XGBoost إن كانا متاحَين
             if result["gbm_mfe"]:
                 for k, v in result["gbm_mfe"]["importance"].items():
                     mfe_imp[k] = (mfe_imp.get(k, 0) + v) / 2
             if result["gbm_bq"]:
                 for k, v in result["gbm_bq"]["importance"].items():
+                    bq_imp[k] = (bq_imp.get(k, 0) + v) / 2
+            mc_mfe = result.get("model_comparison_mfe", {})
+            mc_bq  = result.get("model_comparison_bq", {})
+            if mc_mfe.get("ensemble_importance"):
+                for k, v in mc_mfe["ensemble_importance"].items():
+                    mfe_imp[k] = (mfe_imp.get(k, 0) + v) / 2
+            if mc_bq.get("ensemble_importance"):
+                for k, v in mc_bq["ensemble_importance"].items():
                     bq_imp[k] = (bq_imp.get(k, 0) + v) / 2
             result["weight_suggestions"] = _suggest_weights(mfe_imp, bq_imp)
 
@@ -1177,6 +1411,18 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
             print(f"  [Proba]   AUC={pa['auc']}  high_conf={pa['high_conf_n']} "
                   f"precision={pa['high_conf_precision']:.1%}")
 
+    # ── Pattern Discovery (Clustering) ───────────────────────────────────
+    try:
+        from pattern_discovery import run_pattern_discovery, MIN_SAMPLES as PD_MIN
+        pd_result = run_pattern_discovery(db_path=db_path, min_samples=PD_MIN)
+        result["pattern_discovery"] = pd_result
+        if verbose:
+            nd = pd_result.get("n_used", 0)
+            nc = pd_result.get("n_clusters", 0)
+            print(f"  [PatDisc]  {nd} signals → {nc} clusters")
+    except Exception as e:
+        result["warnings"].append(f"Pattern discovery failed: {e}")
+
     # ── Edge Discovery ────────────────────────────────────────────────────
     if n >= MIN_SAMPLES:
         try:
@@ -1186,6 +1432,14 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
             )
         except Exception as e:
             result["warnings"].append(f"Edge discovery failed: {e}")
+
+    # ── Auto-Update Pattern Engine Weights ───────────────────────────────
+    if n >= MIN_SAMPLES and result.get("pattern_analysis"):
+        try:
+            _auto_update_pattern_weights(result["pattern_analysis"], db_path)
+        except Exception as e:
+            result["warnings"].append(f"Auto-weight update failed: {e}")
+
 
     # ── Low R² Warning ────────────────────────────────────────────────────
     for key in ["rf_mfe", "rf_bq"]:

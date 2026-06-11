@@ -80,8 +80,8 @@ ALL_FEATURE_COLS = [
     "sv_depth",
 ]
 
-# ── المتغيرات المستخدمة في الـ ML ─────────────────────────────────────────────
-# كلها من وقت الإشارة (صفر تسرّب مستقبلي)
+# ── المتغيرات المستخدمة في الـ ML و Correlation ───────────────────────────────
+# كلها من وقت الإشارة (صفر تسرّب مستقبلي) — مطابقة لـ ALL_FEATURE_COLS
 FEATURE_COLS = [
     "raw_score", "adj_score",
     "r1_price", "r2_ob", "r3_liquidity", "r4_htf",
@@ -90,7 +90,17 @@ FEATURE_COLS = [
     "pattern_score", "pattern_eff", "pattern_wr", "pattern_gain", "pattern_n",
     "ind_stoch_rsi", "ind_p_vs_ma20", "ind_mom_10d",
     "ind_mom_5d", "ind_atr_ratio", "ind_vol_trend",
+    "sv_hit", "sv_score", "hvn_hit", "hvn_score",
+    "macd_val", "vol_spike",
     "is_ramadan", "is_cbe", "stock_tier",
+    # 18 extended variables
+    "rsi_val", "macd_hist", "macd_signal",
+    "rsi_div", "macd_div",
+    "ob_quality", "ob_dist",
+    "htf_hh", "htf_hl", "avwap_gap",
+    "sweep_detected", "wick_rejection", "equal_lows",
+    "ctx_mult", "stock_mult", "price_gate", "price_ok",
+    "sv_depth",
 ]
 
 # ── المتغيرات المستهدفة — الأولوية للـ MFE و BQ ─────────────────────────────

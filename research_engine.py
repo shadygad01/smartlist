@@ -54,6 +54,7 @@ except ImportError:
 
 MIN_SAMPLES     = 30     # حد أدنى للتدريب
 TRAIN_SPLIT_PCT = 0.70   # تقسيم زمني — أول 70% للتدريب
+MIN_PER_STOCK   = 20     # إشارات ناضجة لتفعيل التحليل per-stock لسهم معين
 
 # ── المتغيرات المستخدمة في الـ ML ─────────────────────────────────────────────
 # كلها من وقت الإشارة (صفر تسرّب مستقبلي)
@@ -394,6 +395,7 @@ def _pattern_analysis(df: pd.DataFrame) -> dict:
         "combined_smc_pattern":         {},
         "entry_zone_analysis":          {},
         "indicator_weight_suggestions": {},
+        "per_stock_analysis":           {},
         "n_used": 0,
     }
 
@@ -528,7 +530,191 @@ def _pattern_analysis(df: pd.DataFrame) -> dict:
             }
         result["indicator_weight_suggestions"] = ws
 
+    # ── 8. Per-Stock Hybrid Analysis ──────────────────────────────────────
+    if "symbol" in base.columns:
+        result["per_stock_analysis"] = _per_stock_pattern_analysis(base, ind_corr)
+
     return result
+
+
+# ── Per-Stock Hybrid Analysis ──────────────────────────────────────────────────
+
+def _per_stock_pattern_analysis(df: pd.DataFrame, global_corr: dict) -> dict:
+    """
+    السلوك الهجين:
+      < MIN_PER_STOCK إشارة  → global mode  (يعتمد على التحليل الكلي)
+      ≥ MIN_PER_STOCK إشارة  → per-stock mode (تحليل مستقل بمؤشرات السهم)
+
+    يُرجع:
+      mode_summary    ← قائمة بأوضاع كل سهم
+      per_stock       ← نتائج مفصّلة للأسهم في per-stock mode
+      min_required    ← الحد الأدنى المطلوب (MIN_PER_STOCK)
+    """
+    result = {
+        "min_required": MIN_PER_STOCK,
+        "mode_summary": {"global_mode": [], "per_stock_mode": []},
+        "per_stock":    {},
+    }
+
+    base = df.dropna(subset=["mfe_20d", "bq_score"])
+
+    def _sym_weights(sym_corr: dict) -> dict:
+        scores = {
+            col: abs(v["corr_mfe"]) + 0.5 * abs(v["corr_bq"])
+            for col, v in sym_corr.items()
+        }
+        total = sum(scores.values()) or 1
+        ws = {}
+        for col, score in scores.items():
+            eng_key = INDICATOR_ENGINE_KEY.get(col)
+            if not eng_key:
+                continue
+            cur_w = PATTERN_DEFAULT_WEIGHTS.get(eng_key, 1/6)
+            sug_w = score / total
+            delta = max(-cur_w * 0.50, min(cur_w * 0.50, sug_w - cur_w))
+            final = round(cur_w + delta, 4)
+            ws[eng_key] = {
+                "current":   cur_w,
+                "suggested": final,
+                "change":    round(final - cur_w, 4),
+            }
+        return ws
+
+    for sym in sorted(base["symbol"].unique()):
+        sub = base[base["symbol"] == sym]
+        n   = len(sub)
+
+        if n < MIN_PER_STOCK:
+            result["mode_summary"]["global_mode"].append({
+                "symbol":  sym,
+                "n":       n,
+                "needed":  MIN_PER_STOCK - n,
+            })
+            continue
+
+        # ── هذا السهم عنده بيانات كافية ────────────────────────────────
+        result["mode_summary"]["per_stock_mode"].append({"symbol": sym, "n": n})
+
+        # Spearman لهذا السهم تحديداً
+        sym_corr = {}
+        for col in PATTERN_INDICATOR_COLS:
+            if col not in sub.columns:
+                continue
+            c = sub[[col, "mfe_20d", "bq_score"]].dropna()
+            if len(c) < 5:
+                continue
+            sym_corr[col] = {
+                "corr_mfe": round(float(c[col].corr(c["mfe_20d"], method="spearman")), 3),
+                "corr_bq":  round(float(c[col].corr(c["bq_score"], method="spearman")), 3),
+            }
+
+        # مقارنة مع الـ global (هل سلوك هذا السهم مختلف؟)
+        vs_global = {}
+        for col, sv in sym_corr.items():
+            gc = global_corr.get(col, {})
+            gc_mfe = gc.get("corr_mfe", 0) if isinstance(gc, dict) else gc
+            diff   = sv["corr_mfe"] - gc_mfe
+            vs_global[col] = {
+                "global_corr": round(gc_mfe, 3),
+                "stock_corr":  sv["corr_mfe"],
+                "difference":  round(diff, 3),
+                "diverges":    abs(diff) > 0.15,  # اختلاف ملحوظ عن الـ global
+            }
+
+        result["per_stock"][sym] = {
+            "n":                     n,
+            "indicator_correlations": sym_corr,
+            "weight_suggestions":     _sym_weights(sym_corr) if len(sym_corr) >= 4 else {},
+            "vs_global":              vs_global,
+        }
+
+    return result
+
+
+# ── Export per-stock weights to pattern_engine ────────────────────────────────
+
+def export_per_stock_weights(research_result: dict,
+                              out_path: str = "learned_weights.json") -> bool:
+    """
+    يصدّر الأوزان المقترحة (global + per-stock) إلى learned_weights.json
+    بصيغة متوافقة مع pattern_engine.py.
+
+    تشغيل يدوي فقط:
+        python research_engine.py --export-weights
+
+    لتفعيل الأوزان في الماسح:
+        1. راجع learned_weights.json
+        2. غيّر FREEZE_WEIGHTS = False في pattern_engine.py
+    """
+    import datetime
+
+    pat          = research_result.get("pattern_analysis", {})
+    global_ws    = pat.get("indicator_weight_suggestions", {})
+    per_stock_d  = pat.get("per_stock_analysis", {}).get("per_stock", {})
+    n_used       = pat.get("n_used", 0)
+
+    if not global_ws:
+        print("[Export] No weight suggestions — run research first.")
+        return False
+
+    # ── Global weights (normalized) ───────────────────────────────────────
+    raw_global = {k: v["suggested"] for k, v in global_ws.items()}
+    total_g    = sum(raw_global.values()) or 1
+    global_weights = {k: round(v / total_g, 4) for k, v in raw_global.items()}
+
+    # ── Global directions (من التحقق إن كان متاحاً) ───────────────────────
+    dir_val   = pat.get("direction_validation", {})
+    global_directions = {}
+    for col, dv in dir_val.items():
+        eng_key = INDICATOR_ENGINE_KEY.get(col)
+        if eng_key:
+            global_directions[eng_key] = dv.get("expected", "lower")
+    # أكمّل أي مفاتيح ناقصة من الاتجاه الافتراضي
+    for col, eng_key in INDICATOR_ENGINE_KEY.items():
+        if eng_key not in global_directions:
+            global_directions[eng_key] = PATTERN_EXPECTED_DIR.get(col, "lower")
+
+    # ── Per-stock weights ──────────────────────────────────────────────────
+    per_stock_out = {}
+    for sym, sym_data in per_stock_d.items():
+        ws = sym_data.get("weight_suggestions", {})
+        if not ws:
+            continue
+        raw_sym   = {k: v["suggested"] for k, v in ws.items()}
+        total_sym = sum(raw_sym.values()) or 1
+        norm_sym  = {k: round(v / total_sym, 4) for k, v in raw_sym.items()}
+        per_stock_out[sym] = {
+            "weights":   norm_sym,
+            "directions": {k: global_directions.get(k, "lower") for k in norm_sym},
+            "based_on":  sym_data["n"],
+            "alpha":     round(min(0.85, sym_data["n"] / 200), 2),
+        }
+
+    out = {
+        "weights":    global_weights,
+        "directions": global_directions,
+        "per_stock":  per_stock_out,
+        "based_on":   n_used,
+        "alpha":      round(min(0.85, n_used / 500), 2),
+        "updated_at": str(datetime.date.today()),
+        "source":     "research_engine — MFE+BQ Spearman",
+        "note":       "Set FREEZE_WEIGHTS=False in pattern_engine.py to activate",
+    }
+
+    try:
+        with open(out_path, "w") as f:
+            json.dump(out, f, indent=2)
+    except Exception as e:
+        print(f"[Export] Write failed: {e}")
+        return False
+
+    n_ps = len(per_stock_out)
+    print(f"[Export] Weights saved → {out_path}")
+    print(f"  Global:    {global_weights}")
+    print(f"  Per-stock: {list(per_stock_out.keys()) or 'none yet'}")
+    print(f"  Based on:  {n_used} mature signals, {n_ps} stocks in per-stock mode")
+    print(f"\n  To activate: set FREEZE_WEIGHTS = False in pattern_engine.py")
+    return True
 
 
 # ── Main API ───────────────────────────────────────────────────────────────────
@@ -678,13 +864,18 @@ def save_research(result: dict, path: str = "research_results.json"):
 if __name__ == "__main__":
     import argparse
     p = argparse.ArgumentParser(description="EGX Research Engine")
-    p.add_argument("--db",   default=DB_PATH,              help="DB path")
-    p.add_argument("--out",  default="research_results.json", help="Output JSON path")
-    p.add_argument("--quiet", action="store_true")
+    p.add_argument("--db",             default=DB_PATH,              help="DB path")
+    p.add_argument("--out",            default="research_results.json", help="Output JSON path")
+    p.add_argument("--quiet",          action="store_true")
+    p.add_argument("--export-weights", action="store_true",
+                   help="Export per-stock weights to learned_weights.json")
     args = p.parse_args()
 
     res = run_research(db_path=args.db, verbose=not args.quiet)
     save_research(res, args.out)
+
+    if args.export_weights:
+        export_per_stock_weights(res)
 
     n = res["meta"].get("n_signals", 0)
     if n < MIN_SAMPLES:

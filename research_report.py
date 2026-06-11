@@ -514,6 +514,129 @@ def _build_pattern_section(res: dict) -> str:
     return html
 
 
+def _build_per_stock_pattern_section(res: dict) -> str:
+    pat      = res.get("pattern_analysis", {})
+    ps_data  = pat.get("per_stock_analysis", {})
+    if not ps_data:
+        return ""
+
+    summary      = ps_data.get("mode_summary", {})
+    global_list  = summary.get("global_mode",    [])
+    ps_list      = summary.get("per_stock_mode",  [])
+    per_stock    = ps_data.get("per_stock", {})
+    min_req      = ps_data.get("min_required", 20)
+
+    html = (
+        '<div class="section">'
+        '<h2>Pattern Engine — السلوك الهجين (Global vs Per-Stock)</h2>'
+        f'<p style="font-size:.85em;color:#666">'
+        f'الحد الأدنى لتفعيل التحليل per-stock: <strong>{min_req} إشارة ناضجة</strong> لكل سهم</p>'
+    )
+
+    # ── ملخص الأوضاع ─────────────────────────────────────────────────────
+    n_global = len(global_list)
+    n_ps     = len(ps_list)
+    html += (
+        '<div class="kpi-row">'
+        f'<div class="kpi"><div class="val">{n_ps}</div>'
+        f'<div class="lbl">أسهم في Per-Stock Mode</div></div>'
+        f'<div class="kpi"><div class="val">{n_global}</div>'
+        f'<div class="lbl">أسهم في Global Mode</div></div>'
+        '</div>'
+    )
+
+    # ── أسهم في Global Mode (تحتاج مزيداً من البيانات) ──────────────────
+    if global_list:
+        html += '<h3 style="color:#856404">أسهم في Global Mode — بيانات غير كافية بعد</h3>'
+        html += (
+            '<table><thead><tr>'
+            '<th>السهم</th><th>إشارات ناضجة</th><th>المطلوب إضافة</th>'
+            '</tr></thead><tbody>'
+        )
+        for s in sorted(global_list, key=lambda x: -x["n"]):
+            html += (
+                f"<tr><td>{s['symbol']}</td><td>{s['n']}</td>"
+                f"<td>{s['needed']} إشارة</td></tr>"
+            )
+        html += "</tbody></table>"
+
+    # ── أسهم في Per-Stock Mode ────────────────────────────────────────────
+    if per_stock:
+        html += '<h3 style="color:#155724">أسهم في Per-Stock Mode — تحليل مستقل</h3>'
+
+        for sym, sym_data in per_stock.items():
+            n        = sym_data["n"]
+            sym_corr = sym_data.get("indicator_correlations", {})
+            sym_ws   = sym_data.get("weight_suggestions",     {})
+            vs_glob  = sym_data.get("vs_global",              {})
+
+            # هل يختلف سلوك هذا السهم بشكل ملحوظ عن الـ global؟
+            diverging = [col for col, v in vs_glob.items() if v.get("diverges")]
+
+            html += (
+                f'<div class="rec-box">'
+                f'<h3>{sym} — {n} إشارة ناضجة'
+            )
+            if diverging:
+                html += f' | <span style="color:orange">⚠ سلوك مختلف عن Global في: {", ".join(diverging)}</span>'
+            html += '</h3>'
+
+            if sym_corr:
+                html += (
+                    '<table><thead><tr>'
+                    '<th>المؤشر</th>'
+                    '<th>Corr(MFE) — هذا السهم</th>'
+                    '<th>Corr(MFE) — Global</th>'
+                    '<th>الفرق</th>'
+                    '</tr></thead><tbody>'
+                )
+                for col, sv in sym_corr.items():
+                    gv      = vs_glob.get(col, {})
+                    diff    = gv.get("difference", 0)
+                    d_color = "orange" if abs(diff) > 0.15 else "#444"
+                    html += (
+                        f"<tr><td><code>{col}</code></td>"
+                        f"<td>{_f(sv['corr_mfe'], 3)}</td>"
+                        f"<td>{_f(gv.get('global_corr'), 3)}</td>"
+                        f"<td style='color:{d_color};font-weight:600'>{diff:+.3f}</td></tr>"
+                    )
+                html += "</tbody></table>"
+
+            # أوزان مقترحة خاصة بهذا السهم
+            if sym_ws:
+                has_chg = any(abs(v["change"]) > 0.005 for v in sym_ws.values())
+                if has_chg:
+                    html += '<p style="margin:8px 0 4px;font-size:.85em"><strong>أوزان مقترحة لهذا السهم:</strong></p>'
+                    html += (
+                        '<table style="font-size:.83em"><thead><tr>'
+                        '<th>المؤشر</th><th>الحالي</th><th>المقترح</th><th>التغيير</th>'
+                        '</tr></thead><tbody>'
+                    )
+                    for key, v in sorted(sym_ws.items(), key=lambda x: -abs(x[1]["change"])):
+                        chg   = v["change"]
+                        color = "green" if chg > 0 else "red"
+                        html += (
+                            f"<tr><td><code>{key}</code></td>"
+                            f"<td>{v['current']:.4f}</td>"
+                            f"<td>{v['suggested']:.4f}</td>"
+                            f"<td style='color:{color};font-weight:600'>{chg:+.4f}</td></tr>"
+                        )
+                    html += "</tbody></table>"
+
+            html += "</div>"  # rec-box
+
+        html += (
+            '<div class="warn" style="margin-top:12px">'
+            '⚠ لتفعيل الأوزان per-stock في الماسح: '
+            '<code>python research_engine.py --export-weights</code> '
+            'ثم اضبط <code>FREEZE_WEIGHTS = False</code> في <code>pattern_engine.py</code>'
+            '</div>'
+        )
+
+    html += "</div>"
+    return html
+
+
 def _build_warnings_section(warnings: list) -> str:
     if not warnings:
         return ""
@@ -566,6 +689,7 @@ def build_report(db_path: str = DB_PATH) -> str:
   {_build_model_section(res)}
   {_build_weight_suggestions_section(res)}
   {_build_pattern_section(res)}
+  {_build_per_stock_pattern_section(res)}
   {_build_segment_section(res)}
   {_build_mature_signals_section(db_path)}
 

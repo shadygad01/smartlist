@@ -81,26 +81,40 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
 
     print(f"Eligible Buy/Strong Buy signals (≥{MIN_DAYS_OLD}d old): {len(eligible)}")
 
-    # Check which are already in DB
+    # Check which are already in bottom_quality (BQ computed)
     conn = get_conn(db_path)
-    existing_ids = {
+    existing_bq_ids = {
         r[0] for r in conn.execute(
             "SELECT signal_id FROM bottom_quality"
         ).fetchall()
     }
     conn.close()
 
-    to_process = [s for s in eligible if s["id"] not in existing_ids]
-    print(f"Already in DB: {len(existing_ids)}  |  To process: {len(to_process)}")
+    need_bq    = [s for s in eligible if s["id"] not in existing_bq_ids]
+    need_r1upd = [s for s in eligible if s["id"] in existing_bq_ids]
+    print(f"Already have BQ: {len(existing_bq_ids)}  |  Need BQ computation: {len(need_bq)}")
+    print(f"Updating r1_price on {len(need_r1upd)} existing signals ...")
 
     if dry_run:
         print("Dry run — exiting without writing.")
         return
 
-    # Group by symbol to batch yfinance downloads
+    # Update r1_price on all existing signals (fast — no yfinance needed)
+    if need_r1upd:
+        conn = get_conn(db_path)
+        with conn:
+            for sig in need_r1upd:
+                conn.execute(
+                    "UPDATE signals SET r1_price = ? WHERE id = ? AND r1_price IS NULL",
+                    (sig.get("r1_price"), sig["id"])
+                )
+        conn.close()
+        print(f"  r1_price updated.")
+
+    # Group by symbol to batch yfinance downloads (only for signals missing BQ)
     from collections import defaultdict
     by_symbol: dict[str, list] = defaultdict(list)
-    for sig in to_process:
+    for sig in need_bq:
         by_symbol[sig["symbol"]].append(sig)
 
     total_ok = 0

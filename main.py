@@ -5,12 +5,16 @@ import re
 import sys
 import html as _html
 import csv
+import socket
 import pandas as pd
 import numpy as np
 import yfinance as yf
 import requests
 import traceback
 import time
+
+# yfinance لا يدعم timeout مباشرة — نضع حداً لكل socket operations
+socket.setdefaulttimeout(60)
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pattern_engine import analyze_entry_patterns
 from signal_logger import log_signal, check_outcomes

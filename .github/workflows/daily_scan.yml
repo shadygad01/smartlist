@@ -45,6 +45,7 @@ permissions:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,6 +72,7 @@ jobs:
                github.event.inputs.force_daily == 'true')
               && 'True' || 'False'
             }}
+          PYTHONUNBUFFERED: "1"
           MANUAL_RUN: >-
             ${{
               (github.event_name == 'workflow_dispatch' &&

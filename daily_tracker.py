@@ -18,6 +18,7 @@ except ImportError:
 
 from signal_db import (
     DB_PATH, get_active_signals, get_signals_needing_bq,
+    get_signals_for_bq_update,
     upsert_tracking, upsert_bottom_quality, get_tracking_history,
     init_db,
 )
@@ -139,6 +140,13 @@ def _compute_bq(sig: dict, df: pd.DataFrame) -> dict | None:
       bq_recovery  (20 pts) — سرعة الوصول لـ +7% (أقل أيام = أفضل)
       bq_reversal  (15 pts) — النصف الثاني من الـ 20 يوم > النصف الأول
       bq_volume    (10 pts) — حجم التداول في أيام الصعود > أيام الهبوط
+
+    المقاييس الموسّعة (اختيارية — تُحسَب عند توفر البيانات):
+      r1d, r3d          — عائد اليوم الأول والثالث
+      r40d, r60d        — عائد بعد 40 و60 يوم تداول
+      mfe/mae 40d, 60d  — أقصى ربح/تراجع خلال 40 و60 يوم
+      days_to_peak/trough — عدد الأيام للوصول للقمة/القاع
+      classification    — تصنيف (Huge Winner / Winner / Neutral / Loser / Major Loser)
     """
     entry_price = sig.get("price", 0)
     if not entry_price:
@@ -161,9 +169,44 @@ def _compute_bq(sig: dict, df: pd.DataFrame) -> dict | None:
     mfe_20 = round((max(highs)  - entry_price) / entry_price, 4)
     mae_20 = round((min(lows)   - entry_price) / entry_price, 4)
 
+    r1d  = round((closes[0]  - entry_price) / entry_price, 4) if len(closes) >= 1  else None
+    r3d  = round((closes[2]  - entry_price) / entry_price, 4) if len(closes) >= 3  else None
     r5d  = round((closes[4]  - entry_price) / entry_price, 4) if len(closes) >= 5  else None
     r10d = round((closes[9]  - entry_price) / entry_price, 4) if len(closes) >= 10 else None
     r20d = round((closes[19] - entry_price) / entry_price, 4) if len(closes) >= 20 else None
+
+    # ── Extended metrics — 40d and 60d (computed when data is available) ────────
+    r40d = mfe_40d = mae_40d = None
+    if len(window_full) >= 40:
+        w40     = window_full.iloc[:40]
+        r40d    = round((float(w40["Close"].iloc[-1]) - entry_price) / entry_price, 4)
+        mfe_40d = round((float(w40["High"].max()) - entry_price) / entry_price, 4)
+        mae_40d = round((float(w40["Low"].min())  - entry_price) / entry_price, 4)
+
+    r60d = mfe_60d = mae_60d = None
+    if len(window_full) >= 60:
+        w60     = window_full.iloc[:60]
+        r60d    = round((float(w60["Close"].iloc[-1]) - entry_price) / entry_price, 4)
+        mfe_60d = round((float(w60["High"].max()) - entry_price) / entry_price, 4)
+        mae_60d = round((float(w60["Low"].min())  - entry_price) / entry_price, 4)
+
+    # ── Days to peak and trough (full available window) ───────────────────────
+    all_highs      = window_full["High"].values
+    all_lows       = window_full["Low"].values
+    days_to_peak   = int(all_highs.argmax()) + 1
+    days_to_trough = int(all_lows.argmin())  + 1
+
+    # ── Classification (based on 20-day metrics) ──────────────────────────────
+    if   mfe_20 >= 0.20:
+        classification = "Huge Winner"
+    elif mfe_20 >= 0.08:
+        classification = "Winner"
+    elif mae_20 <= -0.15:
+        classification = "Major Loser"
+    elif mfe_20 >= 0.03 and mae_20 > -0.08:
+        classification = "Neutral"
+    else:
+        classification = "Loser"
 
     # ── 1. Gain Score (30 pts) ────────────────────────────────────────────────
     # MFE: 0%→0, 7%→15, 15%→25, 25%+→30
@@ -223,18 +266,29 @@ def _compute_bq(sig: dict, df: pd.DataFrame) -> dict | None:
     bq_score = round(g + d + r + rv + v, 1)
 
     return {
-        "bq_score":    bq_score,
-        "bq_gain":     round(g,  2),
-        "bq_drawdown": round(d,  2),
-        "bq_recovery": round(r,  2),
-        "bq_reversal": round(rv, 2),
-        "bq_volume":   round(v,  2),
-        "mfe_20d":     mfe_20,
-        "mae_20d":     mae_20,
-        "r5d":         r5d,
-        "r10d":        r10d,
-        "r20d":        r20d,
-        "days_to_7pct": days7,
+        "bq_score":      bq_score,
+        "bq_gain":       round(g,  2),
+        "bq_drawdown":   round(d,  2),
+        "bq_recovery":   round(r,  2),
+        "bq_reversal":   round(rv, 2),
+        "bq_volume":     round(v,  2),
+        "mfe_20d":       mfe_20,
+        "mae_20d":       mae_20,
+        "r1d":           r1d,
+        "r3d":           r3d,
+        "r5d":           r5d,
+        "r10d":          r10d,
+        "r20d":          r20d,
+        "days_to_7pct":  days7,
+        "r40d":          r40d,
+        "r60d":          r60d,
+        "mfe_40d":       mfe_40d,
+        "mae_40d":       mae_40d,
+        "mfe_60d":       mfe_60d,
+        "mae_60d":       mae_60d,
+        "days_to_peak":  days_to_peak,
+        "days_to_trough": days_to_trough,
+        "classification": classification,
     }
 
 
@@ -313,11 +367,34 @@ def run_bq_scoring(db_path: str = DB_PATH, verbose: bool = True) -> int:
             bq_str = f"{bq['bq_score']:.1f}"
             r20    = f"{bq['r20d']*100:+.1f}%" if bq.get("r20d") is not None else "N/A"
             mfe    = f"{bq['mfe_20d']*100:.1f}%" if bq.get("mfe_20d") is not None else "N/A"
+            cls    = bq.get("classification", "?")
             print(f"  ✓ {sym:<10} {sig['signal_date']}  BQ={bq_str:<5}  "
-                  f"r20d={r20}  MFE={mfe}")
+                  f"r20d={r20}  MFE={mfe}  [{cls}]")
 
     if verbose:
         print(f"[BQ] Done — scored {scored}/{len(signals)}")
+
+    # ── تحديث المقاييس الموسّعة (r40d/r60d) للإشارات التي تستحق ─────────────
+    update_sigs = get_signals_for_bq_update(db_path=db_path)
+    if update_sigs:
+        if verbose:
+            print(f"[BQ] Updating extended metrics for {len(update_sigs)} signals ...")
+        upairs   = [(s["symbol"], s["signal_date"]) for s in update_sigs]
+        udata    = _batch_fetch(upairs)
+        updated_ext = 0
+        for sig in update_sigs:
+            sym = sig["symbol"]
+            df  = udata.get(sym)
+            if df is None:
+                continue
+            bq = _compute_bq(sig, df)
+            if bq is None:
+                continue
+            upsert_bottom_quality(sig["id"], bq, db_path=db_path)
+            updated_ext += 1
+        if verbose:
+            print(f"[BQ] Extended metrics updated for {updated_ext}/{len(update_sigs)} signals.")
+
     return scored
 
 

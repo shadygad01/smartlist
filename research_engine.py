@@ -28,9 +28,13 @@ except ImportError:
     sys.exit("Run: pip install numpy pandas")
 
 try:
-    from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+    from sklearn.ensemble import (
+        RandomForestRegressor, GradientBoostingRegressor,
+        RandomForestClassifier,
+    )
     from sklearn.inspection import permutation_importance
-    from sklearn.metrics import r2_score, mean_absolute_error
+    from sklearn.metrics import r2_score, mean_absolute_error, roc_auc_score
+    from sklearn.feature_selection import mutual_info_regression
     from sklearn.preprocessing import StandardScaler
     SKLEARN_OK = True
 except ImportError:
@@ -43,6 +47,8 @@ except ImportError:
     LGBM_OK = False
 
 from signal_db import DB_PATH, get_mature_signals, CURRENT_WEIGHTS, WEIGHT_LABELS
+
+WIN_MFE_THRESHOLD = 0.08   # نفس قيمة edge_discovery
 
 try:
     from pattern_engine import DEFAULT_WEIGHTS as PATTERN_DEFAULT_WEIGHTS
@@ -58,13 +64,16 @@ MIN_PER_STOCK     = 20   # إشارات ناضجة لتفعيل تحليل per-s
 MIN_PER_STOCK_ML  = 30   # إشارات ناضجة لتفعيل ML model per-stock
 TOP_MFE_PERCENTILE= 0.75 # الربع الأعلى = "نماذج الفائزة"
 
-# المتغيرات الكاملة — 75 متغير بعد إضافة الـ 18 الجديدة
+# أنواع الإشارات التي تمثّل قرار دخول فعلي — Wait يُسجَّل للمراقبة فقط
+ML_SIGNAL_TYPES = {"Early Buy", "Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy"}
+
+# المتغيرات الكاملة — 49 متغير (مطابقة لـ FEATURE_COLS تماماً)
 ALL_FEATURE_COLS = [
     "raw_score", "adj_score",
     "r1_price", "r2_ob", "r3_liquidity", "r4_htf",
     "r5_avwap", "r6_macd", "r7_div", "r8_demand",
     "discount_depth",
-    "pattern_score", "pattern_eff", "pattern_wr", "pattern_gain",
+    "pattern_score", "pattern_eff", "pattern_wr", "pattern_gain", "pattern_n",
     "ind_stoch_rsi", "ind_p_vs_ma20", "ind_mom_10d",
     "ind_mom_5d", "ind_atr_ratio", "ind_vol_trend",
     "sv_hit", "sv_score", "hvn_hit", "hvn_score",
@@ -140,9 +149,10 @@ def _to_df(signals: list) -> pd.DataFrame:
     if df.empty:
         return df
     df = df.sort_values("signal_date").reset_index(drop=True)
-    # mae_20d سالبة — نحوّلها لقيمة موجبة (سوء الأداء)
-    if "mae_20d" in df.columns:
-        df["mae_20d"] = df["mae_20d"].abs()
+    # mae columns سالبة — نحوّلها لقيم موجبة (سوء الأداء)
+    for mae_col in ["mae_20d", "mae_40d", "mae_60d"]:
+        if mae_col in df.columns:
+            df[mae_col] = df[mae_col].abs()
     return df
 
 
@@ -571,6 +581,113 @@ def _pattern_analysis(df: pd.DataFrame) -> dict:
     return result
 
 
+# ── Mutual Information ─────────────────────────────────────────────────────────
+
+def _mutual_information(df: pd.DataFrame) -> dict:
+    """
+    يحسب Mutual Information بين كل متغير والـ target (MFE و BQ).
+    يقيس الارتباط غير الخطي — يكمّل Spearman.
+    النتيجة مُعيَّرة بين 0 و 1 (0 = لا ارتباط، 1 = أقوى ارتباط في المجموعة).
+    """
+    if not SKLEARN_OK:
+        return {}
+
+    cols    = [c for c in FEATURE_COLS if c in df.columns]
+    results = {}
+
+    for target, tname in [(TARGET_MFE, "mfe_20d"), (TARGET_BQ, "bq_score")]:
+        if target not in df.columns:
+            continue
+        valid = df[cols + [target]].dropna()
+        if len(valid) < MIN_SAMPLES:
+            continue
+
+        X  = valid[cols].fillna(0).values
+        y  = valid[target].values
+
+        try:
+            mi_vals = mutual_info_regression(X, y, random_state=42)
+        except Exception:
+            continue
+
+        mi_dict  = dict(zip(cols, mi_vals))
+        max_mi   = max(mi_dict.values()) if mi_dict else 1.0
+        max_mi   = max(max_mi, 1e-9)
+        mi_norm  = {k: round(float(v) / max_mi, 4) for k, v in mi_dict.items()}
+        results[tname] = dict(sorted(mi_norm.items(), key=lambda x: -x[1]))
+
+    return results
+
+
+# ── Probability Analysis ───────────────────────────────────────────────────────
+
+def _probability_analysis(df: pd.DataFrame) -> dict:
+    """
+    يُدرّب RandomForest Classifier على تحديد "إشارة فائزة" (MFE ≥ 8%).
+    يُنتج:
+      auc              ← دقة التصنيف (0.5 = عشوائي، 1.0 = مثالي)
+      base_win_rate    ← نسبة الفائزين في الـ test set
+      high_conf_n      ← عدد الإشارات بثقة ≥ 65%
+      high_conf_precision ← دقة التنبؤات عالية الثقة
+      top5_features    ← أهم 5 متغيرات في التصنيف
+    """
+    if not SKLEARN_OK:
+        return {"error": "scikit-learn not installed"}
+
+    cols  = [c for c in FEATURE_COLS if c in df.columns]
+    valid = df[cols + ["mfe_20d"]].dropna()
+
+    if len(valid) < MIN_SAMPLES:
+        return {"error": f"Need {MIN_SAMPLES} signals, have {len(valid)}"}
+
+    y = (valid["mfe_20d"] >= WIN_MFE_THRESHOLD).astype(int)
+    X = valid[cols]
+
+    split   = int(len(valid) * TRAIN_SPLIT_PCT)
+    X_tr, X_te = X.iloc[:split], X.iloc[split:]
+    y_tr, y_te = y.iloc[:split], y.iloc[split:]
+
+    if len(X_te) < 5:
+        return {"error": "test set too small"}
+    if y_te.nunique() < 2:
+        return {"error": "no class variation in test set"}
+
+    try:
+        model = RandomForestClassifier(
+            n_estimators=200, max_depth=6,
+            min_samples_leaf=3, class_weight="balanced",
+            random_state=42, n_jobs=-1,
+        )
+        model.fit(X_tr.values, y_tr.values)
+        proba = model.predict_proba(X_te.values)[:, 1]
+        auc   = round(roc_auc_score(y_te.values, proba), 3)
+    except Exception as e:
+        return {"error": str(e)}
+
+    base_win_rate = round(float(y_te.mean()), 4)
+
+    # إشارات بثقة عالية (≥ 65%)
+    hc_mask      = proba >= 0.65
+    hc_n         = int(hc_mask.sum())
+    hc_wins      = int(y_te.values[hc_mask].sum()) if hc_n > 0 else 0
+    hc_precision = round(hc_wins / max(hc_n, 1), 4)
+
+    imp  = dict(zip(cols, model.feature_importances_))
+    top5 = sorted(imp.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    return {
+        "auc":               auc,
+        "n_train":           len(y_tr),
+        "n_test":            len(y_te),
+        "base_win_rate":     base_win_rate,
+        "win_threshold_pct": WIN_MFE_THRESHOLD * 100,
+        "high_conf_n":       hc_n,
+        "high_conf_wins":    hc_wins,
+        "high_conf_precision": hc_precision,
+        "top5_features":     [(k, round(v, 4)) for k, v in top5],
+    }
+
+
 # ── Best Conditions Profile ───────────────────────────────────────────────────
 
 def _best_conditions_profile(df: pd.DataFrame) -> dict:
@@ -607,9 +724,13 @@ def _best_conditions_profile(df: pd.DataFrame) -> dict:
 
             t_mean  = float(t_vals.mean())
             b_mean  = float(b_vals.mean())
-            t_std   = float(sub[feat].std()) or 1.0
-            # effect size (Cohen's d simplified)
-            effect  = (t_mean - b_mean) / t_std
+            # Cohen's d: pooled within-group std (not total std which inflates for boolean features)
+            pooled_var = (
+                (len(t_vals) - 1) * float(t_vals.std()) ** 2 +
+                (len(b_vals) - 1) * float(b_vals.std()) ** 2
+            ) / max(len(t_vals) + len(b_vals) - 2, 1)
+            pooled_std = max(pooled_var ** 0.5, 1e-6)
+            effect  = (t_mean - b_mean) / pooled_std
             conditions[feat] = {
                 "top_mean":    round(t_mean, 4),
                 "bottom_mean": round(b_mean, 4),
@@ -911,12 +1032,21 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
       warnings      ← تحذيرات (حجم البيانات، جودة النموذج)
     """
     signals = get_mature_signals(db_path=db_path)
-    df      = _to_df(signals)
+    df_all  = _to_df(signals)
+
+    # ML يتدرب على إشارات الدخول الفعلي فقط (Early Buy / Buy / …)
+    # Wait يبقى مسجّل للمراقبة البحثية لكن لا يدخل التدريب
+    if "signal_type" in df_all.columns and not df_all.empty:
+        df = df_all[df_all["signal_type"].isin(ML_SIGNAL_TYPES)].reset_index(drop=True)
+    else:
+        df = df_all
 
     result = {
         "generated_at": date.today().isoformat(),
         "meta": {},
         "correlation": {},
+        "mutual_information": {},
+        "probability_analysis": {},
         "rf_mfe": None, "rf_bq": None,
         "gbm_mfe": None, "gbm_bq": None,
         "weight_suggestions": {},
@@ -924,13 +1054,18 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
         "pattern_analysis": {},
         "best_conditions": {},
         "per_stock_ml": {},
+        "edge_discovery": [],
         "warnings": [],
     }
 
     # ── Dataset Meta ───────────────────────────────────────────────────────
-    n = len(df)
+    n       = len(df)
+    n_total = len(df_all)
+    n_wait  = n_total - n
     result["meta"] = {
-        "n_signals":   n,
+        "n_signals":   n,        # إشارات الدخول الفعلي — للـ ML
+        "n_total":     n_total,  # كل الإشارات (شاملة Wait)
+        "n_wait":      n_wait,   # إشارات Wait (مراقبة فقط)
         "date_range":  [
             str(df["signal_date"].min()) if n else None,
             str(df["signal_date"].max()) if n else None,
@@ -950,6 +1085,12 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
     # ── Correlation (always available if ≥10 signals) ─────────────────────
     if n >= 10:
         result["correlation"] = _correlation_analysis(df)
+
+    # ── Mutual Information ─────────────────────────────────────────────────
+    if SKLEARN_OK and n >= MIN_SAMPLES:
+        result["mutual_information"] = _mutual_information(df)
+        if verbose and result["mutual_information"]:
+            print("  [MI] Mutual information computed")
 
     # ── ML Models (only if ≥ MIN_SAMPLES) ────────────────────────────────
     if not SKLEARN_OK:
@@ -1000,11 +1141,12 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
                     bq_imp[k] = (bq_imp.get(k, 0) + v) / 2
             result["weight_suggestions"] = _suggest_weights(mfe_imp, bq_imp)
 
-    # ── Segment Analysis (always) ─────────────────────────────────────────
-    if n >= 5:
-        result["segment_analysis"] = _segment_analysis(df)
+    # ── Segment Analysis — يستخدم كل الإشارات (شاملة Wait) للمقارنة ─────
+    n_all = len(df_all)
+    if n_all >= 5:
+        result["segment_analysis"] = _segment_analysis(df_all)
 
-    # ── Pattern Engine Analysis ───────────────────────────────────────────
+    # ── Pattern Engine Analysis — إشارات الدخول فقط ──────────────────────
     if n >= 5:
         result["pattern_analysis"] = _pattern_analysis(df)
 
@@ -1026,6 +1168,24 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
             changed = [k for k, v in ws.items() if abs(v.get("change", 0)) > 0.005]
             if changed:
                 print(f"  [Pattern] Weight changes suggested for: {', '.join(changed)}")
+
+    # ── Probability Analysis ───────────────────────────────────────────────
+    if SKLEARN_OK and n >= MIN_SAMPLES:
+        result["probability_analysis"] = _probability_analysis(df)
+        pa = result["probability_analysis"]
+        if verbose and "auc" in pa:
+            print(f"  [Proba]   AUC={pa['auc']}  high_conf={pa['high_conf_n']} "
+                  f"precision={pa['high_conf_precision']:.1%}")
+
+    # ── Edge Discovery ────────────────────────────────────────────────────
+    if n >= MIN_SAMPLES:
+        try:
+            from edge_discovery import run_edge_discovery
+            result["edge_discovery"] = run_edge_discovery(
+                db_path=db_path, top_k=20, verbose=verbose,
+            )
+        except Exception as e:
+            result["warnings"].append(f"Edge discovery failed: {e}")
 
     # ── Low R² Warning ────────────────────────────────────────────────────
     for key in ["rf_mfe", "rf_bq"]:

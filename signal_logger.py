@@ -89,8 +89,10 @@ def log_signal(symbol, result):
     signal = result.get("signal", "")
     score  = result.get("score", 0)
 
-    if score < 35 or signal not in ("BUY", "WATCH", "Institutional Buy",
-                                    "Strong Buy", "Aggressive Buy"):
+    # كل عائلة إشارات الشراء التي يصدرها sig_info() فعلياً + أسماء قديمة للتوافق
+    BUY_FAMILY = ("Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy",
+                  "BUY", "WATCH", "Aggressive Buy")
+    if score < 35 or signal not in BUY_FAMILY:
         return
 
     today_str = date.today().isoformat()

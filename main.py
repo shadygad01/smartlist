@@ -53,12 +53,13 @@ STOCKS = [
 # =========================================
 # WHITELIST - Price Gate Threshold >= 15
 # =========================================
-# Backtest evidence (2,774 signals, Sep-2024→May-2026):
-#   r1>=12 (all):  MDD=-0.20%, CAGR=958%  — includes losing signals
-#   r1>=15:        MDD= 0.00%, CAGR=1001% — zero negative outcomes
-#   r1>=18:        MDD= 0.00%, CAGR=928%  — over-filters, reduces CAGR
-# → Raising PRICE_GATE_WHITELIST from 12 → 15 eliminates all losing signals
-#   while keeping more volume than the strict 18-gate used for normal stocks.
+# ⚠️ تنبيه منهجي (مراجعة مستقلة 2026-06):
+# الأرقام السابقة هنا (MDD=0%, CAGR=1001%) كانت من تحليل دائري في
+# backtest_analysis.py: عتبات r1 كانت تُحاكى بالفلترة على "العائد المحقق"
+# نفسه (outcome percentiles)، أي اختيار الصفقات بنتيجتها المستقبلية.
+# سجل signal_log التاريخي لا يحتوي r1 أصلاً (smc_score=0 لكل الأحداث).
+# القيم الحالية (15/16) أبقيناها كما هي، لكن لا يوجد دليل صالح يفضّلها
+# على 14 أو 18 — التحقق الحقيقي الوحيد هو سجل الإشارات الحية الآجل.
 WHITELIST = [
     "FWRY.CA",  # Fawry for Banking Technology
     "EAST.CA",  # Eastern Company
@@ -71,8 +72,8 @@ WHITELIST = [
     "GBCO.CA",  # GB Auto
 ]
 
-PRICE_GATE_NORMAL    = 16   # Lowered 18→16: backtest shows r1>=15 → MDD=0.00%, CAGR=1001%
-PRICE_GATE_WHITELIST = 15   # Raised 12→15: eliminates r1=12-14 losing signals
+PRICE_GATE_NORMAL    = 16   # ملاحظة: فحص الحساسية على بيانات حية (فبراير-يونيو 2026) أظهر
+PRICE_GATE_WHITELIST = 15   # فروقاً طفيفة بين 13 و19 — المعلمة Moderate وليست محسومة بدليل
 
 NAMES = {
     "COMI.CA": "Commercial International Bank",
@@ -108,17 +109,17 @@ SECTORS = {
     "COMI.CA": "Banking",
     "TMGH.CA": "Real Estate",
     "ETEL.CA": "Telecommunications",
-    "EGAL.CA": "Banking",
+    "EGAL.CA": "Basic Resources",
     "EAST.CA": "Consumer Goods",
     "ABUK.CA": "Chemicals & Fertilizers",
     "ORAS.CA": "Engineering & Construction",
     "EFIH.CA": "Financial Services",
     "ADIB.CA": "Banking",
     "FWRY.CA": "Financial Technology",
-    "EMFD.CA": "Food & Beverages",
+    "EMFD.CA": "Real Estate",
     "PHDC.CA": "Real Estate",
     "ORHD.CA": "Real Estate",
-    "EFID.CA": "Financial Services",
+    "EFID.CA": "Food & Beverages",
     "HRHO.CA": "Financial Services",
     "JUFO.CA": "Food & Beverages",
     "BTFH.CA": "Financial Services",
@@ -126,7 +127,7 @@ SECTORS = {
     "GBCO.CA": "Automotive",
     "HELI.CA": "Real Estate",
     "ARCC.CA": "Construction Materials",
-    "MCQE.CA": "Healthcare",
+    "MCQE.CA": "Construction Materials",
     "ORWE.CA": "Manufacturing",
     "ISPH.CA": "Healthcare",
     "RMDA.CA": "Healthcare",
@@ -226,13 +227,15 @@ W_DIV    =  3
 W_DZ     = 15   # Demand Zone Confluence (Stopping Volume + Volume Profile)
 
 # ── Stock Quality Tiers ────────────────────────────────────────────────────────
-# Derived from historical BUY signal outcomes (large% = gain>20%):
-# Stock quality tiers — updated from backtest (2,774 signals, Sep-2024→May-2026):
-#   Tier A (exp>10%):  MCQE 13.3%, ARCC 11.3%, OIH 9.9% → ×1.15
-#   Tier B (exp 7-10%): CCAP 10.0%, EFID, ETEL, PHDC, ISPH 9.1% → ×1.07
-#   Tier C (exp 4-7%): most stocks → ×1.00
-#   Tier D (exp<4%):  JUFO 2%, HRHO 4%, EAST 5%, EFIH 6% → ×0.88
-# Changes vs prior: OIH promoted Tier C→A (+15%), ISPH added Tier B (+7%)
+# ⚠️ تنبيه منهجي (مراجعة مستقلة 2026-06):
+# التصنيفات مشتقة من متوسط عوائد "أحداث قيعان محلية" تاريخية، وليست من
+# إشارات الماسح. فحص ثبات الترتيب بين نصفي الفترة (قبل/بعد 2025-08)
+# أعطى Spearman rho = 0.03 ≈ صفر — أي أن ترتيب الأسهم لا يثبت زمنياً
+# والفروق غالباً ضوضاء + Multiple Testing على 27 سهماً.
+# كذلك بعض القيم ملوثة بأحداث Corporate Actions غير معالَجة (EFID/HELI splits).
+# المضاعفات حالياً غير مؤثرة على اختيار الصفقات (score≥65 دائماً عند عبور
+# بوابة r1) — أثرها فقط على Position Sizing. يُنصح بتحييدها إلى 1.00
+# حتى يتوفر دليل حي مستقر ≥ 12 شهراً.
 STOCK_QUALITY: dict[str, float] = {
     # Tier A  (expectancy > 10%)
     "MCQE.CA": 1.15, "RAYA.CA": 1.15, "ORHD.CA": 1.15, "ARCC.CA": 1.15,
@@ -244,27 +247,24 @@ STOCK_QUALITY: dict[str, float] = {
     "JUFO.CA": 0.88, "HRHO.CA": 0.88, "EAST.CA": 0.88, "EFIH.CA": 0.88,
 }
 
-# Context multipliers — CORRECTED from backtest evidence (2,774 signals):
-#
-#   RAMADAN (n=325):     win_rate=12.9%, expectancy=5.1%  ← BELOW baseline 26.9%
-#   Non-Ramadan (n=2449): win_rate=26.9%, expectancy=7.6%
-#   → Previous CTX_RAMADAN_MULT=1.15 boosted Ramadan scores — WRONG DIRECTION.
-#   → Corrected to 0.85 (−15% penalty) reflecting actual lower win probability.
-#
-#   CBE WINDOW (n=450):  win_rate=34.0%, expectancy=8.6% ← ABOVE baseline 23.5%
-#   Non-CBE (n=2324):    win_rate=23.5%, expectancy=7.0%
-#   → Previous CTX_CBE_MULT=0.85 penalised CBE windows — WRONG DIRECTION.
-#   → Corrected to 1.15 (+15% bonus) reflecting actual higher win probability.
-CTX_RAMADAN_MULT = 0.70   # −30% penalty: Ramadan WR=12.9% vs baseline 26.9% (−52% drop, −15% was too lenient)
-CTX_CBE_MULT     = 1.30   # +30% bonus: CBE WR=34.0% vs baseline 23.5% (+45% uplift, +15% was undervalued)
+# Context multipliers:
+# المراجعة المستقلة (عوائد close-to-close صادقة، 15 يوم تداول، 2,774 حدثاً):
+#   رمضان    (n=325):  متوسط +0.25%  مقابل +3.40% خارج رمضان  → الاتجاه السالب صحيح
+#   نافذة CBE (n=450):  متوسط +4.76%  مقابل +2.70% خارجها       → الاتجاه الموجب صحيح
+# الاتجاهان مدعومان بالبيانات، لكن المقدار (±30%) غير قابل للمعايرة من السجل
+# الحالي (لا يحتوي scores تاريخية). عملياً المضاعفان غير مؤثرَين على اختيار
+# الصفقات (score بعد البوابة ≥65 دائماً) — الأثر على التصنيف والعرض فقط.
+CTX_RAMADAN_MULT = 0.70
+CTX_CBE_MULT     = 1.30
 
 # =========================================
 # POSITION SIZING (Conservative Fund Mode)
 # =========================================
-# Backtest with 2% fixed risk/trade: CAGR=958%, MDD=-0.20% (vs unlimited sizing)
-# Kelly fraction for this system: f* = (p*b - q) / b ≈ 0.20 (20% Kelly)
-# We use 1/4 Kelly = 5% as full position, 2% as minimum/default for new entries.
-# This caps single-trade impact and keeps portfolio MDD within the 10-15% target.
+# ⚠️ الأرقام السابقة هنا (CAGR=958%, MDD=-0.20%) كانت من محاكاة غير قابلة
+# للتنفيذ: خروج عند قمة المستقبل + تعرض متزامن يصل 378% من رأس المال.
+# محاكاة واقعية (قيد تعرض ≤100%، عوائد close-to-close، تكاليف 0.6%) تعطي
+# ترتيب CAGR ≈ 35-50% و MDD ≈ 5-7% لنفس الأحداث — وهذا لسلة "كل قاع محلي"
+# وليس لإشارات الماسح. الأحجام 2%/5% معقولة كإدارة مخاطر متحفظة بذاتها.
 MAX_RISK_PER_TRADE_PCT = 2.0    # % of portfolio to risk on a single new signal
 FULL_POSITION_PCT      = 5.0    # % of portfolio for high-conviction (score >= 70) signals
 
@@ -1274,8 +1274,9 @@ def analyze(symbol):
         hist_date  = df.index[-1].strftime("%Y-%m-%d")
         cur        = hist_price
         last_dt    = hist_date
-        src        = "TradingView Scanner" if "ORAS" in symbol else "EGX yfinance"
-        is_fresh   = True
+        src        = "yfinance + TradingView patch"   # نفس المصدر لكل الأسهم
+        # حديثة = آخر شمعة بتاريخ آخر يوم تداول فعلي (كانت سابقاً True دائماً)
+        is_fresh   = (hist_date == str(most_recent_trading_day()))
 
         close            = df["Close"]
         hi,lo,eq,buy_hi,sell_lo = swings(df)
@@ -1397,13 +1398,6 @@ def analyze(symbol):
         }
     except Exception as e:
         return {"ok":False,"error":str(e)}
-
-# =========================================
-# NEWS
-# =========================================
-
-def get_news(symbol):
-    return [{"headline":"News aggregator synchronized","date_str":"","days_ago":0}]
 
 # =========================================
 # SAVE HISTORY
@@ -2228,19 +2222,23 @@ def send_telegram_alerts(results):
         lines.append("━━━━━━━━━━━━━━━━━━━━━\n")
 
     SIGNAL_EMOJI = {
-        "STRONG BUY":  "🟢",
-        "BUY":         "🟩",
-        "WATCH":       "🟡",
-        "NEUTRAL":     "⚪",
-        "SELL":        "🔴",
-        "STRONG SELL": "🔴",
+        "INSTITUTIONAL BUY": "🟢",
+        "VERY STRONG BUY":   "🟢",
+        "STRONG BUY":        "🟢",
+        "BUY":               "🟩",
+        "WATCH":             "🟡",
+        "WAIT":              "🟡",
+        "NEUTRAL":           "⚪",
+        "SELL":              "🔴",
+        "STRONG SELL":       "🔴",
     }
+    BUY_FAMILY_UPPER = {"BUY", "STRONG BUY", "VERY STRONG BUY", "INSTITUTIONAL BUY"}
 
     for s, r in alerts:
         signal_upper = r.get("signal", "").upper()
         emoji        = SIGNAL_EMOJI.get(signal_upper, "🔵")
         fresh_flag   = "✅" if r.get("is_fresh") else "⚠️"
-        is_buy       = signal_upper in ("BUY", "STRONG BUY")
+        is_buy       = signal_upper in BUY_FAMILY_UPPER
 
         in_portfolio = s in positions and positions[s].get("status") == "open"
         portfolio_tag = "  🔵 _In Portfolio_" if in_portfolio else ""
@@ -2416,13 +2414,20 @@ def _collect_current_prices(results):
         and results[s]["price"] > 0
     }
 
+_BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy"}
+
 def _register_new_positions(results):
-    """Register positions for all qualifying stocks not already tracked."""
+    """
+    Register positions for qualifying stocks not already tracked.
+    يشترط إشارة شراء فعلية (يعني بوابة السيولة Sweep & Reverse عدّت) —
+    سابقاً كان يسجّل مراكز لإشارات "Wait" بما يناقض تصميم الـ Dual Gate.
+    """
     qualifying = {
         s for s in STOCKS
         if results[s].get("ok")
+        and results[s].get("signal") in _BUY_SIGNALS
         and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
-        and results[s].get("r1", 0) >= (15 if s in WHITELIST else 16)
+        and results[s].get("r1", 0) >= (PRICE_GATE_WHITELIST if s in WHITELIST else PRICE_GATE_NORMAL)
     }
     for stock in qualifying:
         positions = load_open_positions()

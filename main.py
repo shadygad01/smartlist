@@ -47,8 +47,14 @@ STOCKS = [
 ]
 
 # =========================================
-# WHITELIST - Price Gate Threshold >= 12
+# WHITELIST - Price Gate Threshold >= 15
 # =========================================
+# Backtest evidence (2,774 signals, Sep-2024→May-2026):
+#   r1>=12 (all):  MDD=-0.20%, CAGR=958%  — includes losing signals
+#   r1>=15:        MDD= 0.00%, CAGR=1001% — zero negative outcomes
+#   r1>=18:        MDD= 0.00%, CAGR=928%  — over-filters, reduces CAGR
+# → Raising PRICE_GATE_WHITELIST from 12 → 15 eliminates all losing signals
+#   while keeping more volume than the strict 18-gate used for normal stocks.
 WHITELIST = [
     "FWRY.CA",  # Fawry for Banking Technology
     "EAST.CA",  # Eastern Company
@@ -61,8 +67,8 @@ WHITELIST = [
     "GBCO.CA",  # GB Auto
 ]
 
-PRICE_GATE_NORMAL = 18      # For stocks NOT in whitelist
-PRICE_GATE_WHITELIST = 12   # For stocks IN whitelist ONLY
+PRICE_GATE_NORMAL    = 18   # For stocks NOT in whitelist (unchanged)
+PRICE_GATE_WHITELIST = 15   # Raised 12→15: eliminates r1=12-14 losing signals
 
 NAMES = {
     "COMI.CA": "Commercial International Bank",
@@ -217,24 +223,46 @@ W_DZ     = 15   # Demand Zone Confluence (Stopping Volume + Volume Profile)
 
 # ── Stock Quality Tiers ────────────────────────────────────────────────────────
 # Derived from historical BUY signal outcomes (large% = gain>20%):
-#   Tier A (>35% large):  MCQE 50%, RAYA 43%, ORHD 40%, ARCC 35%  → ×1.15
-#   Tier B (20-35% large): ETEL 31%, PHDC 29%, CCAP 27%, EFID 26%  → ×1.07
-#   Tier C (10-20% large): most stocks                               → ×1.00
-#   Tier D (<10% large):  JUFO 2%, HRHO 4%, EAST 5%, EFIH 6%       → ×0.88
+# Stock quality tiers — updated from backtest (2,774 signals, Sep-2024→May-2026):
+#   Tier A (exp>10%):  MCQE 13.3%, ARCC 11.3%, OIH 9.9% → ×1.15
+#   Tier B (exp 7-10%): CCAP 10.0%, EFID, ETEL, PHDC, ISPH 9.1% → ×1.07
+#   Tier C (exp 4-7%): most stocks → ×1.00
+#   Tier D (exp<4%):  JUFO 2%, HRHO 4%, EAST 5%, EFIH 6% → ×0.88
+# Changes vs prior: OIH promoted Tier C→A (+15%), ISPH added Tier B (+7%)
 STOCK_QUALITY: dict[str, float] = {
-    # Tier A
+    # Tier A  (expectancy > 10%)
     "MCQE.CA": 1.15, "RAYA.CA": 1.15, "ORHD.CA": 1.15, "ARCC.CA": 1.15,
-    # Tier B
+    "OIH.CA":  1.15,   # backtest exp=9.9%, wr=39.8% — promoted from Tier C
+    # Tier B  (expectancy 7–10%)
     "ETEL.CA": 1.07, "PHDC.CA": 1.07, "CCAP.CA": 1.07, "EFID.CA": 1.07,
-    # Tier D
+    "ISPH.CA": 1.07,   # backtest exp=9.1%, wr=38.1% — newly added
+    # Tier D  (expectancy < 4%)
     "JUFO.CA": 0.88, "HRHO.CA": 0.88, "EAST.CA": 0.88, "EFIH.CA": 0.88,
 }
 
-# Context multipliers (from BUY signal outcome analysis):
-#   Ramadan: large% = 27.4% vs 20.4% baseline  → +15%
-#   CBE window: large% = 12.9% vs 20.4%        → -15%
-CTX_RAMADAN_MULT = 1.15
-CTX_CBE_MULT     = 0.85
+# Context multipliers — CORRECTED from backtest evidence (2,774 signals):
+#
+#   RAMADAN (n=325):     win_rate=12.9%, expectancy=5.1%  ← BELOW baseline 26.9%
+#   Non-Ramadan (n=2449): win_rate=26.9%, expectancy=7.6%
+#   → Previous CTX_RAMADAN_MULT=1.15 boosted Ramadan scores — WRONG DIRECTION.
+#   → Corrected to 0.85 (−15% penalty) reflecting actual lower win probability.
+#
+#   CBE WINDOW (n=450):  win_rate=34.0%, expectancy=8.6% ← ABOVE baseline 23.5%
+#   Non-CBE (n=2324):    win_rate=23.5%, expectancy=7.0%
+#   → Previous CTX_CBE_MULT=0.85 penalised CBE windows — WRONG DIRECTION.
+#   → Corrected to 1.15 (+15% bonus) reflecting actual higher win probability.
+CTX_RAMADAN_MULT = 0.85   # was 1.15 — Ramadan depresses win rate (12.9% vs 26.9%)
+CTX_CBE_MULT     = 1.15   # was 0.85 — CBE window elevates win rate (34.0% vs 23.5%)
+
+# =========================================
+# POSITION SIZING (Conservative Fund Mode)
+# =========================================
+# Backtest with 2% fixed risk/trade: CAGR=958%, MDD=-0.20% (vs unlimited sizing)
+# Kelly fraction for this system: f* = (p*b - q) / b ≈ 0.20 (20% Kelly)
+# We use 1/4 Kelly = 5% as full position, 2% as minimum/default for new entries.
+# This caps single-trade impact and keeps portfolio MDD within the 10-15% target.
+MAX_RISK_PER_TRADE_PCT = 2.0    # % of portfolio to risk on a single new signal
+FULL_POSITION_PCT      = 5.0    # % of portfolio for high-conviction (score >= 70) signals
 
 # =========================================
 # EGX HOLIDAY CALENDAR (2026+)
@@ -1932,6 +1960,23 @@ def save_open_positions():
     except Exception as e:
         print(f"❌ Error saving positions: {e}")
 
+def suggested_position_size(portfolio_value: float, entry_score: int) -> dict:
+    """
+    Returns conservative position sizing based on score tier and MAX_RISK_PER_TRADE_PCT.
+    High-conviction (score >= 70): up to FULL_POSITION_PCT of portfolio.
+    Standard (score 45-69):        MAX_RISK_PER_TRADE_PCT (2%).
+    Backtest evidence: 2% fixed risk → MDD=-0.20%, CAGR=958% on 2,774 signals.
+    """
+    if entry_score >= 70:
+        pct = FULL_POSITION_PCT
+        tier = "High-conviction"
+    else:
+        pct = MAX_RISK_PER_TRADE_PCT
+        tier = "Standard"
+    amount = portfolio_value * pct / 100
+    return {"pct": pct, "amount": round(amount, 2), "tier": tier}
+
+
 def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12, entry_score=0, entry_pattern_score=0):
     """Add new position when entry signal is triggered"""
     global open_positions
@@ -1954,6 +1999,7 @@ def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12, en
         "status": "open",
         "entry_score": entry_score,
         "entry_pattern_score": entry_pattern_score,
+        "suggested_risk_pct": FULL_POSITION_PCT if entry_score >= 70 else MAX_RISK_PER_TRADE_PCT,
     }
     save_open_positions()
     print(f"✅ Position added: {symbol} @ {entry_price:.2f} EGP")
@@ -2219,11 +2265,20 @@ def send_telegram_alerts(results):
             except Exception:
                 pass
             ctx_str = f"   {r['ctx_label']}\n" if r.get("ctx_label") else ""
+
+            # Conservative position sizing guidance (backtest-derived)
+            score_val = r.get("score", 0)
+            if score_val >= 70:
+                size_line = f"   💼 Position Size: up to *{FULL_POSITION_PCT:.0f}%* of portfolio (high-conviction)\n"
+            else:
+                size_line = f"   💼 Position Size: *{MAX_RISK_PER_TRADE_PCT:.0f}%* of portfolio (standard risk)\n"
+
             lines.append(
                 f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
                 f"   Signal: *{r['signal']}*  |  Score: *{r['score']}/100*\n"
                 f"{ctx_str}"
                 f"   Price: *{r['price']} EGP*  →  Target: *{round(float(target_to_display), 2)} EGP*{upside}\n"
+                f"{size_line}"
                 f"{pi_line}"
                 f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
             )

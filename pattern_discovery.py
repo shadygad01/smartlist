@@ -234,15 +234,20 @@ def run_pattern_discovery(
             "mae_distribution": _mae_distribution(df) if len(df) >= 5 else {},
         }
 
-    # حدد المتغيرات المتاحة
-    used_feats = [f for f in CLUSTER_FEATURES if f in df.columns]
+    # حدد المتغيرات المتاحة — فقط الأعمدة التي تحتوي بيانات فعلية
+    min_nonull = max(4, min_samples // 5)
+    used_feats = [
+        f for f in CLUSTER_FEATURES
+        if f in df.columns and df[f].notna().sum() >= min_nonull
+    ]
     snap_count = sum(1 for f in used_feats if f.startswith("snap_"))
     if len(used_feats) < 4:
-        return {"error": f"Not enough features: only {len(used_feats)} available",
+        return {"error": f"Not enough features with data: only {len(used_feats)} available (need 4+)",
                 "n_used": len(df)}
 
-    # نظّف البيانات
-    X_raw = df[used_feats].copy().fillna(df[used_feats].median())
+    # نظّف البيانات — fillna بالوسيط، ثم صفر لأي عمود لا يزال فارغاً
+    medians = df[used_feats].median()
+    X_raw = df[used_feats].copy().fillna(medians).fillna(0.0)
     scaler = StandardScaler()
     X = scaler.fit_transform(X_raw)
 

@@ -1350,15 +1350,25 @@ def analyze(symbol):
             if cur < eq:
                 l1  = l1 + f" ⛔ Price gate failed — not in Deep Discount (need >= {PRICE_GATE}/{W_PRICE})"
         elif not liq_ok:
-            sig = "Wait"
-            tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
-            l3  = l3 + " ⏳ Liquidity gate pending — waiting for Sweep & Reverse (need 20/20)"
+            # سياسة الدخول المبكر: السعر رخيص بما يكفي (بوابة r1 عدّت) والجودة كافية
+            # → "Early Buy" يُشترى فوراً دون انتظار Sweep & Reverse (قرار صاحب النظام).
+            # لو الجودة أقل من بوابة الدخول (35/40 على الـ score المعدّل) → يبقى Wait.
+            _entry_score_gate = 35 if symbol in WHITELIST else 40
+            if score >= _entry_score_gate:
+                sig = "Early Buy"
+                tc  = "#084298"; tbg = "#cfe2ff"; tbr = "#b6d4fe"
+                l3  = l3 + " 🟦 Early entry — دخول مبكر دون انتظار Sweep & Reverse (سياسة معتمدة)"
+            else:
+                sig = "Wait"
+                tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
+                l3  = l3 + " ⏳ Liquidity gate pending — waiting for Sweep & Reverse (need 20/20)"
         else:
             sig,tc,tbg,tbr = sig_info(score)
 
         entry_zones = None
         _score_gate = 35 if symbol in WHITELIST else 40
-        if price_ok and liq_ok and r8 > 0 and total >= _score_gate:
+        # liq_ok لم يعد شرطاً — الدخول المبكر يحتاج مناطق الدخول والتعزيز (Zone 3) أيضاً
+        if price_ok and r8 > 0 and total >= _score_gate:
             entry_zones = calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo,
                                            _sv=sv_result, _hvn=hvn_result)
 
@@ -2127,10 +2137,13 @@ def send_telegram_alerts(results):
     positions = load_open_positions()
 
     # Collect qualifying stocks sorted by score descending
+    # Skip مستبعدة — الجودة الخام تحت 35 ليست إشارة حتى لو المضاعفات رفعت الـ score
     alerts = [
         (s, results[s])
         for s in STOCKS
-        if results[s].get("ok") and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
+        if results[s].get("ok")
+        and results[s].get("signal") != "Skip"
+        and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
     ]
     alerts.sort(key=lambda x: x[1].get("score", 0), reverse=True)
 
@@ -2226,13 +2239,14 @@ def send_telegram_alerts(results):
         "VERY STRONG BUY":   "🟢",
         "STRONG BUY":        "🟢",
         "BUY":               "🟩",
+        "EARLY BUY":         "🟦",
         "WATCH":             "🟡",
         "WAIT":              "🟡",
         "NEUTRAL":           "⚪",
         "SELL":              "🔴",
         "STRONG SELL":       "🔴",
     }
-    BUY_FAMILY_UPPER = {"BUY", "STRONG BUY", "VERY STRONG BUY", "INSTITUTIONAL BUY"}
+    BUY_FAMILY_UPPER = {"BUY", "STRONG BUY", "VERY STRONG BUY", "INSTITUTIONAL BUY", "EARLY BUY"}
 
     for s, r in alerts:
         signal_upper = r.get("signal", "").upper()
@@ -2272,10 +2286,13 @@ def send_telegram_alerts(results):
                 pass
             ctx_str = f"   {r['ctx_label']}\n" if r.get("ctx_label") else ""
 
-            # Score-proportional position sizing
-            score_val = r.get("score", 0)
-            sizing = suggested_position_size(1, score_val)
-            size_line = f"   💼 Position Size: *{sizing['pct']:.1f}%* of portfolio ({sizing['tier']})\n"
+            # Score-proportional position sizing — لا يُقترح حجم لمركز قائم بالفعل
+            if in_portfolio:
+                size_line = "   🔵 مركز قائم — التنبيه للمتابعة، لا إضافة جديدة\n"
+            else:
+                score_val = r.get("score", 0)
+                sizing = suggested_position_size(1, score_val)
+                size_line = f"   💼 Position Size: *{sizing['pct']:.1f}%* of portfolio ({sizing['tier']})\n"
 
             lines.append(
                 f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
@@ -2414,18 +2431,23 @@ def _collect_current_prices(results):
         and results[s]["price"] > 0
     }
 
-_BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy"}
+_BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy", "Early Buy"}
 
 def _register_new_positions(results):
     """
-    Register positions for qualifying stocks not already tracked.
-    يشترط إشارة شراء فعلية (يعني بوابة السيولة Sweep & Reverse عدّت) —
-    سابقاً كان يسجّل مراكز لإشارات "Wait" بما يناقض تصميم الـ Dual Gate.
+    سياسة الدخول المبكر (قرار صاحب النظام 2026-06-11):
+    الدخول أول ما يصبح السهم رخيصاً — عبور بوابتي Score + r1 فقط،
+    بدون انتظار تأكيد Sweep & Reverse (إشارة Buy).
+
+    الأساس: تحليل متعدد الآفاق على السجل الحي (فبراير→يونيو 2026):
+      أفق 15 يوم: دخول مبكر +5.27% مقابل +3.80% بانتظار التأكيد
+      أفق 50 يوم: دخول مبكر +17.4% مقابل +13.9%
+      وفي الشهر الهابط الوحيد (فبراير) لم يُظهر التأكيد أي قيمة حمائية.
+    بوابة السيولة تبقى مستخدمة في تصنيف الإشارة المعروضة فقط.
     """
     qualifying = {
         s for s in STOCKS
         if results[s].get("ok")
-        and results[s].get("signal") in _BUY_SIGNALS
         and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
         and results[s].get("r1", 0) >= (PRICE_GATE_WHITELIST if s in WHITELIST else PRICE_GATE_NORMAL)
     }
@@ -2439,7 +2461,12 @@ def _register_new_positions(results):
                              entry_score=results[stock].get("score", 0),
                              entry_pattern_score=round(pat.get("pattern_score", 0)),
                              entry_effective_score=round(pat.get("effective_score", 0)))
-                print(f"📌 تسجيل مركز جديد: {NAMES.get(stock, stock)} @ {price}")
+                print(f"📌 تسجيل مركز جديد (دخول مبكر): {NAMES.get(stock, stock)} @ {price}")
+                # الإشارة المعروضة الآن "Early Buy" أو من عائلة الشراء — تنبيهات
+                # التحول والملخص اليومي تغطيها. التنبيه المباشر هنا للحالة
+                # النادرة فقط (مثل Skip بمضاعف سياق رفع الـ score فوق البوابة)
+                if results[stock].get("signal") not in _BUY_SIGNALS:
+                    send_alert_for_high_score(stock, results[stock].get("score", 0), results[stock])
 
 def backfill_pattern_scores():
     """
@@ -2696,8 +2723,8 @@ def detect_signal_changes(current_results, previous_results):
         current_price = current.get("price", "N/A")
         current_target = current.get("target", "N/A")
 
-        # إذا تغيرت الإشارة من Skip/Wait إلى أي إشارة شراء
-        BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy"}
+        # إذا تغيرت الإشارة من Skip/Wait إلى أي إشارة شراء (تشمل الدخول المبكر)
+        BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy", "Early Buy"}
         if previous_sig in ("Skip", "Wait") and current_sig in BUY_SIGNALS:
             changed_stocks.append({
                 "stock": stock,

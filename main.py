@@ -1796,8 +1796,8 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
   <tr>
     <td style="padding:14px 16px;">
       <div style="font-family:Arial,sans-serif;font-size:17px;font-weight:bold;color:{tc};">{r["signal"]}</div>
-      <div style="font-family:Arial,sans-serif;font-size:13px;color:#444;margin-top:6px;">SMC Score: &nbsp;{bar(r["score"])}{"&nbsp; <span style='font-size:11px;color:#555;'>" + r["ctx_label"] + "</span>" if r.get("ctx_label") else ""}</div>
-      {"<div style='font-family:Arial,sans-serif;font-size:11px;color:#888;margin-top:2px;'>Raw SMC: " + str(r.get("raw_score",r["score"])) + "/100</div>" if r.get("raw_score") and r["raw_score"] != r["score"] else ""}
+      <div style="font-family:Arial,sans-serif;font-size:13px;color:#444;margin-top:6px;">SMC المعدل: &nbsp;{bar(r["score"])}{"&nbsp; <span style='font-size:11px;color:#555;'>" + r["ctx_label"] + "</span>" if r.get("ctx_label") else ""}</div>
+      {"<div style='font-family:Arial,sans-serif;font-size:11px;color:#888;margin-top:2px;'>SMC الأصلي: " + str(r.get("raw_score",r["score"])) + "/100</div>" if r.get("raw_score") and r["raw_score"] != r["score"] else ""}
     </td>
     <td align="right" style="padding:14px 16px;">
       <div style="font-family:Arial,sans-serif;font-size:24px;font-weight:bold;color:#222;">{r["price"]} EGP</div>
@@ -2300,9 +2300,15 @@ def send_telegram_alerts(results):
                 sizing = suggested_position_size(1, score_val)
                 size_line = f"   💼 Position Size: *{sizing['pct']:.1f}%* of portfolio ({sizing['tier']})\n"
 
+            raw = r.get("raw_score", r["score"])
+            score_line = (
+                f"   Signal: *{r['signal']}*  |  SMC المعدل: *{r['score']}/100*"
+                + (f"  (أصلي: {raw})" if raw != r["score"] else "")
+                + "\n"
+            )
             lines.append(
                 f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
-                f"   Signal: *{r['signal']}*  |  Score: *{r['score']}/100*\n"
+                f"{score_line}"
                 f"{ctx_str}"
                 f"   Price: *{r['price']} EGP*  →  Target: *{round(float(target_to_display), 2)} EGP*{upside}\n"
                 f"{size_line}"
@@ -2312,9 +2318,15 @@ def send_telegram_alerts(results):
         else:
             # WATCH only — no target, no buy mention
             ctx_str = f"   {r['ctx_label']}\n" if r.get("ctx_label") else ""
+            raw_w = r.get("raw_score", r["score"])
+            watch_score_line = (
+                f"   👀 Watch  |  SMC المعدل: *{r['score']}/100*"
+                + (f"  (أصلي: {raw_w})" if raw_w != r["score"] else "")
+                + "\n"
+            )
             lines.append(
                 f"{emoji} *{NAMES.get(s, s)}* `{s}`{portfolio_tag}\n"
-                f"   👀 Watch  |  Score: *{r['score']}/100*\n"
+                f"{watch_score_line}"
                 f"{ctx_str}"
                 f"   Price: *{r['price']} EGP*\n"
                 f"{pi_line}"
@@ -2390,9 +2402,15 @@ def send_alert_for_high_score(stock, score, result):
                            f"  |  Avg Gain: *+{pat['avg_gain']:.1f}%*"
                            f"  ({pat['similar_count']} cases)")
 
+            raw_alert = result.get("raw_score", score)
+            score_display = (
+                f"SMC المعدل: *{score}/100*" +
+                (f"  (أصلي: {raw_alert})" if raw_alert != score else "")
+            )
+            ctx_alert = f"\n{result['ctx_label']}" if result.get("ctx_label") else ""
             msg = (
                 f"🚨 *ALERT* — {emoji} {NAMES.get(stock, stock)}\n"
-                f"Score: *{score}/100*  |  Signal: *{signal}*\n"
+                f"{score_display}  |  Signal: *{signal}*{ctx_alert}\n"
                 f"Price: *{result['price']} EGP*\n"
                 f"Target: *{round(float(result['target']), 2)} EGP*{upside}"
                 f"{pi_line}\n"
@@ -2721,6 +2739,7 @@ def detect_signal_changes(current_results, previous_results):
         current_sig = current.get("signal", "Skip")
         previous_sig = previous.get("signal", "Skip")
         current_score = current.get("score", 0)
+        current_raw_score = current.get("raw_score", current_score)
         current_price = current.get("price", "N/A")
         current_target = current.get("target", "N/A")
 
@@ -2732,6 +2751,8 @@ def detect_signal_changes(current_results, previous_results):
                 "from": previous_sig,
                 "to": current_sig,
                 "score": current_score,
+                "raw_score": current_raw_score,
+                "ctx_label": current.get("ctx_label", ""),
                 "price": current_price,
                 "target": current_target,
                 "entry_zones": current.get("entry_zones", None),
@@ -3061,8 +3082,13 @@ def send_change_alert(changed_stocks):
         else:
             message += "\n"
         
+        raw_c = item.get("raw_score", item["score"])
+        score_str = f"SMC المعدل: {item['score']:.0f}/100"
+        if raw_c != item["score"]:
+            score_str += f"  (أصلي: {raw_c:.0f})"
+        ctx_c = f"\n  └─ {item['ctx_label']}" if item.get("ctx_label") else ""
         message += f"  └─ {item['from']} → {item['to']}\n"
-        message += f"  └─ Score: {item['score']:.1f}\n"
+        message += f"  └─ {score_str}{ctx_c}\n"
         message += f"  └─ السعر الحالي: {price} EGP\n"
         message += f"  └─ السعر المستهدف: {target} EGP\n\n"
     

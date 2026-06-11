@@ -40,18 +40,496 @@
     "bq_mean": 52.6,
     "mae_mean": 0.0636
   },
-  "correlation": {},
+  "correlation": {
+    "mfe_20d": {
+      "raw_score": -0.005,
+      "r1_price": -0.001,
+      "sv_hit": NaN,
+      "hvn_hit": NaN,
+      "rsi_div": NaN,
+      "macd_div": NaN,
+      "htf_hh": NaN,
+      "htf_hl": NaN,
+      "sweep_detected": NaN,
+      "wick_rejection": NaN,
+      "equal_lows": NaN,
+      "price_ok": NaN
+    },
+    "bq_score": {
+      "r1_price": 0.012,
+      "raw_score": 0.01,
+      "sv_hit": NaN,
+      "hvn_hit": NaN,
+      "rsi_div": NaN,
+      "macd_div": NaN,
+      "htf_hh": NaN,
+      "htf_hl": NaN,
+      "sweep_detected": NaN,
+      "wick_rejection": NaN,
+      "equal_lows": NaN,
+      "price_ok": NaN
+    },
+    "mae_20d": {
+      "raw_score": -0.07,
+      "r1_price": -0.067,
+      "sv_hit": NaN,
+      "hvn_hit": NaN,
+      "rsi_div": NaN,
+      "macd_div": NaN,
+      "htf_hh": NaN,
+      "htf_hl": NaN,
+      "sweep_detected": NaN,
+      "wick_rejection": NaN,
+      "equal_lows": NaN,
+      "price_ok": NaN
+    }
+  },
   "mutual_information": {},
   "probability_analysis": {
     "error": "Need 30 signals, have 0"
   },
-  "rf_mfe": null,
-  "rf_bq": null,
-  "gbm_mfe": null,
-  "gbm_bq": null,
-  "model_comparison_mfe": {},
-  "model_comparison_bq": {},
-  "weight_suggestions": {},
+  "rf_mfe": {
+    "model": "RandomForest",
+    "r2": -0.201,
+    "mae": 0.0807,
+    "importance": {
+      "raw_score": 0.5235589306681188,
+      "r1_price": 0.03527760550003785,
+      "sv_hit": -2.590520390792032e-17,
+      "hvn_hit": -3.3306690738754695e-17,
+      "rsi_div": -3.3306690738754695e-17,
+      "macd_div": -3.3306690738754695e-17,
+      "htf_hh": -3.700743415417188e-17,
+      "htf_hl": -3.3306690738754695e-17,
+      "sweep_detected": -2.2204460492503132e-17,
+      "wick_rejection": -2.960594732333751e-17,
+      "equal_lows": -4.810966440042345e-17,
+      "price_ok": -4.070817756958907e-17,
+      "snap_bos": -2.960594732333751e-17,
+      "snap_choch": -2.590520390792032e-17
+    },
+    "n_train": 471,
+    "n_test": 203
+  },
+  "rf_bq": {
+    "model": "RandomForest",
+    "r2": -0.089,
+    "mae": 23.2418,
+    "importance": {
+      "raw_score": 0.5169681046671888,
+      "r1_price": 0.04155922285303344,
+      "sv_hit": 0.0,
+      "hvn_hit": 0.0,
+      "rsi_div": 3.7007434154171884e-18,
+      "macd_div": 0.0,
+      "htf_hh": 0.0,
+      "htf_hl": 0.0,
+      "sweep_detected": 3.7007434154171884e-18,
+      "wick_rejection": 0.0,
+      "equal_lows": 0.0,
+      "price_ok": 7.401486830834377e-18,
+      "snap_bos": 0.0,
+      "snap_choch": 7.401486830834377e-18
+    },
+    "n_train": 471,
+    "n_test": 203
+  },
+  "gbm_mfe": {
+    "model": "LightGBM",
+    "r2": -0.084,
+    "mae": 0.077,
+    "importance": {
+      "raw_score": 1.0,
+      "r1_price": 0.0,
+      "sv_hit": 0.0,
+      "hvn_hit": 0.0,
+      "rsi_div": 0.0,
+      "macd_div": 0.0,
+      "htf_hh": 0.0,
+      "htf_hl": 0.0,
+      "sweep_detected": 0.0,
+      "wick_rejection": 0.0,
+      "equal_lows": 0.0,
+      "price_ok": 0.0,
+      "snap_bos": 0.0,
+      "snap_choch": 0.0
+    },
+    "n_train": 471,
+    "n_test": 203
+  },
+  "gbm_bq": {
+    "model": "LightGBM",
+    "r2": -0.001,
+    "mae": 22.4582,
+    "importance": {
+      "raw_score": 1.0,
+      "r1_price": 0.0,
+      "sv_hit": 0.0,
+      "hvn_hit": 0.0,
+      "rsi_div": 0.0,
+      "macd_div": 0.0,
+      "htf_hh": 0.0,
+      "htf_hl": 0.0,
+      "sweep_detected": 0.0,
+      "wick_rejection": 0.0,
+      "equal_lows": 0.0,
+      "price_ok": 0.0,
+      "snap_bos": 0.0,
+      "snap_choch": 0.0
+    },
+    "n_train": 471,
+    "n_test": 203
+  },
+  "model_comparison_mfe": {
+    "target": "mfe_20d",
+    "best_model": "LightGBM",
+    "best_r2": -0.084,
+    "rf": {
+      "model": "RandomForest",
+      "r2": -0.201,
+      "mae": 0.0807,
+      "importance": {
+        "raw_score": -0.042164277327524785,
+        "r1_price": -0.016689577999848635,
+        "sv_hit": -1.1842378929335003e-16,
+        "hvn_hit": -1.1842378929335003e-16,
+        "rsi_div": -1.0362081563168128e-16,
+        "macd_div": -1.4802973661668753e-16,
+        "htf_hh": -1.1842378929335003e-16,
+        "htf_hl": -8.881784197001253e-17,
+        "sweep_detected": -1.4802973661668753e-16,
+        "wick_rejection": -5.921189464667501e-17,
+        "equal_lows": -1.0362081563168128e-16,
+        "price_ok": -1.0362081563168128e-16,
+        "snap_bos": -7.401486830834377e-17,
+        "snap_choch": -8.881784197001253e-17
+      },
+      "n_train": 471,
+      "n_test": 203
+    },
+    "gbm": {
+      "model": "LightGBM",
+      "r2": -0.084,
+      "mae": 0.077,
+      "importance": {
+        "raw_score": 1.0,
+        "r1_price": 0.0,
+        "sv_hit": 0.0,
+        "hvn_hit": 0.0,
+        "rsi_div": 0.0,
+        "macd_div": 0.0,
+        "htf_hh": 0.0,
+        "htf_hl": 0.0,
+        "sweep_detected": 0.0,
+        "wick_rejection": 0.0,
+        "equal_lows": 0.0,
+        "price_ok": 0.0,
+        "snap_bos": 0.0,
+        "snap_choch": 0.0
+      },
+      "n_train": 471,
+      "n_test": 203
+    },
+    "xgb": {
+      "model": "XGBoost",
+      "r2": -0.085,
+      "mae": 0.077,
+      "importance": {
+        "raw_score": "0.74672925",
+        "r1_price": "0.25327078",
+        "sv_hit": "0.0",
+        "hvn_hit": "0.0",
+        "rsi_div": "0.0",
+        "macd_div": "0.0",
+        "htf_hh": "0.0",
+        "htf_hl": "0.0",
+        "sweep_detected": "0.0",
+        "wick_rejection": "0.0",
+        "equal_lows": "0.0",
+        "price_ok": "0.0",
+        "snap_bos": "0.0",
+        "snap_choch": "0.0"
+      },
+      "n_train": 471,
+      "n_test": 203,
+      "_fitted": "XGBRegressor(base_score=None, booster=None, callbacks=None,\n             colsample_bylevel=None, colsample_bynode=None,\n             colsample_bytree=0.8, device=None, early_stopping_rounds=30,\n             enable_categorical=False, eval_metric='rmse', feature_types=None,\n             feature_weights=None, gamma=None, grow_policy=None,\n             importance_type=None, interaction_constraints=None,\n             learning_rate=0.05, max_bin=None, max_cat_threshold=None,\n             max_cat_to_onehot=None, max_delta_step=None, max_depth=4,\n             max_leaves=None, min_child_weight=None, missing=nan,\n             monotone_constraints=None, multi_strategy=None, n_estimators=300,\n             n_jobs=None, num_parallel_tree=None, ...)"
+    },
+    "shap_importance": {},
+    "ensemble_importance": {
+      "raw_score": 0.5682,
+      "r1_price": 0.0789,
+      "sv_hit": -0.0,
+      "hvn_hit": -0.0,
+      "rsi_div": -0.0,
+      "macd_div": -0.0,
+      "htf_hh": -0.0,
+      "htf_hl": -0.0,
+      "sweep_detected": -0.0,
+      "wick_rejection": -0.0,
+      "equal_lows": -0.0,
+      "price_ok": -0.0,
+      "snap_bos": -0.0,
+      "snap_choch": -0.0
+    },
+    "top20_features": [
+      [
+        "raw_score",
+        0.5682
+      ],
+      [
+        "r1_price",
+        0.0789
+      ],
+      [
+        "snap_choch",
+        0.0
+      ],
+      [
+        "wick_rejection",
+        0.0
+      ],
+      [
+        "macd_div",
+        0.0
+      ],
+      [
+        "equal_lows",
+        0.0
+      ],
+      [
+        "htf_hl",
+        0.0
+      ],
+      [
+        "hvn_hit",
+        0.0
+      ],
+      [
+        "htf_hh",
+        0.0
+      ],
+      [
+        "snap_bos",
+        0.0
+      ],
+      [
+        "rsi_div",
+        0.0
+      ],
+      [
+        "sv_hit",
+        0.0
+      ],
+      [
+        "sweep_detected",
+        0.0
+      ],
+      [
+        "price_ok",
+        0.0
+      ]
+    ]
+  },
+  "model_comparison_bq": {
+    "target": "bq_score",
+    "best_model": "LightGBM",
+    "best_r2": -0.001,
+    "rf": {
+      "model": "RandomForest",
+      "r2": -0.089,
+      "mae": 23.2418,
+      "importance": {
+        "raw_score": -0.02292758133124493,
+        "r1_price": -0.03656310858786622,
+        "sv_hit": 0.0,
+        "hvn_hit": 0.0,
+        "rsi_div": 0.0,
+        "macd_div": 0.0,
+        "htf_hh": 0.0,
+        "htf_hl": 0.0,
+        "sweep_detected": 1.4802973661668754e-17,
+        "wick_rejection": 1.4802973661668754e-17,
+        "equal_lows": 0.0,
+        "price_ok": 2.960594732333751e-17,
+        "snap_bos": 1.4802973661668754e-17,
+        "snap_choch": 0.0
+      },
+      "n_train": 471,
+      "n_test": 203
+    },
+    "gbm": {
+      "model": "LightGBM",
+      "r2": -0.001,
+      "mae": 22.4582,
+      "importance": {
+        "raw_score": 1.0,
+        "r1_price": 0.0,
+        "sv_hit": 0.0,
+        "hvn_hit": 0.0,
+        "rsi_div": 0.0,
+        "macd_div": 0.0,
+        "htf_hh": 0.0,
+        "htf_hl": 0.0,
+        "sweep_detected": 0.0,
+        "wick_rejection": 0.0,
+        "equal_lows": 0.0,
+        "price_ok": 0.0,
+        "snap_bos": 0.0,
+        "snap_choch": 0.0
+      },
+      "n_train": 471,
+      "n_test": 203
+    },
+    "xgb": {
+      "model": "XGBoost",
+      "r2": -0.002,
+      "mae": 22.4783,
+      "importance": {
+        "raw_score": "0.659198",
+        "r1_price": "0.340802",
+        "sv_hit": "0.0",
+        "hvn_hit": "0.0",
+        "rsi_div": "0.0",
+        "macd_div": "0.0",
+        "htf_hh": "0.0",
+        "htf_hl": "0.0",
+        "sweep_detected": "0.0",
+        "wick_rejection": "0.0",
+        "equal_lows": "0.0",
+        "price_ok": "0.0",
+        "snap_bos": "0.0",
+        "snap_choch": "0.0"
+      },
+      "n_train": 471,
+      "n_test": 203,
+      "_fitted": "XGBRegressor(base_score=None, booster=None, callbacks=None,\n             colsample_bylevel=None, colsample_bynode=None,\n             colsample_bytree=0.8, device=None, early_stopping_rounds=30,\n             enable_categorical=False, eval_metric='rmse', feature_types=None,\n             feature_weights=None, gamma=None, grow_policy=None,\n             importance_type=None, interaction_constraints=None,\n             learning_rate=0.05, max_bin=None, max_cat_threshold=None,\n             max_cat_to_onehot=None, max_delta_step=None, max_depth=4,\n             max_leaves=None, min_child_weight=None, missing=nan,\n             monotone_constraints=None, multi_strategy=None, n_estimators=300,\n             n_jobs=None, num_parallel_tree=None, ...)"
+    },
+    "shap_importance": {},
+    "ensemble_importance": {
+      "raw_score": 0.5454,
+      "r1_price": 0.1014,
+      "sv_hit": 0.0,
+      "hvn_hit": 0.0,
+      "rsi_div": 0.0,
+      "macd_div": 0.0,
+      "htf_hh": 0.0,
+      "htf_hl": 0.0,
+      "sweep_detected": 0.0,
+      "wick_rejection": 0.0,
+      "equal_lows": 0.0,
+      "price_ok": 0.0,
+      "snap_bos": 0.0,
+      "snap_choch": 0.0
+    },
+    "top20_features": [
+      [
+        "raw_score",
+        0.5454
+      ],
+      [
+        "r1_price",
+        0.1014
+      ],
+      [
+        "snap_choch",
+        0.0
+      ],
+      [
+        "wick_rejection",
+        0.0
+      ],
+      [
+        "macd_div",
+        0.0
+      ],
+      [
+        "equal_lows",
+        0.0
+      ],
+      [
+        "htf_hl",
+        0.0
+      ],
+      [
+        "hvn_hit",
+        0.0
+      ],
+      [
+        "htf_hh",
+        0.0
+      ],
+      [
+        "snap_bos",
+        0.0
+      ],
+      [
+        "rsi_div",
+        0.0
+      ],
+      [
+        "sv_hit",
+        0.0
+      ],
+      [
+        "sweep_detected",
+        0.0
+      ],
+      [
+        "price_ok",
+        0.0
+      ]
+    ]
+  },
+  "weight_suggestions": {
+    "r1_price": {
+      "current": 30,
+      "suggested": 39,
+      "change": 9,
+      "reason": "importance rank vs MFE+BQ suggests higher weight; avg_importance=0.0384"
+    },
+    "r2_ob": {
+      "current": 10,
+      "suggested": 10,
+      "change": 0,
+      "reason": "insufficient data"
+    },
+    "r3_liquidity": {
+      "current": 20,
+      "suggested": 20,
+      "change": 0,
+      "reason": "insufficient data"
+    },
+    "r4_htf": {
+      "current": 10,
+      "suggested": 10,
+      "change": 0,
+      "reason": "insufficient data"
+    },
+    "r5_avwap": {
+      "current": 8,
+      "suggested": 8,
+      "change": 0,
+      "reason": "insufficient data"
+    },
+    "r6_macd": {
+      "current": 4,
+      "suggested": 4,
+      "change": 0,
+      "reason": "insufficient data"
+    },
+    "r7_div": {
+      "current": 3,
+      "suggested": 3,
+      "change": 0,
+      "reason": "insufficient data"
+    },
+    "r8_demand": {
+      "current": 15,
+      "suggested": 15,
+      "change": 0,
+      "reason": "insufficient data"
+    }
+  },
   "segment_analysis": {
     "by_score_bucket": {
       "35-49": {
@@ -452,6 +930,12 @@
       "n_top": 8,
       "mfe_threshold": 0.2107,
       "conditions": {
+        "r1_price": {
+          "top_mean": 22.625,
+          "bottom_mean": 21.875,
+          "diff": 0.75,
+          "effect_size": 0.313
+        },
         "raw_score": {
           "top_mean": 76.5,
           "bottom_mean": 74.375,
@@ -532,11 +1016,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أعلى (22.625 vs 21.875)",
         "raw_score: أعلى (76.500 vs 74.375)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "ADIB.CA": {
@@ -544,6 +1028,12 @@
       "n_top": 8,
       "mfe_threshold": 0.1704,
       "conditions": {
+        "r1_price": {
+          "top_mean": 21.0,
+          "bottom_mean": 22.6818,
+          "diff": -1.6818,
+          "effect_size": -0.628
+        },
         "raw_score": {
           "top_mean": 71.875,
           "bottom_mean": 77.0455,
@@ -624,11 +1114,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أقل (21.000 vs 22.682)",
         "raw_score: أقل (71.875 vs 77.046)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "ARCC.CA": {
@@ -636,6 +1126,12 @@
       "n_top": 6,
       "mfe_threshold": 0.1194,
       "conditions": {
+        "r1_price": {
+          "top_mean": 22.8333,
+          "bottom_mean": 21.8667,
+          "diff": 0.9667,
+          "effect_size": 0.42
+        },
         "raw_score": {
           "top_mean": 77.6667,
           "bottom_mean": 74.7333,
@@ -716,11 +1212,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أعلى (22.833 vs 21.867)",
         "raw_score: أعلى (77.667 vs 74.733)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "BTFH.CA": {
@@ -728,6 +1224,12 @@
       "n_top": 6,
       "mfe_threshold": 0.0975,
       "conditions": {
+        "r1_price": {
+          "top_mean": 22.0,
+          "bottom_mean": 20.7059,
+          "diff": 1.2941,
+          "effect_size": 0.692
+        },
         "raw_score": {
           "top_mean": 74.6667,
           "bottom_mean": 70.8235,
@@ -808,11 +1310,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أعلى (22.000 vs 20.706)",
         "raw_score: أعلى (74.667 vs 70.823)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "CCAP.CA": {
@@ -825,6 +1327,12 @@
           "bottom_mean": 74.0312,
           "diff": 1.6051,
           "effect_size": 0.189
+        },
+        "r1_price": {
+          "top_mean": 22.2727,
+          "bottom_mean": 21.8125,
+          "diff": 0.4602,
+          "effect_size": 0.176
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -901,10 +1409,10 @@
       },
       "top5_summary": [
         "raw_score: أعلى (75.636 vs 74.031)",
+        "r1_price: أعلى (22.273 vs 21.812)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "COMI.CA": {
@@ -917,6 +1425,12 @@
           "bottom_mean": 72.5789,
           "diff": 1.1353,
           "effect_size": 0.196
+        },
+        "r1_price": {
+          "top_mean": 21.7143,
+          "bottom_mean": 21.3684,
+          "diff": 0.3459,
+          "effect_size": 0.195
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -993,10 +1507,10 @@
       },
       "top5_summary": [
         "raw_score: أعلى (73.714 vs 72.579)",
+        "r1_price: أعلى (21.714 vs 21.368)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "EAST.CA": {
@@ -1004,6 +1518,12 @@
       "n_top": 5,
       "mfe_threshold": 0.0823,
       "conditions": {
+        "r1_price": {
+          "top_mean": 21.2,
+          "bottom_mean": 21.8462,
+          "diff": -0.6462,
+          "effect_size": -0.338
+        },
         "raw_score": {
           "top_mean": 72.6,
           "bottom_mean": 74.2308,
@@ -1084,11 +1604,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أقل (21.200 vs 21.846)",
         "raw_score: أقل (72.600 vs 74.231)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "EFID.CA": {
@@ -1096,6 +1616,12 @@
       "n_top": 5,
       "mfe_threshold": 0.0602,
       "conditions": {
+        "r1_price": {
+          "top_mean": 21.6,
+          "bottom_mean": 21.0769,
+          "diff": 0.5231,
+          "effect_size": 0.24
+        },
         "raw_score": {
           "top_mean": 73.0,
           "bottom_mean": 71.8462,
@@ -1176,11 +1702,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أعلى (21.600 vs 21.077)",
         "raw_score: أعلى (73.000 vs 71.846)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "EFIH.CA": {
@@ -1193,6 +1719,12 @@
           "bottom_mean": 72.9375,
           "diff": 0.8958,
           "effect_size": 0.126
+        },
+        "r1_price": {
+          "top_mean": 21.5,
+          "bottom_mean": 21.375,
+          "diff": 0.125,
+          "effect_size": 0.057
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -1269,10 +1801,10 @@
       },
       "top5_summary": [
         "raw_score: أعلى (73.833 vs 72.938)",
+        "r1_price: أعلى (21.500 vs 21.375)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "EGAL.CA": {
@@ -1285,6 +1817,12 @@
           "bottom_mean": 73.2273,
           "diff": 5.2727,
           "effect_size": 0.676
+        },
+        "r1_price": {
+          "top_mean": 23.0,
+          "bottom_mean": 21.5455,
+          "diff": 1.4545,
+          "effect_size": 0.638
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -1361,10 +1899,10 @@
       },
       "top5_summary": [
         "raw_score: أعلى (78.500 vs 73.227)",
+        "r1_price: أعلى (23.000 vs 21.546)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "EMFD.CA": {
@@ -1372,6 +1910,12 @@
       "n_top": 7,
       "mfe_threshold": 0.1778,
       "conditions": {
+        "r1_price": {
+          "top_mean": 23.2857,
+          "bottom_mean": 22.55,
+          "diff": 0.7357,
+          "effect_size": 0.31
+        },
         "raw_score": {
           "top_mean": 78.4286,
           "bottom_mean": 76.6,
@@ -1452,11 +1996,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أعلى (23.286 vs 22.550)",
         "raw_score: أعلى (78.429 vs 76.600)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "ETEL.CA": {
@@ -1469,6 +2013,12 @@
           "bottom_mean": 76.3684,
           "diff": -7.3684,
           "effect_size": -1.023
+        },
+        "r1_price": {
+          "top_mean": 20.2857,
+          "bottom_mean": 22.3684,
+          "diff": -2.0827,
+          "effect_size": -0.924
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -1545,10 +2095,10 @@
       },
       "top5_summary": [
         "raw_score: أقل (69.000 vs 76.368)",
+        "r1_price: أقل (20.286 vs 22.368)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "FWRY.CA": {
@@ -1556,6 +2106,12 @@
       "n_top": 6,
       "mfe_threshold": 0.1591,
       "conditions": {
+        "r1_price": {
+          "top_mean": 21.5,
+          "bottom_mean": 21.2778,
+          "diff": 0.2222,
+          "effect_size": 0.09
+        },
         "raw_score": {
           "top_mean": 73.0,
           "bottom_mean": 72.5,
@@ -1636,11 +2192,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أعلى (21.500 vs 21.278)",
         "raw_score: أعلى (73.000 vs 72.500)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "GBCO.CA": {
@@ -1653,6 +2209,12 @@
           "bottom_mean": 75.7059,
           "diff": -1.2059,
           "effect_size": -0.15
+        },
+        "r1_price": {
+          "top_mean": 22.0,
+          "bottom_mean": 22.2941,
+          "diff": -0.2941,
+          "effect_size": -0.126
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -1729,10 +2291,10 @@
       },
       "top5_summary": [
         "raw_score: أقل (74.500 vs 75.706)",
+        "r1_price: أقل (22.000 vs 22.294)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "HELI.CA": {
@@ -1740,6 +2302,12 @@
       "n_top": 10,
       "mfe_threshold": 0.2764,
       "conditions": {
+        "r1_price": {
+          "top_mean": 21.0,
+          "bottom_mean": 21.3333,
+          "diff": -0.3333,
+          "effect_size": -0.184
+        },
         "raw_score": {
           "top_mean": 71.9,
           "bottom_mean": 72.4,
@@ -1820,11 +2388,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أقل (21.000 vs 21.333)",
         "raw_score: أقل (71.900 vs 72.400)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "HRHO.CA": {
@@ -1832,6 +2400,12 @@
       "n_top": 8,
       "mfe_threshold": 0.0996,
       "conditions": {
+        "r1_price": {
+          "top_mean": 21.5,
+          "bottom_mean": 21.0909,
+          "diff": 0.4091,
+          "effect_size": 0.221
+        },
         "raw_score": {
           "top_mean": 72.875,
           "bottom_mean": 72.0909,
@@ -1912,11 +2486,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أعلى (21.500 vs 21.091)",
         "raw_score: أعلى (72.875 vs 72.091)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "ISPH.CA": {
@@ -1929,6 +2503,12 @@
           "bottom_mean": 74.1429,
           "diff": -3.7429,
           "effect_size": -0.514
+        },
+        "r1_price": {
+          "top_mean": 20.6,
+          "bottom_mean": 21.6429,
+          "diff": -1.0429,
+          "effect_size": -0.492
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -2005,10 +2585,10 @@
       },
       "top5_summary": [
         "raw_score: أقل (70.400 vs 74.143)",
+        "r1_price: أقل (20.600 vs 21.643)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "JUFO.CA": {
@@ -2021,6 +2601,12 @@
           "bottom_mean": 74.8,
           "diff": 10.4,
           "effect_size": 1.726
+        },
+        "r1_price": {
+          "top_mean": 25.0,
+          "bottom_mean": 22.0,
+          "diff": 3.0,
+          "effect_size": 1.701
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -2097,10 +2683,10 @@
       },
       "top5_summary": [
         "raw_score: أعلى (85.200 vs 74.800)",
+        "r1_price: أعلى (25.000 vs 22.000)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "MCQE.CA": {
@@ -2108,6 +2694,12 @@
       "n_top": 7,
       "mfe_threshold": 0.0746,
       "conditions": {
+        "r1_price": {
+          "top_mean": 22.2857,
+          "bottom_mean": 21.75,
+          "diff": 0.5357,
+          "effect_size": 0.269
+        },
         "raw_score": {
           "top_mean": 75.2857,
           "bottom_mean": 73.65,
@@ -2188,11 +2780,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أعلى (22.286 vs 21.750)",
         "raw_score: أعلى (75.286 vs 73.650)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "OIH.CA": {
@@ -2200,6 +2792,12 @@
       "n_top": 5,
       "mfe_threshold": 0.103,
       "conditions": {
+        "r1_price": {
+          "top_mean": 21.2,
+          "bottom_mean": 21.0714,
+          "diff": 0.1286,
+          "effect_size": 0.056
+        },
         "raw_score": {
           "top_mean": 72.4,
           "bottom_mean": 72.0714,
@@ -2280,11 +2878,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أعلى (21.200 vs 21.071)",
         "raw_score: أعلى (72.400 vs 72.071)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "ORHD.CA": {
@@ -2292,6 +2890,12 @@
       "n_top": 7,
       "mfe_threshold": 0.2868,
       "conditions": {
+        "r1_price": {
+          "top_mean": 22.5714,
+          "bottom_mean": 21.8947,
+          "diff": 0.6767,
+          "effect_size": 0.253
+        },
         "raw_score": {
           "top_mean": 76.1429,
           "bottom_mean": 74.6316,
@@ -2372,11 +2976,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أعلى (22.571 vs 21.895)",
         "raw_score: أعلى (76.143 vs 74.632)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "ORWE.CA": {
@@ -2389,6 +2993,12 @@
           "bottom_mean": 71.4211,
           "diff": 2.8647,
           "effect_size": 0.466
+        },
+        "r1_price": {
+          "top_mean": 21.8571,
+          "bottom_mean": 21.0,
+          "diff": 0.8571,
+          "effect_size": 0.427
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -2465,10 +3075,10 @@
       },
       "top5_summary": [
         "raw_score: أعلى (74.286 vs 71.421)",
+        "r1_price: أعلى (21.857 vs 21.000)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "PHDC.CA": {
@@ -2481,6 +3091,12 @@
           "bottom_mean": 71.0667,
           "diff": 11.3333,
           "effect_size": 1.597
+        },
+        "r1_price": {
+          "top_mean": 24.2,
+          "bottom_mean": 20.8,
+          "diff": 3.4,
+          "effect_size": 1.581
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -2557,10 +3173,10 @@
       },
       "top5_summary": [
         "raw_score: أعلى (82.400 vs 71.067)",
+        "r1_price: أعلى (24.200 vs 20.800)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "RAYA.CA": {
@@ -2568,6 +3184,12 @@
       "n_top": 11,
       "mfe_threshold": 0.3073,
       "conditions": {
+        "r1_price": {
+          "top_mean": 22.5455,
+          "bottom_mean": 21.5625,
+          "diff": 0.983,
+          "effect_size": 0.422
+        },
         "raw_score": {
           "top_mean": 76.3636,
           "bottom_mean": 73.4688,
@@ -2648,11 +3270,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أعلى (22.546 vs 21.562)",
         "raw_score: أعلى (76.364 vs 73.469)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "RMDA.CA": {
@@ -2660,6 +3282,12 @@
       "n_top": 5,
       "mfe_threshold": 0.1664,
       "conditions": {
+        "r1_price": {
+          "top_mean": 21.4,
+          "bottom_mean": 22.3333,
+          "diff": -0.9333,
+          "effect_size": -0.391
+        },
         "raw_score": {
           "top_mean": 72.8,
           "bottom_mean": 75.8,
@@ -2740,11 +3368,11 @@
         }
       },
       "top5_summary": [
+        "r1_price: أقل (21.400 vs 22.333)",
         "raw_score: أقل (72.800 vs 75.800)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     },
     "TMGH.CA": {
@@ -2752,6 +3380,12 @@
       "n_top": 6,
       "mfe_threshold": 0.1807,
       "conditions": {
+        "r1_price": {
+          "top_mean": 22.6667,
+          "bottom_mean": 21.0667,
+          "diff": 1.6,
+          "effect_size": 0.677
+        },
         "raw_score": {
           "top_mean": 76.5,
           "bottom_mean": 71.6667,
@@ -2832,16 +3466,36 @@
         }
       },
       "top5_summary": [
+        "r1_price: أعلى (22.667 vs 21.067)",
         "raw_score: أعلى (76.500 vs 71.667)",
         "sv_hit: أقل (0.000 vs 0.000)",
         "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)",
-        "macd_div: أقل (0.000 vs 0.000)"
+        "rsi_div: أقل (0.000 vs 0.000)"
       ]
     }
   },
   "per_stock_ml": {},
   "edge_discovery": [
+    {
+      "rule": "Score السعر ≥15",
+      "conditions": [
+        {
+          "feature": "r1_price",
+          "op": ">=",
+          "threshold": 15,
+          "label": "Score السعر ≥15"
+        }
+      ],
+      "n_conditions": 1,
+      "n": 203,
+      "wins": 103,
+      "win_rate": 0.5074,
+      "avg_mfe": 0.1081,
+      "avg_bq": 52.76,
+      "p_value": 0.5281,
+      "lift": 1.0,
+      "score": 2.108
+    },
     {
       "rule": "Score الكلي ≥50",
       "conditions": [
@@ -2881,11 +3535,51 @@
       "p_value": 0.5281,
       "lift": 1.0,
       "score": 2.108
+    },
+    {
+      "rule": "Score السعر ≥20",
+      "conditions": [
+        {
+          "feature": "r1_price",
+          "op": ">=",
+          "threshold": 20,
+          "label": "Score السعر ≥20"
+        }
+      ],
+      "n_conditions": 1,
+      "n": 165,
+      "wins": 80,
+      "win_rate": 0.4848,
+      "avg_mfe": 0.1046,
+      "avg_bq": 52.18,
+      "p_value": 0.7444,
+      "lift": 0.956,
+      "score": 1.492
+    },
+    {
+      "rule": "Score السعر ≥24",
+      "conditions": [
+        {
+          "feature": "r1_price",
+          "op": ">=",
+          "threshold": 24,
+          "label": "Score السعر ≥24"
+        }
+      ],
+      "n_conditions": 1,
+      "n": 44,
+      "wins": 18,
+      "win_rate": 0.4091,
+      "avg_mfe": 0.0962,
+      "avg_bq": 47.95,
+      "p_value": 0.9275,
+      "lift": 0.806,
+      "score": 0.785
     }
   ],
   "warnings": [
-    "Insufficient data for mfe_20d model.",
-    "Insufficient data for bq_score model.",
-    "Pattern discovery failed: Input X contains NaN.\nKMeans does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values"
+    "Pattern discovery failed: Input X contains NaN.\nKMeans does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values",
+    "rf_mfe: R²=-0.201 — weak predictive signal. More data needed before acting on weight suggestions.",
+    "rf_bq: R²=-0.089 — weak predictive signal. More data needed before acting on weight suggestions."
   ]
 }

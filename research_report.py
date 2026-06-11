@@ -1159,10 +1159,26 @@ def build_report(db_path: str = DB_PATH) -> str:
         except Exception:
             pass
     else:
-        res = {"meta": {}, "correlation": {}, "weight_suggestions": {},
-               "segment_analysis": {}, "warnings": [
-                   f"فقط {stats.get('with_bq', 0)} إشارات ناضجة — نحتاج 5 على الأقل للتحليل."
-               ]}
+        # fallback: load cached research_results.json if available
+        cached = {}
+        try:
+            if os.path.exists(REPORT_JSON_PATH):
+                with open(REPORT_JSON_PATH, encoding="utf-8") as f:
+                    cached = json.load(f)
+        except Exception:
+            pass
+        n_bq = stats.get("with_bq", 0)
+        warn_msg = (f"فقط {n_bq} إشارات ناضجة في الـ DB الحالي — نحتاج 5 على الأقل. "
+                    "البيانات المعروضة من آخر تحليل محفوظ.")
+        if cached and cached.get("meta"):
+            res = cached
+            res.setdefault("warnings", [])
+            res["warnings"] = [warn_msg] + [w for w in res["warnings"] if w != warn_msg]
+        else:
+            res = {"meta": {}, "correlation": {}, "weight_suggestions": {},
+                   "segment_analysis": {}, "warnings": [
+                       f"فقط {n_bq} إشارات ناضجة — نحتاج 5 على الأقل للتحليل."
+                   ]}
 
     today = date.today().strftime("%Y-%m-%d")
     html  = f"""<!DOCTYPE html>

@@ -87,6 +87,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git add open_positions.json positions_history.json scan_results.json signal_history.json signal_log.json learned_weights.json egx_research.db || true
           git diff --staged --quiet || git commit -m "Auto-update positions [skip ci]"
+          git pull origin main --rebase || true
           git push || true
 
       - name: Generate Heatmap and Research Report
@@ -108,9 +109,9 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git pull --rebase || true
-          git add egx_research.db research_results.json || true
+          git add -f egx_research.db research_results.json 2>/dev/null || true
           git diff --staged --quiet || git commit -m "Auto-update research DB [skip ci]"
+          git pull origin main --rebase || true
           git push || true
 
       - name: Deploy to GitHub Pages

@@ -1746,10 +1746,12 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 </table>
 {open_positions_block}""")
 
+    SUMMARY_SIGNALS = {"buy", "strong buy", "very strong buy", "institutional buy", "early buy", "watch", "wait"}
     wr=""
     for idx, s in enumerate(sorted_stocks):
         r=results[s]
         if not r["ok"]: continue
+        if r.get("signal","").lower() not in SUMMARY_SIGNALS: continue
         _,tc,tbg,tbr=sig_info(r["score"])
         in_portfolio = s in positions and positions[s].get("status") == "open"
         portfolio_badge = ' <span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:bold;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;">🔵 In Portfolio</span>' if in_portfolio else ""

@@ -37,6 +37,29 @@ EGX30_TICKER     = "^EGX30"   # Yahoo Finance ticker for EGX30 index
 TODAY        = date.today()
 CUTOFF_DATE  = TODAY - timedelta(days=MIN_DAYS_OLD)
 
+_HERE          = os.path.dirname(os.path.abspath(__file__))
+LOCAL_DATA_DIR = os.path.join(_HERE, "historical_data", "historical_data")
+
+
+# ── Local CSV loader ──────────────────────────────────────────────────────────
+
+def _load_local_ohlcv(symbol: str, start_date: "str | None" = None) -> "pd.DataFrame | None":
+    """Load OHLCV from local historical_data/ CSV. Returns None if file not found."""
+    csv_path = os.path.join(LOCAL_DATA_DIR, f"{symbol}.csv")
+    if not os.path.exists(csv_path):
+        return None
+    try:
+        df = pd.read_csv(csv_path, parse_dates=["Date"], index_col="Date")
+        df.index = pd.to_datetime(df.index).tz_localize(None)
+        df = df[["Open", "High", "Low", "Close", "Volume"]]
+        if start_date:
+            df = df[df.index >= pd.Timestamp(start_date)]
+        print(f"  [local] {len(df)} bars from {os.path.basename(csv_path)}")
+        return df
+    except Exception as exc:
+        print(f"  [local] Failed to load {csv_path}: {exc}")
+        return None
+
 
 # ── EGX30 download ─────────────────────────────────────────────────────────────
 
@@ -208,21 +231,24 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
 
             print(f"\n{symbol}: downloading {dl_start} → {dl_end} ({len(sigs)} signals)")
 
-            try:
-                df_raw = yf.Ticker(symbol).history(
-                    start=dl_start, end=dl_end, auto_adjust=True,
-                )
-            except Exception as exc:
-                print(f"  ERROR downloading {symbol}: {exc}")
-                total_err += len(sigs)
-                continue
+            # Try local CSV first; fall back to yfinance
+            df_raw = _load_local_ohlcv(symbol, start_date=dl_start)
+            if df_raw is None:
+                try:
+                    df_raw = yf.Ticker(symbol).history(
+                        start=dl_start, end=dl_end, auto_adjust=True,
+                    )
+                    if not df_raw.empty:
+                        df_raw.index = pd.to_datetime(df_raw.index).tz_localize(None)
+                except Exception as exc:
+                    print(f"  ERROR downloading {symbol}: {exc}")
+                    total_err += len(sigs)
+                    continue
 
-            if df_raw.empty:
+            if df_raw is None or df_raw.empty:
                 print(f"  No data returned for {symbol}")
                 total_skip += len(sigs)
                 continue
-
-            df_raw.index = pd.to_datetime(df_raw.index).tz_localize(None)
             need_bq_ids  = {s["id"] for s in need_bq}
             need_feat_ids = {s["id"] for s in need_feat}
 
@@ -512,21 +538,24 @@ def backfill_smc_scores(db_path: str = DB_PATH):
 
         print(f"\n{symbol}: تنزيل {dl_start} → {dl_end}  ({len(sigs)} إشارة)")
 
-        try:
-            df_raw = yf.Ticker(symbol).history(
-                start=dl_start, end=dl_end, auto_adjust=True,
-            )
-        except Exception as exc:
-            print(f"  ERROR تنزيل {symbol}: {exc}")
-            total_err += len(sigs)
-            continue
+        # Try local CSV first; fall back to yfinance
+        df_raw = _load_local_ohlcv(symbol, start_date=dl_start)
+        if df_raw is None:
+            try:
+                df_raw = yf.Ticker(symbol).history(
+                    start=dl_start, end=dl_end, auto_adjust=True,
+                )
+                if not df_raw.empty:
+                    df_raw.index = pd.to_datetime(df_raw.index).tz_localize(None)
+            except Exception as exc:
+                print(f"  ERROR تنزيل {symbol}: {exc}")
+                total_err += len(sigs)
+                continue
 
-        if df_raw.empty:
+        if df_raw is None or df_raw.empty:
             print(f"  لا بيانات لـ {symbol}")
             total_skip += len(sigs)
             continue
-
-        df_raw.index = pd.to_datetime(df_raw.index).tz_localize(None)
 
         conn = get_conn(db_path)
         for sig_id, sym, sig_date_str, sig_price in sigs:

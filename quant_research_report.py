@@ -12,7 +12,7 @@ Quant Research Report
   3. Average MFE     ← متوسط أقصى ربح غير محقق
   4. Calmar Ratio    ← CAGR ÷ متوسط الـ MAE
   5. Max Drawdown    ← أسوأ تراجع منفرد
-  --- Win Rate في الأسفل دائماً ---
+  --- Win Rate مقياس مكمّل، الترتيب يبدأ من CAGR ---
   النظام يحقق عوائده من عدد قليل من الرابحين الكبار.
   رفع Win Rate يقتل العائد الكلي بتفضيل إشارات آمنة ضعيفة.
 ═══════════════════════════════════════════════════════
@@ -79,11 +79,11 @@ ENTRY_SCORE_GATE     = 40
 PHILOSOPHY_NOTE = """
 <div style="background:#1a3c5e;color:#fff;border-radius:6px;padding:10px 16px;
             margin:10px 0;font-size:.85em;line-height:1.7">
-  <strong>⚖ مقياس الترتيب:</strong>
-  CAGR → Profit Factor → Avg MFE → Calmar → Max DD
+  <strong>⚖ ترتيب التقييم:</strong>
+  CAGR → Profit Factor → Avg MFE → Calmar → Max DD → Win Rate
   <span style="opacity:.7;margin-right:12px">|</span>
-  <strong>Win Rate في آخر القائمة دائماً</strong> —
-  النظام يحقق عوائده من رابحين قلائل كبار، رفع Win Rate يُفضّل إشارات آمنة تقتل العائد الكلي.
+  Win Rate مقياس مهم لكنه ليس الأول — النظام يحقق عوائده من رابحين قلائل كبار،
+  لذا CAGR وProfit Factor يُقيّمان حجم العائد الكلي بدقة أكبر.
 </div>"""
 
 # ── CSS ────────────────────────────────────────────────────────────────────────
@@ -192,7 +192,7 @@ def _metrics(sub: pd.DataFrame) -> dict:
         mfe = sub["mfe_20d"].dropna()
         if len(mfe) >= 3:
             result["avg_mfe"] = mfe.mean()
-            # Win Rate — آخر القائمة، للمرجعية فقط
+            # Win Rate — مقياس كامل في التقرير
             result["win_rate"] = (mfe >= WIN_MFE_THRESH).mean()
 
     # 4. Calmar = CAGR / avg_MAE
@@ -213,7 +213,7 @@ def _metrics(sub: pd.DataFrame) -> dict:
 def _fmt_metrics(m: dict, base: dict | None = None) -> list:
     """
     يُرجع قائمة خلايا HTML بالترتيب:
-    CAGR | PF | Avg MFE | Calmar | Max DD | Win Rate (dim)
+    CAGR | PF | Avg MFE | Calmar | Max DD | Win Rate
     """
     def _fmt(v, fmt, suffix=""):
         return f"{v:{fmt}}{suffix}" if v is not None else "—"
@@ -235,13 +235,12 @@ def _fmt_metrics(m: dict, base: dict | None = None) -> list:
     mfe_s   = _delta_badge(m["avg_mfe"], bm.get("avg_mfe"), 0.12, 0.05, ".1%")
     cal_s   = _delta_badge(m["calmar"],  bm.get("calmar"),  2.0,  0.5,  ".2f")
     dd_s    = _fmt(m["max_dd"],   ".1%") if m["max_dd"] is not None else "—"
-    wr_s    = f'<span class="wr-dim">{m["win_rate"]:.0%}</span>' if m["win_rate"] is not None else '<span class="wr-dim">—</span>'
+    wr_s    = f"{m['win_rate']:.0%}" if m["win_rate"] is not None else "—"
 
     return [str(m["n"]), cagr_s, pf_s, mfe_s, cal_s, dd_s, wr_s]
 
 
-METRICS_HEADERS = ["N", "CAGR", "Profit Factor", "Avg MFE", "Calmar", "Max DD",
-                   '<span class="wr-dim">Win Rate ↓</span>']
+METRICS_HEADERS = ["N", "CAGR", "Profit Factor", "Avg MFE", "Calmar", "Max DD", "Win Rate"]
 
 
 # ── HTML helpers ───────────────────────────────────────────────────────────────
@@ -422,8 +421,8 @@ def phase2_feature_consistency(df: pd.DataFrame) -> tuple:
         cagr_top = f"{top_m['cagr']:.0%}"  if top_m["cagr"]    is not None else "—"
         pf_top   = f"{top_m['pf']:.2f}"    if top_m["pf"]       is not None else "—"
         mfe_top  = f"{top_m['avg_mfe']:.1%}"if top_m["avg_mfe"] is not None else "—"
-        wr_top   = f'<span class="wr-dim">{top_m["win_rate"]:.0%}</span>' \
-                   if top_m["win_rate"] is not None else '<span class="wr-dim">—</span>'
+        wr_top   = f'{top_m["win_rate"]:.0%}' \
+                   if top_m["win_rate"] is not None else '—'
         mono_s   = "✓" if mono_ok else ("✗" if mono_ok is False else "—")
         sp_s     = f"{spear:+.3f}"
 
@@ -441,7 +440,7 @@ def phase2_feature_consistency(df: pd.DataFrame) -> tuple:
   </p>
   {_tbl(
     ["المكوّن","N","Spearman","CAGR(top)","PF(top)","MFE(top)","Mono",
-     '<span class="wr-dim">WR↓</span>',"درجة"],
+     "Win Rate","درجة"],
     rows
   )}
 </div>"""
@@ -557,7 +556,7 @@ def phase4_gate_analysis(df: pd.DataFrame) -> str:
   <p style="font-size:.85em;color:#555">
     الترتيب: CAGR → PF → Avg MFE → Calmar → Max DD.
     الفارق (+/-) محسوب من قاعدة الكل.
-    <span class="wr-dim">Win Rate في آخر الجدول — للمرجعية فقط.</span>
+    Win Rate مُدرَج كمقياس كامل — الترتيب يبدأ من CAGR.
   </p>
   <div class="frozen-note">⚠ العتبات مجمّدة في النظام — النتائج للبحث فقط</div>
 
@@ -663,8 +662,8 @@ def phase5_edge_discovery(df: pd.DataFrame) -> str:
         mfe_s     = f"{m['avg_mfe']:.1%}"           if m["avg_mfe"]  is not None else "—"
         pf_s      = f"{m['pf']:.2f}"                if m["pf"]       is not None else "—"
         cal_s     = f"{m['calmar']:.2f}"             if m["calmar"]   is not None else "—"
-        wr_s      = f'<span class="wr-dim">{m["win_rate"]:.0%}</span>' \
-                    if m["win_rate"] is not None else '<span class="wr-dim">—</span>'
+        wr_s      = f'{m["win_rate"]:.0%}' \
+                    if m["win_rate"] is not None else '—'
         rows.append([e["combo"], deg_s, str(m["n"]),
                      cagr_lift, pf_s, mfe_s, cal_s, p_s, wr_s])
 
@@ -683,11 +682,11 @@ def phase5_edge_discovery(df: pd.DataFrame) -> str:
   <p style="font-size:.85em;color:#555">
     مرتَّب: CAGR Lift ← ثم Avg MFE.
     فلترة: p ≤ 0.25 و N ≥ {MIN_N_EDGE}.
-    <span class="wr-dim">Win Rate في آخر الجدول — للمرجعية فقط.</span>
+    Win Rate مُدرَج كمقياس كامل — الترتيب يبدأ من CAGR.
   </p>
   {_tbl(
     ["التركيبة","نوع","N","CAGR Lift","PF","Avg MFE","Calmar","p-val",
-     '<span class="wr-dim">WR↓</span>'],
+     "Win Rate"],
     rows
   ) if rows else '<p class="warn">لا حوافّ ذات دلالة</p>'}
 </div>"""
@@ -758,7 +757,7 @@ def phase6_clusters(df: pd.DataFrame) -> str:
   {PHILOSOPHY_NOTE}
   <p style="font-size:.85em;color:#555">
     KMeans (k={k}) — مرتَّب حسب CAGR تنازلياً.
-    <span class="wr-dim">Win Rate في آخر الجدول — للمرجعية فقط.</span>
+    Win Rate مُدرَج كمقياس كامل — الترتيب يبدأ من CAGR.
   </p>
   {_tbl(
     ["المجموعة"] + METRICS_HEADERS + ["أقوى مكوّن"],
@@ -840,7 +839,7 @@ def phase7_summary(dq_score: float, feat_scores: dict, df: pd.DataFrame) -> str:
   </div>
   <div class="kpi-row">
     {_kpi(dd_s,  "Max DD")}
-    {_kpi(f'<span class="wr-dim">{wr_s}</span>', "Win Rate (آخر الأولويات)")}
+    {_kpi(f'{wr_s}', "Win Rate")}
   </div>
   <div class="rec-box">
     <h3>أقوى المكونات (CAGR/PF/MFE)</h3>

@@ -1001,12 +1001,13 @@ def _build_distribution_section(res: dict) -> str:
 
 
 def _build_pattern_clusters_section(res: dict) -> str:
-    pd = res.get("pattern_discovery", {})
-    if not pd:
+    pd_res = res.get("pattern_discovery", {})
+    if not pd_res:
         return ""
-    clusters = pd.get("clusters", {})
-    top_feats = pd.get("top_discriminating_features", [])
-    n_total = pd.get("n_signals", 0)
+    # clusters is a list of dicts (already sorted best→worst by MFE)
+    clusters = pd_res.get("clusters", [])
+    top_feats_raw = pd_res.get("top_discriminating_features", [])
+    n_total = pd_res.get("n_used", 0)
     if not clusters:
         return ""
 
@@ -1017,39 +1018,47 @@ def _build_pattern_clusters_section(res: dict) -> str:
         f'مبني على {n_total} إشارة — مُرتَّبة بـ MFE تنازلياً</p>'
     )
 
-    if top_feats:
-        feats_str = " | ".join(f"<code>{f}</code>" for f in top_feats[:8])
+    # top_discriminating_features is a list of (feat, importance) tuples or [feat, importance] lists
+    if top_feats_raw:
+        feat_names = [f[0] if isinstance(f, (list, tuple)) else f for f in top_feats_raw[:8]]
+        feats_str = " | ".join(f"<code>{f}</code>" for f in feat_names)
         html += f'<p style="font-size:.83em;color:#555">أكثر المتغيرات تمييزاً بين الـ clusters: {feats_str}</p>'
 
     html += (
         '<table><thead><tr>'
-        '<th>Cluster</th><th>عدد</th><th>MFE (متوسط)</th>'
+        '<th>Cluster</th><th>التصنيف</th><th>عدد</th><th>MFE (متوسط)</th>'
         '<th>MAE (متوسط)</th><th>BQ (متوسط)</th>'
-        '<th>أبرز خصائص الـ Cluster</th>'
+        '<th>أبرز الخصائص</th>'
         '</tr></thead><tbody>'
     )
 
-    sorted_clusters = sorted(clusters.items(),
-                             key=lambda x: x[1].get("mfe_mean", 0), reverse=True)
-    for cid, cv in sorted_clusters:
-        n = cv.get("n", 0)
+    for cv in clusters:
+        cid   = cv.get("cluster_id", "?")
+        label = cv.get("cluster_label", "")
+        n     = cv.get("n", 0)
         mfe_m = cv.get("mfe_mean")
         mae_m = cv.get("mae_mean")
-        bq_m = cv.get("bq_mean")
-        profile = cv.get("profile", {})
+        bq_m  = cv.get("bq_mean")
 
-        top_profile = sorted(profile.items(), key=lambda x: abs(x[1]), reverse=True)[:4]
-        profile_str = " | ".join(
-            f"<code>{k}</code>: {v:+.2f}" for k, v in top_profile
-        )
+        # signatures: {feat: {"cluster_mean": float, "diff_from_global": float}}
+        signatures = cv.get("signatures", {})
+        top_feats_cv = cv.get("top_features", [])[:4]
+        sig_parts = []
+        for feat in top_feats_cv:
+            sig = signatures.get(feat, {})
+            diff = sig.get("diff_from_global")
+            if diff is not None:
+                sig_parts.append(f"<code>{feat}</code>: {diff:+.2f}")
+        profile_str = " | ".join(sig_parts) if sig_parts else "—"
 
         html += (
             f"<tr><td><strong>C{cid}</strong></td>"
+            f"<td style='font-size:.82em'>{label}</td>"
             f"<td>{n}</td>"
             f"<td>{_mfe_badge(mfe_m)}</td>"
             f"<td>{_pct(mae_m)}</td>"
             f"<td>{_bq_badge(bq_m)}</td>"
-            f"<td style='font-size:.80em'>{profile_str}</td></tr>"
+            f"<td style='font-size:.79em'>{profile_str}</td></tr>"
         )
 
     html += (

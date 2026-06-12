@@ -7,9 +7,9 @@ and research report show performance from 2021 instead of 2024.
 
 Each entry uses:
   - smc_score    = raw_score from signals table
-  - outcome_gain = mfe_20d  (actual max favorable excursion over 20 days)
-  - peak_gain    = mfe_20d
-  - outcome      = classification mapped to flat/small/medium/large
+  - outcome_gain = r20d  (actual confirmed return at exactly 20 trading days — real exit, no assumptions)
+  - peak_gain    = mfe_20d  (actual max favorable excursion — how far price moved at best)
+  - outcome      = flat/small/medium/large mapped from r20d thresholds
   - outcome_date = signal_date + 28 calendar days (~20 trading days)
   - source       = "smc_historical"
 
@@ -27,14 +27,12 @@ from egx_context import is_ramadan, is_cbe_window
 
 SIGNAL_LOG_FILE = "signal_log.json"
 
-# Map BQ classification → signal_log outcome category
-CLASSIFICATION_MAP = {
-    "Huge Winner": "large",   # mfe >= 20%
-    "Winner":      "medium",  # mfe >= 8%
-    "Neutral":     "small",   # mfe >= 3%, mae > -8%
-    "Loser":       "flat",    # everything else
-    "Major Loser": "flat",    # mae <= -15%
-}
+def _outcome_from_r20d(r20d: float) -> str:
+    """Map actual 20-day return to outcome category — no assumptions, real exit."""
+    if   r20d >= 0.20: return "large"
+    elif r20d >= 0.08: return "medium"
+    elif r20d >= 0.04: return "small"
+    else:              return "flat"
 
 
 def _load_signal_log() -> dict:
@@ -64,7 +62,7 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
         SELECT
             s.id, s.symbol, s.signal_date, s.signal_type,
             s.raw_score, s.price,
-            b.mfe_20d, b.mae_20d, b.classification
+            b.mfe_20d, b.mae_20d, b.r20d
         FROM signals s
         JOIN bottom_quality b ON b.signal_id = s.id
         ORDER BY s.signal_date
@@ -77,7 +75,7 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
 
     for row in rows:
         sig_id, symbol, sig_date, sig_type, raw_score, price, \
-            mfe_20d, mae_20d, classification = row
+            mfe_20d, mae_20d, r20d = row
 
         log_id = f"{sig_id}_smc_hist"
         if log_id in exist_ids:
@@ -87,10 +85,13 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
         # Dates
         d            = date.fromisoformat(sig_date)
         outcome_date = (d + timedelta(days=28)).isoformat()
-        outcome_price = round(float(price) * (1 + float(mfe_20d)), 2)
 
-        # Outcome category
-        outcome = CLASSIFICATION_MAP.get(classification, "flat")
+        # Use r20d (actual confirmed return at day 20) — no assumptions
+        r20d_val      = float(r20d) if r20d is not None else 0.0
+        outcome_price = round(float(price) * (1 + r20d_val), 2)
+
+        # Outcome category — based on actual exit, not peak
+        outcome = _outcome_from_r20d(r20d_val)
 
         # Context flags (historically accurate)
         ctx = {
@@ -113,7 +114,7 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
             "outcome":       outcome,
             "outcome_date":  outcome_date,
             "outcome_price": outcome_price,
-            "outcome_gain":  round(float(mfe_20d), 4),
+            "outcome_gain":  round(r20d_val, 4),
             "peak_gain":     round(float(mfe_20d), 4),
             "source":        "smc_historical",
             "context":       ctx,

@@ -69,13 +69,19 @@ jobs:
           PYTHONUNBUFFERED: "1"
         run: python backfill_research_db.py
 
-      - name: Commit research DB
+      - name: Backfill signal_log.json with SMC historical signals
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: python backfill_signal_log_smc.py
+
+      - name: Commit research DB + signal_log
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git add -f egx_research.db signal_history.json 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "Backfill historical BQ + features [skip ci]"
+          git add -f egx_research.db signal_history.json signal_log.json 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "Backfill historical BQ + features + signal_log [skip ci]"
           git pull origin main --rebase || true
           git push || true
 

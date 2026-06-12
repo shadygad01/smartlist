@@ -5,35 +5,31 @@ Quant Research Report
 
 لا يُعدّل أي منطق في النظام — بحث وإبلاغ فقط.
 
-المراحل:
-  1. Data Audit       — جودة البيانات، معدلات NULL، توزيع العوائد
-  2. Feature Analysis — اتساق r1-r8: ارتباط، رتب، قيمة المعلومات
-  3. Weight Validation— مقارنة الأوزان الحالية بأهمية ML
-  4. Gate Analysis    — اختبار عتبات PRICE_GATE / LIQ / SCORE
-  5. Edge Discovery   — مجموعات المكونات ذات الـ MFE الأعلى
-  6. Cluster Profiles — تجميع الإشارات وتحديد ملامح الفائزين
-  7. Final Summary    — الدرجات والتوصيات
-
-التشغيل:
-    python quant_research_report.py
+═══════════════════════════════════════════════════════
+فلسفة التقييم — الترتيب الإلزامي للمقاييس:
+  1. CAGR            ← العائد السنوي المركب
+  2. Profit Factor   ← مجموع الأرباح ÷ مجموع الخسائر
+  3. Average MFE     ← متوسط أقصى ربح غير محقق
+  4. Calmar Ratio    ← CAGR ÷ متوسط الـ MAE
+  5. Max Drawdown    ← أسوأ تراجع منفرد
+  --- Win Rate في الأسفل دائماً ---
+  النظام يحقق عوائده من عدد قليل من الرابحين الكبار.
+  رفع Win Rate يقتل العائد الكلي بتفضيل إشارات آمنة ضعيفة.
+═══════════════════════════════════════════════════════
 """
 
 import os
 import sys
-import sqlite3
-from datetime import date, datetime
+from datetime import date
 from itertools import combinations
 
-# ── اختياري: numpy / pandas / sklearn ─────────────────────────────────────────
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 try:
     import numpy as np
     import pandas as pd
-    NUMPY_OK = True
 except ImportError:
-    NUMPY_OK = False
     sys.exit("Run: pip install numpy pandas")
 
 try:
@@ -68,21 +64,33 @@ R_LABELS = {
     "r8_demand":   "r8 منطقة الطلب",
 }
 
-WIN_MFE_THRESH  = 0.08   # 8% MFE = فائز
-MIN_N_EDGE      = 8      # حد أدنى للإشارات في Edge group
-MIN_N_CLUSTER   = 5      # حد أدنى لـ cluster
+WIN_MFE_THRESH  = 0.08   # 8% MFE = فائز — للمرجعية فقط، ليس للترتيب
+MIN_N_EDGE      = 8
+MIN_N_CLUSTER   = 5
 TRAIN_SPLIT     = 0.70
 TODAY           = date.today().isoformat()
+ANNUALIZE_DAYS  = 252
+HOLD_DAYS       = 20     # افتراض فترة الاحتفاظ 20 يوم تداول
 
 PRICE_GATE_NORMAL    = 16
 PRICE_GATE_WHITELIST = 15
 ENTRY_SCORE_GATE     = 40
 
+PHILOSOPHY_NOTE = """
+<div style="background:#1a3c5e;color:#fff;border-radius:6px;padding:10px 16px;
+            margin:10px 0;font-size:.85em;line-height:1.7">
+  <strong>⚖ مقياس الترتيب:</strong>
+  CAGR → Profit Factor → Avg MFE → Calmar → Max DD
+  <span style="opacity:.7;margin-right:12px">|</span>
+  <strong>Win Rate في آخر القائمة دائماً</strong> —
+  النظام يحقق عوائده من رابحين قلائل كبار، رفع Win Rate يُفضّل إشارات آمنة تقتل العائد الكلي.
+</div>"""
+
 # ── CSS ────────────────────────────────────────────────────────────────────────
 _CSS = """
 <style>
   body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#222;direction:rtl;margin:0}
-  .container{max-width:960px;margin:20px auto;background:#fff;border-radius:10px;
+  .container{max-width:980px;margin:20px auto;background:#fff;border-radius:10px;
              box-shadow:0 2px 12px #0002;overflow:hidden}
   .header{background:linear-gradient(135deg,#1a3c5e,#2a6496);color:#fff;padding:28px 30px}
   .header h1{margin:0;font-size:1.6em}
@@ -91,13 +99,14 @@ _CSS = """
   .section h2{color:#1a3c5e;margin-top:0;font-size:1.15em;
               border-right:4px solid #2a6496;padding-right:10px}
   .kpi-row{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0}
-  .kpi{flex:1;min-width:120px;background:#f7f9fb;border-radius:8px;
+  .kpi{flex:1;min-width:110px;background:#f7f9fb;border-radius:8px;
        padding:14px 16px;text-align:center}
-  .kpi .val{font-size:1.9em;font-weight:700;color:#1a3c5e}
-  .kpi .lbl{font-size:.78em;color:#666;margin-top:4px}
+  .kpi .val{font-size:1.7em;font-weight:700;color:#1a3c5e}
+  .kpi .lbl{font-size:.76em;color:#666;margin-top:4px}
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  table{width:100%;border-collapse:collapse;font-size:.87em}
+  table{width:100%;border-collapse:collapse;font-size:.85em}
   th{background:#1a3c5e;color:#fff;padding:8px 10px;text-align:right;white-space:nowrap}
+  th.wr-col{background:#4a5568;opacity:.8}
   td{padding:7px 10px;border-bottom:1px solid #eee}
   tr:nth-child(even) td{background:#f9f9f9}
   .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.78em;font-weight:600}
@@ -116,6 +125,7 @@ _CSS = """
   .score-fill{height:100%;border-radius:4px;background:#2a6496}
   .frozen-note{background:#e8f0fe;border:1px solid #c5cae9;border-radius:6px;
                padding:8px 14px;margin:8px 0;font-size:.82em;color:#3949ab}
+  .wr-dim{color:#999;font-size:.85em}
 </style>"""
 
 
@@ -124,7 +134,6 @@ _CSS = """
 def _load_data() -> pd.DataFrame:
     conn = get_conn()
     try:
-        # all mature signals (with BQ computed)
         rows = conn.execute("""
             SELECT s.*, b.bq_score, b.mfe_20d, b.mfe_40d,
                    b.mae_20d, b.mae_40d, b.days_to_peak,
@@ -136,7 +145,6 @@ def _load_data() -> pd.DataFrame:
             return pd.DataFrame()
         df = pd.DataFrame([dict(r) for r in rows])
         df = df.sort_values("signal_date").reset_index(drop=True)
-        # mae → absolute
         for c in ["mae_20d", "mae_40d"]:
             if c in df.columns:
                 df[c] = df[c].abs()
@@ -154,15 +162,93 @@ def _load_all_signals() -> pd.DataFrame:
         conn.close()
 
 
+# ── Metrics Engine ─────────────────────────────────────────────────────────────
+
+def _metrics(sub: pd.DataFrame) -> dict:
+    """
+    يحسب المقاييس الخمسة بالترتيب الإلزامي.
+    يُستخدم r20d للعائد الفعلي — mfe_20d للإمكانية — mae_20d للمخاطرة.
+    """
+    n = len(sub)
+    result = {"n": n, "cagr": None, "pf": None, "avg_mfe": None,
+              "calmar": None, "max_dd": None, "win_rate": None}
+    if n < 3:
+        return result
+
+    # 1. CAGR — من r20d (العائد الفعلي لكل إشارة)
+    if "r20d" in sub.columns:
+        r20 = sub["r20d"].dropna()
+        if len(r20) >= 3:
+            mean_r = r20.mean()
+            cagr   = (1 + mean_r) ** (ANNUALIZE_DAYS / HOLD_DAYS) - 1
+            result["cagr"] = cagr
+            # 2. Profit Factor
+            gains  = r20[r20 > 0].sum()
+            losses = r20[r20 < 0].abs().sum()
+            result["pf"] = gains / losses if losses > 0 else float("inf")
+
+    # 3. Average MFE
+    if "mfe_20d" in sub.columns:
+        mfe = sub["mfe_20d"].dropna()
+        if len(mfe) >= 3:
+            result["avg_mfe"] = mfe.mean()
+            # Win Rate — آخر القائمة، للمرجعية فقط
+            result["win_rate"] = (mfe >= WIN_MFE_THRESH).mean()
+
+    # 4. Calmar = CAGR / avg_MAE
+    if "mae_20d" in sub.columns and result["cagr"] is not None:
+        mae = sub["mae_20d"].dropna()
+        if len(mae) >= 3 and mae.mean() > 0:
+            result["calmar"] = result["cagr"] / mae.mean()
+
+    # 5. Max Drawdown (أسوأ تراجع منفرد)
+    if "mae_20d" in sub.columns:
+        mae = sub["mae_20d"].dropna()
+        if len(mae) >= 1:
+            result["max_dd"] = mae.max()
+
+    return result
+
+
+def _fmt_metrics(m: dict, base: dict | None = None) -> list:
+    """
+    يُرجع قائمة خلايا HTML بالترتيب:
+    CAGR | PF | Avg MFE | Calmar | Max DD | Win Rate (dim)
+    """
+    def _fmt(v, fmt, suffix=""):
+        return f"{v:{fmt}}{suffix}" if v is not None else "—"
+
+    def _delta_badge(val, bval, hi, lo, fmt, suffix=""):
+        if val is None:
+            return "—"
+        s = f"{val:{fmt}}{suffix}"
+        cls = "b-high" if val >= hi else ("b-low" if val < lo else "b-med")
+        if base and bval is not None:
+            d = val - bval
+            sign = "+" if d > 0 else ""
+            s += f' <span style="font-size:.75em;color:#666">({sign}{d:{fmt}})</span>'
+        return f'<span class="badge {cls}">{s}</span>'
+
+    bm = base or {}
+    cagr_s  = _delta_badge(m["cagr"],    bm.get("cagr"),    0.20, 0.05, ".0%")
+    pf_s    = _delta_badge(m["pf"],      bm.get("pf"),      1.5,  1.0,  ".2f")
+    mfe_s   = _delta_badge(m["avg_mfe"], bm.get("avg_mfe"), 0.12, 0.05, ".1%")
+    cal_s   = _delta_badge(m["calmar"],  bm.get("calmar"),  2.0,  0.5,  ".2f")
+    dd_s    = _fmt(m["max_dd"],   ".1%") if m["max_dd"] is not None else "—"
+    wr_s    = f'<span class="wr-dim">{m["win_rate"]:.0%}</span>' if m["win_rate"] is not None else '<span class="wr-dim">—</span>'
+
+    return [str(m["n"]), cagr_s, pf_s, mfe_s, cal_s, dd_s, wr_s]
+
+
+METRICS_HEADERS = ["N", "CAGR", "Profit Factor", "Avg MFE", "Calmar", "Max DD",
+                   '<span class="wr-dim">Win Rate ↓</span>']
+
+
 # ── HTML helpers ───────────────────────────────────────────────────────────────
 
 def _badge(val: float, hi: float, lo: float, fmt: str = ".1%") -> str:
     cls = "b-high" if val >= hi else ("b-low" if val < lo else "b-med")
     return f'<span class="badge {cls}">{val:{fmt}}</span>'
-
-
-def _pct(n: int, tot: int) -> str:
-    return f"{n/tot:.1%}" if tot else "—"
 
 
 def _kpi(val: str, lbl: str) -> str:
@@ -178,11 +264,13 @@ def _bar(score: float, maxv: float = 100) -> str:
 
 def _tbl(headers: list, rows: list) -> str:
     ths = "".join(f"<th>{h}</th>" for h in headers)
-    trs = ""
-    for row in rows:
-        tds = "".join(f"<td>{c}</td>" for c in row)
-        trs += f"<tr>{tds}</tr>"
-    return f'<div class="tbl-wrap"><table><thead><tr>{ths}</tr></thead><tbody>{trs}</tbody></table></div>'
+    trs = "".join(
+        "<tr>" + "".join(f"<td>{c}</td>" for c in row) + "</tr>"
+        for row in rows
+    )
+    return (f'<div class="tbl-wrap"><table>'
+            f'<thead><tr>{ths}</tr></thead>'
+            f'<tbody>{trs}</tbody></table></div>')
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -190,15 +278,12 @@ def _tbl(headers: list, rows: list) -> str:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def phase1_data_audit(df: pd.DataFrame, df_all: pd.DataFrame) -> tuple:
-    """Returns (html_section, dq_score)"""
+    total_all = len(df_all)
+    total_mat = len(df)
+    n_symbols = df_all["symbol"].nunique() if "symbol" in df_all.columns else 0
 
-    total_all  = len(df_all)
-    total_mat  = len(df)
-    n_symbols  = df_all["symbol"].nunique() if "symbol" in df_all.columns else 0
-
-    # NULL rates for r1-r8
-    null_rows = []
-    dq_penalties = 0.0
+    null_rows     = []
+    dq_penalties  = 0.0
     for col in R_COLS:
         n_null = df[col].isna().sum() if col in df.columns else total_mat
         pct_ok = (total_mat - n_null) / total_mat if total_mat else 0
@@ -208,9 +293,8 @@ def phase1_data_audit(df: pd.DataFrame, df_all: pd.DataFrame) -> tuple:
         if pct_ok < 0.90:
             dq_penalties += (0.90 - pct_ok) * 20
 
-    # Target columns
     tgt_null_rows = []
-    for col in ["mfe_20d", "mfe_40d", "mae_20d", "bq_score"]:
+    for col in ["mfe_20d", "mfe_40d", "mae_20d", "r20d", "bq_score"]:
         if col not in df.columns:
             continue
         n_null = df[col].isna().sum()
@@ -220,32 +304,35 @@ def phase1_data_audit(df: pd.DataFrame, df_all: pd.DataFrame) -> tuple:
         if pct_ok < 0.90:
             dq_penalties += (0.90 - pct_ok) * 10
 
-    # Return distribution
+    # توزيع MFE
     dist_html = ""
     if "mfe_20d" in df.columns:
-        mfe = df["mfe_20d"].dropna()
-        n_high = (mfe >= 0.15).sum()
-        n_med  = ((mfe >= 0.05) & (mfe < 0.15)).sum()
-        n_low  = (mfe < 0.05).sum()
-        n_tot  = len(mfe)
+        mfe   = df["mfe_20d"].dropna()
+        n_tot = len(mfe)
         dist_html = f"""
 <div class="kpi-row">
-  {_kpi(f"{n_high/n_tot:.0%}" if n_tot else "—", "MFE ≥ 15%")}
-  {_kpi(f"{n_med/n_tot:.0%}"  if n_tot else "—", "MFE 5–15%")}
-  {_kpi(f"{n_low/n_tot:.0%}"  if n_tot else "—", "MFE < 5%")}
+  {_kpi(f"{(mfe>=0.20).sum()/n_tot:.0%}" if n_tot else "—", "MFE ≥ 20% (كبار)")}
+  {_kpi(f"{((mfe>=0.10)&(mfe<0.20)).sum()/n_tot:.0%}" if n_tot else "—", "MFE 10–20%")}
+  {_kpi(f"{((mfe>=0.05)&(mfe<0.10)).sum()/n_tot:.0%}" if n_tot else "—", "MFE 5–10%")}
+  {_kpi(f"{(mfe<0.05).sum()/n_tot:.0%}" if n_tot else "—", "MFE < 5%")}
   {_kpi(f"{mfe.median():.1%}" if n_tot else "—", "Median MFE")}
-  {_kpi(f"{mfe.mean():.1%}"   if n_tot else "—", "Mean MFE")}
 </div>"""
 
-    # DQ Score
+    # مقاييس كاملة للمجموعة كلها
+    bm = _metrics(df)
     dq_score = max(0.0, 100.0 - dq_penalties)
-    # Penalise small sample
     if total_mat < 30:
         dq_score = min(dq_score, 40.0)
     elif total_mat < 60:
         dq_score = min(dq_score, 70.0)
 
-    dq_badge = ("b-high" if dq_score >= 70 else ("b-low" if dq_score < 40 else "b-med"))
+    dq_cls = "b-high" if dq_score >= 70 else ("b-low" if dq_score < 40 else "b-med")
+
+    cagr_s  = f"{bm['cagr']:.0%}"   if bm["cagr"]    is not None else "—"
+    pf_s    = f"{bm['pf']:.2f}"     if bm["pf"]      is not None else "—"
+    mfe_s   = f"{bm['avg_mfe']:.1%}"if bm["avg_mfe"] is not None else "—"
+    cal_s   = f"{bm['calmar']:.2f}" if bm["calmar"]  is not None else "—"
+    dd_s    = f"{bm['max_dd']:.1%}" if bm["max_dd"]  is not None else "—"
 
     html = f"""
 <div class="section">
@@ -254,16 +341,22 @@ def phase1_data_audit(df: pd.DataFrame, df_all: pd.DataFrame) -> tuple:
     {_kpi(str(total_all),  "إجمالي الإشارات")}
     {_kpi(str(total_mat),  "إشارات ناضجة")}
     {_kpi(str(n_symbols),  "رمز سهم")}
-    {_kpi(f'<span class="badge {dq_badge}">{dq_score:.0f}/100</span>', "درجة جودة البيانات")}
+    {_kpi(f'<span class="badge {dq_cls}">{dq_score:.0f}/100</span>', "درجة جودة البيانات")}
+  </div>
+  <div class="kpi-row">
+    {_kpi(cagr_s,  "CAGR الكلي")}
+    {_kpi(pf_s,    "Profit Factor")}
+    {_kpi(mfe_s,   "Avg MFE")}
+    {_kpi(cal_s,   "Calmar Ratio")}
+    {_kpi(dd_s,    "Max DD")}
   </div>
   {dist_html}
-  <h3 style="color:#1a3c5e;margin:14px 0 6px">معدلات البيانات — مكونات التسجيل (r1-r8)</h3>
+  <h3 style="color:#1a3c5e;margin:14px 0 6px">اكتمال بيانات المكوّنات r1-r8</h3>
   {_tbl(["المكوّن","متوفر","Null","اكتمال"],null_rows)}
-  <h3 style="color:#1a3c5e;margin:14px 0 6px">معدلات البيانات — متغيرات الهدف</h3>
+  <h3 style="color:#1a3c5e;margin:14px 0 6px">اكتمال متغيرات الهدف</h3>
   {_tbl(["المتغير","متوفر","Null","اكتمال"],tgt_null_rows)}
   <div class="frozen-note">⚙ منطق الإدخال مجمّد — هذا التقرير للبحث والإبلاغ فقط</div>
 </div>"""
-
     return html, dq_score
 
 
@@ -272,12 +365,11 @@ def phase1_data_audit(df: pd.DataFrame, df_all: pd.DataFrame) -> tuple:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def phase2_feature_consistency(df: pd.DataFrame) -> tuple:
-    """Returns (html_section, feature_scores: dict r→score)"""
     if df.empty or "mfe_20d" not in df.columns:
-        return '<div class="section"><h2>المرحلة 2: اتساق المكونات</h2><p class="warn">بيانات غير كافية</p></div>', {}
+        return ('<div class="section"><h2>المرحلة 2</h2>'
+                '<p class="warn">بيانات غير كافية</p></div>'), {}
 
-    mfe = df["mfe_20d"].fillna(0)
-    bq  = df["bq_score"].fillna(0) if "bq_score" in df.columns else pd.Series([0]*len(df))
+    base_m = _metrics(df)
     rows   = []
     scores = {}
 
@@ -285,64 +377,71 @@ def phase2_feature_consistency(df: pd.DataFrame) -> tuple:
         if col not in df.columns:
             continue
         vals = df[col].fillna(0)
-        n    = vals.notna().sum()
+        n    = int(vals.notna().sum())
         if n < 10:
-            rows.append([R_LABELS[col], str(n), "—","—","—","—","—"])
+            rows.append([R_LABELS[col], str(n)] + ["—"]*8)
             scores[col] = 0
             continue
 
-        # correlation with MFE (Spearman)
+        med    = vals.median()
+        top_df = df.loc[vals >= med].copy()
+        bot_df = df.loc[vals <  med].copy()
+        top_m  = _metrics(top_df)
+        bot_m  = _metrics(bot_df)
+
+        # Spearman(component, MFE)
         if SCIPY_OK:
-            spear, p_spear = sp_stats.spearmanr(vals, mfe)
+            spear, _ = sp_stats.spearmanr(vals, df["mfe_20d"].fillna(0))
         else:
-            corr_df = pd.DataFrame({"v": vals, "m": mfe}).dropna()
-            spear   = corr_df["v"].corr(corr_df["m"], method="spearman") if len(corr_df) > 5 else 0.0
-            p_spear = 0.5
+            spear = vals.corr(df["mfe_20d"].fillna(0), method="spearman")
 
-        # win rate in top half vs bottom half
-        med = vals.median()
-        top = df.loc[vals >= med, "mfe_20d"].dropna()
-        bot = df.loc[vals < med,  "mfe_20d"].dropna()
-        wr_top = (top >= WIN_MFE_THRESH).mean() if len(top) else 0
-        wr_bot = (bot >= WIN_MFE_THRESH).mean() if len(bot) else 0
-        lift   = wr_top / wr_bot if wr_bot > 0 else float("nan")
-
-        # avg MFE top half
-        avg_mfe_top = top.mean() if len(top) else 0
-
-        # monotonicity: split into quartiles, check if avg MFE is increasing
+        # رتابة عبر الأرباع
         try:
-            q_labels  = pd.qcut(vals, 4, labels=False, duplicates="drop")
-            mono_mfe  = df.groupby(q_labels)["mfe_20d"].mean().dropna()
-            mono_corr = mono_mfe.corr(pd.Series(range(len(mono_mfe)), index=mono_mfe.index))
-            mono_ok   = mono_corr > 0.5 if len(mono_mfe) >= 3 else None
+            q      = pd.qcut(vals, 4, labels=False, duplicates="drop")
+            mono_c = df.groupby(q)["mfe_20d"].mean().dropna()
+            mono_ok = mono_c.corr(
+                pd.Series(range(len(mono_c)), index=mono_c.index)
+            ) > 0.5 if len(mono_c) >= 3 else None
         except Exception:
             mono_ok = None
 
-        # information value proxy (abs spearman × sign)
-        iv = abs(spear)
+        # درجة المكوّن — مرتّبة حسب CAGR/PF/MFE وليس Win Rate
+        score = 0.0
+        if top_m["cagr"] is not None and base_m["cagr"] is not None and base_m["cagr"] != 0:
+            score += min(40, max(0, (top_m["cagr"] - base_m["cagr"]) / abs(base_m["cagr"]) * 40))
+        if top_m["pf"] is not None and bot_m["pf"] is not None and bot_m["pf"] > 0:
+            pf_lift = top_m["pf"] / bot_m["pf"]
+            score  += min(30, max(0, (pf_lift - 1) * 30))
+        if top_m["avg_mfe"] is not None and base_m["avg_mfe"] is not None and base_m["avg_mfe"] > 0:
+            mfe_lift = top_m["avg_mfe"] / base_m["avg_mfe"]
+            score   += min(20, max(0, (mfe_lift - 1) * 20))
+        score += 10 if mono_ok else 0
+        scores[col] = round(min(100, score), 1)
 
-        # component score 0-100
-        comp_score  = min(100, max(0, iv * 60 + (lift - 1) * 20 + (1 if mono_ok else 0) * 20))
-        scores[col] = round(comp_score, 1)
-
-        spear_fmt = f"{spear:+.3f}"
-        lift_fmt  = f"{lift:.2f}" if not (isinstance(lift, float) and (lift != lift)) else "—"
-        mono_fmt  = "✓" if mono_ok else ("✗" if mono_ok is False else "—")
-        p_fmt     = f"{p_spear:.3f}" if SCIPY_OK else "—"
-        mfe_fmt   = f"{avg_mfe_top:.1%}"
+        # أعمدة الجدول
+        cagr_top = f"{top_m['cagr']:.0%}"  if top_m["cagr"]    is not None else "—"
+        pf_top   = f"{top_m['pf']:.2f}"    if top_m["pf"]       is not None else "—"
+        mfe_top  = f"{top_m['avg_mfe']:.1%}"if top_m["avg_mfe"] is not None else "—"
+        wr_top   = f'<span class="wr-dim">{top_m["win_rate"]:.0%}</span>' \
+                   if top_m["win_rate"] is not None else '<span class="wr-dim">—</span>'
+        mono_s   = "✓" if mono_ok else ("✗" if mono_ok is False else "—")
+        sp_s     = f"{spear:+.3f}"
 
         rows.append([
-            R_LABELS[col], str(int(n)), spear_fmt, p_fmt, lift_fmt, mfe_fmt,
-            mono_fmt, _bar(comp_score),
+            R_LABELS[col], str(n), sp_s,
+            cagr_top, pf_top, mfe_top, mono_s, wr_top, _bar(scores[col]),
         ])
 
     html = f"""
 <div class="section">
   <h2>المرحلة 2: اتساق المكونات <span class="phase-badge">Feature Analysis</span></h2>
-  <p style="font-size:.88em;color:#555">Spearman مع MFE_20d — Lift = win-rate النصف العلوي ÷ السفلي — Mono = رتابة عبر الأرباع</p>
+  {PHILOSOPHY_NOTE}
+  <p style="font-size:.85em;color:#555">
+    CAGR/PF/MFE للنصف العلوي من كل مكوّن — Spearman مع MFE — Mono = رتابة عبر الأرباع
+  </p>
   {_tbl(
-    ["المكوّن","N","Spearman","p-val","Lift","Avg-MFE(top)","Mono","درجة"],
+    ["المكوّن","N","Spearman","CAGR(top)","PF(top)","MFE(top)","Mono",
+     '<span class="wr-dim">WR↓</span>',"درجة"],
     rows
   )}
 </div>"""
@@ -355,74 +454,66 @@ def phase2_feature_consistency(df: pd.DataFrame) -> tuple:
 
 def phase3_weight_validation(df: pd.DataFrame) -> str:
     if not SKLEARN_OK or df.empty or "mfe_20d" not in df.columns:
-        return '<div class="section"><h2>المرحلة 3: التحقق من الأوزان</h2><p class="warn">sklearn غير متوفر أو بيانات غير كافية</p></div>'
+        return ('<div class="section"><h2>المرحلة 3: التحقق من الأوزان</h2>'
+                '<p class="warn">sklearn غير متوفر أو بيانات غير كافية</p></div>')
 
     valid = df[R_COLS + ["mfe_20d"]].dropna()
     if len(valid) < 20:
-        return f'<div class="section"><h2>المرحلة 3: التحقق من الأوزان</h2><p class="warn">عدد الإشارات ({len(valid)}) أقل من الحد الأدنى</p></div>'
+        return (f'<div class="section"><h2>المرحلة 3: التحقق من الأوزان</h2>'
+                f'<p class="warn">عدد الإشارات ({len(valid)}) أقل من الحد الأدنى</p></div>')
 
-    X = valid[R_COLS].values
-    y = valid["mfe_20d"].values
+    X  = valid[R_COLS].values
+    y  = valid["mfe_20d"].values
+    n  = len(X)
+    sp = int(n * TRAIN_SPLIT)
+    Xtr, Xte = X[:sp], X[sp:]
+    ytr, yte = y[:sp], y[sp:]
 
-    n      = len(X)
-    split  = int(n * TRAIN_SPLIT)
-    X_tr, X_te = X[:split], X[split:]
-    y_tr, y_te = y[:split], y[split:]
+    if len(ytr) < 10 or len(yte) < 5:
+        return ('<div class="section"><h2>المرحلة 3: التحقق من الأوزان</h2>'
+                '<p class="warn">تدريب/اختبار غير كافيَين</p></div>')
 
-    if len(y_tr) < 10 or len(y_te) < 5:
-        return '<div class="section"><h2>المرحلة 3: التحقق من الأوزان</h2><p class="warn">تدريب/اختبار غير كافيَين</p></div>'
-
+    # RF مدرَّب على MFE (وليس Win Rate)
     model = RandomForestRegressor(
         n_estimators=200, max_depth=5,
         min_samples_leaf=3, random_state=42, n_jobs=-1,
     )
-    model.fit(X_tr, y_tr)
-    y_pred = model.predict(X_te)
-    r2 = r2_score(y_te, y_pred)
+    model.fit(Xtr, ytr)
+    r2  = r2_score(yte, model.predict(Xte))
+    imp = model.feature_importances_
+    imp_pct   = imp / imp.sum() if imp.sum() > 0 else imp
+    total_w   = sum(CURRENT_WEIGHTS.values())
 
-    importances = model.feature_importances_
-    imp_sum     = importances.sum()
-    imp_pct     = importances / imp_sum if imp_sum > 0 else importances
-
-    total_w     = sum(CURRENT_WEIGHTS.values())
-    rows        = []
-    suggestions = {}
-
+    rows = []
     for i, col in enumerate(R_COLS):
         cur_w   = CURRENT_WEIGHTS.get(col, 0)
         cur_pct = cur_w / total_w
         ml_pct  = imp_pct[i]
         sugg_w  = round(ml_pct * total_w)
         delta   = sugg_w - cur_w
-        delta_s = f"+{delta}" if delta > 0 else str(delta)
-        delta_c = "b-high" if delta > 2 else ("b-low" if delta < -2 else "b-med")
-        suggestions[col] = sugg_w
+        d_s     = f"+{delta}" if delta > 0 else str(delta)
+        d_cls   = "b-high" if delta > 2 else ("b-low" if delta < -2 else "b-med")
         rows.append([
-            R_LABELS[col],
-            str(cur_w),
-            f"{cur_pct:.1%}",
-            f"{ml_pct:.1%}",
-            str(sugg_w),
-            f'<span class="badge {delta_c}">{delta_s}</span>',
+            R_LABELS[col], str(cur_w), f"{cur_pct:.1%}",
+            f"{ml_pct:.1%}", str(sugg_w),
+            f'<span class="badge {d_cls}">{d_s}</span>',
         ])
 
     html = f"""
 <div class="section">
   <h2>المرحلة 3: التحقق من الأوزان <span class="phase-badge">Weight Validation</span></h2>
+  {PHILOSOPHY_NOTE}
   <div class="kpi-row">
-    {_kpi(str(len(valid)), "إشارات مُستخدَمة")}
-    {_kpi(f"{r2:.3f}", "RF R² (اختبار)")}
-    {_kpi(str(int(split)), "تدريب")}
-    {_kpi(str(n - split), "اختبار")}
+    {_kpi(str(len(valid)), "إشارات")}
+    {_kpi(f"{r2:.3f}", "RF R² على MFE")}
+    {_kpi(str(sp), "تدريب")}
+    {_kpi(str(n-sp), "اختبار")}
   </div>
   <p style="font-size:.85em;color:#555">
-    الأهمية: Random Forest permutation importance على مجموعة الاختبار.
-    الاقتراح = إعادة توزيع نسبي فقط — الأوزان مجمّدة في النظام الفعلي.
+    الأهمية مُحسَّبة على هدف <strong>MFE_20d</strong> — ليس Win Rate.
+    النموذج يُقيّم مساهمة كل مكوّن في تعظيم العائد الكامن.
   </p>
-  {_tbl(
-    ["المكوّن","وزن حالي","%حالي","أهمية ML","وزن مقترح","فارق"],
-    rows
-  )}
+  {_tbl(["المكوّن","وزن حالي","%حالي","أهمية↔MFE","وزن مقترح","فارق"],rows)}
   <div class="frozen-note">⚠ الأوزان الحالية مجمّدة — هذا اقتراح بحثي فقط</div>
 </div>"""
     return html
@@ -434,54 +525,50 @@ def phase3_weight_validation(df: pd.DataFrame) -> str:
 
 def phase4_gate_analysis(df: pd.DataFrame) -> str:
     if df.empty or "mfe_20d" not in df.columns:
-        return '<div class="section"><h2>المرحلة 4: تحليل العتبات</h2><p class="warn">بيانات غير كافية</p></div>'
+        return ('<div class="section"><h2>المرحلة 4: تحليل العتبات</h2>'
+                '<p class="warn">بيانات غير كافية</p></div>')
 
-    def _gate_stats(mask) -> tuple:
-        sub = df.loc[mask, "mfe_20d"].dropna()
-        n   = len(sub)
-        if n < 3:
-            return n, "—", "—"
-        avg_mfe = sub.mean()
-        wr      = (sub >= WIN_MFE_THRESH).mean()
-        return n, f"{avg_mfe:.1%}", f"{wr:.0%}"
+    base_m = _metrics(df)
 
-    # ── PRICE_GATE (r1_price) ──────────────────────────────────────────────
-    pg_rows = []
-    if "r1_price" in df.columns:
-        for thresh in range(10, 25):
-            n, am, wr = _gate_stats(df["r1_price"] >= thresh)
-            cur = " ◀ حالي" if thresh == PRICE_GATE_NORMAL else ""
-            pg_rows.append([str(thresh), str(n), am, wr, cur])
+    def _gate_rows(col: str, thresholds: list, cur_thresh=None) -> list:
+        rows = []
+        for t in thresholds:
+            mask  = df[col] >= t
+            sub   = df.loc[mask].copy()
+            m     = _metrics(sub)
+            cells = _fmt_metrics(m, base_m)
+            note  = " ◀ حالي" if t == cur_thresh else ""
+            rows.append([str(t)] + cells + [note])
+        return rows
 
-    # ── LIQ_GATE (r3_liquidity) ────────────────────────────────────────────
-    lq_rows = []
-    if "r3_liquidity" in df.columns:
-        for thresh in [0, 5, 8, 10, 12, 14, 16, 18, 20]:
-            n, am, wr = _gate_stats(df["r3_liquidity"] >= thresh)
-            cur = " ◀ حالي (W=20)" if thresh == 20 else ""
-            lq_rows.append([str(thresh), str(n), am, wr, cur])
+    gate_headers = ["العتبة"] + METRICS_HEADERS + ["ملاحظة"]
 
-    # ── ENTRY_SCORE_GATE (raw_score) ───────────────────────────────────────
-    sc_rows = []
-    if "raw_score" in df.columns:
-        for thresh in range(25, 75, 5):
-            n, am, wr = _gate_stats(df["raw_score"] >= thresh)
-            cur = " ◀ حالي" if thresh == ENTRY_SCORE_GATE else ""
-            sc_rows.append([str(thresh), str(n), am, wr, cur])
+    pg_rows = _gate_rows("r1_price",    list(range(10, 25)), PRICE_GATE_NORMAL) \
+              if "r1_price"    in df.columns else []
+    lq_rows = _gate_rows("r3_liquidity",[0,5,8,10,12,14,16,18,20], 20) \
+              if "r3_liquidity" in df.columns else []
+    sc_rows = _gate_rows("raw_score",   list(range(25, 75, 5)), ENTRY_SCORE_GATE) \
+              if "raw_score"   in df.columns else []
 
     html = f"""
 <div class="section">
   <h2>المرحلة 4: تحليل العتبات <span class="phase-badge">Gate Analysis</span></h2>
-  <div class="frozen-note">⚠ العتبات مجمّدة في النظام — النتائج أدناه للبحث فقط</div>
+  {PHILOSOPHY_NOTE}
+  <p style="font-size:.85em;color:#555">
+    الترتيب: CAGR → PF → Avg MFE → Calmar → Max DD.
+    الفارق (+/-) محسوب من قاعدة الكل.
+    <span class="wr-dim">Win Rate في آخر الجدول — للمرجعية فقط.</span>
+  </p>
+  <div class="frozen-note">⚠ العتبات مجمّدة في النظام — النتائج للبحث فقط</div>
 
-  <h3 style="color:#1a3c5e;margin:14px 0 6px">PRICE_GATE (r1_price ≥ x)</h3>
-  {_tbl(["العتبة","N","Avg MFE","Win Rate","ملاحظة"],pg_rows) if pg_rows else '<p class="warn">r1_price غير متوفر</p>'}
+  <h3 style="color:#1a3c5e;margin:14px 0 6px">PRICE_GATE — r1_price ≥ x</h3>
+  {_tbl(gate_headers, pg_rows) if pg_rows else '<p class="warn">r1_price غير متوفر</p>'}
 
-  <h3 style="color:#1a3c5e;margin:14px 0 6px">LIQ_GATE (r3_liquidity ≥ x)</h3>
-  {_tbl(["العتبة","N","Avg MFE","Win Rate","ملاحظة"],lq_rows) if lq_rows else '<p class="warn">r3_liquidity غير متوفر</p>'}
+  <h3 style="color:#1a3c5e;margin:14px 0 6px">LIQ_GATE — r3_liquidity ≥ x</h3>
+  {_tbl(gate_headers, lq_rows) if lq_rows else '<p class="warn">r3_liquidity غير متوفر</p>'}
 
-  <h3 style="color:#1a3c5e;margin:14px 0 6px">ENTRY_SCORE_GATE (raw_score ≥ x)</h3>
-  {_tbl(["العتبة","N","Avg MFE","Win Rate","ملاحظة"],sc_rows) if sc_rows else '<p class="warn">raw_score غير متوفر</p>'}
+  <h3 style="color:#1a3c5e;margin:14px 0 6px">ENTRY_SCORE_GATE — raw_score ≥ x</h3>
+  {_tbl(gate_headers, sc_rows) if sc_rows else '<p class="warn">raw_score غير متوفر</p>'}
 </div>"""
     return html
 
@@ -491,114 +578,118 @@ def phase4_gate_analysis(df: pd.DataFrame) -> str:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _edge_test(df: pd.DataFrame, mask: pd.Series) -> tuple:
-    """Returns (n, avg_mfe, win_rate, p_value)"""
-    sub  = df.loc[mask, "mfe_20d"].dropna()
+    """Returns (metrics_dict, p_value)"""
+    sub  = df.loc[mask].copy()
     rest = df.loc[~mask, "mfe_20d"].dropna()
-    n    = len(sub)
-    if n < MIN_N_EDGE:
-        return n, None, None, None
-    avg_mfe = sub.mean()
-    wr      = (sub >= WIN_MFE_THRESH).mean()
-    # t-test vs rest
+    m    = _metrics(sub)
+    if m["n"] < MIN_N_EDGE or m["avg_mfe"] is None:
+        return m, None
     if SCIPY_OK and len(rest) >= 5:
-        _, p = sp_stats.ttest_ind(sub, rest, equal_var=False)
+        _, p = sp_stats.ttest_ind(
+            sub["mfe_20d"].dropna(), rest, equal_var=False
+        )
     else:
         p = 1.0
-    return n, avg_mfe, wr, p
+    return m, p
 
 
 def phase5_edge_discovery(df: pd.DataFrame) -> str:
     if df.empty or "mfe_20d" not in df.columns:
-        return '<div class="section"><h2>المرحلة 5: اكتشاف الحافة</h2><p class="warn">بيانات غير كافية</p></div>'
+        return ('<div class="section"><h2>المرحلة 5: اكتشاف الحافة</h2>'
+                '<p class="warn">بيانات غير كافية</p></div>')
 
-    base_wr  = (df["mfe_20d"].dropna() >= WIN_MFE_THRESH).mean()
-    base_mfe = df["mfe_20d"].dropna().mean()
-
-    available = [c for c in R_COLS if c in df.columns and df[c].notna().sum() >= MIN_N_EDGE]
-    medians   = {c: df[c].median() for c in available}
+    base_m   = _metrics(df)
+    available= [c for c in R_COLS
+                if c in df.columns and df[c].notna().sum() >= MIN_N_EDGE]
+    medians  = {c: df[c].median() for c in available}
 
     edges = []
 
-    # Singles
+    # فردية
     for col in available:
         mask = df[col] >= medians[col]
-        n, am, wr, p = _edge_test(df, mask)
-        if n and am is not None:
-            lift = am / base_mfe if base_mfe > 0 else 0
-            edges.append({
-                "combo": R_LABELS.get(col, col),
-                "n": n, "avg_mfe": am, "wr": wr,
-                "lift": lift, "p": p, "degree": 1,
-            })
+        m, p = _edge_test(df, mask)
+        if p is not None:
+            edges.append({"combo": R_LABELS.get(col, col),
+                          "m": m, "p": p, "deg": 1})
 
-    # Pairs
+    # زوجية
     for c1, c2 in combinations(available, 2):
         mask = (df[c1] >= medians[c1]) & (df[c2] >= medians[c2])
-        n, am, wr, p = _edge_test(df, mask)
-        if n and am is not None:
-            lift  = am / base_mfe if base_mfe > 0 else 0
-            label = f"{R_LABELS.get(c1,c1)} + {R_LABELS.get(c2,c2)}"
-            edges.append({
-                "combo": label,
-                "n": n, "avg_mfe": am, "wr": wr,
-                "lift": lift, "p": p, "degree": 2,
-            })
+        m, p = _edge_test(df, mask)
+        if p is not None:
+            edges.append({"combo": f"{R_LABELS.get(c1,c1)} + {R_LABELS.get(c2,c2)}",
+                          "m": m, "p": p, "deg": 2})
 
-    # Triples (top pairs by lift)
-    if edges:
-        pair_edges = sorted([e for e in edges if e["degree"] == 2],
-                            key=lambda x: -x["lift"])[:5]
-        used_cols  = set()
-        for e in pair_edges:
-            for c in available:
-                if R_LABELS.get(c, c) in e["combo"]:
-                    used_cols.add(c)
-        for base_e in pair_edges[:3]:
-            for c3 in available:
-                if R_LABELS.get(c3, c3) in base_e["combo"]:
-                    continue
-                # reconstruct mask from label
-                matched = [c for c in available if R_LABELS.get(c, c) in base_e["combo"]]
-                if len(matched) < 2:
-                    continue
-                mask = (df[matched[0]] >= medians[matched[0]]) & \
-                       (df[matched[1]] >= medians[matched[1]]) & \
-                       (df[c3]         >= medians[c3])
-                n, am, wr, p = _edge_test(df, mask)
-                if n and am is not None:
-                    lift  = am / base_mfe if base_mfe > 0 else 0
-                    label = base_e["combo"] + f" + {R_LABELS.get(c3,c3)}"
-                    edges.append({
-                        "combo": label,
-                        "n": n, "avg_mfe": am, "wr": wr,
-                        "lift": lift, "p": p, "degree": 3,
-                    })
+    # ثلاثية (أفضل 4 زوجية × كل مكوّن متبقٍّ)
+    top_pairs = sorted([e for e in edges if e["deg"] == 2],
+                       key=lambda x: -(x["m"]["avg_mfe"] or 0))[:4]
+    for pe in top_pairs:
+        for c3 in available:
+            if R_LABELS.get(c3, c3) in pe["combo"]:
+                continue
+            matched = [c for c in available if R_LABELS.get(c, c) in pe["combo"]]
+            if len(matched) < 2:
+                continue
+            mask = ((df[matched[0]] >= medians[matched[0]]) &
+                    (df[matched[1]] >= medians[matched[1]]) &
+                    (df[c3]         >= medians[c3]))
+            m, p = _edge_test(df, mask)
+            if p is not None:
+                edges.append({
+                    "combo": pe["combo"] + f" + {R_LABELS.get(c3,c3)}",
+                    "m": m, "p": p, "deg": 3,
+                })
 
-    # filter p ≤ 0.25 and sort by avg_mfe descending, take top 20
-    sig  = sorted([e for e in edges if e["p"] is not None and e["p"] <= 0.25],
-                  key=lambda x: -x["avg_mfe"])[:20]
+    # فلترة p ≤ 0.25 — ترتيب: CAGR أولاً ثم MFE
+    def _sort_key(e):
+        m = e["m"]
+        cagr = m["cagr"]  if m["cagr"]    is not None else -999
+        mfe  = m["avg_mfe"] if m["avg_mfe"] is not None else 0
+        return (-cagr, -mfe)
+
+    sig = sorted([e for e in edges if e["p"] is not None and e["p"] <= 0.25],
+                 key=_sort_key)[:20]
+
+    base_cagr = base_m["cagr"]  if base_m["cagr"]    is not None else 0
+    base_mfe  = base_m["avg_mfe"] if base_m["avg_mfe"] is not None else 0
+
     rows = []
     for e in sig:
-        deg_s = ["—","فردي","زوجي","ثلاثي"][min(e["degree"],3)]
-        p_s   = f"{e['p']:.3f}" if e["p"] is not None else "—"
-        rows.append([
-            e["combo"], deg_s, str(e["n"]),
-            f"{e['avg_mfe']:.1%}",
-            f"{e['wr']:.0%}",
-            f"{e['lift']:.2f}×",
-            p_s,
-        ])
+        m     = e["m"]
+        deg_s = ["—","فردي","زوجي","ثلاثي"][min(e["deg"],3)]
+        p_s   = f"{e['p']:.3f}"
+        cagr_lift = f"{m['cagr']/base_cagr:.2f}×"  if (m["cagr"]  and base_cagr) else "—"
+        mfe_s     = f"{m['avg_mfe']:.1%}"           if m["avg_mfe"]  is not None else "—"
+        pf_s      = f"{m['pf']:.2f}"                if m["pf"]       is not None else "—"
+        cal_s     = f"{m['calmar']:.2f}"             if m["calmar"]   is not None else "—"
+        wr_s      = f'<span class="wr-dim">{m["win_rate"]:.0%}</span>' \
+                    if m["win_rate"] is not None else '<span class="wr-dim">—</span>'
+        rows.append([e["combo"], deg_s, str(m["n"]),
+                     cagr_lift, pf_s, mfe_s, cal_s, p_s, wr_s])
+
+    cagr_s = f"{base_m['cagr']:.0%}" if base_m["cagr"] is not None else "—"
+    mfe_bs = f"{base_mfe:.1%}"
 
     html = f"""
 <div class="section">
   <h2>المرحلة 5: اكتشاف الحافة <span class="phase-badge">Edge Discovery</span></h2>
+  {PHILOSOPHY_NOTE}
   <div class="kpi-row">
-    {_kpi(f"{base_wr:.0%}", "Win Rate قاعدي")}
-    {_kpi(f"{base_mfe:.1%}", "Avg MFE قاعدي")}
+    {_kpi(cagr_s,  "CAGR قاعدي")}
+    {_kpi(mfe_bs,  "Avg MFE قاعدي")}
     {_kpi(str(len(sig)), "حافة ذات دلالة")}
   </div>
-  <p style="font-size:.85em;color:#555">فلترة: p ≤ 0.25 و N ≥ {MIN_N_EDGE} — ترتيب تنازلي حسب Avg MFE</p>
-  {_tbl(["التركيبة","نوع","N","Avg MFE","Win Rate","Lift","p-value"],rows) if rows else '<p class="warn">لا حوافّ ذات دلالة</p>'}
+  <p style="font-size:.85em;color:#555">
+    مرتَّب: CAGR Lift ← ثم Avg MFE.
+    فلترة: p ≤ 0.25 و N ≥ {MIN_N_EDGE}.
+    <span class="wr-dim">Win Rate في آخر الجدول — للمرجعية فقط.</span>
+  </p>
+  {_tbl(
+    ["التركيبة","نوع","N","CAGR Lift","PF","Avg MFE","Calmar","p-val",
+     '<span class="wr-dim">WR↓</span>'],
+    rows
+  ) if rows else '<p class="warn">لا حوافّ ذات دلالة</p>'}
 </div>"""
     return html
 
@@ -609,66 +700,72 @@ def phase5_edge_discovery(df: pd.DataFrame) -> str:
 
 def phase6_clusters(df: pd.DataFrame) -> str:
     if not SKLEARN_OK or df.empty or "mfe_20d" not in df.columns:
-        return '<div class="section"><h2>المرحلة 6: ملامح التجميع</h2><p class="warn">sklearn غير متوفر أو بيانات غير كافية</p></div>'
+        return ('<div class="section"><h2>المرحلة 6: ملامح التجميع</h2>'
+                '<p class="warn">sklearn غير متوفر أو بيانات غير كافية</p></div>')
 
-    feat_cols = [c for c in R_COLS if c in df.columns and df[c].notna().sum() >= MIN_N_CLUSTER]
+    feat_cols = [c for c in R_COLS
+                 if c in df.columns and df[c].notna().sum() >= MIN_N_CLUSTER]
     if not feat_cols:
-        return '<div class="section"><h2>المرحلة 6: ملامح التجميع</h2><p class="warn">مكونات غير كافية</p></div>'
+        return ('<div class="section"><h2>المرحلة 6: ملامح التجميع</h2>'
+                '<p class="warn">مكونات غير كافية</p></div>')
 
-    sub = df[feat_cols + ["mfe_20d", "bq_score"]].dropna(subset=feat_cols)
+    sub = df[feat_cols + ["mfe_20d","mae_20d","bq_score","r20d"]].dropna(subset=feat_cols)
     if len(sub) < 9:
-        return f'<div class="section"><h2>المرحلة 6: ملامح التجميع</h2><p class="warn">إشارات ({len(sub)}) أقل من الحد الأدنى</p></div>'
+        return (f'<div class="section"><h2>المرحلة 6: ملامح التجميع</h2>'
+                f'<p class="warn">إشارات ({len(sub)}) أقل من الحد الأدنى</p></div>')
 
-    # scale and cluster
-    scaler  = StandardScaler()
-    X_s     = scaler.fit_transform(sub[feat_cols])
-    k       = min(3, len(sub) // MIN_N_CLUSTER)
+    scaler = StandardScaler()
+    X_s    = scaler.fit_transform(sub[feat_cols])
+    k      = min(3, len(sub) // MIN_N_CLUSTER)
     if k < 2:
-        return '<div class="section"><h2>المرحلة 6: ملامح التجميع</h2><p class="warn">إشارات غير كافية للتجميع</p></div>'
+        return ('<div class="section"><h2>المرحلة 6: ملامح التجميع</h2>'
+                '<p class="warn">إشارات غير كافية للتجميع</p></div>')
 
-    km        = KMeans(n_clusters=k, random_state=42, n_init=10)
-    labels    = km.fit_predict(X_s)
-    sub       = sub.copy()
-    sub["cl"] = labels
+    km     = KMeans(n_clusters=k, random_state=42, n_init=10)
+    sub    = sub.copy()
+    sub["cl"] = km.fit_predict(X_s)
 
-    # label each cluster by MFE
-    cl_mfe   = sub.groupby("cl")["mfe_20d"].mean().sort_values(ascending=False)
-    cl_label = {}
+    # ترتيب المجموعات حسب CAGR (وليس Win Rate)
+    cl_cagr = {}
+    for ci in range(k):
+        m = _metrics(sub[sub["cl"] == ci])
+        cl_cagr[ci] = m["cagr"] if m["cagr"] is not None else -999
+
+    ranked   = sorted(cl_cagr.keys(), key=lambda x: -cl_cagr[x])
     tag_map  = {0: "قاع قوي 🟢", 1: "متوسط 🟡", 2: "ضعيف 🔴"}
-    for rank, cl_idx in enumerate(cl_mfe.index):
-        cl_label[cl_idx] = tag_map.get(rank, f"مجموعة {rank}")
+    cl_label = {ci: tag_map.get(rank, f"مجموعة {rank}") for rank, ci in enumerate(ranked)}
 
     rows = []
-    for cl_idx in cl_mfe.index:
-        grp   = sub[sub["cl"] == cl_idx]
-        n     = len(grp)
-        am    = grp["mfe_20d"].mean()
-        bqs   = grp["bq_score"].mean() if "bq_score" in grp else float("nan")
-        wr    = (grp["mfe_20d"] >= WIN_MFE_THRESH).mean()
-        # mean of each r component (raw scale after inverse transform)
-        r_means = {c: grp[c].mean() for c in feat_cols}
-        top_r   = max(r_means, key=r_means.get)
-        rows.append([
-            cl_label[cl_idx], str(n),
-            f"{am:.1%}", f"{bqs:.1f}" if not (isinstance(bqs, float) and bqs != bqs) else "—",
-            f"{wr:.0%}",
-            R_LABELS.get(top_r, top_r),
-        ])
+    for ci in ranked:
+        grp = sub[sub["cl"] == ci]
+        m   = _metrics(grp)
+        cells = _fmt_metrics(m)
+        top_r = max(feat_cols, key=lambda c: grp[c].mean())
+        rows.append([cl_label[ci]] + cells + [R_LABELS.get(top_r, top_r)])
 
-    # per-cluster r-component means table
     detail_rows = []
-    for cl_idx in cl_mfe.index:
-        grp  = sub[sub["cl"] == cl_idx]
-        vals = [cl_label[cl_idx]] + [f"{grp[c].mean():.1f}" if c in grp.columns else "—" for c in feat_cols]
+    for ci in ranked:
+        grp  = sub[sub["cl"] == ci]
+        vals = [cl_label[ci]] + [
+            f"{grp[c].mean():.1f}" if c in grp.columns else "—"
+            for c in feat_cols
+        ]
         detail_rows.append(vals)
 
     html = f"""
 <div class="section">
   <h2>المرحلة 6: ملامح التجميع <span class="phase-badge">Cluster Profiles</span></h2>
-  <p style="font-size:.85em;color:#555">KMeans (k={k}) على مكونات r1–r8 — ترتيب حسب Avg MFE تنازلياً</p>
-  {_tbl(["المجموعة","N","Avg MFE","BQ Avg","Win Rate","أقوى مكوّن"],rows)}
+  {PHILOSOPHY_NOTE}
+  <p style="font-size:.85em;color:#555">
+    KMeans (k={k}) — مرتَّب حسب CAGR تنازلياً.
+    <span class="wr-dim">Win Rate في آخر الجدول — للمرجعية فقط.</span>
+  </p>
+  {_tbl(
+    ["المجموعة"] + METRICS_HEADERS + ["أقوى مكوّن"],
+    rows
+  )}
   <h3 style="color:#1a3c5e;margin:14px 0 6px">متوسط المكونات لكل مجموعة</h3>
-  {_tbl(["المجموعة"]+[R_LABELS.get(c,c) for c in feat_cols], detail_rows)}
+  {_tbl(["المجموعة"] + [R_LABELS.get(c,c) for c in feat_cols], detail_rows)}
 </div>"""
     return html
 
@@ -677,20 +774,20 @@ def phase6_clusters(df: pd.DataFrame) -> str:
 # PHASE 7 — Final Summary
 # ══════════════════════════════════════════════════════════════════════════════
 
-def phase7_summary(
-    dq_score:       float,
-    feat_scores:    dict,
-    df:             pd.DataFrame,
-) -> str:
-    # Overall grade
-    if dq_score >= 70 and df is not None and len(df) >= 50:
-        data_grade = ("b-high", "جيدة")
-    elif dq_score >= 40:
-        data_grade = ("b-med",  "متوسطة")
-    else:
-        data_grade = ("b-low",  "ضعيفة")
+def phase7_summary(dq_score: float, feat_scores: dict, df: pd.DataFrame) -> str:
+    n  = len(df) if df is not None else 0
+    bm = _metrics(df) if df is not None and not df.empty else {}
 
-    # Strongest / weakest components (by feature score)
+    dq_cls = ("b-high" if dq_score >= 70 else ("b-low" if dq_score < 40 else "b-med"))
+    dq_lbl = ("جيدة" if dq_score >= 70 else ("ضعيفة" if dq_score < 40 else "متوسطة"))
+
+    cagr_s  = f"{bm['cagr']:.0%}"    if bm.get("cagr")    is not None else "—"
+    pf_s    = f"{bm['pf']:.2f}"      if bm.get("pf")      is not None else "—"
+    mfe_s   = f"{bm['avg_mfe']:.1%}" if bm.get("avg_mfe") is not None else "—"
+    cal_s   = f"{bm['calmar']:.2f}"  if bm.get("calmar")  is not None else "—"
+    dd_s    = f"{bm['max_dd']:.1%}"  if bm.get("max_dd")  is not None else "—"
+    wr_s    = f"{bm['win_rate']:.0%}" if bm.get("win_rate") is not None else "—"
+
     if feat_scores:
         ranked  = sorted(feat_scores.items(), key=lambda x: -x[1])
         top3    = ranked[:3]
@@ -699,44 +796,54 @@ def phase7_summary(
         top3 = bottom3 = []
 
     top_html = "".join(
-        f'<li><strong>{R_LABELS.get(c,c)}</strong> — درجة {s:.0f}/100</li>'
+        f"<li><strong>{R_LABELS.get(c,c)}</strong> — درجة {s:.0f}/100</li>"
         for c, s in top3
     )
     bot_html = "".join(
-        f'<li><strong>{R_LABELS.get(c,c)}</strong> — درجة {s:.0f}/100</li>'
+        f"<li><strong>{R_LABELS.get(c,c)}</strong> — درجة {s:.0f}/100</li>"
         for c, s in bottom3
-    )
-
-    # Sample size note
-    n = len(df) if df is not None else 0
-    sample_note = (
-        "✓ حجم العينة كافٍ للتحليل الموثوق" if n >= 60 else
-        f"⚠ حجم العينة ({n}) صغير — زِد الإشارات لمزيد من الدقة"
     )
 
     recs = []
     if n < 60:
         recs.append("جمع إشارات إضافية لتحسين دقة التحليل الإحصائي")
     if feat_scores:
-        low_feats = [R_LABELS.get(c,c) for c,s in feat_scores.items() if s < 30]
+        low_feats  = [R_LABELS.get(c,c) for c, s in feat_scores.items() if s < 30]
+        high_feats = [R_LABELS.get(c,c) for c, s in feat_scores.items() if s > 70]
         if low_feats:
-            recs.append(f"مكونات تستحق مراجعة الحساب (ارتباط منخفض): {', '.join(low_feats[:3])}")
-        high_feats = [R_LABELS.get(c,c) for c,s in feat_scores.items() if s > 70]
+            recs.append(f"مكونات ذات ارتباط ضعيف بـ CAGR/MFE: {', '.join(low_feats[:3])}")
         if high_feats:
-            recs.append(f"مكونات ذات قيمة تنبؤية عالية: {', '.join(high_feats[:3])}")
+            recs.append(f"مكونات ذات قيمة تنبؤية عالية للعائد: {', '.join(high_feats[:3])}")
+
+    if bm.get("pf") is not None and bm["pf"] < 1.0:
+        recs.append("⚠ Profit Factor < 1 — الخسائر تتجاوز الأرباح في العينة الحالية")
+    if bm.get("calmar") is not None and bm["calmar"] < 1.0:
+        recs.append("⚠ Calmar < 1 — مخاطرة عالية نسبياً مقارنة بالعائد")
 
     rec_html = "".join(f"<li>{r}</li>" for r in recs) if recs else "<li>لا توصيات استثنائية</li>"
+    sample_note = (
+        "✓ حجم العينة كافٍ للتحليل الموثوق" if n >= 60 else
+        f"⚠ حجم العينة ({n}) صغير — زِد الإشارات لمزيد من الدقة"
+    )
 
     html = f"""
 <div class="section">
   <h2>المرحلة 7: الملخص النهائي <span class="phase-badge">Final Summary</span></h2>
+  {PHILOSOPHY_NOTE}
   <div class="kpi-row">
-    {_kpi(f'<span class="badge {data_grade[0]}">{data_grade[1]}</span>', "جودة البيانات")}
-    {_kpi(str(n), "إشارات ناضجة")}
-    {_kpi(f"{dq_score:.0f}/100", "درجة DQ")}
+    {_kpi(f'<span class="badge {dq_cls}">{dq_lbl}</span>', "جودة البيانات")}
+    {_kpi(str(n),    "إشارات ناضجة")}
+    {_kpi(cagr_s,   "CAGR الكلي")}
+    {_kpi(pf_s,     "Profit Factor")}
+    {_kpi(mfe_s,    "Avg MFE")}
+    {_kpi(cal_s,    "Calmar Ratio")}
+  </div>
+  <div class="kpi-row">
+    {_kpi(dd_s,  "Max DD")}
+    {_kpi(f'<span class="wr-dim">{wr_s}</span>', "Win Rate (آخر الأولويات)")}
   </div>
   <div class="rec-box">
-    <h3>أقوى المكونات</h3>
+    <h3>أقوى المكونات (CAGR/PF/MFE)</h3>
     <ul style="margin:4px 0;padding-right:18px">{top_html or "<li>—</li>"}</ul>
   </div>
   <div class="rec-box">
@@ -756,7 +863,7 @@ def phase7_summary(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# MAIN — build report
+# MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 
 def build_report() -> str:
@@ -768,37 +875,29 @@ def build_report() -> str:
 
     sections = []
 
-    # Phase 1
     print("[QuantReport] Phase 1: Data Audit…")
     s1, dq_score = phase1_data_audit(df, df_all)
     sections.append(s1)
 
-    # Phase 2
     print("[QuantReport] Phase 2: Feature Consistency…")
     s2, feat_scores = phase2_feature_consistency(df)
     sections.append(s2)
 
-    # Phase 3
     print("[QuantReport] Phase 3: Weight Validation…")
     sections.append(phase3_weight_validation(df))
 
-    # Phase 4
     print("[QuantReport] Phase 4: Gate Analysis…")
     sections.append(phase4_gate_analysis(df))
 
-    # Phase 5
     print("[QuantReport] Phase 5: Edge Discovery…")
     sections.append(phase5_edge_discovery(df))
 
-    # Phase 6
     print("[QuantReport] Phase 6: Cluster Profiles…")
     sections.append(phase6_clusters(df))
 
-    # Phase 7
     print("[QuantReport] Phase 7: Final Summary…")
     sections.append(phase7_summary(dq_score, feat_scores, df))
 
-    body    = "\n".join(sections)
     weights_fmt = " | ".join(
         f"{WEIGHT_LABELS.get(k,k)}={v}" for k, v in CURRENT_WEIGHTS.items()
     )
@@ -817,7 +916,7 @@ def build_report() -> str:
     <h1>📊 تقرير البحث الكمي — EGX30</h1>
     <p>تاريخ: {TODAY} | إشارات ناضجة: {n_mat} | {weights_fmt}</p>
   </div>
-  {body}
+  {"".join(sections)}
 </div>
 </body>
 </html>"""
@@ -825,8 +924,8 @@ def build_report() -> str:
 
 
 def main():
-    html      = build_report()
-    out_path  = f"quant_research_report_{TODAY}.html"
+    html     = build_report()
+    out_path = f"quant_research_report_{TODAY}.html"
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"[QuantReport] Written → {out_path}")

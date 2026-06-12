@@ -944,10 +944,20 @@ def _build_distribution_section(res: dict) -> str:
     pd = res.get("pattern_discovery", {})
     if not pd:
         return ""
-    mfe_dist = pd.get("mfe_distribution", {})
-    mae_dist = pd.get("mae_distribution", {})
-    if not mfe_dist and not mae_dist:
+    mfe_dist_raw = pd.get("mfe_distribution", {})
+    mae_dist_raw = pd.get("mae_distribution", {})
+    if not mfe_dist_raw and not mae_dist_raw:
         return ""
+
+    # mfe_distribution / mae_distribution have nested structure:
+    # {"buckets": {bucket: count, ...}, "mean": float, "median": float, ...}
+    def _extract(dist_raw):
+        if isinstance(dist_raw.get("buckets"), dict):
+            return dist_raw["buckets"], {k: v for k, v in dist_raw.items() if k != "buckets"}
+        return dist_raw, {}
+
+    mfe_dist, mfe_stats = _extract(mfe_dist_raw)
+    mae_dist, mae_stats = _extract(mae_dist_raw)
 
     def _bar_row(label, count, total, color):
         pct = (count / total * 100) if total else 0
@@ -958,27 +968,41 @@ def _build_distribution_section(res: dict) -> str:
                 f"<td style='text-align:center'>{count}</td>"
                 f"<td style='text-align:center'>{pct:.1f}%</td></tr>")
 
+    def _stats_line(stats):
+        if not stats:
+            return ""
+        parts = []
+        if "mean"   in stats: parts.append(f"متوسط: {stats['mean']:.1f}%")
+        if "median" in stats: parts.append(f"وسيط: {stats['median']:.1f}%")
+        if "p75"    in stats: parts.append(f"P75: {stats['p75']:.1f}%")
+        if "p90"    in stats: parts.append(f"P90: {stats['p90']:.1f}%")
+        if "worst"  in stats: parts.append(f"أسوأ: {stats['worst']:.1f}%")
+        return (f'<p style="font-size:.85em;color:#555;margin:4px 0 12px">'
+                f'{" &nbsp;|&nbsp; ".join(parts)}</p>') if parts else ""
+
     html = '<div class="section"><h2>توزيع MFE و MAE — بصمة الجودة الكلية</h2>'
 
     if mfe_dist:
-        total = sum(mfe_dist.values())
+        total = sum(int(v) for v in mfe_dist.values())
         html += '<h3 style="color:#2a6496">توزيع MFE (الحركة القصوى لصالحنا)</h3>'
+        html += _stats_line(mfe_stats)
         html += '<table><thead><tr><th>الفئة</th><th>التوزيع</th><th>عدد</th><th>%</th></tr></thead><tbody>'
-        colors = {"<0%": "#dc3545", "0–5%": "#fd7e14", "5–10%": "#ffc107",
-                  "10–20%": "#20c997", "20–30%": "#0d6efd", ">30%": "#198754"}
-        for bucket in ["<0%", "0–5%", "5–10%", "10–20%", "20–30%", ">30%"]:
-            count = mfe_dist.get(bucket, 0)
+        colors = {"<0%": "#dc3545", "0–3%": "#fd7e14", "3–8%": "#ffc107",
+                  "8–15%": "#20c997", "15–25%": "#0d6efd", ">25%": "#198754"}
+        for bucket in list(mfe_dist.keys()):
+            count = int(mfe_dist.get(bucket, 0))
             html += _bar_row(bucket, count, total, colors.get(bucket, "#888"))
         html += "</tbody></table>"
 
     if mae_dist:
-        total = sum(mae_dist.values())
-        html += '<h3 style="color:#2a6496">توزيع MAE (الحركة القصوى ضدنا)</h3>'
+        total = sum(int(v) for v in mae_dist.values())
+        html += '<h3 style="color:#2a6496">توزيع MAE (الحركة القصوى ضدنا — قيمة مطلقة)</h3>'
+        html += _stats_line(mae_stats)
         html += '<table><thead><tr><th>الفئة</th><th>التوزيع</th><th>عدد</th><th>%</th></tr></thead><tbody>'
-        colors = {">0%": "#198754", "0–(-5%)": "#20c997", "(-5%)–(-10%)": "#ffc107",
-                  "(-10%)–(-20%)": "#fd7e14", "<-20%": "#dc3545"}
-        for bucket in [">0%", "0–(-5%)", "(-5%)–(-10%)", "(-10%)–(-20%)", "<-20%"]:
-            count = mae_dist.get(bucket, 0)
+        colors = {"0–2%": "#198754", "2–5%": "#20c997", "5–10%": "#ffc107",
+                  "10–15%": "#fd7e14", ">15%": "#dc3545"}
+        for bucket in list(mae_dist.keys()):
+            count = int(mae_dist.get(bucket, 0))
             html += _bar_row(bucket, count, total, colors.get(bucket, "#888"))
         html += "</tbody></table>"
 

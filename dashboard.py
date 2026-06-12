@@ -333,6 +333,14 @@ def build_dashboard() -> str:
     .nav {{ margin-top:10px; font-size:.82em; }}
     .container {{ max-width:900px; margin:22px auto; padding:0 14px; }}
     .footer {{ text-align:center; color:#aaa; font-size:11px; padding:20px 0 30px; }}
+    #countdown-box {{
+      background:rgba(255,255,255,0.12); border-radius:8px;
+      padding:8px 14px; margin-top:10px; display:inline-block;
+      font-size:.85em; direction:ltr; text-align:center;
+    }}
+    #countdown-box .label {{ font-size:.75em; opacity:.8; margin-bottom:2px; }}
+    #countdown-box .timer {{ font-size:1.3em; font-weight:700; letter-spacing:2px; }}
+    #countdown-box .status {{ font-size:.72em; opacity:.7; margin-top:2px; }}
   </style>
 </head>
 <body>
@@ -340,11 +348,113 @@ def build_dashboard() -> str:
   <h1>EGX Scanner — Dashboard</h1>
   <div class="sub">آخر تحديث: {now}</div>
   <div class="nav">{nav_links}</div>
+  <div id="countdown-box">
+    <div class="label">⏱ التحديث القادم</div>
+    <div class="timer" id="cdtimer">--:--:--</div>
+    <div class="status" id="cdstatus">جاري الحساب...</div>
+  </div>
 </div>
 <div class="container">
 {body}
 </div>
 <div class="footer">EGX30 Self-Learning Scanner &nbsp;·&nbsp; البيانات تُحدَّث مع كل scan يومي</div>
+
+<script>
+// ── EGX Scan Schedule (Cairo time = UTC+3 in summer / UTC+2 in winter) ───────
+// Market scans: every 5 min, Sun-Thu 10:00-14:30 Cairo
+// Daily report: Sun-Thu 07:00 Cairo
+// We approximate Cairo = UTC+2 (conservative, works year-round)
+const CAIRO_OFFSET = 2; // hours ahead of UTC
+
+function cairoNow() {{
+  const now = new Date();
+  return new Date(now.getTime() + CAIRO_OFFSET * 3600000);
+}}
+
+function nextScanTime() {{
+  const now = cairoNow();
+  const dow = now.getUTCDay(); // 0=Sun,1=Mon,...,6=Sat
+  const h   = now.getUTCHours();
+  const m   = now.getUTCMinutes();
+  const totalMin = h * 60 + m;
+
+  const isWeekday = dow >= 0 && dow <= 4; // Sun-Thu
+
+  // Helper: next occurrence of (target weekday + hour + min) in UTC+CAIRO_OFFSET
+  function nextOccurrence(targetH, targetM, anyWeekday) {{
+    const candidate = new Date(now);
+    candidate.setUTCHours(targetH - CAIRO_OFFSET, targetM, 0, 0);
+    if (candidate <= now || (!anyWeekday && !isWeekday)) {{
+      candidate.setUTCDate(candidate.getUTCDate() + 1);
+    }}
+    // Advance past weekend if needed
+    while (candidate.getUTCDay() > 4) {{
+      candidate.setUTCDate(candidate.getUTCDate() + 1);
+    }}
+    return candidate;
+  }}
+
+  if (isWeekday) {{
+    // During market scan window (10:00-14:30 Cairo)
+    if (totalMin >= 600 && totalMin < 870) {{
+      // Next 5-min mark
+      const nextMin = Math.ceil((totalMin + 1) / 5) * 5;
+      const t = new Date(now);
+      t.setUTCHours(Math.floor(nextMin / 60) - CAIRO_OFFSET, nextMin % 60, 0, 0);
+      if (t > now) return {{ time: t, label: "Scan السوق (كل 5 دقائق)" }};
+    }}
+    // After 14:30, next is daily report at 07:00 tomorrow
+    if (totalMin >= 870) {{
+      return {{ time: nextOccurrence(7, 0, false), label: "التقرير اليومي 07:00" }};
+    }}
+    // Before 10:00 today
+    if (totalMin < 420) {{
+      // Is it before 07:00 daily?
+      const daily = new Date(now);
+      daily.setUTCHours(7 - CAIRO_OFFSET, 0, 0, 0);
+      if (daily > now) return {{ time: daily, label: "التقرير اليومي 07:00" }};
+    }}
+    // Between 07:00 and 10:00 → next is market open at 10:00
+    const market = new Date(now);
+    market.setUTCHours(10 - CAIRO_OFFSET, 0, 0, 0);
+    if (market > now) return {{ time: market, label: "بداية scan السوق 10:00" }};
+  }}
+
+  // Weekend or fallback → next Sunday 07:00
+  return {{ time: nextOccurrence(7, 0, false), label: "التقرير اليومي" }};
+}}
+
+function fmt(sec) {{
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return String(h).padStart(2,'0') + ':' +
+         String(m).padStart(2,'0') + ':' +
+         String(s).padStart(2,'0');
+}}
+
+let reloading = false;
+function tick() {{
+  if (reloading) return;
+  const {{ time, label }} = nextScanTime();
+  const diffMs = time - new Date();
+  const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+
+  document.getElementById('cdtimer').textContent = fmt(diffSec);
+  document.getElementById('cdstatus').textContent = label;
+
+  if (diffSec <= 0) {{
+    reloading = true;
+    document.getElementById('cdtimer').textContent = '⏳';
+    document.getElementById('cdstatus').textContent = 'جاري تحميل التحديث...';
+    // Wait 3 min after scheduled time for workflow + Pages deploy
+    setTimeout(() => location.reload(true), 3 * 60 * 1000);
+  }}
+}}
+
+tick();
+setInterval(tick, 1000);
+</script>
 </body>
 </html>"""
 

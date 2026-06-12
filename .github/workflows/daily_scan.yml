@@ -101,8 +101,27 @@ jobs:
           mkdir -p web_deploy
           python heatmap.py
           python research_report.py --no-email --force || true
-          cp research_report_*.html web_deploy/research_report.html 2>/dev/null || true
+          # copy report (use python glob to avoid shell glob failure)
+          python - <<'PYEOF'
+          import glob, shutil, os
+          files = sorted(glob.glob("research_report_*.html"))
+          if files:
+              shutil.copy(files[-1], "web_deploy/research_report.html")
+              print(f"Copied {files[-1]} -> web_deploy/research_report.html")
+          else:
+              print("WARNING: no research_report_*.html found")
+          PYEOF
           cp manifest.json sw.js icon.svg web_deploy/
+          # index.html يوجّه للـ heatmap
+          cat > web_deploy/index.html << 'HTML'
+          <!DOCTYPE html>
+          <html><head><meta charset="utf-8">
+          <meta http-equiv="refresh" content="0; url=heatmap.html">
+          <title>EGX Scanner</title></head>
+          <body>
+          <p>جاري التحويل... <a href="heatmap.html">Heatmap</a> | <a href="research_report.html">Research Report</a></p>
+          </body></html>
+          HTML
 
       - name: Save research results
         if: always()

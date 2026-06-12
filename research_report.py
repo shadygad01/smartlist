@@ -960,26 +960,40 @@ def _build_distribution_section(res: dict) -> str:
 
     html = '<div class="section"><h2>توزيع MFE و MAE — بصمة الجودة الكلية</h2>'
 
-    if mfe_dist:
-        total = sum(mfe_dist.values())
+    # mfe_dist / mae_dist may be nested {"buckets":{...}, "mean":..., ...} or flat {bucket: count}
+    mfe_buckets = mfe_dist.get("buckets", mfe_dist) if isinstance(mfe_dist, dict) else {}
+    mae_buckets = mae_dist.get("buckets", mae_dist) if isinstance(mae_dist, dict) else {}
+
+    if mfe_buckets:
+        total = sum(v for v in mfe_buckets.values() if isinstance(v, (int, float)))
         html += '<h3 style="color:#2a6496">توزيع MFE (الحركة القصوى لصالحنا)</h3>'
         html += '<table><thead><tr><th>الفئة</th><th>التوزيع</th><th>عدد</th><th>%</th></tr></thead><tbody>'
-        colors = {"<0%": "#dc3545", "0–5%": "#fd7e14", "5–10%": "#ffc107",
-                  "10–20%": "#20c997", "20–30%": "#0d6efd", ">30%": "#198754"}
-        for bucket in ["<0%", "0–5%", "5–10%", "10–20%", "20–30%", ">30%"]:
-            count = mfe_dist.get(bucket, 0)
+        colors = {"<0%": "#dc3545", "0–3%": "#fd7e14", "3–8%": "#ffc107",
+                  "8–15%": "#20c997", "15–25%": "#0d6efd", ">25%": "#198754"}
+        for bucket in ["<0%", "0–3%", "3–8%", "8–15%", "15–25%", ">25%"]:
+            count = mfe_buckets.get(bucket, 0)
             html += _bar_row(bucket, count, total, colors.get(bucket, "#888"))
+        stats = mfe_dist if isinstance(mfe_dist, dict) else {}
+        if stats.get("mean") is not None:
+            html += (f"<tr><td colspan='4' style='font-size:0.85em;color:#555'>"
+                     f"متوسط: {stats['mean']:.1f}%  |  وسيط: {stats.get('median',0):.1f}%  |  "
+                     f"P75: {stats.get('p75',0):.1f}%  |  P90: {stats.get('p90',0):.1f}%</td></tr>")
         html += "</tbody></table>"
 
-    if mae_dist:
-        total = sum(mae_dist.values())
+    if mae_buckets:
+        total = sum(v for v in mae_buckets.values() if isinstance(v, (int, float)))
         html += '<h3 style="color:#2a6496">توزيع MAE (الحركة القصوى ضدنا)</h3>'
         html += '<table><thead><tr><th>الفئة</th><th>التوزيع</th><th>عدد</th><th>%</th></tr></thead><tbody>'
-        colors = {">0%": "#198754", "0–(-5%)": "#20c997", "(-5%)–(-10%)": "#ffc107",
-                  "(-10%)–(-20%)": "#fd7e14", "<-20%": "#dc3545"}
-        for bucket in [">0%", "0–(-5%)", "(-5%)–(-10%)", "(-10%)–(-20%)", "<-20%"]:
-            count = mae_dist.get(bucket, 0)
+        colors = {"0–2%": "#198754", "2–5%": "#20c997", "5–10%": "#ffc107",
+                  "10–15%": "#fd7e14", ">15%": "#dc3545"}
+        for bucket in ["0–2%", "2–5%", "5–10%", "10–15%", ">15%"]:
+            count = mae_buckets.get(bucket, 0)
             html += _bar_row(bucket, count, total, colors.get(bucket, "#888"))
+        stats = mae_dist if isinstance(mae_dist, dict) else {}
+        if stats.get("mean") is not None:
+            html += (f"<tr><td colspan='4' style='font-size:0.85em;color:#555'>"
+                     f"متوسط: {stats['mean']:.1f}%  |  وسيط: {stats.get('median',0):.1f}%  |  "
+                     f"P75: {stats.get('p75',0):.1f}%  |  أسوأ: {stats.get('worst',0):.1f}%</td></tr>")
         html += "</tbody></table>"
 
     html += "</div>"

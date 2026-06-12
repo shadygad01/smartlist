@@ -90,7 +90,7 @@ jobs:
           git pull origin main --rebase || true
           git push || true
 
-      - name: Generate Heatmap and Research Report
+      - name: Backfill Research DB + Generate Heatmap and Research Report
         if: always()
         env:
           WEB_OUT: ./web_deploy
@@ -99,6 +99,7 @@ jobs:
           REPORT_EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
         run: |
           mkdir -p web_deploy
+          python backfill_research_db.py || true
           python heatmap.py
           python research_report.py --no-email --force || true
           # copy report (use python glob to avoid shell glob failure)
@@ -132,6 +133,13 @@ jobs:
           git diff --staged --quiet || git commit -m "Auto-update research DB [skip ci]"
           git pull origin main --rebase || true
           git push || true
+
+      - name: Run Edge Discovery Engine
+        if: always()
+        run: |
+          python rule_discovery.py || true
+          python edge_report.py || true
+          cp edge_discovery_report_*.html web_deploy/edge_report.html 2>/dev/null || true
 
       - name: Deploy to GitHub Pages
         if: always()

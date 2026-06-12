@@ -25,23 +25,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Reset DB (remove old incorrect signals)
-        run: |
-          python - <<'EOF'
-          import sqlite3, os
-          db = "egx_research.db"
-          if os.path.exists(db):
-              conn = sqlite3.connect(db)
-              conn.execute("DELETE FROM bottom_quality")
-              conn.execute("DELETE FROM signals")
-              conn.execute("DELETE FROM tracking")
-              conn.commit()
-              conn.close()
-              print("DB reset: all old signals removed")
-          else:
-              print("DB does not exist yet")
-          EOF
-
       - name: Run DB backfill
         run: python backfill_research_db.py
 

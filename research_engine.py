@@ -77,10 +77,22 @@ SNAP_FEATURE_COLS = [
     "snap_reclaim_spd", "snap_dist_lo", "snap_prem_disc",
 ]
 
+FEAT_FEATURE_COLS = [
+    "feat_dist_swing_low", "feat_dealing_range_pos",
+    "feat_candles_since_bos", "feat_dist_last_bos",
+    "feat_sweep_depth_pct", "feat_equal_lows_count",
+    "feat_vol_spike_ratio", "feat_candles_since_sweep",
+    "feat_accumulation_score",
+    "feat_consec_red", "feat_down_days_pct",
+    "feat_atr_compression", "feat_vol_contraction",
+    "feat_dist_20d_low", "feat_dist_50d_low", "feat_dist_52w_low",
+    "feat_vwap_dist", "feat_rs_vs_egx30", "feat_egx30_trend_val",
+]
+
 MIN_SAMPLES       = 30   # حد أدنى للتدريب global
 TRAIN_SPLIT_PCT   = 0.70 # تقسيم زمني — أول 70% للتدريب
 MIN_PER_STOCK     = 20   # إشارات ناضجة لتفعيل تحليل per-stock
-MIN_PER_STOCK_ML  = 30   # إشارات ناضجة لتفعيل ML model per-stock
+MIN_PER_STOCK_ML  = 50   # إشارات ناضجة لتفعيل ML model per-stock (Phase 4)
 TOP_MFE_PERCENTILE= 0.75 # الربع الأعلى = "نماذج الفائزة"
 
 # أنواع الإشارات التي تمثّل قرار دخول فعلي — Wait يُسجَّل للمراقبة فقط
@@ -111,10 +123,19 @@ ALL_FEATURE_COLS = [
     "snap_bos", "snap_bos_dist", "snap_choch", "snap_pivot_str",
     "snap_num_touches", "snap_sweep_size", "snap_vol_exp",
     "snap_reclaim_spd", "snap_dist_lo", "snap_prem_disc",
+    # Phase 1 computed features (feat_*)
+    "feat_dist_swing_low", "feat_dealing_range_pos",
+    "feat_candles_since_bos", "feat_dist_last_bos",
+    "feat_sweep_depth_pct", "feat_equal_lows_count",
+    "feat_vol_spike_ratio", "feat_candles_since_sweep",
+    "feat_accumulation_score",
+    "feat_consec_red", "feat_down_days_pct",
+    "feat_atr_compression", "feat_vol_contraction",
+    "feat_dist_20d_low", "feat_dist_50d_low", "feat_dist_52w_low",
+    "feat_vwap_dist", "feat_rs_vs_egx30", "feat_egx30_trend_val",
 ]
 
 # ── المتغيرات المستخدمة في الـ ML و Correlation ───────────────────────────────
-# كلها من وقت الإشارة (صفر تسرّب مستقبلي) — مطابقة لـ ALL_FEATURE_COLS
 FEATURE_COLS = [
     "raw_score", "adj_score",
     "r1_price", "r2_ob", "r3_liquidity", "r4_htf",
@@ -181,11 +202,12 @@ def _to_df(signals: list) -> pd.DataFrame:
 
 
 def _get_feature_cols(df: pd.DataFrame) -> list:
-    """Returns FEATURE_COLS + available SNAP_FEATURE_COLS that have enough non-NULL values."""
+    """Returns FEATURE_COLS + SNAP + FEAT columns that have enough non-NULL values."""
     threshold = min(10, MIN_SAMPLES)
     base = [c for c in FEATURE_COLS      if c in df.columns and df[c].notna().sum() >= threshold]
     snap = [c for c in SNAP_FEATURE_COLS if c in df.columns and df[c].notna().sum() >= threshold]
-    return list(dict.fromkeys(base + snap))
+    feat = [c for c in FEAT_FEATURE_COLS if c in df.columns and df[c].notna().sum() >= threshold]
+    return list(dict.fromkeys(base + snap + feat))
 
 
 def _prepare(df: pd.DataFrame, target: str) -> tuple:
@@ -1222,6 +1244,95 @@ def _auto_update_pattern_weights(pattern_result: dict, db_path: str = DB_PATH):
         json.dump(old_data, f, indent=2)
 
 
+# ── Feature Health Report (Phase 6) ──────────────────────────────────────────
+
+def _feature_health_report(df: pd.DataFrame) -> dict:
+    """
+    Per-feature quality audit:
+      missing_ratio  — fraction of rows that are NULL
+      zero_ratio     — fraction of non-null values equal to 0
+      variance       — variance of non-null values
+      n_unique       — number of distinct non-null values
+      info_gain_mfe  — mutual information with MFE (0–1, normalised)
+      health         — "ok" / "low_info" / "mostly_zero" / "zero_variance" / "too_sparse"
+
+    Auto-excludes features that are too sparse, zero-variance, or mostly-zero.
+    """
+    if not SKLEARN_OK or TARGET_MFE not in df.columns:
+        return {}
+
+    all_cols  = _get_feature_cols(df)
+    mfe_mask  = df[TARGET_MFE].notna()
+    n_total   = len(df)
+
+    if not all_cols or mfe_mask.sum() < 10:
+        return {}
+
+    X_mi = df.loc[mfe_mask, all_cols].fillna(0).values
+    y_mi = df.loc[mfe_mask, TARGET_MFE].values
+
+    try:
+        mi_vals = mutual_info_regression(X_mi, y_mi, random_state=42)
+        max_mi  = max(float(v) for v in mi_vals) if len(mi_vals) > 0 else 1e-9
+        max_mi  = max(max_mi, 1e-9)
+        mi_norm = {c: round(float(v) / max_mi, 4) for c, v in zip(all_cols, mi_vals)}
+    except Exception:
+        mi_norm = {c: 0.0 for c in all_cols}
+
+    report        = {}
+    auto_excluded = []
+
+    for col in all_cols:
+        if col not in df.columns:
+            continue
+        series    = df[col]
+        non_null  = series.dropna()
+        n_nn      = len(non_null)
+
+        missing_ratio = round(1.0 - n_nn / max(n_total, 1), 4)
+        zero_ratio    = round(float((non_null == 0).sum()) / max(n_nn, 1), 4)
+        variance      = round(float(non_null.var()) if n_nn > 1 else 0.0, 6)
+        n_unique      = int(non_null.nunique())
+        info_gain     = mi_norm.get(col, 0.0)
+
+        if missing_ratio > 0.80:
+            health = "too_sparse"
+            auto_excluded.append(col)
+        elif variance < 1e-8 or n_unique <= 1:
+            health = "zero_variance"
+            auto_excluded.append(col)
+        elif zero_ratio > 0.90:
+            health = "mostly_zero"
+            auto_excluded.append(col)
+        elif info_gain < 0.02 and n_nn >= 20:
+            health = "low_info"
+        else:
+            health = "ok"
+
+        report[col] = {
+            "n_non_null":    n_nn,
+            "missing_ratio": missing_ratio,
+            "zero_ratio":    zero_ratio,
+            "variance":      variance,
+            "n_unique":      n_unique,
+            "info_gain_mfe": info_gain,
+            "health":        health,
+        }
+
+    sorted_report = dict(
+        sorted(report.items(), key=lambda x: -x[1]["info_gain_mfe"])
+    )
+    return {
+        "features":     sorted_report,
+        "auto_excluded": auto_excluded,
+        "n_ok":         sum(1 for v in report.values() if v["health"] == "ok"),
+        "n_sparse":     sum(1 for v in report.values() if v["health"] == "too_sparse"),
+        "n_low_info":   sum(1 for v in report.values() if v["health"] == "low_info"),
+        "n_zero_var":   sum(1 for v in report.values() if v["health"] == "zero_variance"),
+        "n_mostly_zero":sum(1 for v in report.values() if v["health"] == "mostly_zero"),
+    }
+
+
 # ── Main API ───────────────────────────────────────────────────────────────────
 
 def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
@@ -1267,6 +1378,7 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
         "best_conditions": {},
         "per_stock_ml": {},
         "edge_discovery": [],
+        "feature_health": {},
         "warnings": [],
     }
 
@@ -1444,6 +1556,19 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
             _auto_update_pattern_weights(result["pattern_analysis"], db_path)
         except Exception as e:
             result["warnings"].append(f"Auto-weight update failed: {e}")
+
+
+    # ── Feature Health Report (Phase 6) ──────────────────────────────────
+    if SKLEARN_OK and n >= 10:
+        try:
+            result["feature_health"] = _feature_health_report(df)
+            fh = result["feature_health"]
+            if verbose and fh:
+                n_ok   = fh.get("n_ok", 0)
+                n_excl = len(fh.get("auto_excluded", []))
+                print(f"  [FeatHealth] {n_ok} healthy features, {n_excl} auto-excluded")
+        except Exception as e:
+            result["warnings"].append(f"Feature health report failed: {e}")
 
 
     # ── Low R² Warning ────────────────────────────────────────────────────

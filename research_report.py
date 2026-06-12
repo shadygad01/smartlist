@@ -147,23 +147,44 @@ def _build_kpi_section(stats: dict, res: dict) -> str:
 
 
 def _build_correlation_section(res: dict) -> str:
+    import math
+
     corr = res.get("correlation", {})
     if not corr:
         return ""
 
     rows_html = ""
+    skipped = 0
     # نُرتّب حسب ارتباط MFE
     mfe_corr = corr.get("mfe_20d", {})
     bq_corr  = corr.get("bq_score", {})
 
     all_features = list(dict.fromkeys(list(mfe_corr.keys()) + list(bq_corr.keys())))
-    for feat in all_features[:20]:
+    displayed = 0
+    for feat in all_features:
         mfe_v = mfe_corr.get(feat)
         bq_v  = bq_corr.get(feat)
+        # تصفية: تجاهل الصفوف التي ليس فيها قيمة صالحة لأيٍّ من الارتباطين
+        mfe_valid = mfe_v is not None and not (isinstance(mfe_v, float) and math.isnan(mfe_v))
+        bq_valid  = bq_v  is not None and not (isinstance(bq_v,  float) and math.isnan(bq_v))
+        if not mfe_valid and not bq_valid:
+            skipped += 1
+            continue
+        if displayed >= 20:
+            break
         rows_html += (
             f"<tr><td><code>{feat}</code></td>"
             f"<td>{_f(mfe_v, 3)}</td>"
             f"<td>{_f(bq_v,  3)}</td></tr>"
+        )
+        displayed += 1
+
+    skipped_note = ""
+    if skipped:
+        skipped_note = (
+            f'<p style="font-size:.82em;color:#999;margin-top:.4em">'
+            f'{skipped} متغيرات لم تُعرض (صفر تباين أو بيانات غير كافية)'
+            f'</p>'
         )
 
     return (
@@ -175,6 +196,7 @@ def _build_correlation_section(res: dict) -> str:
         '</tr></thead><tbody>'
         f'{rows_html}'
         '</tbody></table>'
+        f'{skipped_note}'
         '</div>'
     )
 
@@ -412,38 +434,56 @@ def _build_pattern_section(res: dict) -> str:
     ps_buckets = pat.get("pattern_score_buckets", {})
     if ps_buckets:
         html += '<h3 style="color:#2a6496">أداء حسب نطاق Pattern Score</h3>'
-        html += (
-            '<table><thead><tr>'
-            '<th>Pattern Score</th><th>عدد</th>'
-            '<th>MFE (متوسط)</th><th>BQ (متوسط)</th><th>MAE (متوسط)</th>'
-            '</tr></thead><tbody>'
-        )
-        for bucket, v in sorted(ps_buckets.items()):
+        # إذا كانت جميع الـ buckets بعدد صفر — Pattern Score لم يُحسب للإشارات التاريخية
+        all_ps_zero = all(v.get('n', 0) == 0 for v in ps_buckets.values())
+        if all_ps_zero:
             html += (
-                f"<tr><td>{bucket}</td><td>{v.get('n',0)}</td>"
-                f"<td>{_mfe_badge(v.get('mfe_20d_mean'))}</td>"
-                f"<td>{_bq_badge(v.get('bq_score_mean'))}</td>"
-                f"<td>{_pct(v.get('mae_20d_mean'))}</td></tr>"
+                '<p style="color:#e67e22;font-style:italic">'
+                'Pattern Score غير محسوب للإشارات التاريخية — يحتاج إعادة مسح'
+                '</p>'
             )
-        html += "</tbody></table>"
+        else:
+            html += (
+                '<table><thead><tr>'
+                '<th>Pattern Score</th><th>عدد</th>'
+                '<th>MFE (متوسط)</th><th>BQ (متوسط)</th><th>MAE (متوسط)</th>'
+                '</tr></thead><tbody>'
+            )
+            for bucket, v in sorted(ps_buckets.items()):
+                html += (
+                    f"<tr><td>{bucket}</td><td>{v.get('n',0)}</td>"
+                    f"<td>{_mfe_badge(v.get('mfe_20d_mean'))}</td>"
+                    f"<td>{_bq_badge(v.get('bq_score_mean'))}</td>"
+                    f"<td>{_pct(v.get('mae_20d_mean'))}</td></tr>"
+                )
+            html += "</tbody></table>"
 
     # ── Effective Score Buckets ───────────────────────────────────────────
     eff_buckets = pat.get("effective_score_buckets", {})
     if eff_buckets:
         html += '<h3 style="color:#2a6496">أداء حسب نطاق Effective Score</h3>'
-        html += (
-            '<table><thead><tr>'
-            '<th>Effective Score</th><th>عدد</th>'
-            '<th>MFE (متوسط)</th><th>BQ (متوسط)</th>'
-            '</tr></thead><tbody>'
-        )
-        for bucket, v in sorted(eff_buckets.items()):
+        # إذا كانت جميع الـ buckets بعدد صفر — Effective Score لم يُحسب للإشارات التاريخية
+        all_eff_zero = all(v.get('n', 0) == 0 for v in eff_buckets.values())
+        if all_eff_zero:
             html += (
-                f"<tr><td>{bucket}</td><td>{v.get('n',0)}</td>"
-                f"<td>{_mfe_badge(v.get('mfe_20d_mean'))}</td>"
-                f"<td>{_bq_badge(v.get('bq_score_mean'))}</td></tr>"
+                '<p style="color:#e67e22;font-style:italic">'
+                'Pattern Score غير محسوب للإشارات التاريخية — يحتاج إعادة مسح'
+                '</p>'
             )
-        html += "</tbody></table>"
+        else:
+            html += (
+                '<table><thead><tr>'
+                '<th>Effective Score</th><th>عدد</th>'
+                '<th>MFE (متوسط)</th><th>BQ (متوسط)</th>'
+                '</tr></thead><tbody>'
+            )
+            for bucket, v in sorted(eff_buckets.items()):
+                html += (
+                    f"<tr><td>{bucket}</td><td>{v.get('n',0)}</td>"
+                    f"<td>{_mfe_badge(v.get('mfe_20d_mean'))}</td>"
+                    f"<td>{_bq_badge(v.get('bq_score_mean'))}</td></tr>"
+                )
+            html += "</tbody></table>"
 
     # ── Combined SMC + Pattern ─────────────────────────────────────────────
     combined = pat.get("combined_smc_pattern", {})

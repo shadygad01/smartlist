@@ -113,6 +113,16 @@ jobs:
           else:
               print("WARNING: no research_report_*.html found")
           PYEOF
+          python quant_research_report.py || true
+          python - <<'PYEOF'
+          import glob, shutil
+          files = sorted(glob.glob("quant_research_report_*.html"))
+          if files:
+              shutil.copy(files[-1], "web_deploy/quant_research_report.html")
+              print(f"Copied {files[-1]} -> web_deploy/quant_research_report.html")
+          else:
+              print("WARNING: no quant_research_report_*.html found")
+          PYEOF
           cp manifest.json sw.js icon.svg web_deploy/
 
       - name: Run Edge Discovery Engine

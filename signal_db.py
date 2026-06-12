@@ -88,7 +88,33 @@ def _migrate_schema(conn: sqlite3.Connection):
         if col not in existing:
             conn.execute(f"ALTER TABLE signals ADD COLUMN {col} {defn}")
 
-    # Migrate signals — snapshot engine columns (Phase 3)
+    # Migrate signals — feature extractor columns (feat_*)
+    feat_cols = {
+        "feat_dist_swing_low":       "REAL",
+        "feat_dealing_range_pos":    "REAL",
+        "feat_candles_since_bos":    "INTEGER",
+        "feat_dist_last_bos":        "REAL",
+        "feat_sweep_depth_pct":      "REAL",
+        "feat_equal_lows_count":     "INTEGER",
+        "feat_vol_spike_ratio":      "REAL",
+        "feat_candles_since_sweep":  "INTEGER",
+        "feat_accumulation_score":   "REAL",
+        "feat_consec_red":           "INTEGER",
+        "feat_down_days_pct":        "REAL",
+        "feat_atr_compression":      "REAL",
+        "feat_vol_contraction":      "REAL",
+        "feat_dist_20d_low":         "REAL",
+        "feat_dist_50d_low":         "REAL",
+        "feat_dist_52w_low":         "REAL",
+        "feat_vwap_dist":            "REAL",
+        "feat_rs_vs_egx30":          "REAL",
+        "feat_egx30_trend_val":      "REAL",
+    }
+    for col, defn in feat_cols.items():
+        if col not in existing:
+            conn.execute(f"ALTER TABLE signals ADD COLUMN {col} {defn}")
+
+    # Migrate signals — snapshot engine columns (snap_*)
     snap_cols = {
         "snap_atr":         "REAL",
         "snap_wick_ratio":  "REAL",
@@ -558,6 +584,35 @@ def upsert_tracking(signal_id: str, data: dict, db_path: str = DB_PATH):
             "hc":  data.get("highest_close"), "lc": data.get("lowest_close"),
             "hh":  data.get("highest_high"),  "ll": data.get("lowest_low"),
         })
+    conn.close()
+
+
+def upsert_signal_features(signal_id: str, features: dict, db_path: str = DB_PATH):
+    """Update feat_* and snap_* columns on an existing signals row."""
+    if not features:
+        return
+    _safe = {
+        "feat_dist_swing_low", "feat_dealing_range_pos", "feat_candles_since_bos",
+        "feat_dist_last_bos", "feat_sweep_depth_pct", "feat_equal_lows_count",
+        "feat_vol_spike_ratio", "feat_candles_since_sweep", "feat_accumulation_score",
+        "feat_consec_red", "feat_down_days_pct", "feat_atr_compression",
+        "feat_vol_contraction", "feat_dist_20d_low", "feat_dist_50d_low",
+        "feat_dist_52w_low", "feat_vwap_dist", "feat_rs_vs_egx30",
+        "feat_egx30_trend_val",
+        "snap_atr", "snap_wick_ratio", "snap_compression", "snap_consol_len",
+        "snap_bos", "snap_bos_dist", "snap_choch", "snap_pivot_str",
+        "snap_num_touches", "snap_sweep_size", "snap_vol_exp",
+        "snap_reclaim_spd", "snap_dist_lo", "snap_prem_disc",
+    }
+    cols = [c for c, v in features.items() if v is not None and c in _safe]
+    if not cols:
+        return
+    set_clause = ", ".join(f'"{c}" = :{c}' for c in cols)
+    params = {c: features[c] for c in cols}
+    params["__id"] = signal_id
+    conn = get_conn(db_path)
+    with conn:
+        conn.execute(f'UPDATE signals SET {set_clause} WHERE id = :__id', params)
     conn.close()
 
 

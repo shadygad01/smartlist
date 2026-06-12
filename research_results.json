@@ -59,8 +59,8 @@
       "feat_dist_52w_low": 0.058,
       "r3_liquidity": 0.055,
       "r8_demand": 0.055,
+      "feat_dist_swing_low": -0.051,
       "raw_score": 0.05,
-      "feat_dist_swing_low": -0.046,
       "feat_candles_since_bos": 0.044,
       "discount_depth": 0.041,
       "price_ok": 0.041,
@@ -70,12 +70,12 @@
       "snap_vol_exp": 0.038,
       "rsi_div": 0.034,
       "snap_wick_ratio": -0.033,
-      "feat_consec_red": 0.031,
       "r1_price": 0.03,
       "feat_vol_spike_ratio": -0.03,
-      "feat_accumulation_score": 0.03,
+      "feat_consec_red": 0.03,
       "r2_ob": -0.029,
       "r6_macd": 0.029,
+      "feat_accumulation_score": 0.029,
       "r4_htf": 0.024,
       "htf_hh": -0.02,
       "feat_dist_50d_low": 0.019,
@@ -85,10 +85,10 @@
       "wick_rejection": 0.01,
       "snap_sweep_size": 0.01,
       "feat_sweep_depth_pct": 0.01,
-      "feat_candles_since_sweep": 0.008,
       "snap_dist_lo": 0.007,
       "feat_dist_20d_low": 0.007,
       "is_cbe": -0.006,
+      "feat_candles_since_sweep": 0.005,
       "sv_hit": -0.003,
       "sv_score": -0.003,
       "htf_hl": 0.003,
@@ -117,14 +117,14 @@
       "r3_liquidity": 0.047,
       "rsi_div": 0.044,
       "equal_lows": 0.043,
-      "feat_dist_swing_low": -0.036,
+      "feat_dist_swing_low": -0.043,
       "r6_macd": 0.03,
       "r5_avwap": -0.028,
       "snap_consol_len": -0.028,
       "r8_demand": 0.021,
-      "feat_consec_red": 0.021,
       "snap_wick_ratio": -0.02,
       "snap_compression": 0.019,
+      "feat_consec_red": 0.019,
       "feat_atr_compression": 0.019,
       "snap_pivot_str": 0.018,
       "feat_vol_contraction": 0.017,
@@ -139,18 +139,18 @@
       "snap_choch": 0.009,
       "snap_num_touches": -0.009,
       "feat_equal_lows_count": -0.009,
+      "feat_candles_since_sweep": -0.009,
       "htf_hl": 0.008,
       "snap_dist_lo": -0.007,
       "feat_dist_20d_low": -0.007,
-      "feat_candles_since_sweep": -0.006,
       "sv_hit": -0.005,
       "sv_score": -0.005,
       "sv_depth": -0.005,
       "feat_dist_52w_low": 0.005,
       "r7_div": -0.004,
       "is_cbe": 0.004,
-      "feat_accumulation_score": 0.004,
       "feat_dist_50d_low": -0.004,
+      "feat_accumulation_score": 0.003,
       "r2_ob": -0.002,
       "feat_vol_spike_ratio": 0.001,
       "htf_hh": 0.0
@@ -178,11 +178,11 @@
       "equal_lows": -0.057,
       "feat_candles_since_bos": -0.056,
       "r1_price": 0.053,
-      "feat_consec_red": -0.053,
-      "feat_dist_52w_low": 0.052,
       "wick_rejection": -0.051,
+      "feat_consec_red": -0.051,
       "is_cbe": -0.05,
       "snap_vol_exp": -0.05,
+      "feat_dist_52w_low": 0.05,
       "htf_hl": -0.048,
       "feat_vwap_dist": -0.048,
       "stock_tier": -0.047,
@@ -200,23 +200,23 @@
       "r3_liquidity": -0.031,
       "r7_div": 0.03,
       "r4_htf": 0.024,
+      "feat_dist_swing_low": 0.022,
       "feat_candles_since_sweep": 0.021,
       "r8_demand": -0.017,
-      "feat_accumulation_score": 0.013,
       "snap_pivot_str": 0.012,
+      "feat_accumulation_score": 0.012,
       "discount_depth": 0.011,
       "snap_prem_disc": -0.011,
       "feat_dealing_range_pos": -0.011,
       "snap_consol_len": -0.01,
       "snap_choch": -0.01,
-      "feat_dist_swing_low": 0.01,
       "r6_macd": 0.001
     }
   },
   "mutual_information": {
     "mfe_20d": {
       "snap_atr": 1.0,
-      "feat_dist_52w_low": 0.5198,
+      "feat_dist_52w_low": 0.6552,
       "feat_dist_last_bos": 0.5075,
       "snap_reclaim_spd": 0.4368,
       "feat_atr_compression": 0.1959,
@@ -228,10 +228,9 @@
       "feat_dist_20d_low": 0.1665,
       "snap_dist_lo": 0.1618,
       "r8_demand": 0.1589,
-      "feat_accumulation_score": 0.1586,
       "feat_vol_spike_ratio": 0.146,
       "feat_vwap_dist": 0.1146,
-      "snap_pivot_str": 0.1109,
+      "snap_pivot_str": 0.1128,
       "r4_htf": 0.1044,
       "hvn_hit": 0.0936,
       "htf_hh": 0.0416,
@@ -267,6 +266,7 @@
       "feat_sweep_depth_pct": 0.0,
       "feat_equal_lows_count": 0.0,
       "feat_candles_since_sweep": 0.0,
+      "feat_accumulation_score": 0.0,
       "feat_consec_red": 0.0,
       "feat_down_days_pct": 0.0,
       "feat_vol_contraction": 0.0,
@@ -274,45 +274,44 @@
     },
     "bq_score": {
       "feat_dist_52w_low": 1.0,
-      "feat_candles_since_bos": 0.8958,
-      "r1_price": 0.8159,
-      "stock_tier": 0.719,
-      "r5_avwap": 0.6989,
-      "raw_score": 0.4906,
-      "feat_down_days_pct": 0.4731,
-      "feat_equal_lows_count": 0.4545,
-      "r6_macd": 0.4538,
-      "feat_dist_20d_low": 0.4268,
-      "snap_dist_lo": 0.4261,
-      "snap_num_touches": 0.4195,
-      "snap_atr": 0.4086,
-      "snap_sweep_size": 0.3551,
-      "feat_sweep_depth_pct": 0.3447,
-      "snap_wick_ratio": 0.3276,
-      "snap_choch": 0.2431,
-      "r8_demand": 0.2386,
-      "snap_bos": 0.2146,
-      "r2_ob": 0.2102,
-      "feat_dist_last_bos": 0.209,
-      "r4_htf": 0.2002,
-      "r3_liquidity": 0.1745,
-      "snap_pivot_str": 0.1649,
-      "feat_vwap_dist": 0.16,
-      "snap_consol_len": 0.1335,
-      "r7_div": 0.1309,
-      "sweep_detected": 0.0789,
-      "hvn_score": 0.0754,
-      "price_ok": 0.0622,
-      "macd_div": 0.0567,
-      "htf_hl": 0.0556,
-      "hvn_hit": 0.0507,
-      "discount_depth": 0.0441,
-      "feat_dealing_range_pos": 0.041,
-      "htf_hh": 0.0403,
-      "snap_prem_disc": 0.0384,
-      "equal_lows": 0.0268,
-      "feat_consec_red": 0.0259,
-      "wick_rejection": 0.0082,
+      "feat_candles_since_bos": 0.8635,
+      "r1_price": 0.7864,
+      "stock_tier": 0.6931,
+      "r5_avwap": 0.6737,
+      "raw_score": 0.4729,
+      "feat_down_days_pct": 0.456,
+      "feat_equal_lows_count": 0.4381,
+      "r6_macd": 0.4374,
+      "feat_dist_20d_low": 0.4114,
+      "snap_dist_lo": 0.4107,
+      "snap_num_touches": 0.4044,
+      "snap_atr": 0.3939,
+      "snap_sweep_size": 0.3467,
+      "feat_sweep_depth_pct": 0.3356,
+      "snap_wick_ratio": 0.3158,
+      "snap_choch": 0.2343,
+      "r8_demand": 0.23,
+      "snap_bos": 0.2069,
+      "r2_ob": 0.2026,
+      "feat_dist_last_bos": 0.2015,
+      "r4_htf": 0.193,
+      "r3_liquidity": 0.1682,
+      "feat_vwap_dist": 0.1543,
+      "snap_consol_len": 0.1287,
+      "r7_div": 0.1262,
+      "snap_pivot_str": 0.1179,
+      "sweep_detected": 0.076,
+      "hvn_score": 0.0726,
+      "price_ok": 0.0599,
+      "macd_div": 0.0546,
+      "htf_hl": 0.0536,
+      "hvn_hit": 0.0489,
+      "discount_depth": 0.0425,
+      "feat_dealing_range_pos": 0.0395,
+      "htf_hh": 0.0389,
+      "snap_prem_disc": 0.037,
+      "equal_lows": 0.0258,
+      "wick_rejection": 0.0079,
       "sv_hit": 0.0,
       "sv_score": 0.0,
       "is_ramadan": 0.0,
@@ -326,13 +325,14 @@
       "feat_vol_spike_ratio": 0.0,
       "feat_candles_since_sweep": 0.0,
       "feat_accumulation_score": 0.0,
+      "feat_consec_red": 0.0,
       "feat_atr_compression": 0.0,
       "feat_vol_contraction": 0.0,
       "feat_dist_50d_low": 0.0
     }
   },
   "probability_analysis": {
-    "auc": 0.504,
+    "auc": 0.518,
     "n_train": 447,
     "n_test": 192,
     "base_win_rate": 0.6302,
@@ -343,23 +343,23 @@
     "top5_features": [
       [
         "snap_reclaim_spd",
-        0.0682
+        0.0703
       ],
       [
         "feat_vwap_dist",
-        0.0679
+        0.0684
       ],
       [
         "snap_pivot_str",
-        0.0548
+        0.0522
       ],
       [
         "feat_atr_compression",
-        0.0415
+        0.045
       ],
       [
         "feat_dist_swing_low",
-        0.0392
+        0.0372
       ]
     ]
   },
@@ -368,62 +368,62 @@
     "r2": 0.128,
     "mae": 0.1103,
     "importance": {
-      "raw_score": 0.01925142140080565,
-      "r1_price": 0.001973937991064613,
+      "raw_score": 0.019251421400805643,
+      "r1_price": 0.001973937991064615,
       "r2_ob": 0.0003,
-      "r3_liquidity": 0.003677697045701954,
-      "r4_htf": 0.006819649175777561,
+      "r3_liquidity": 0.003677697045701967,
+      "r4_htf": 0.006819649175777562,
       "r5_avwap": 0.003082213438735178,
-      "r6_macd": 0.0002601003163992309,
-      "r7_div": 0.00215,
-      "r8_demand": 0.010408614333774324,
-      "discount_depth": 0.010304058032014379,
+      "r6_macd": 0.0002601003163992401,
+      "r7_div": 0.002149999999999996,
+      "r8_demand": 0.010408614333774319,
+      "discount_depth": 0.010304058032014386,
       "sv_hit": 0.0,
       "sv_score": 0.0,
-      "hvn_hit": 0.0004143284622645549,
-      "hvn_score": 0.04648133630714018,
-      "is_ramadan": 0.007470355731225295,
-      "is_cbe": 0.006745735886036384,
+      "hvn_hit": 0.00041432846226455676,
+      "hvn_score": 0.046481336307140186,
+      "is_ramadan": 0.007470355731225297,
+      "is_cbe": 0.006745735886036386,
       "stock_tier": 0.02941905891855935,
       "rsi_div": 0.0,
       "macd_div": -1.8503717077085942e-18,
       "htf_hh": 0.00015,
       "htf_hl": 0.00015145500376872442,
-      "sweep_detected": -1.8503717077085942e-18,
+      "sweep_detected": 0.0,
       "wick_rejection": 0.0,
       "equal_lows": 0.0,
       "price_ok": 0.0,
       "sv_depth": 0.0,
       "snap_atr": 0.017818345343278155,
-      "snap_wick_ratio": 0.032399214693857044,
-      "snap_compression": 0.017686430718780306,
-      "snap_consol_len": 0.0175072711062098,
-      "snap_bos": 0.0008716709732344833,
-      "snap_choch": 0.0022992698876706293,
-      "snap_pivot_str": 0.0298439381773338,
+      "snap_wick_ratio": 0.03239921469385704,
+      "snap_compression": 0.01768643071878032,
+      "snap_consol_len": 0.017507271106209792,
+      "snap_bos": 0.0008716709732344851,
+      "snap_choch": 0.0022992698876706332,
+      "snap_pivot_str": 0.029843938177333808,
       "snap_num_touches": 0.012223704085352928,
-      "snap_sweep_size": 0.01510351865995625,
-      "snap_vol_exp": 0.021388196198953716,
-      "snap_reclaim_spd": 0.014630977213524427,
-      "snap_dist_lo": 0.010698880346781757,
+      "snap_sweep_size": 0.015103518659956242,
+      "snap_vol_exp": 0.02138819619895372,
+      "snap_reclaim_spd": 0.01463097721352443,
+      "snap_dist_lo": 0.010698880346781755,
       "snap_prem_disc": 0.017538441708810353,
-      "feat_dist_swing_low": 0.010362677746362932,
-      "feat_dealing_range_pos": 0.0007640310657219924,
+      "feat_dist_swing_low": 0.010362677746362927,
+      "feat_dealing_range_pos": 0.0007640310657219905,
       "feat_candles_since_bos": 0.008266664619906787,
       "feat_dist_last_bos": 0.029879755190851964,
-      "feat_sweep_depth_pct": 0.0135562708879553,
-      "feat_equal_lows_count": 0.0009554988898433253,
-      "feat_vol_spike_ratio": 0.011859663671517858,
-      "feat_candles_since_sweep": 0.011685055388127748,
-      "feat_accumulation_score": 0.013311177787920549,
-      "feat_consec_red": 0.0019012409334033097,
-      "feat_down_days_pct": 0.019612573103542617,
-      "feat_atr_compression": 0.010146054005682277,
-      "feat_vol_contraction": 0.028369853240099708,
-      "feat_dist_20d_low": 0.005630715325251791,
+      "feat_sweep_depth_pct": 0.013556270887955297,
+      "feat_equal_lows_count": 0.0009554988898433233,
+      "feat_vol_spike_ratio": 0.011859663671517865,
+      "feat_candles_since_sweep": 0.011685055388127755,
+      "feat_accumulation_score": 0.013311177787920533,
+      "feat_consec_red": 0.0019012409334033058,
+      "feat_down_days_pct": 0.01961257310354262,
+      "feat_atr_compression": 0.010146054005682281,
+      "feat_vol_contraction": 0.02836985324009971,
+      "feat_dist_20d_low": 0.005630715325251786,
       "feat_dist_50d_low": 0.032286592117872284,
-      "feat_dist_52w_low": 0.07736512435625265,
-      "feat_vwap_dist": 0.020149306085287838
+      "feat_dist_52w_low": 0.07736512435625267,
+      "feat_vwap_dist": 0.02014930608528783
     },
     "n_train": 72,
     "n_test": 32
@@ -433,61 +433,61 @@
     "r2": -0.021,
     "mae": 24.8426,
     "importance": {
-      "raw_score": 0.0035843230625584293,
-      "r1_price": 0.00398516639765082,
-      "r2_ob": 5.00000000000111e-05,
-      "r3_liquidity": 0.0003216268321535114,
-      "r4_htf": 0.003828023366013086,
-      "r5_avwap": 1.4802973661668754e-17,
-      "r6_macd": -0.00028640333956772004,
-      "r7_div": 0.00880000000000002,
-      "r8_demand": 0.0007013457698867885,
-      "discount_depth": 0.04714335454634638,
-      "sv_hit": 1.4802973661668754e-17,
-      "sv_score": 2.960594732333751e-17,
-      "hvn_hit": 0.0005279832984026528,
-      "hvn_score": 0.006427783629021304,
-      "is_ramadan": 0.0054000000000000185,
-      "is_cbe": 0.004972620930431212,
-      "stock_tier": 0.0019385442612709885,
-      "rsi_div": 1.850371707708594e-17,
-      "macd_div": 1.4802973661668754e-17,
-      "htf_hh": -0.00011532875692364013,
-      "htf_hl": -0.00015635561989902713,
-      "sweep_detected": 1.4802973661668754e-17,
-      "wick_rejection": 1.850371707708594e-17,
-      "equal_lows": 1.1102230246251566e-17,
-      "price_ok": 1.1102230246251566e-17,
-      "sv_depth": 1.4802973661668754e-17,
+      "raw_score": 0.0035843230625584254,
+      "r1_price": 0.0039851663976508125,
+      "r2_ob": 5.00000000000074e-05,
+      "r3_liquidity": 0.0003216268321535225,
+      "r4_htf": 0.0038280233660131007,
+      "r5_avwap": 1.1102230246251566e-17,
+      "r6_macd": -0.0002864033395676978,
+      "r7_div": 0.008800000000000027,
+      "r8_demand": 0.0007013457698867773,
+      "discount_depth": 0.0471433545463464,
+      "sv_hit": 3.7007434154171884e-18,
+      "sv_score": 1.4802973661668754e-17,
+      "hvn_hit": 0.0005279832984026713,
+      "hvn_score": 0.0064277836290213,
+      "is_ramadan": 0.005400000000000015,
+      "is_cbe": 0.004972620930431207,
+      "stock_tier": 0.0019385442612709922,
+      "rsi_div": 1.1102230246251566e-17,
+      "macd_div": 1.1102230246251566e-17,
+      "htf_hh": -0.00011532875692363642,
+      "htf_hl": -0.00015635561989901973,
+      "sweep_detected": 2.960594732333751e-17,
+      "wick_rejection": 3.7007434154171884e-18,
+      "equal_lows": 1.850371707708594e-17,
+      "price_ok": 1.850371707708594e-17,
+      "sv_depth": 2.2204460492503132e-17,
       "snap_atr": 0.08910176969329961,
-      "snap_wick_ratio": 0.010080629464593985,
-      "snap_compression": -0.0036797454840488395,
-      "snap_consol_len": 0.0012215229617684687,
-      "snap_bos": -0.00017395498733874313,
-      "snap_choch": 0.005925354718890723,
-      "snap_pivot_str": 0.010858526725116257,
-      "snap_num_touches": 0.0035175688011753184,
-      "snap_sweep_size": 0.0005971685955471916,
-      "snap_vol_exp": 0.00045774487794657823,
-      "snap_reclaim_spd": 0.046190847630273306,
-      "snap_dist_lo": -0.0018467799777517936,
-      "snap_prem_disc": 0.05448661517497114,
+      "snap_wick_ratio": 0.010080629464593992,
+      "snap_compression": -0.003679745484048851,
+      "snap_consol_len": 0.0012215229617684798,
+      "snap_bos": -0.00017395498733874682,
+      "snap_choch": 0.005925354718890719,
+      "snap_pivot_str": 0.010858526725116252,
+      "snap_num_touches": 0.0035175688011753257,
+      "snap_sweep_size": 0.0005971685955471768,
+      "snap_vol_exp": 0.0004577448779465691,
+      "snap_reclaim_spd": 0.04619084763027333,
+      "snap_dist_lo": -0.0018467799777517975,
+      "snap_prem_disc": 0.05448661517497112,
       "feat_dist_swing_low": 0.0025692811601462735,
-      "feat_dealing_range_pos": -0.00027719289223726356,
-      "feat_candles_since_bos": 0.05131526684185682,
+      "feat_dealing_range_pos": -0.00027719289223726573,
+      "feat_candles_since_bos": 0.05131526684185683,
       "feat_dist_last_bos": 0.07075672635161746,
-      "feat_sweep_depth_pct": -0.002841798491581435,
+      "feat_sweep_depth_pct": -0.002841798491581427,
       "feat_equal_lows_count": 0.0028751382766819327,
-      "feat_vol_spike_ratio": -0.0019223129627723593,
-      "feat_candles_since_sweep": 0.005920811785054785,
-      "feat_accumulation_score": 0.0023756863542748322,
+      "feat_vol_spike_ratio": -0.0019223129627723558,
+      "feat_candles_since_sweep": 0.005920811785054783,
+      "feat_accumulation_score": 0.002375686354274843,
       "feat_consec_red": 0.009256095646282766,
       "feat_down_days_pct": 0.04987207047568677,
-      "feat_atr_compression": 0.00227587239721883,
+      "feat_atr_compression": 0.0022758723972188333,
       "feat_vol_contraction": -0.01271619601619532,
-      "feat_dist_20d_low": -0.0014913289047214146,
-      "feat_dist_50d_low": 0.001627987267670275,
-      "feat_dist_52w_low": 0.023417364207002488,
+      "feat_dist_20d_low": -0.001491328904721426,
+      "feat_dist_50d_low": 0.0016279872676702954,
+      "feat_dist_52w_low": 0.02341736420700247,
       "feat_vwap_dist": 0.05024167420508979
     },
     "n_train": 72,
@@ -632,61 +632,61 @@
       "r2": 0.128,
       "mae": 0.1103,
       "importance": {
-        "raw_score": -0.0020488598513228743,
-        "r1_price": -0.0002923903282316583,
+        "raw_score": -0.0020488598513228595,
+        "r1_price": -0.0002923903282316361,
         "r2_ob": 0.0,
-        "r3_liquidity": 0.004134503597827618,
-        "r4_htf": 0.0007971737782090557,
-        "r5_avwap": 0.0,
-        "r6_macd": 0.000440401265596931,
+        "r3_liquidity": 0.004134503597827603,
+        "r4_htf": 0.0007971737782090482,
+        "r5_avwap": -7.401486830834377e-18,
+        "r6_macd": 0.0004404012655969458,
         "r7_div": 0.0,
-        "r8_demand": 0.0016463150426071493,
+        "r8_demand": 0.0016463150426071715,
         "discount_depth": -0.00035847142925472163,
         "sv_hit": 0.0,
         "sv_score": 0.0,
-        "hvn_hit": 5.7313849058219604e-05,
-        "hvn_score": 0.0554794954261892,
-        "is_ramadan": 0.0,
+        "hvn_hit": 5.7313849058212205e-05,
+        "hvn_score": 0.05547949542618922,
+        "is_ramadan": -7.401486830834377e-18,
         "is_cbe": 0.0018778052042246252,
-        "stock_tier": 0.015797974804672214,
-        "rsi_div": 0.0,
-        "macd_div": 0.0,
+        "stock_tier": 0.015797974804672186,
+        "rsi_div": -7.401486830834377e-18,
+        "macd_div": -7.401486830834377e-18,
         "htf_hh": 0.0,
         "htf_hl": 5.8200150748977105e-06,
-        "sweep_detected": -7.401486830834377e-18,
+        "sweep_detected": 0.0,
         "wick_rejection": 0.0,
-        "equal_lows": 0.0,
-        "price_ok": 0.0,
-        "sv_depth": 0.0,
+        "equal_lows": -7.401486830834377e-18,
+        "price_ok": -7.401486830834377e-18,
+        "sv_depth": -7.401486830834377e-18,
         "snap_atr": -0.01254559095890322,
-        "snap_wick_ratio": -0.01812408984117262,
-        "snap_compression": -0.0010273996545230165,
-        "snap_consol_len": -0.005908464982275426,
-        "snap_bos": 8.668389293794801e-05,
-        "snap_choch": 0.0001970795506825255,
-        "snap_pivot_str": 0.023661918717240313,
-        "snap_num_touches": 0.0009556859066291039,
-        "snap_sweep_size": -0.0020064787198588027,
-        "snap_vol_exp": 0.014061085191071802,
-        "snap_reclaim_spd": -0.002544075335625588,
-        "snap_dist_lo": -0.002767324462675321,
-        "snap_prem_disc": -0.00011421735448193063,
-        "feat_dist_swing_low": 0.008381145768060417,
-        "feat_dealing_range_pos": 0.0008561242628879621,
-        "feat_candles_since_bos": 0.003797093262235851,
-        "feat_dist_last_bos": 0.031298467403724044,
-        "feat_sweep_depth_pct": 0.005025083551821208,
+        "snap_wick_ratio": -0.018124089841172603,
+        "snap_compression": -0.001027399654523046,
+        "snap_consol_len": -0.005908464982275448,
+        "snap_bos": 8.668389293793321e-05,
+        "snap_choch": 0.00019707955068254773,
+        "snap_pivot_str": 0.02366191871724034,
+        "snap_num_touches": 0.0009556859066291113,
+        "snap_sweep_size": -0.0020064787198588617,
+        "snap_vol_exp": 0.014061085191071795,
+        "snap_reclaim_spd": -0.0025440753356255805,
+        "snap_dist_lo": -0.002767324462675336,
+        "snap_prem_disc": -0.00011421735448192323,
+        "feat_dist_swing_low": 0.008381145768060424,
+        "feat_dealing_range_pos": 0.0008561242628879917,
+        "feat_candles_since_bos": 0.0037970932622358364,
+        "feat_dist_last_bos": 0.03129846740372408,
+        "feat_sweep_depth_pct": 0.005025083551821193,
         "feat_equal_lows_count": 0.0006219955593733007,
-        "feat_vol_spike_ratio": -0.012498894721043197,
-        "feat_candles_since_sweep": 0.00015366028768887635,
-        "feat_accumulation_score": -0.0008232730380411427,
-        "feat_consec_red": -0.0019594631438571318,
-        "feat_down_days_pct": -0.0003228301154738045,
-        "feat_atr_compression": -0.0036157839772708996,
-        "feat_vol_contraction": 0.004143444580952186,
+        "feat_vol_spike_ratio": -0.012498894721043204,
+        "feat_candles_since_sweep": 0.00015366028768886892,
+        "feat_accumulation_score": -0.0008232730380411354,
+        "feat_consec_red": -0.0019594631438571244,
+        "feat_down_days_pct": -0.0003228301154737749,
+        "feat_atr_compression": -0.0036157839772708923,
+        "feat_vol_contraction": 0.004143444580952209,
         "feat_dist_20d_low": -0.0014771386989928562,
-        "feat_dist_50d_low": -0.013881299512700599,
-        "feat_dist_52w_low": 0.08037512193093947,
+        "feat_dist_50d_low": -0.01388129951270057,
+        "feat_dist_52w_low": 0.0803751219309395,
         "feat_vwap_dist": 0.0007529555664478031
       },
       "n_train": 72,
@@ -898,15 +898,15 @@
       "is_ramadan": 0.01,
       "is_cbe": 0.0086,
       "stock_tier": 0.0292,
-      "rsi_div": 0.0,
-      "macd_div": 0.0,
+      "rsi_div": -0.0,
+      "macd_div": -0.0,
       "htf_hh": 0.0003,
       "htf_hl": 0.0003,
-      "sweep_detected": -0.0,
+      "sweep_detected": 0.0,
       "wick_rejection": 0.0,
-      "equal_lows": 0.0,
-      "price_ok": 0.0,
-      "sv_depth": 0.0,
+      "equal_lows": -0.0,
+      "price_ok": -0.0,
+      "sv_depth": -0.0,
       "snap_atr": 0.0177,
       "snap_wick_ratio": 0.0289,
       "snap_compression": 0.0181,
@@ -996,11 +996,11 @@
         0.0249
       ],
       [
-        "discount_depth",
+        "snap_vol_exp",
         0.0246
       ],
       [
-        "snap_vol_exp",
+        "discount_depth",
         0.0246
       ],
       [
@@ -1030,62 +1030,62 @@
       "r2": -0.021,
       "mae": 24.8426,
       "importance": {
-        "raw_score": 0.005737292250233746,
-        "r1_price": 0.004340665590603251,
-        "r2_ob": 5.921189464667501e-17,
-        "r3_liquidity": -0.00011349267138593966,
-        "r4_htf": 0.0009120934640523585,
-        "r5_avwap": 7.401486830834377e-17,
-        "r6_macd": -0.0007456133582708653,
-        "r7_div": 8.881784197001253e-17,
-        "r8_demand": 0.00040538307954715396,
-        "discount_depth": -0.008937692925725585,
+        "raw_score": 0.005737292250233731,
+        "r1_price": 0.004340665590603221,
+        "r2_ob": 4.4408920985006264e-17,
+        "r3_liquidity": -0.00011349267138592486,
+        "r4_htf": 0.000912093464052403,
+        "r5_avwap": 8.881784197001253e-17,
+        "r6_macd": -0.0007456133582708949,
+        "r7_div": 1.1842378929335003e-16,
+        "r8_demand": 0.00040538307954718356,
+        "discount_depth": -0.008937692925725556,
         "sv_hit": 4.4408920985006264e-17,
-        "sv_score": 5.921189464667501e-17,
-        "hvn_hit": 0.001311933193610626,
-        "hvn_score": 0.004311134516085232,
-        "is_ramadan": 7.401486830834377e-17,
-        "is_cbe": 0.003690483721724817,
-        "stock_tier": -0.0046458229549160455,
-        "rsi_div": 2.960594732333751e-17,
-        "macd_div": 8.881784197001253e-17,
-        "htf_hh": -0.0002613150276945753,
+        "sv_score": 4.4408920985006264e-17,
+        "hvn_hit": 0.0013119331936106112,
+        "hvn_score": 0.004311134516085247,
+        "is_ramadan": 4.4408920985006264e-17,
+        "is_cbe": 0.0036904837217248466,
+        "stock_tier": -0.004645822954916075,
+        "rsi_div": 7.401486830834377e-17,
+        "macd_div": 7.401486830834377e-17,
+        "htf_hh": -0.0002613150276945901,
         "htf_hl": -0.0004254224795960789,
-        "sweep_detected": 4.4408920985006264e-17,
-        "wick_rejection": 1.1842378929335003e-16,
-        "equal_lows": 4.4408920985006264e-17,
-        "price_ok": 7.401486830834377e-17,
-        "sv_depth": 8.881784197001253e-17,
-        "snap_atr": -0.014015143449023786,
-        "snap_wick_ratio": 0.015922517858375892,
+        "sweep_detected": 1.0362081563168128e-16,
+        "wick_rejection": 5.921189464667501e-17,
+        "equal_lows": 7.401486830834377e-17,
+        "price_ok": 1.0362081563168128e-16,
+        "sv_depth": 5.921189464667501e-17,
+        "snap_atr": -0.014015143449023822,
+        "snap_wick_ratio": 0.01592251785837592,
         "snap_compression": -0.024718981936195365,
-        "snap_consol_len": -0.006513908152926051,
-        "snap_bos": -0.0038958199493549727,
-        "snap_choch": 0.0003014188755628903,
+        "snap_consol_len": -0.006513908152926096,
+        "snap_bos": -0.003895819949355002,
+        "snap_choch": 0.0003014188755628755,
         "snap_pivot_str": 0.01423410690046502,
-        "snap_num_touches": 0.000670275204701302,
-        "snap_sweep_size": -0.0028113256178112778,
-        "snap_vol_exp": -0.010169020488213694,
-        "snap_reclaim_spd": -0.002747720590017829,
-        "snap_dist_lo": -0.011787119911007197,
-        "snap_prem_disc": -0.0007646504112265233,
-        "feat_dist_swing_low": 0.003477124640585079,
-        "feat_dealing_range_pos": -0.008308771568949077,
-        "feat_candles_since_bos": 0.0033499562563161925,
-        "feat_dist_last_bos": 0.04191579429535876,
-        "feat_sweep_depth_pct": -0.006767193966325754,
-        "feat_equal_lows_count": 0.0069005531067277024,
-        "feat_vol_spike_ratio": -0.012689251851089437,
-        "feat_candles_since_sweep": 0.008283247140219123,
-        "feat_accumulation_score": -0.0008972545829006862,
-        "feat_consec_red": -0.0023756174148689357,
-        "feat_down_days_pct": -0.0030228292083639935,
-        "feat_atr_compression": -0.02189651041112466,
-        "feat_vol_contraction": -0.04426478406478125,
-        "feat_dist_20d_low": -0.011365315618885659,
-        "feat_dist_50d_low": -0.006088050929318863,
-        "feat_dist_52w_low": 0.04126945682800991,
-        "feat_vwap_dist": -0.009344414290751894
+        "snap_num_touches": 0.0006702752047012428,
+        "snap_sweep_size": -0.0028113256178112483,
+        "snap_vol_exp": -0.010169020488213724,
+        "snap_reclaim_spd": -0.002747720590017814,
+        "snap_dist_lo": -0.01178711991100719,
+        "snap_prem_disc": -0.0007646504112265825,
+        "feat_dist_swing_low": 0.0034771246405850944,
+        "feat_dealing_range_pos": -0.008308771568949054,
+        "feat_candles_since_bos": 0.003349956256316163,
+        "feat_dist_last_bos": 0.04191579429535877,
+        "feat_sweep_depth_pct": -0.0067671939663257385,
+        "feat_equal_lows_count": 0.006900553106727747,
+        "feat_vol_spike_ratio": -0.012689251851089467,
+        "feat_candles_since_sweep": 0.008283247140219153,
+        "feat_accumulation_score": -0.000897254582900701,
+        "feat_consec_red": -0.002375617414868921,
+        "feat_down_days_pct": -0.003022829208363964,
+        "feat_atr_compression": -0.021896510411124614,
+        "feat_vol_contraction": -0.044264784064781286,
+        "feat_dist_20d_low": -0.011365315618885688,
+        "feat_dist_50d_low": -0.006088050929318893,
+        "feat_dist_52w_low": 0.04126945682800993,
+        "feat_vwap_dist": -0.009344414290751923
       },
       "n_train": 72,
       "n_test": 32
@@ -1362,11 +1362,11 @@
         0.0496
       ],
       [
-        "is_cbe",
+        "feat_candles_since_bos",
         0.0454
       ],
       [
-        "feat_candles_since_bos",
+        "is_cbe",
         0.0454
       ],
       [
@@ -2310,7 +2310,7 @@
           },
           "snap_pivot_str": {
             "cluster_mean": 6.5014,
-            "diff_from_global": 6.0223
+            "diff_from_global": 6.0192
           },
           "snap_num_touches": {
             "cluster_mean": 5.0,
@@ -2415,7 +2415,7 @@
           },
           "snap_pivot_str": {
             "cluster_mean": 3.9806,
-            "diff_from_global": 3.5014
+            "diff_from_global": 3.4984
           },
           "snap_num_touches": {
             "cluster_mean": 4.8235,
@@ -2520,8 +2520,8 @@
             "diff_from_global": -0.2391
           },
           "snap_pivot_str": {
-            "cluster_mean": -3.1225,
-            "diff_from_global": -3.6017
+            "cluster_mean": -3.1178,
+            "diff_from_global": -3.6
           },
           "snap_num_touches": {
             "cluster_mean": 2.1663,
@@ -2628,7 +2628,7 @@
           },
           "snap_pivot_str": {
             "cluster_mean": 7.1588,
-            "diff_from_global": 6.6796
+            "diff_from_global": 6.6766
           },
           "snap_num_touches": {
             "cluster_mean": 2.0503,
@@ -2777,2100 +2777,2100 @@
     },
     "pca_coords": [
       {
-        "x": -1.246,
-        "y": 0.25,
+        "x": 1.246,
+        "y": 0.249,
         "cluster": 1,
         "mfe": 0.0174,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 0.558,
-        "y": 0.245,
+        "x": -0.557,
+        "y": 0.244,
         "cluster": 1,
         "mfe": 0.6291,
         "symbol": "HELI.CA"
       },
       {
-        "x": -2.703,
+        "x": 2.703,
         "y": 0.085,
         "cluster": 1,
         "mfe": 0.1111,
         "symbol": "PHDC.CA"
       },
       {
-        "x": -1.516,
+        "x": 1.516,
         "y": -0.347,
         "cluster": 1,
         "mfe": 0.0638,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -1.607,
+        "x": 1.607,
         "y": -0.998,
         "cluster": 1,
         "mfe": 0.3662,
         "symbol": "GBCO.CA"
       },
       {
-        "x": 1.384,
-        "y": 0.356,
+        "x": -1.384,
+        "y": 0.355,
         "cluster": 2,
         "mfe": 0.0663,
         "symbol": "MCQE.CA"
       },
       {
-        "x": -1.911,
-        "y": 0.07,
+        "x": 1.912,
+        "y": 0.069,
         "cluster": 1,
         "mfe": 0.0826,
         "symbol": "CCAP.CA"
       },
       {
-        "x": -2.922,
+        "x": 2.921,
         "y": -0.466,
         "cluster": 1,
         "mfe": 0.1254,
         "symbol": "EGAL.CA"
       },
       {
-        "x": -2.246,
+        "x": 2.246,
         "y": -0.68,
         "cluster": 1,
         "mfe": 0.2,
         "symbol": "OIH.CA"
       },
       {
-        "x": -1.072,
-        "y": 0.144,
+        "x": 1.072,
+        "y": 0.142,
         "cluster": 1,
         "mfe": 0.0939,
         "symbol": "CCAP.CA"
       },
       {
-        "x": -1.061,
-        "y": 0.253,
+        "x": 1.061,
+        "y": 0.251,
         "cluster": 1,
         "mfe": 0.0939,
         "symbol": "CCAP.CA"
       },
       {
-        "x": -0.96,
+        "x": 0.96,
         "y": 0.023,
         "cluster": 1,
         "mfe": 0.0595,
         "symbol": "EGAL.CA"
       },
       {
-        "x": 2.831,
-        "y": 1.031,
+        "x": -2.83,
+        "y": 1.029,
         "cluster": 2,
         "mfe": 0.026,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.602,
-        "y": -0.206,
+        "x": -0.601,
+        "y": -0.208,
         "cluster": 1,
         "mfe": 0.1755,
         "symbol": "FWRY.CA"
       },
       {
-        "x": -1.152,
-        "y": 1.033,
+        "x": 1.152,
+        "y": 1.031,
         "cluster": 1,
         "mfe": 0.0679,
         "symbol": "ORWE.CA"
       },
       {
-        "x": -1.963,
-        "y": 0.083,
+        "x": 1.953,
+        "y": 0.09,
         "cluster": 1,
         "mfe": 0.0556,
         "symbol": "EAST.CA"
       },
       {
-        "x": 0.865,
-        "y": 1.578,
+        "x": -0.865,
+        "y": 1.576,
         "cluster": 1,
         "mfe": 0.1582,
         "symbol": "EGAL.CA"
       },
       {
-        "x": -1.404,
+        "x": 1.404,
         "y": -0.922,
         "cluster": 1,
         "mfe": -0.0002,
         "symbol": "FWRY.CA"
       },
       {
-        "x": -2.169,
-        "y": -0.269,
+        "x": 2.169,
+        "y": -0.27,
         "cluster": 1,
         "mfe": 0.0595,
         "symbol": "PHDC.CA"
       },
       {
-        "x": -1.024,
-        "y": -0.206,
+        "x": 1.025,
+        "y": -0.207,
         "cluster": 1,
         "mfe": 0.1091,
         "symbol": "OIH.CA"
       },
       {
-        "x": -1.886,
-        "y": -0.148,
+        "x": 1.895,
+        "y": -0.155,
         "cluster": 1,
         "mfe": 0.0337,
         "symbol": "EAST.CA"
       },
       {
-        "x": -2.982,
-        "y": -2.019,
+        "x": 2.981,
+        "y": -2.017,
         "cluster": 1,
         "mfe": 0.1637,
         "symbol": "ADIB.CA"
       },
       {
-        "x": -1.701,
-        "y": 0.197,
+        "x": 1.701,
+        "y": 0.196,
         "cluster": 1,
         "mfe": 0.0156,
         "symbol": "RAYA.CA"
       },
       {
-        "x": -1.636,
+        "x": 1.636,
         "y": -0.295,
         "cluster": 1,
         "mfe": 0.0242,
         "symbol": "PHDC.CA"
       },
       {
-        "x": -1.813,
-        "y": -0.373,
+        "x": 1.813,
+        "y": -0.372,
         "cluster": 1,
         "mfe": 0.0549,
         "symbol": "ORHD.CA"
       },
       {
-        "x": -0.766,
-        "y": 0.027,
+        "x": 0.767,
+        "y": 0.026,
         "cluster": 1,
         "mfe": 0.0088,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -2.575,
-        "y": 0.133,
+        "x": 2.575,
+        "y": 0.134,
         "cluster": 1,
         "mfe": 0.0172,
         "symbol": "ORHD.CA"
       },
       {
-        "x": -1.196,
-        "y": 1.729,
+        "x": 1.197,
+        "y": 1.726,
         "cluster": 1,
         "mfe": 0.1356,
         "symbol": "EAST.CA"
       },
       {
-        "x": -1.195,
-        "y": -0.565,
+        "x": 1.195,
+        "y": -0.567,
         "cluster": 1,
         "mfe": -0.0089,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -1.063,
-        "y": -0.08,
+        "x": 1.063,
+        "y": -0.082,
         "cluster": 1,
         "mfe": 0.1252,
         "symbol": "ORWE.CA"
       },
       {
-        "x": -0.679,
+        "x": 0.679,
         "y": 0.346,
         "cluster": 1,
         "mfe": 0.0201,
         "symbol": "COMI.CA"
       },
       {
-        "x": -1.971,
-        "y": -0.541,
+        "x": 1.971,
+        "y": -0.542,
         "cluster": 1,
         "mfe": 0.1333,
         "symbol": "OIH.CA"
       },
       {
-        "x": -0.735,
-        "y": 1.444,
+        "x": 0.735,
+        "y": 1.443,
         "cluster": 1,
         "mfe": 0.1523,
         "symbol": "EAST.CA"
       },
       {
-        "x": -2.164,
+        "x": 2.164,
         "y": -1.243,
         "cluster": 1,
         "mfe": 0.0737,
         "symbol": "ORHD.CA"
       },
       {
-        "x": -2.396,
+        "x": 2.396,
         "y": -0.849,
         "cluster": 1,
         "mfe": 0.2265,
         "symbol": "JUFO.CA"
       },
       {
-        "x": -2.173,
+        "x": 2.173,
         "y": -0.648,
         "cluster": 1,
         "mfe": 0.0637,
         "symbol": "ISPH.CA"
       },
       {
-        "x": -2.711,
-        "y": -0.924,
+        "x": 2.711,
+        "y": -0.923,
         "cluster": 1,
         "mfe": 0.2526,
         "symbol": "OIH.CA"
       },
       {
-        "x": -1.616,
+        "x": 1.616,
         "y": 0.022,
         "cluster": 1,
         "mfe": 0.0547,
         "symbol": "EFID.CA"
       },
       {
-        "x": -0.499,
+        "x": 0.499,
         "y": -0.885,
         "cluster": 1,
         "mfe": 0.1271,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 1.759,
-        "y": 0.553,
+        "x": -1.759,
+        "y": 0.551,
         "cluster": 2,
         "mfe": 0.1237,
         "symbol": "FWRY.CA"
       },
       {
-        "x": -0.839,
-        "y": 0.089,
+        "x": 0.84,
+        "y": 0.087,
         "cluster": 1,
         "mfe": 0.017,
         "symbol": "ISPH.CA"
       },
       {
-        "x": -0.897,
-        "y": 0.907,
+        "x": 0.897,
+        "y": 0.906,
         "cluster": 1,
         "mfe": 0.0643,
         "symbol": "EFID.CA"
       },
       {
-        "x": -1.875,
+        "x": 1.875,
         "y": -0.781,
         "cluster": 1,
         "mfe": 0.277,
         "symbol": "JUFO.CA"
       },
       {
-        "x": 0.297,
-        "y": -0.428,
+        "x": -0.297,
+        "y": -0.429,
         "cluster": 1,
         "mfe": 0.1083,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.21,
-        "y": -0.203,
+        "x": -0.21,
+        "y": -0.205,
         "cluster": 1,
         "mfe": 0.2482,
         "symbol": "RAYA.CA"
       },
       {
-        "x": -0.905,
+        "x": 0.905,
         "y": -0.745,
         "cluster": 1,
         "mfe": 0.1817,
         "symbol": "MCQE.CA"
       },
       {
-        "x": -1.473,
-        "y": -0.58,
+        "x": 1.473,
+        "y": -0.581,
         "cluster": 1,
         "mfe": 0.1787,
         "symbol": "ORWE.CA"
       },
       {
-        "x": -1.618,
-        "y": 0.005,
+        "x": 1.618,
+        "y": 0.004,
         "cluster": 1,
         "mfe": 0.0804,
         "symbol": "RMDA.CA"
       },
       {
-        "x": -1.557,
+        "x": 1.557,
         "y": -0.239,
         "cluster": 1,
         "mfe": 0.2695,
         "symbol": "EMFD.CA"
       },
       {
-        "x": -1.844,
-        "y": -0.321,
+        "x": 1.844,
+        "y": -0.322,
         "cluster": 1,
         "mfe": 0.3134,
         "symbol": "JUFO.CA"
       },
       {
-        "x": -1.238,
+        "x": 1.238,
         "y": -1.958,
         "cluster": 1,
         "mfe": 0.244,
         "symbol": "COMI.CA"
       },
       {
-        "x": -1.56,
-        "y": -0.406,
+        "x": 1.56,
+        "y": -0.407,
         "cluster": 1,
         "mfe": 0.153,
         "symbol": "EFID.CA"
       },
       {
-        "x": -1.769,
-        "y": -0.105,
+        "x": 1.769,
+        "y": -0.106,
         "cluster": 1,
         "mfe": 0.3738,
         "symbol": "HELI.CA"
       },
       {
-        "x": -1.617,
+        "x": 1.617,
         "y": -0.899,
         "cluster": 1,
         "mfe": 0.2526,
         "symbol": "OIH.CA"
       },
       {
-        "x": -0.662,
-        "y": 0.428,
+        "x": 0.662,
+        "y": 0.427,
         "cluster": 1,
         "mfe": 0.1459,
         "symbol": "MCQE.CA"
       },
       {
-        "x": -1.591,
-        "y": 0.565,
+        "x": 1.592,
+        "y": 0.564,
         "cluster": 1,
         "mfe": 0.2745,
         "symbol": "EMFD.CA"
       },
       {
-        "x": 1.318,
-        "y": 0.82,
+        "x": -1.317,
+        "y": 0.819,
         "cluster": 2,
         "mfe": 0.1412,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 1.758,
-        "y": 0.789,
+        "x": -1.758,
+        "y": 0.788,
         "cluster": 2,
         "mfe": 0.139,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 1.45,
-        "y": -0.344,
+        "x": -1.449,
+        "y": -0.346,
         "cluster": 2,
         "mfe": 0.0753,
         "symbol": "ORHD.CA"
       },
       {
-        "x": 0.138,
-        "y": 0.062,
+        "x": -0.137,
+        "y": 0.061,
         "cluster": 1,
         "mfe": 0.1285,
         "symbol": "RMDA.CA"
       },
       {
-        "x": -0.125,
-        "y": 0.483,
+        "x": 0.125,
+        "y": 0.482,
         "cluster": 1,
         "mfe": 0.0839,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.477,
-        "y": 0.005,
+        "x": -0.477,
+        "y": 0.004,
         "cluster": 1,
         "mfe": 0.0748,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.006,
-        "y": -0.255,
+        "x": -0.006,
+        "y": -0.256,
         "cluster": 1,
         "mfe": 0.0255,
         "symbol": "GBCO.CA"
       },
       {
-        "x": -2.218,
+        "x": 2.218,
         "y": -0.705,
         "cluster": 1,
         "mfe": 0.105,
         "symbol": "EGAL.CA"
       },
       {
-        "x": -0.324,
+        "x": 0.324,
         "y": -2.045,
         "cluster": 1,
         "mfe": 0.0787,
         "symbol": "FWRY.CA"
       },
       {
-        "x": -1.07,
-        "y": -1.023,
+        "x": 1.07,
+        "y": -1.024,
         "cluster": 1,
         "mfe": 0.0666,
         "symbol": "ARCC.CA"
       },
       {
-        "x": -1.441,
-        "y": 0.696,
+        "x": 1.418,
+        "y": 0.715,
         "cluster": 1,
         "mfe": 0.1476,
         "symbol": "ETEL.CA"
       },
       {
-        "x": 0.219,
-        "y": -0.03,
+        "x": -0.219,
+        "y": -0.031,
         "cluster": 1,
         "mfe": 0.1223,
         "symbol": "ORHD.CA"
       },
       {
-        "x": -2.385,
-        "y": 0.496,
+        "x": 2.361,
+        "y": 0.514,
         "cluster": 1,
         "mfe": 0.1614,
         "symbol": "ETEL.CA"
       },
       {
-        "x": -1.01,
-        "y": -0.747,
+        "x": 1.01,
+        "y": -0.749,
         "cluster": 1,
         "mfe": 0.0257,
         "symbol": "ISPH.CA"
       },
       {
-        "x": -1.936,
-        "y": -1.212,
+        "x": 1.936,
+        "y": -1.213,
         "cluster": 1,
         "mfe": 0.073,
         "symbol": "ADIB.CA"
       },
       {
-        "x": -3.223,
-        "y": -1.133,
+        "x": 3.223,
+        "y": -1.129,
         "cluster": 1,
         "mfe": 0.1316,
         "symbol": "HRHO.CA"
       },
       {
-        "x": -1.962,
-        "y": 0.013,
+        "x": 1.962,
+        "y": 0.012,
         "cluster": 1,
         "mfe": 0.1355,
         "symbol": "MCQE.CA"
       },
       {
-        "x": -2.324,
-        "y": -0.368,
+        "x": 2.324,
+        "y": -0.37,
         "cluster": 1,
         "mfe": 0.1263,
         "symbol": "OIH.CA"
       },
       {
-        "x": -2.323,
-        "y": -0.788,
+        "x": 2.322,
+        "y": -0.787,
         "cluster": 1,
         "mfe": 0.1667,
         "symbol": "HRHO.CA"
       },
       {
-        "x": -1.189,
-        "y": -0.514,
+        "x": 1.189,
+        "y": -0.515,
         "cluster": 1,
         "mfe": 0.1295,
         "symbol": "CCAP.CA"
       },
       {
-        "x": -0.303,
-        "y": 1.15,
+        "x": 0.37,
+        "y": 1.095,
         "cluster": 1,
         "mfe": 0.0263,
         "symbol": "EFIH.CA"
       },
       {
-        "x": -1.016,
-        "y": 0.794,
+        "x": 1.017,
+        "y": 0.792,
         "cluster": 1,
         "mfe": 0.0263,
         "symbol": "EFIH.CA"
       },
       {
-        "x": 1.532,
-        "y": 0.2,
+        "x": -1.532,
+        "y": 0.198,
         "cluster": 2,
         "mfe": 0.0806,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 1.466,
+        "x": -1.467,
         "y": -0.022,
         "cluster": 2,
         "mfe": 0.0519,
         "symbol": "GBCO.CA"
       },
       {
-        "x": -0.65,
+        "x": 0.65,
         "y": -0.091,
         "cluster": 1,
         "mfe": 0.0163,
         "symbol": "PHDC.CA"
       },
       {
-        "x": -1.761,
-        "y": 0.777,
+        "x": 1.761,
+        "y": 0.776,
         "cluster": 1,
         "mfe": 0.038,
         "symbol": "EMFD.CA"
       },
       {
-        "x": -1.648,
+        "x": 1.648,
         "y": -1.172,
         "cluster": 1,
         "mfe": 0.0646,
         "symbol": "HRHO.CA"
       },
       {
-        "x": -2.135,
-        "y": -0.444,
+        "x": 2.135,
+        "y": -0.445,
         "cluster": 1,
         "mfe": 0.0743,
         "symbol": "TMGH.CA"
       },
       {
-        "x": -1.615,
-        "y": 1.303,
+        "x": 1.649,
+        "y": 1.274,
         "cluster": 1,
         "mfe": 0.011,
         "symbol": "EFIH.CA"
       },
       {
-        "x": -1.181,
-        "y": -0.443,
+        "x": 1.181,
+        "y": -0.444,
         "cluster": 1,
         "mfe": 0.0299,
         "symbol": "HRHO.CA"
       },
       {
-        "x": -1.453,
-        "y": -0.184,
+        "x": 1.453,
+        "y": -0.185,
         "cluster": 1,
         "mfe": 0.0427,
         "symbol": "COMI.CA"
       },
       {
-        "x": -1.172,
-        "y": 0.201,
+        "x": 1.172,
+        "y": 0.199,
         "cluster": 1,
         "mfe": 0.0467,
         "symbol": "TMGH.CA"
       },
       {
-        "x": 0.011,
-        "y": -0.095,
+        "x": -0.011,
+        "y": -0.096,
         "cluster": 1,
         "mfe": 0.0574,
         "symbol": "ORHD.CA"
       },
       {
-        "x": -1.665,
-        "y": 1.694,
+        "x": 1.665,
+        "y": 1.693,
         "cluster": 1,
         "mfe": 0.0226,
         "symbol": "EMFD.CA"
       },
       {
-        "x": -2.26,
-        "y": -0.455,
+        "x": 2.26,
+        "y": -0.454,
         "cluster": 1,
         "mfe": 0.1009,
         "symbol": "EGAL.CA"
       },
       {
-        "x": -2.471,
+        "x": 2.471,
         "y": -0.694,
         "cluster": 1,
         "mfe": 0.0711,
         "symbol": "RAYA.CA"
       },
       {
-        "x": -2.243,
-        "y": -1.174,
+        "x": 2.243,
+        "y": -1.171,
         "cluster": 1,
         "mfe": 0.0932,
         "symbol": "ARCC.CA"
       },
       {
-        "x": -2.296,
+        "x": 2.296,
         "y": -0.439,
         "cluster": 1,
         "mfe": 0.1368,
         "symbol": "OIH.CA"
       },
       {
-        "x": -1.151,
+        "x": 1.151,
         "y": -1.399,
         "cluster": 1,
         "mfe": 0.1188,
         "symbol": "ADIB.CA"
       },
       {
-        "x": -1.859,
-        "y": -0.299,
+        "x": 1.859,
+        "y": -0.3,
         "cluster": 1,
         "mfe": 0.0008,
         "symbol": "ORWE.CA"
       },
       {
-        "x": -1.473,
-        "y": -0.198,
+        "x": 1.474,
+        "y": -0.199,
         "cluster": 1,
         "mfe": 0.1025,
         "symbol": "TMGH.CA"
       },
       {
-        "x": -0.659,
-        "y": 0.442,
+        "x": 0.659,
+        "y": 0.441,
         "cluster": 1,
         "mfe": 0.0267,
         "symbol": "EGAL.CA"
       },
       {
-        "x": -1.533,
-        "y": -0.16,
+        "x": 1.533,
+        "y": -0.161,
         "cluster": 1,
         "mfe": 0.4663,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -1.773,
+        "x": 1.774,
         "y": -0.117,
         "cluster": 1,
         "mfe": 0.0814,
         "symbol": "EAST.CA"
       },
       {
-        "x": -0.767,
-        "y": 2.431,
+        "x": 0.768,
+        "y": 2.429,
         "cluster": 1,
         "mfe": 0.0151,
         "symbol": "EMFD.CA"
       },
       {
-        "x": -2.829,
+        "x": 2.829,
         "y": -0.094,
         "cluster": 1,
         "mfe": 0.1674,
         "symbol": "HELI.CA"
       },
       {
-        "x": -1.558,
-        "y": 0.428,
+        "x": 1.559,
+        "y": 0.426,
         "cluster": 1,
         "mfe": 0.1092,
         "symbol": "CCAP.CA"
       },
       {
-        "x": 0.455,
-        "y": 1.023,
+        "x": -0.454,
+        "y": 1.021,
         "cluster": 1,
         "mfe": 0.0605,
         "symbol": "TMGH.CA"
       },
       {
-        "x": -1.9,
-        "y": 0.138,
+        "x": 1.9,
+        "y": 0.137,
         "cluster": 1,
         "mfe": 0.0665,
         "symbol": "MCQE.CA"
       },
       {
-        "x": -1.889,
-        "y": -0.019,
+        "x": 1.889,
+        "y": -0.02,
         "cluster": 1,
         "mfe": 0.0252,
         "symbol": "COMI.CA"
       },
       {
-        "x": -1.94,
-        "y": -0.495,
+        "x": 1.94,
+        "y": -0.496,
         "cluster": 1,
         "mfe": 0.0619,
         "symbol": "ORWE.CA"
       },
       {
-        "x": -0.576,
-        "y": 0.462,
+        "x": 0.576,
+        "y": 0.461,
         "cluster": 1,
         "mfe": 0.0871,
         "symbol": "ISPH.CA"
       },
       {
-        "x": -1.594,
-        "y": 1.46,
+        "x": 1.594,
+        "y": 1.458,
         "cluster": 1,
         "mfe": 0.0769,
         "symbol": "EAST.CA"
       },
       {
-        "x": -0.874,
+        "x": 0.874,
         "y": -0.58,
         "cluster": 1,
         "mfe": 0.0117,
         "symbol": "HRHO.CA"
       },
       {
-        "x": 0.802,
-        "y": 1.325,
+        "x": -0.802,
+        "y": 1.324,
         "cluster": 2,
         "mfe": 0.0245,
         "symbol": "TMGH.CA"
       },
       {
-        "x": 0.499,
-        "y": 0.076,
+        "x": -0.498,
+        "y": 0.075,
         "cluster": 1,
         "mfe": 0.0069,
         "symbol": "TMGH.CA"
       },
       {
-        "x": 0.248,
-        "y": 0.084,
+        "x": -0.247,
+        "y": 0.082,
         "cluster": 1,
         "mfe": 0.0126,
         "symbol": "RAYA.CA"
       },
       {
-        "x": -1.487,
-        "y": 1.138,
+        "x": 1.488,
+        "y": 1.136,
         "cluster": 1,
         "mfe": 0.0154,
         "symbol": "EAST.CA"
       },
       {
-        "x": -1.649,
-        "y": 0.111,
+        "x": 1.649,
+        "y": 0.11,
         "cluster": 1,
         "mfe": 0.0445,
         "symbol": "ORWE.CA"
       },
       {
-        "x": 1.201,
-        "y": -0.237,
+        "x": -1.201,
+        "y": -0.236,
         "cluster": 2,
         "mfe": 0.013,
         "symbol": "CCAP.CA"
       },
       {
-        "x": -0.213,
-        "y": 0.456,
+        "x": 0.214,
+        "y": 0.455,
         "cluster": 1,
         "mfe": 0.035,
         "symbol": "OIH.CA"
       },
       {
-        "x": -1.889,
-        "y": 0.1,
+        "x": 1.889,
+        "y": 0.099,
         "cluster": 1,
         "mfe": 0.1422,
         "symbol": "HRHO.CA"
       },
       {
-        "x": -0.205,
-        "y": -0.669,
+        "x": 0.206,
+        "y": -0.67,
         "cluster": 1,
         "mfe": 0.0011,
         "symbol": "EFIH.CA"
       },
       {
-        "x": -2.083,
+        "x": 2.083,
         "y": -0.603,
         "cluster": 1,
         "mfe": 0.0535,
         "symbol": "EAST.CA"
       },
       {
-        "x": -1.417,
-        "y": -0.655,
+        "x": 1.417,
+        "y": -0.654,
         "cluster": 1,
         "mfe": 0.0237,
         "symbol": "ORHD.CA"
       },
       {
-        "x": -1.757,
+        "x": 1.756,
         "y": -0.186,
         "cluster": 1,
         "mfe": 0.0059,
         "symbol": "ETEL.CA"
       },
       {
-        "x": -1.743,
-        "y": 0.392,
+        "x": 1.743,
+        "y": 0.391,
         "cluster": 1,
         "mfe": 0.1725,
         "symbol": "HRHO.CA"
       },
       {
-        "x": -2.196,
-        "y": -0.797,
+        "x": 2.195,
+        "y": -0.789,
         "cluster": 0,
         "mfe": 0.2693,
         "symbol": "ARCC.CA"
       },
       {
-        "x": -1.983,
-        "y": 0.242,
+        "x": 1.984,
+        "y": 0.241,
         "cluster": 1,
         "mfe": 0.0316,
         "symbol": "OIH.CA"
       },
       {
-        "x": -0.411,
-        "y": -0.028,
+        "x": 0.411,
+        "y": -0.03,
         "cluster": 1,
         "mfe": 0.0432,
         "symbol": "COMI.CA"
       },
       {
-        "x": -1.342,
-        "y": 0.059,
+        "x": 1.343,
+        "y": 0.057,
         "cluster": 1,
         "mfe": 0.049,
         "symbol": "EAST.CA"
       },
       {
-        "x": -1.106,
-        "y": -0.053,
+        "x": 1.106,
+        "y": -0.054,
         "cluster": 1,
         "mfe": 0.2178,
         "symbol": "TMGH.CA"
       },
       {
-        "x": -1.874,
-        "y": 0.255,
+        "x": 1.874,
+        "y": 0.254,
         "cluster": 1,
         "mfe": 0.1724,
         "symbol": "PHDC.CA"
       },
       {
-        "x": -0.978,
-        "y": -0.523,
+        "x": 0.978,
+        "y": -0.524,
         "cluster": 1,
         "mfe": 0.1814,
         "symbol": "ORHD.CA"
       },
       {
-        "x": -2.135,
-        "y": 0.067,
+        "x": 2.135,
+        "y": 0.066,
         "cluster": 1,
         "mfe": 0.1584,
         "symbol": "ABUK.CA"
       },
       {
-        "x": -1.566,
-        "y": 1.039,
+        "x": 1.566,
+        "y": 1.037,
         "cluster": 1,
         "mfe": 0.1702,
         "symbol": "ADIB.CA"
       },
       {
-        "x": -0.63,
-        "y": 0.393,
+        "x": 0.63,
+        "y": 0.392,
         "cluster": 1,
         "mfe": 0.278,
         "symbol": "HRHO.CA"
       },
       {
-        "x": -0.841,
-        "y": 0.885,
+        "x": 0.841,
+        "y": 0.883,
         "cluster": 1,
         "mfe": 0.2413,
         "symbol": "ADIB.CA"
       },
       {
-        "x": -1.609,
-        "y": 0.182,
+        "x": 1.609,
+        "y": 0.181,
         "cluster": 1,
         "mfe": 0.3334,
         "symbol": "EGAL.CA"
       },
       {
-        "x": -2.084,
-        "y": -0.397,
+        "x": 2.084,
+        "y": -0.398,
         "cluster": 1,
         "mfe": 0.577,
         "symbol": "EFIH.CA"
       },
       {
-        "x": 2.999,
-        "y": 0.736,
+        "x": -2.999,
+        "y": 0.734,
         "cluster": 2,
         "mfe": 0.1509,
         "symbol": "EGAL.CA"
       },
       {
-        "x": 0.648,
-        "y": 1.319,
+        "x": -0.648,
+        "y": 1.318,
         "cluster": 1,
         "mfe": 0.1244,
         "symbol": "ABUK.CA"
       },
       {
-        "x": 0.797,
-        "y": 0.628,
+        "x": -0.797,
+        "y": 0.626,
         "cluster": 2,
         "mfe": 0.0621,
         "symbol": "EAST.CA"
       },
       {
-        "x": -1.649,
-        "y": 0.855,
+        "x": 1.649,
+        "y": 0.853,
         "cluster": 1,
         "mfe": 0.206,
         "symbol": "ORWE.CA"
       },
       {
-        "x": -2.185,
-        "y": 1.104,
+        "x": 2.186,
+        "y": 1.103,
         "cluster": 1,
         "mfe": 0.3633,
         "symbol": "EMFD.CA"
       },
       {
-        "x": 0.38,
-        "y": 0.825,
+        "x": -0.38,
+        "y": 0.823,
         "cluster": 1,
         "mfe": 0.1423,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -0.299,
+        "x": 0.299,
         "y": -0.193,
         "cluster": 1,
         "mfe": 0.1396,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -0.25,
+        "x": 0.25,
         "y": 0.779,
         "cluster": 1,
         "mfe": 0.1255,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -1.352,
+        "x": 1.352,
         "y": -1.284,
         "cluster": 1,
         "mfe": 0.1172,
         "symbol": "RAYA.CA"
       },
       {
-        "x": -2.13,
-        "y": -0.743,
+        "x": 2.13,
+        "y": -0.742,
         "cluster": 1,
         "mfe": 0.03,
         "symbol": "ISPH.CA"
       },
       {
-        "x": 0.826,
-        "y": 0.708,
+        "x": -0.825,
+        "y": 0.707,
         "cluster": 1,
         "mfe": 0.3419,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -1.559,
-        "y": -0.307,
+        "x": 1.559,
+        "y": -0.308,
         "cluster": 1,
         "mfe": 0.0328,
         "symbol": "RMDA.CA"
       },
       {
-        "x": -0.826,
-        "y": 0.327,
+        "x": 0.826,
+        "y": 0.326,
         "cluster": 1,
         "mfe": 0.0328,
         "symbol": "RMDA.CA"
       },
       {
-        "x": -1.087,
-        "y": -0.38,
+        "x": 0.994,
+        "y": -0.306,
         "cluster": 1,
         "mfe": 0.017,
         "symbol": "RMDA.CA"
       },
       {
-        "x": -1.973,
+        "x": 1.973,
         "y": 0.027,
         "cluster": 1,
         "mfe": 0.0381,
         "symbol": "TMGH.CA"
       },
       {
-        "x": -1.383,
-        "y": -0.222,
+        "x": 1.383,
+        "y": -0.221,
         "cluster": 1,
         "mfe": 0.0391,
         "symbol": "OIH.CA"
       },
       {
-        "x": -1.79,
+        "x": 1.79,
         "y": -0.27,
         "cluster": 1,
         "mfe": 0.0525,
         "symbol": "TMGH.CA"
       },
       {
-        "x": -2.325,
+        "x": 2.326,
         "y": -0.744,
         "cluster": 1,
         "mfe": 0.1268,
         "symbol": "EFIH.CA"
       },
       {
-        "x": -3.003,
-        "y": 0.496,
+        "x": 3.003,
+        "y": 0.495,
         "cluster": 1,
         "mfe": 0.0455,
         "symbol": "OIH.CA"
       },
       {
-        "x": -2.642,
-        "y": 0.166,
+        "x": 2.642,
+        "y": 0.165,
         "cluster": 1,
         "mfe": 0.0993,
         "symbol": "EMFD.CA"
       },
       {
-        "x": -1.839,
+        "x": 1.838,
         "y": -1.229,
         "cluster": 1,
         "mfe": 0.0918,
         "symbol": "RAYA.CA"
       },
       {
-        "x": -2.061,
-        "y": -0.793,
+        "x": 2.061,
+        "y": -0.792,
         "cluster": 1,
         "mfe": 0.2239,
         "symbol": "GBCO.CA"
       },
       {
-        "x": -2.703,
+        "x": 2.703,
         "y": -0.498,
         "cluster": 1,
         "mfe": 0.296,
         "symbol": "EAST.CA"
       },
       {
-        "x": -1.673,
+        "x": 1.673,
         "y": -0.144,
         "cluster": 1,
         "mfe": 0.0776,
         "symbol": "TMGH.CA"
       },
       {
-        "x": -2.226,
+        "x": 2.226,
         "y": -0.851,
         "cluster": 1,
         "mfe": 0.2717,
         "symbol": "FWRY.CA"
       },
       {
-        "x": -2.34,
+        "x": 2.34,
         "y": -0.52,
         "cluster": 1,
         "mfe": 0.1439,
         "symbol": "EMFD.CA"
       },
       {
-        "x": -2.611,
+        "x": 2.611,
         "y": -0.733,
         "cluster": 1,
         "mfe": 0.241,
         "symbol": "PHDC.CA"
       },
       {
-        "x": -3.009,
-        "y": -1.359,
+        "x": 3.009,
+        "y": -1.358,
         "cluster": 1,
         "mfe": 0.4937,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -2.703,
-        "y": -0.949,
+        "x": 2.703,
+        "y": -0.948,
         "cluster": 1,
         "mfe": 0.342,
         "symbol": "GBCO.CA"
       },
       {
-        "x": -2.418,
+        "x": 2.418,
         "y": -0.604,
         "cluster": 1,
         "mfe": 0.1546,
         "symbol": "RMDA.CA"
       },
       {
-        "x": -1.81,
-        "y": -0.851,
+        "x": 1.81,
+        "y": -0.852,
         "cluster": 1,
         "mfe": 0.2353,
         "symbol": "ETEL.CA"
       },
       {
-        "x": -1.769,
-        "y": -0.948,
+        "x": 1.769,
+        "y": -0.949,
         "cluster": 1,
         "mfe": 0.1733,
         "symbol": "RMDA.CA"
       },
       {
-        "x": -1.626,
-        "y": -0.239,
+        "x": 1.626,
+        "y": -0.24,
         "cluster": 1,
         "mfe": 0.4114,
         "symbol": "CCAP.CA"
       },
       {
-        "x": -0.598,
-        "y": -0.221,
+        "x": 0.598,
+        "y": -0.222,
         "cluster": 1,
         "mfe": 0.2112,
         "symbol": "ETEL.CA"
       },
       {
-        "x": -0.327,
-        "y": 0.177,
+        "x": 0.327,
+        "y": 0.176,
         "cluster": 1,
         "mfe": 0.2367,
         "symbol": "PHDC.CA"
       },
       {
-        "x": -1.333,
-        "y": -0.372,
+        "x": 1.333,
+        "y": -0.373,
         "cluster": 1,
         "mfe": 0.1636,
         "symbol": "HRHO.CA"
       },
       {
-        "x": -0.976,
+        "x": 0.976,
         "y": 0.023,
         "cluster": 1,
         "mfe": 0.1855,
         "symbol": "RMDA.CA"
       },
       {
-        "x": -2.378,
+        "x": 2.378,
         "y": 0.444,
         "cluster": 1,
         "mfe": 0.1492,
         "symbol": "TMGH.CA"
       },
       {
-        "x": -1.62,
+        "x": 1.619,
         "y": 0.047,
         "cluster": 1,
         "mfe": 0.0603,
         "symbol": "MCQE.CA"
       },
       {
-        "x": -1.448,
+        "x": 1.448,
         "y": 0.246,
         "cluster": 1,
         "mfe": 0.1464,
         "symbol": "EMFD.CA"
       },
       {
-        "x": -1.773,
-        "y": 0.584,
+        "x": 1.774,
+        "y": 0.583,
         "cluster": 1,
         "mfe": 0.1505,
         "symbol": "EMFD.CA"
       },
       {
-        "x": -2.118,
-        "y": -2.936,
+        "x": 2.117,
+        "y": -2.933,
         "cluster": 1,
         "mfe": 0.9928,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -1.966,
+        "x": 1.966,
         "y": 0.171,
         "cluster": 1,
         "mfe": 0.0879,
         "symbol": "MCQE.CA"
       },
       {
-        "x": 0.075,
+        "x": -0.075,
         "y": 0.999,
         "cluster": 1,
         "mfe": 0.0312,
         "symbol": "MCQE.CA"
       },
       {
-        "x": -2.639,
+        "x": 2.639,
         "y": -0.232,
         "cluster": 1,
         "mfe": 0.0613,
         "symbol": "COMI.CA"
       },
       {
-        "x": -1.831,
+        "x": 1.83,
         "y": -0.49,
         "cluster": 1,
         "mfe": 0.0778,
         "symbol": "COMI.CA"
       },
       {
-        "x": -1.369,
+        "x": 1.369,
         "y": -0.526,
         "cluster": 1,
         "mfe": 0.141,
         "symbol": "TMGH.CA"
       },
       {
-        "x": -2.656,
-        "y": -2.107,
+        "x": 2.655,
+        "y": -2.105,
         "cluster": 1,
         "mfe": 0.3603,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.132,
-        "y": 1.837,
+        "x": -0.132,
+        "y": 1.836,
         "cluster": 1,
         "mfe": 0.0457,
         "symbol": "MCQE.CA"
       },
       {
-        "x": -0.075,
-        "y": 0.383,
+        "x": 0.076,
+        "y": 0.382,
         "cluster": 1,
         "mfe": 0.2171,
         "symbol": "RAYA.CA"
       },
       {
-        "x": -2.445,
-        "y": 0.309,
+        "x": 2.445,
+        "y": 0.308,
         "cluster": 1,
         "mfe": 0.1379,
         "symbol": "ARCC.CA"
       },
       {
-        "x": -1.615,
-        "y": 0.433,
+        "x": 1.615,
+        "y": 0.432,
         "cluster": 1,
         "mfe": 0.066,
         "symbol": "RMDA.CA"
       },
       {
-        "x": -1.5,
-        "y": 1.059,
+        "x": 1.5,
+        "y": 1.058,
         "cluster": 1,
         "mfe": 0.1834,
         "symbol": "ARCC.CA"
       },
       {
-        "x": -1.896,
+        "x": 1.896,
         "y": -0.16,
         "cluster": 1,
         "mfe": 0.1613,
         "symbol": "CCAP.CA"
       },
       {
-        "x": -2.2,
-        "y": -0.337,
+        "x": 2.2,
+        "y": -0.338,
         "cluster": 1,
         "mfe": 0.1644,
         "symbol": "RMDA.CA"
       },
       {
-        "x": 0.424,
+        "x": -0.424,
         "y": 1.022,
         "cluster": 1,
         "mfe": 0.1026,
         "symbol": "RMDA.CA"
       },
       {
-        "x": -2.416,
-        "y": 0.956,
+        "x": 2.417,
+        "y": 0.955,
         "cluster": 1,
         "mfe": 0.0541,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -1.86,
+        "x": 1.86,
         "y": -0.265,
         "cluster": 1,
         "mfe": 0.1656,
         "symbol": "ORHD.CA"
       },
       {
-        "x": -1.558,
-        "y": 0.492,
+        "x": 1.558,
+        "y": 0.49,
         "cluster": 1,
         "mfe": 0.041,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -1.475,
-        "y": 1.043,
+        "x": 1.475,
+        "y": 1.041,
         "cluster": 1,
         "mfe": 0.0787,
         "symbol": "ISPH.CA"
       },
       {
-        "x": -1.968,
-        "y": 0.912,
+        "x": 1.968,
+        "y": 0.91,
         "cluster": 1,
         "mfe": 0.0577,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.899,
-        "y": 0.92,
+        "x": -0.899,
+        "y": 0.919,
         "cluster": 2,
         "mfe": 0.0322,
         "symbol": "ISPH.CA"
       },
       {
-        "x": -1.541,
+        "x": 1.541,
         "y": -0.796,
         "cluster": 1,
         "mfe": 0.0149,
         "symbol": "FWRY.CA"
       },
       {
-        "x": -2.108,
-        "y": -0.489,
+        "x": 2.108,
+        "y": -0.488,
         "cluster": 1,
         "mfe": 0.0691,
         "symbol": "GBCO.CA"
       },
       {
-        "x": -1.227,
-        "y": -0.272,
+        "x": 1.227,
+        "y": -0.271,
         "cluster": 1,
         "mfe": 0.0133,
         "symbol": "CCAP.CA"
       },
       {
-        "x": -1.593,
-        "y": -0.234,
+        "x": 1.593,
+        "y": -0.235,
         "cluster": 1,
         "mfe": 0.1931,
         "symbol": "HRHO.CA"
       },
       {
-        "x": -2.705,
+        "x": 2.705,
         "y": -0.082,
         "cluster": 1,
         "mfe": 0.1577,
         "symbol": "JUFO.CA"
       },
       {
-        "x": -1.904,
-        "y": -0.82,
+        "x": 1.904,
+        "y": -0.821,
         "cluster": 1,
         "mfe": 0.1206,
         "symbol": "RAYA.CA"
       },
       {
-        "x": -1.068,
+        "x": 1.068,
         "y": -0.439,
         "cluster": 1,
         "mfe": 0.1696,
         "symbol": "OIH.CA"
       },
       {
-        "x": -0.459,
-        "y": -0.58,
+        "x": 0.459,
+        "y": -0.581,
         "cluster": 1,
         "mfe": 0.3627,
         "symbol": "ISPH.CA"
       },
       {
-        "x": -1.905,
-        "y": -0.314,
+        "x": 1.905,
+        "y": -0.315,
         "cluster": 1,
         "mfe": 0.2327,
         "symbol": "RMDA.CA"
       },
       {
-        "x": -0.99,
-        "y": -0.008,
+        "x": 0.99,
+        "y": -0.01,
         "cluster": 1,
         "mfe": 0.4091,
         "symbol": "PHDC.CA"
       },
       {
-        "x": -0.335,
-        "y": -0.135,
+        "x": 0.335,
+        "y": -0.137,
         "cluster": 1,
         "mfe": 0.2236,
         "symbol": "JUFO.CA"
       },
       {
-        "x": -1.502,
-        "y": -0.725,
+        "x": 1.503,
+        "y": -0.726,
         "cluster": 1,
         "mfe": 0.1907,
         "symbol": "EFIH.CA"
       },
       {
-        "x": -1.133,
-        "y": 0.272,
+        "x": 1.133,
+        "y": 0.271,
         "cluster": 1,
         "mfe": 0.2926,
         "symbol": "HRHO.CA"
       },
       {
-        "x": -2.934,
-        "y": -1.571,
+        "x": 2.933,
+        "y": -1.569,
         "cluster": 1,
         "mfe": 0.1127,
         "symbol": "ABUK.CA"
       },
       {
-        "x": -1.663,
-        "y": -0.041,
+        "x": 1.663,
+        "y": -0.042,
         "cluster": 1,
         "mfe": 0.1433,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -1.987,
-        "y": -0.142,
+        "x": 1.987,
+        "y": -0.143,
         "cluster": 1,
         "mfe": 0.3683,
         "symbol": "COMI.CA"
       },
       {
-        "x": -1.9,
-        "y": -1.04,
+        "x": 1.9,
+        "y": -1.041,
         "cluster": 1,
         "mfe": 0.2492,
         "symbol": "ORWE.CA"
       },
       {
-        "x": -1.552,
-        "y": -0.655,
+        "x": 1.552,
+        "y": -0.656,
         "cluster": 1,
         "mfe": 0.1564,
         "symbol": "ABUK.CA"
       },
       {
-        "x": -1.313,
-        "y": -0.962,
+        "x": 1.313,
+        "y": -0.963,
         "cluster": 1,
         "mfe": 0.221,
         "symbol": "ORWE.CA"
       },
       {
-        "x": -1.502,
-        "y": -0.814,
+        "x": 1.502,
+        "y": -0.815,
         "cluster": 1,
         "mfe": 0.2404,
         "symbol": "ABUK.CA"
       },
       {
-        "x": -1.735,
-        "y": -1.089,
+        "x": 1.735,
+        "y": -1.09,
         "cluster": 1,
         "mfe": 0.0648,
         "symbol": "HELI.CA"
       },
       {
-        "x": -2.706,
-        "y": -0.894,
+        "x": 2.706,
+        "y": -0.893,
         "cluster": 1,
         "mfe": 0.0601,
         "symbol": "EAST.CA"
       },
       {
-        "x": -2.792,
+        "x": 2.792,
         "y": -0.962,
         "cluster": 1,
         "mfe": 0.0653,
         "symbol": "MCQE.CA"
       },
       {
-        "x": -1.463,
+        "x": 1.462,
         "y": -0.561,
         "cluster": 1,
         "mfe": 0.2316,
         "symbol": "ORWE.CA"
       },
       {
-        "x": -2.91,
-        "y": -1.747,
+        "x": 2.909,
+        "y": -1.746,
         "cluster": 1,
         "mfe": 0.1103,
         "symbol": "ISPH.CA"
       },
       {
-        "x": -2.984,
+        "x": 2.984,
         "y": -1.03,
         "cluster": 1,
         "mfe": 0.2289,
         "symbol": "OIH.CA"
       },
       {
-        "x": -2.774,
-        "y": -1.146,
+        "x": 2.774,
+        "y": -1.145,
         "cluster": 1,
         "mfe": 0.4038,
         "symbol": "CCAP.CA"
       },
       {
-        "x": -2.13,
+        "x": 2.13,
         "y": -0.656,
         "cluster": 1,
         "mfe": 0.3187,
         "symbol": "PHDC.CA"
       },
       {
-        "x": -1.423,
-        "y": -0.727,
+        "x": 1.423,
+        "y": -0.728,
         "cluster": 1,
         "mfe": 0.148,
         "symbol": "ISPH.CA"
       },
       {
-        "x": -1.731,
-        "y": -0.037,
+        "x": 1.731,
+        "y": -0.038,
         "cluster": 1,
         "mfe": 0.1505,
         "symbol": "HELI.CA"
       },
       {
-        "x": -0.989,
-        "y": 0.592,
+        "x": 0.989,
+        "y": 0.591,
         "cluster": 1,
         "mfe": 0.2043,
         "symbol": "ABUK.CA"
       },
       {
-        "x": -1.622,
-        "y": -0.166,
+        "x": 1.622,
+        "y": -0.167,
         "cluster": 1,
         "mfe": 0.0204,
         "symbol": "HRHO.CA"
       },
       {
-        "x": -1.994,
-        "y": -0.035,
+        "x": 1.994,
+        "y": -0.036,
         "cluster": 1,
         "mfe": 0.1125,
         "symbol": "ETEL.CA"
       },
       {
-        "x": -2.02,
-        "y": 0.577,
+        "x": 2.02,
+        "y": 0.576,
         "cluster": 1,
         "mfe": 0.2559,
         "symbol": "ORWE.CA"
       },
       {
-        "x": -1.22,
-        "y": -0.312,
+        "x": 1.22,
+        "y": -0.313,
         "cluster": 1,
         "mfe": 0.1675,
         "symbol": "OIH.CA"
       },
       {
-        "x": -1.186,
-        "y": -0.016,
+        "x": 1.186,
+        "y": -0.017,
         "cluster": 1,
         "mfe": 0.4313,
         "symbol": "CCAP.CA"
       },
       {
-        "x": -0.617,
+        "x": 0.617,
         "y": 0.31,
         "cluster": 1,
         "mfe": 0.0379,
         "symbol": "EAST.CA"
       },
       {
-        "x": -0.948,
-        "y": 0.223,
+        "x": 0.948,
+        "y": 0.222,
         "cluster": 1,
         "mfe": 0.1813,
         "symbol": "ORHD.CA"
       },
       {
-        "x": -1.654,
-        "y": 0.078,
+        "x": 1.654,
+        "y": 0.077,
         "cluster": 1,
         "mfe": 0.244,
         "symbol": "ISPH.CA"
       },
       {
-        "x": -2.201,
+        "x": 2.201,
         "y": 0.121,
         "cluster": 1,
         "mfe": 0.1419,
         "symbol": "ADIB.CA"
       },
       {
-        "x": -2.553,
+        "x": 2.553,
         "y": -0.331,
         "cluster": 1,
         "mfe": 0.0435,
         "symbol": "JUFO.CA"
       },
       {
-        "x": -1.426,
+        "x": 1.426,
         "y": 0.227,
         "cluster": 1,
         "mfe": 0.0233,
         "symbol": "HRHO.CA"
       },
       {
-        "x": -2.002,
-        "y": -0.144,
+        "x": 2.002,
+        "y": -0.145,
         "cluster": 1,
         "mfe": 0.0476,
         "symbol": "JUFO.CA"
       },
       {
-        "x": 1.193,
-        "y": 0.847,
+        "x": -1.193,
+        "y": 0.845,
         "cluster": 2,
         "mfe": 0.148,
         "symbol": "ISPH.CA"
       },
       {
-        "x": -0.948,
+        "x": 0.948,
         "y": -0.052,
         "cluster": 1,
         "mfe": 0.069,
         "symbol": "ADIB.CA"
       },
       {
-        "x": -1.656,
+        "x": 1.656,
         "y": -0.476,
         "cluster": 1,
         "mfe": 0.0744,
         "symbol": "ETEL.CA"
       },
       {
-        "x": -1.364,
-        "y": -0.494,
+        "x": 1.364,
+        "y": -0.493,
         "cluster": 1,
         "mfe": 0.1097,
         "symbol": "ABUK.CA"
       },
       {
-        "x": -0.611,
-        "y": -0.189,
+        "x": 0.611,
+        "y": -0.188,
         "cluster": 1,
         "mfe": 0.0649,
         "symbol": "ORHD.CA"
       },
       {
-        "x": -0.357,
-        "y": -1.62,
+        "x": 0.356,
+        "y": -1.618,
         "cluster": 1,
         "mfe": 0.1165,
         "symbol": "HELI.CA"
       },
       {
-        "x": -0.797,
+        "x": 0.797,
         "y": -0.467,
         "cluster": 1,
         "mfe": 0.0027,
         "symbol": "MCQE.CA"
       },
       {
-        "x": -2.105,
-        "y": -0.418,
+        "x": 2.105,
+        "y": -0.417,
         "cluster": 1,
         "mfe": 0.0539,
         "symbol": "COMI.CA"
       },
       {
-        "x": -1.593,
+        "x": 1.593,
         "y": 0.148,
         "cluster": 1,
         "mfe": 0.0995,
         "symbol": "EFID.CA"
       },
       {
-        "x": -2.096,
-        "y": -1.537,
+        "x": 2.096,
+        "y": -1.536,
         "cluster": 1,
         "mfe": 0.0441,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -0.199,
-        "y": -0.279,
+        "x": 0.199,
+        "y": -0.278,
         "cluster": 1,
         "mfe": 0.0599,
         "symbol": "ISPH.CA"
       },
       {
-        "x": -1.767,
-        "y": -0.318,
+        "x": 1.767,
+        "y": -0.317,
         "cluster": 1,
         "mfe": -0.0077,
         "symbol": "OIH.CA"
       },
       {
-        "x": -1.845,
-        "y": -0.786,
+        "x": 1.845,
+        "y": -0.785,
         "cluster": 1,
         "mfe": 0.3683,
         "symbol": "EMFD.CA"
       },
       {
-        "x": -2.208,
+        "x": 2.208,
         "y": -0.101,
         "cluster": 1,
         "mfe": 0.0876,
         "symbol": "COMI.CA"
       },
       {
-        "x": -1.584,
+        "x": 1.584,
         "y": -1.084,
         "cluster": 1,
         "mfe": 0.3559,
         "symbol": "ADIB.CA"
       },
       {
-        "x": -2.632,
+        "x": 2.631,
         "y": -1.42,
         "cluster": 1,
         "mfe": 0.1685,
         "symbol": "FWRY.CA"
       },
       {
-        "x": -2.231,
-        "y": -0.767,
+        "x": 2.231,
+        "y": -0.766,
         "cluster": 1,
         "mfe": 0.2484,
         "symbol": "PHDC.CA"
       },
       {
-        "x": -1.362,
+        "x": 1.362,
         "y": 0.365,
         "cluster": 1,
         "mfe": 0.1721,
         "symbol": "ORWE.CA"
       },
       {
-        "x": -0.747,
+        "x": 0.747,
         "y": 0.568,
         "cluster": 1,
         "mfe": 0.0696,
         "symbol": "COMI.CA"
       },
       {
-        "x": -1.298,
-        "y": -0.716,
+        "x": 1.297,
+        "y": -0.715,
         "cluster": 1,
         "mfe": 0.2208,
         "symbol": "HRHO.CA"
       },
       {
-        "x": 1.673,
-        "y": 0.803,
+        "x": -1.673,
+        "y": 0.802,
         "cluster": 2,
         "mfe": 0.1196,
         "symbol": "JUFO.CA"
       },
       {
-        "x": -1.527,
-        "y": 0.568,
+        "x": 1.527,
+        "y": 0.567,
         "cluster": 1,
         "mfe": 0.226,
         "symbol": "RMDA.CA"
       },
       {
-        "x": -2.138,
+        "x": 2.138,
         "y": -0.357,
         "cluster": 1,
         "mfe": 0.1197,
         "symbol": "CCAP.CA"
       },
       {
-        "x": -1.677,
+        "x": 1.677,
         "y": 0.101,
         "cluster": 1,
         "mfe": 0.469,
         "symbol": "EMFD.CA"
       },
       {
-        "x": -2.318,
+        "x": 2.318,
         "y": 0.008,
         "cluster": 1,
         "mfe": 0.2092,
         "symbol": "RAYA.CA"
       },
       {
-        "x": 0.166,
+        "x": -0.166,
         "y": 0.873,
         "cluster": 1,
         "mfe": 0.247,
         "symbol": "HELI.CA"
       },
       {
-        "x": -1.075,
-        "y": -0.09,
+        "x": 1.075,
+        "y": -0.091,
         "cluster": 1,
         "mfe": 0.1222,
         "symbol": "ETEL.CA"
       },
       {
-        "x": -1.719,
+        "x": 1.719,
         "y": -0.768,
         "cluster": 1,
         "mfe": 0.1327,
         "symbol": "ARCC.CA"
       },
       {
-        "x": -0.479,
-        "y": 0.335,
+        "x": 0.479,
+        "y": 0.334,
         "cluster": 1,
         "mfe": 0.0496,
         "symbol": "COMI.CA"
       },
       {
-        "x": -2.525,
-        "y": -0.064,
+        "x": 2.525,
+        "y": -0.065,
         "cluster": 1,
         "mfe": 0.2785,
         "symbol": "EGAL.CA"
       },
       {
-        "x": 1.32,
-        "y": 0.774,
+        "x": -1.32,
+        "y": 0.773,
         "cluster": 2,
         "mfe": 0.0333,
         "symbol": "ABUK.CA"
       },
       {
-        "x": 1.095,
-        "y": 0.327,
+        "x": -1.094,
+        "y": 0.325,
         "cluster": 2,
         "mfe": 0.0906,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 1.124,
-        "y": 0.844,
+        "x": -1.124,
+        "y": 0.843,
         "cluster": 2,
         "mfe": 0.1659,
         "symbol": "RMDA.CA"
       },
       {
-        "x": 0.344,
-        "y": -0.098,
+        "x": -0.344,
+        "y": -0.099,
         "cluster": 1,
         "mfe": 0.0948,
         "symbol": "CCAP.CA"
       },
       {
-        "x": 0.255,
-        "y": 0.818,
+        "x": -0.255,
+        "y": 0.819,
         "cluster": 1,
         "mfe": 0.0272,
         "symbol": "EFID.CA"
       },
       {
-        "x": -0.594,
+        "x": 0.594,
         "y": 0.345,
         "cluster": 1,
         "mfe": 0.0176,
         "symbol": "ARCC.CA"
       },
       {
-        "x": 0.497,
-        "y": 0.232,
+        "x": -0.497,
+        "y": 0.233,
         "cluster": 1,
         "mfe": 0.4805,
         "symbol": "HRHO.CA"
       },
       {
-        "x": -2.579,
-        "y": -1.517,
+        "x": 2.579,
+        "y": -1.514,
         "cluster": 1,
         "mfe": 0.095,
         "symbol": "EAST.CA"
       },
       {
-        "x": -0.699,
-        "y": 0.534,
+        "x": 0.699,
+        "y": 0.533,
         "cluster": 1,
         "mfe": 0.1845,
         "symbol": "FWRY.CA"
       },
       {
-        "x": -0.83,
-        "y": -0.242,
+        "x": 0.83,
+        "y": -0.243,
         "cluster": 1,
         "mfe": 0.0192,
         "symbol": "CCAP.CA"
       },
       {
-        "x": -2.306,
-        "y": 1.27,
+        "x": 2.306,
+        "y": 1.269,
         "cluster": 1,
         "mfe": 0.1213,
         "symbol": "COMI.CA"
       },
       {
-        "x": -2.33,
+        "x": 2.33,
         "y": 0.161,
         "cluster": 1,
         "mfe": 0.257,
         "symbol": "TMGH.CA"
       },
       {
-        "x": -2.073,
-        "y": -0.543,
+        "x": 2.073,
+        "y": -0.542,
         "cluster": 1,
         "mfe": 0.4296,
         "symbol": "ADIB.CA"
       },
       {
-        "x": -0.498,
-        "y": -0.373,
+        "x": 0.498,
+        "y": -0.372,
         "cluster": 1,
         "mfe": 0.229,
         "symbol": "RAYA.CA"
       },
       {
-        "x": 0.954,
-        "y": -0.757,
+        "x": -0.954,
+        "y": -0.756,
         "cluster": 2,
         "mfe": 0.2754,
         "symbol": "ISPH.CA"
       },
       {
-        "x": -0.968,
-        "y": 0.09,
+        "x": 0.968,
+        "y": 0.091,
         "cluster": 1,
         "mfe": 0.2301,
         "symbol": "RMDA.CA"
       },
       {
-        "x": -1.425,
-        "y": -0.407,
+        "x": 1.425,
+        "y": -0.406,
         "cluster": 1,
         "mfe": 0.3687,
         "symbol": "OIH.CA"
       },
       {
-        "x": -0.959,
-        "y": 0.403,
+        "x": 0.959,
+        "y": 0.402,
         "cluster": 1,
         "mfe": 0.3558,
         "symbol": "ORHD.CA"
       },
       {
-        "x": -1.025,
-        "y": 0.108,
+        "x": 1.025,
+        "y": 0.107,
         "cluster": 1,
         "mfe": 0.1377,
         "symbol": "BTFH.CA"
       },
       {
-        "x": -4.928,
-        "y": -2.2,
+        "x": 4.928,
+        "y": -2.197,
         "cluster": 1,
         "mfe": 0.1256,
         "symbol": "RAYA.CA"
       },
       {
-        "x": 0.397,
-        "y": 0.271,
+        "x": -0.396,
+        "y": 0.27,
         "cluster": 1,
         "mfe": 0.0986,
         "symbol": "ETEL.CA"
       },
       {
-        "x": 0.903,
+        "x": -0.903,
         "y": 0.236,
         "cluster": 2,
         "mfe": 0.2228,
         "symbol": "CCAP.CA"
       },
       {
-        "x": 1.137,
+        "x": -1.137,
         "y": 0.923,
         "cluster": 2,
         "mfe": 0.0819,
         "symbol": "ABUK.CA"
       },
       {
-        "x": 0.229,
+        "x": -0.229,
         "y": 1.443,
         "cluster": 1,
         "mfe": 0.0275,
         "symbol": "EFID.CA"
       },
       {
-        "x": -1.113,
+        "x": 1.113,
         "y": -0.019,
         "cluster": 1,
         "mfe": 0.25,
         "symbol": "CCAP.CA"
       },
       {
-        "x": 0.133,
-        "y": 0.212,
+        "x": -0.133,
+        "y": 0.211,
         "cluster": 1,
         "mfe": 0.1798,
         "symbol": "ABUK.CA"
       },
       {
-        "x": -0.815,
+        "x": 0.815,
         "y": -0.825,
         "cluster": 1,
         "mfe": 0.2935,
         "symbol": "FWRY.CA"
       },
       {
-        "x": -0.729,
+        "x": 0.729,
         "y": -0.068,
         "cluster": 1,
         "mfe": 0.1948,
         "symbol": "ABUK.CA"
       },
       {
-        "x": -2.78,
+        "x": 2.78,
         "y": 0.269,
         "cluster": 1,
         "mfe": 0.0557,
@@ -5924,9 +5924,9 @@
         },
         "feat_dist_52w_low": {
           "top_mean": 0.4152,
-          "bottom_mean": 0.1933,
-          "diff": 0.2219,
-          "effect_size": 1.186
+          "bottom_mean": 0.1991,
+          "diff": 0.216,
+          "effect_size": 1.156
         },
         "feat_vwap_dist": {
           "top_mean": -0.1292,
@@ -6219,7 +6219,7 @@
       },
       "top5_summary": [
         "feat_dist_last_bos: أقل (-0.447 vs -0.153)",
-        "feat_dist_52w_low: أعلى (0.415 vs 0.193)",
+        "feat_dist_52w_low: أعلى (0.415 vs 0.199)",
         "feat_vwap_dist: أقل (-0.129 vs -0.043)",
         "snap_reclaim_spd: أقل (-0.109 vs -0.037)",
         "r4_htf: أعلى (4.000 vs 1.667)"
@@ -6232,9 +6232,9 @@
       "conditions": {
         "feat_dist_52w_low": {
           "top_mean": 0.417,
-          "bottom_mean": 0.2077,
-          "diff": 0.2093,
-          "effect_size": 1.565
+          "bottom_mean": 0.2388,
+          "diff": 0.1782,
+          "effect_size": 1.403
         },
         "snap_compression": {
           "top_mean": 1.4115,
@@ -6562,7 +6562,7 @@
         }
       },
       "top5_summary": [
-        "feat_dist_52w_low: أعلى (0.417 vs 0.208)",
+        "feat_dist_52w_low: أعلى (0.417 vs 0.239)",
         "snap_compression: أعلى (1.411 vs 0.879)",
         "feat_atr_compression: أعلى (1.411 vs 0.879)",
         "is_ramadan: أعلى (0.333 vs 0.056)",
@@ -6600,9 +6600,9 @@
         },
         "feat_accumulation_score": {
           "top_mean": 5.5714,
-          "bottom_mean": 3.1053,
-          "diff": 2.4662,
-          "effect_size": 0.897
+          "bottom_mean": 3.1579,
+          "diff": 2.4135,
+          "effect_size": 0.886
         },
         "snap_consol_len": {
           "top_mean": 9.7143,
@@ -6910,7 +6910,7 @@
         "feat_atr_compression: أعلى (1.461 vs 0.928)",
         "feat_down_days_pct: أعلى (0.593 vs 0.466)",
         "feat_candles_since_bos: أعلى (28.000 vs 16.812)",
-        "feat_accumulation_score: أعلى (5.571 vs 3.105)"
+        "feat_accumulation_score: أعلى (5.571 vs 3.158)"
       ]
     },
     "EAST.CA": {
@@ -6944,8 +6944,8 @@
         },
         "snap_pivot_str": {
           "top_mean": -7.0286,
-          "bottom_mean": 0.1061,
-          "diff": -7.1347,
+          "bottom_mean": 0.1117,
+          "diff": -7.1402,
           "effect_size": -0.81
         },
         "snap_reclaim_spd": {
@@ -7104,17 +7104,11 @@
           "diff": 1.5556,
           "effect_size": 0.395
         },
-        "feat_candles_since_sweep": {
-          "top_mean": 2.6,
-          "bottom_mean": 3.9231,
-          "diff": -1.3231,
-          "effect_size": -0.363
-        },
         "feat_accumulation_score": {
           "top_mean": 3.2857,
-          "bottom_mean": 4.0,
-          "diff": -0.7143,
-          "effect_size": -0.362
+          "bottom_mean": 4.0556,
+          "diff": -0.7698,
+          "effect_size": -0.372
         },
         "discount_depth": {
           "top_mean": 0.7298,
@@ -7139,6 +7133,12 @@
           "bottom_mean": 54.6667,
           "diff": 4.3333,
           "effect_size": 0.299
+        },
+        "feat_candles_since_sweep": {
+          "top_mean": 2.6,
+          "bottom_mean": 3.5385,
+          "diff": -0.9385,
+          "effect_size": -0.291
         },
         "wick_rejection": {
           "top_mean": 0.2857,
@@ -7188,12 +7188,6 @@
           "diff": 0.0635,
           "effect_size": 0.143
         },
-        "feat_consec_red": {
-          "top_mean": 1.4286,
-          "bottom_mean": 1.2222,
-          "diff": 0.2063,
-          "effect_size": 0.121
-        },
         "is_cbe": {
           "top_mean": 0.1429,
           "bottom_mean": 0.1111,
@@ -7205,6 +7199,12 @@
           "bottom_mean": 0.2549,
           "diff": 0.0181,
           "effect_size": 0.094
+        },
+        "feat_consec_red": {
+          "top_mean": 1.2857,
+          "bottom_mean": 1.2778,
+          "diff": 0.0079,
+          "effect_size": 0.005
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -7254,7 +7254,7 @@
         "hvn_score: أعلى (0.861 vs 0.000)",
         "r8_demand: أعلى (4.286 vs 1.000)",
         "r2_ob: أعلى (2.286 vs 0.000)",
-        "snap_pivot_str: أقل (-7.029 vs 0.106)"
+        "snap_pivot_str: أقل (-7.029 vs 0.112)"
       ]
     },
     "EFID.CA": {
@@ -7310,6 +7310,12 @@
           "diff": 0.0889,
           "effect_size": 0.935
         },
+        "feat_candles_since_sweep": {
+          "top_mean": 3.2857,
+          "bottom_mean": 8.2143,
+          "diff": -4.9286,
+          "effect_size": -0.849
+        },
         "r7_div": {
           "top_mean": 0.2857,
           "bottom_mean": 0.0,
@@ -7321,18 +7327,6 @@
           "bottom_mean": 63.2778,
           "diff": 6.4365,
           "effect_size": 0.701
-        },
-        "feat_candles_since_sweep": {
-          "top_mean": 3.2857,
-          "bottom_mean": 7.1429,
-          "diff": -3.8571,
-          "effect_size": -0.678
-        },
-        "feat_accumulation_score": {
-          "top_mean": 3.4286,
-          "bottom_mean": 4.9444,
-          "diff": -1.5159,
-          "effect_size": -0.588
         },
         "feat_dist_50d_low": {
           "top_mean": 0.0593,
@@ -7399,6 +7393,12 @@
           "bottom_mean": 0.2222,
           "diff": 0.2063,
           "effect_size": 0.451
+        },
+        "feat_accumulation_score": {
+          "top_mean": 3.7143,
+          "bottom_mean": 4.8889,
+          "diff": -1.1746,
+          "effect_size": -0.446
         },
         "snap_wick_ratio": {
           "top_mean": 0.5453,
@@ -7650,9 +7650,9 @@
         },
         "feat_accumulation_score": {
           "top_mean": 5.25,
-          "bottom_mean": 3.7391,
-          "diff": 1.5109,
-          "effect_size": 0.544
+          "bottom_mean": 3.6522,
+          "diff": 1.5978,
+          "effect_size": 0.571
         },
         "raw_score": {
           "top_mean": 55.375,
@@ -7734,9 +7734,9 @@
         },
         "snap_pivot_str": {
           "top_mean": -2.0437,
-          "bottom_mean": 0.797,
-          "diff": -2.8407,
-          "effect_size": -0.313
+          "bottom_mean": 0.5965,
+          "diff": -2.6403,
+          "effect_size": -0.29
         },
         "feat_vol_spike_ratio": {
           "top_mean": 1.5996,
@@ -7834,17 +7834,17 @@
           "diff": -0.0111,
           "effect_size": -0.102
         },
+        "feat_candles_since_sweep": {
+          "top_mean": 5.25,
+          "bottom_mean": 4.9,
+          "diff": 0.35,
+          "effect_size": 0.07
+        },
         "feat_candles_since_bos": {
           "top_mean": 20.25,
           "bottom_mean": 20.9286,
           "diff": -0.6786,
           "effect_size": -0.052
-        },
-        "feat_candles_since_sweep": {
-          "top_mean": 5.25,
-          "bottom_mean": 5.0,
-          "diff": 0.25,
-          "effect_size": 0.05
         },
         "feat_dist_52w_low": {
           "top_mean": 0.2661,
@@ -7980,12 +7980,6 @@
           "diff": -0.12,
           "effect_size": -0.733
         },
-        "feat_dist_52w_low": {
-          "top_mean": 0.336,
-          "bottom_mean": 0.4517,
-          "diff": -0.1156,
-          "effect_size": -0.682
-        },
         "feat_vol_contraction": {
           "top_mean": -0.0303,
           "bottom_mean": 0.0372,
@@ -8010,6 +8004,12 @@
           "diff": -0.0408,
           "effect_size": -0.612
         },
+        "feat_dist_52w_low": {
+          "top_mean": 0.336,
+          "bottom_mean": 0.4454,
+          "diff": -0.1093,
+          "effect_size": -0.61
+        },
         "discount_depth": {
           "top_mean": 0.7779,
           "bottom_mean": 0.6029,
@@ -8027,6 +8027,12 @@
           "bottom_mean": 0.3971,
           "diff": -0.175,
           "effect_size": -0.558
+        },
+        "feat_dist_swing_low": {
+          "top_mean": -0.0064,
+          "bottom_mean": 0.0488,
+          "diff": -0.0552,
+          "effect_size": -0.554
         },
         "r6_macd": {
           "top_mean": 1.6,
@@ -8124,12 +8130,6 @@
           "diff": -0.3333,
           "effect_size": -0.277
         },
-        "feat_dist_swing_low": {
-          "top_mean": -0.0064,
-          "bottom_mean": 0.0232,
-          "diff": -0.0296,
-          "effect_size": -0.268
-        },
         "r8_demand": {
           "top_mean": 3.6,
           "bottom_mean": 2.8,
@@ -8171,12 +8171,6 @@
           "bottom_mean": 1.9333,
           "diff": 0.0667,
           "effect_size": 0.034
-        },
-        "feat_accumulation_score": {
-          "top_mean": 5.4,
-          "bottom_mean": 5.4667,
-          "diff": -0.0667,
-          "effect_size": -0.025
         },
         "stock_tier": {
           "top_mean": 1.0,
@@ -8235,6 +8229,12 @@
         "snap_bos": {
           "top_mean": 0.0,
           "bottom_mean": 0.0,
+          "diff": 0.0,
+          "effect_size": 0.0
+        },
+        "feat_accumulation_score": {
+          "top_mean": 5.4,
+          "bottom_mean": 5.4,
           "diff": 0.0,
           "effect_size": 0.0
         }
@@ -8728,17 +8728,17 @@
           "diff": 0.0211,
           "effect_size": 0.243
         },
+        "snap_pivot_str": {
+          "top_mean": 4.718,
+          "bottom_mean": 2.9957,
+          "diff": 1.7223,
+          "effect_size": 0.222
+        },
         "feat_candles_since_bos": {
           "top_mean": 17.6,
           "bottom_mean": 14.6667,
           "diff": 2.9333,
           "effect_size": 0.208
-        },
-        "snap_pivot_str": {
-          "top_mean": 4.5,
-          "bottom_mean": 2.9186,
-          "diff": 1.5814,
-          "effect_size": 0.202
         },
         "snap_num_touches": {
           "top_mean": 1.4,
@@ -9176,9 +9176,9 @@
         },
         "feat_dist_52w_low": {
           "top_mean": 0.3458,
-          "bottom_mean": 0.3778,
-          "diff": -0.032,
-          "effect_size": -0.165
+          "bottom_mean": 0.3914,
+          "diff": -0.0456,
+          "effect_size": -0.238
         },
         "r7_div": {
           "top_mean": 0.2857,
@@ -9410,6 +9410,12 @@
           "diff": 0.0425,
           "effect_size": 0.701
         },
+        "feat_dist_52w_low": {
+          "top_mean": 0.4493,
+          "bottom_mean": 0.3727,
+          "diff": 0.0766,
+          "effect_size": 0.643
+        },
         "snap_compression": {
           "top_mean": 0.8554,
           "bottom_mean": 1.1173,
@@ -9470,12 +9476,6 @@
           "diff": 0.15,
           "effect_size": 0.405
         },
-        "feat_dist_52w_low": {
-          "top_mean": 0.417,
-          "bottom_mean": 0.3727,
-          "diff": 0.0443,
-          "effect_size": 0.374
-        },
         "is_ramadan": {
           "top_mean": 0.0,
           "bottom_mean": 0.1,
@@ -9512,17 +9512,17 @@
           "diff": -0.1456,
           "effect_size": -0.286
         },
-        "feat_accumulation_score": {
-          "top_mean": 4.75,
-          "bottom_mean": 5.4,
-          "diff": -0.65,
-          "effect_size": -0.25
-        },
         "r3_liquidity": {
           "top_mean": 7.0,
           "bottom_mean": 5.2,
           "diff": 1.8,
           "effect_size": 0.228
+        },
+        "feat_accumulation_score": {
+          "top_mean": 4.75,
+          "bottom_mean": 5.3,
+          "diff": -0.55,
+          "effect_size": -0.209
         },
         "r7_div": {
           "top_mean": 0.5,
@@ -9652,6 +9652,12 @@
           "diff": -0.7068,
           "effect_size": -0.522
         },
+        "feat_dist_52w_low": {
+          "top_mean": 0.2747,
+          "bottom_mean": 0.2058,
+          "diff": 0.0688,
+          "effect_size": 0.464
+        },
         "feat_dist_last_bos": {
           "top_mean": -0.0101,
           "bottom_mean": -0.1899,
@@ -9718,11 +9724,11 @@
           "diff": 0.1504,
           "effect_size": 0.292
         },
-        "feat_dist_52w_low": {
-          "top_mean": 0.2476,
-          "bottom_mean": 0.2058,
-          "diff": 0.0418,
-          "effect_size": 0.28
+        "feat_accumulation_score": {
+          "top_mean": 4.1429,
+          "bottom_mean": 3.3158,
+          "diff": 0.8271,
+          "effect_size": 0.268
         },
         "r7_div": {
           "top_mean": 0.0,
@@ -9735,12 +9741,6 @@
           "bottom_mean": 0.3921,
           "diff": -0.0926,
           "effect_size": -0.264
-        },
-        "feat_accumulation_score": {
-          "top_mean": 4.1429,
-          "bottom_mean": 3.3684,
-          "diff": 0.7744,
-          "effect_size": 0.247
         },
         "snap_compression": {
           "top_mean": 1.1673,
@@ -10944,12 +10944,6 @@
           "diff": -0.6667,
           "effect_size": -0.764
         },
-        "feat_dist_52w_low": {
-          "top_mean": 0.6227,
-          "bottom_mean": 0.4572,
-          "diff": 0.1655,
-          "effect_size": 0.743
-        },
         "snap_sweep_size": {
           "top_mean": -0.0299,
           "bottom_mean": -0.0022,
@@ -10980,6 +10974,12 @@
           "diff": 4.3825,
           "effect_size": 0.731
         },
+        "feat_dist_52w_low": {
+          "top_mean": 0.6227,
+          "bottom_mean": 0.4623,
+          "diff": 0.1604,
+          "effect_size": 0.696
+        },
         "snap_num_touches": {
           "top_mean": 1.5,
           "bottom_mean": 3.5,
@@ -10998,6 +10998,12 @@
           "diff": 8.8333,
           "effect_size": 0.606
         },
+        "feat_accumulation_score": {
+          "top_mean": 3.0,
+          "bottom_mean": 4.5,
+          "diff": -1.5,
+          "effect_size": -0.553
+        },
         "r5_avwap": {
           "top_mean": 4.0,
           "bottom_mean": 6.0,
@@ -11009,12 +11015,6 @@
           "bottom_mean": 2.25,
           "diff": -1.0,
           "effect_size": -0.514
-        },
-        "feat_accumulation_score": {
-          "top_mean": 3.0,
-          "bottom_mean": 4.4167,
-          "diff": -1.4167,
-          "effect_size": -0.503
         },
         "feat_dist_swing_low": {
           "top_mean": 0.0344,
@@ -11482,9 +11482,9 @@
         },
         "feat_dist_52w_low": {
           "top_mean": 0.4073,
-          "bottom_mean": 0.4108,
-          "diff": -0.0035,
-          "effect_size": -0.015
+          "bottom_mean": 0.4113,
+          "diff": -0.004,
+          "effect_size": -0.017
         },
         "snap_dist_lo": {
           "top_mean": 0.0557,
@@ -12036,12 +12036,6 @@
           "diff": 1.0952,
           "effect_size": 0.852
         },
-        "feat_dist_swing_low": {
-          "top_mean": -0.0106,
-          "bottom_mean": 0.0167,
-          "diff": -0.0273,
-          "effect_size": -0.657
-        },
         "r3_liquidity": {
           "top_mean": 17.1429,
           "bottom_mean": 11.0476,
@@ -12052,13 +12046,13 @@
           "top_mean": -0.0024,
           "bottom_mean": -0.0207,
           "diff": 0.0183,
-          "effect_size": 0.634
+          "effect_size": 0.633
         },
         "feat_sweep_depth_pct": {
           "top_mean": -0.0024,
           "bottom_mean": -0.0207,
           "diff": 0.0183,
-          "effect_size": 0.634
+          "effect_size": 0.633
         },
         "r1_price": {
           "top_mean": 17.8571,
@@ -12096,6 +12090,12 @@
           "diff": -0.0527,
           "effect_size": -0.508
         },
+        "feat_dist_swing_low": {
+          "top_mean": -0.0106,
+          "bottom_mean": 0.0128,
+          "diff": -0.0234,
+          "effect_size": -0.503
+        },
         "feat_down_days_pct": {
           "top_mean": 0.5571,
           "bottom_mean": 0.5071,
@@ -12120,6 +12120,12 @@
           "diff": -0.0124,
           "effect_size": -0.425
         },
+        "feat_candles_since_sweep": {
+          "top_mean": 3.8571,
+          "bottom_mean": 5.8235,
+          "diff": -1.9664,
+          "effect_size": -0.365
+        },
         "htf_hl": {
           "top_mean": 0.0,
           "bottom_mean": 0.0952,
@@ -12137,12 +12143,6 @@
           "bottom_mean": 2.3431,
           "diff": -0.4469,
           "effect_size": -0.278
-        },
-        "feat_candles_since_sweep": {
-          "top_mean": 4.5714,
-          "bottom_mean": 6.0,
-          "diff": -1.4286,
-          "effect_size": -0.271
         },
         "r8_demand": {
           "top_mean": 4.2857,
@@ -12180,12 +12180,6 @@
           "diff": 0.2857,
           "effect_size": 0.121
         },
-        "feat_accumulation_score": {
-          "top_mean": 4.0,
-          "bottom_mean": 3.7143,
-          "diff": 0.2857,
-          "effect_size": 0.106
-        },
         "snap_num_touches": {
           "top_mean": 2.8571,
           "bottom_mean": 3.1429,
@@ -12209,6 +12203,12 @@
           "bottom_mean": 13.0,
           "diff": 0.2857,
           "effect_size": 0.04
+        },
+        "feat_accumulation_score": {
+          "top_mean": 3.8571,
+          "bottom_mean": 3.7619,
+          "diff": 0.0952,
+          "effect_size": 0.035
         },
         "stock_tier": {
           "top_mean": 1.0,
@@ -12518,17 +12518,17 @@
           "diff": -0.0027,
           "effect_size": -0.029
         },
-        "feat_dist_52w_low": {
-          "top_mean": 0.3131,
-          "bottom_mean": 0.3155,
-          "diff": -0.0024,
-          "effect_size": -0.019
-        },
         "feat_candles_since_bos": {
           "top_mean": 17.1667,
           "bottom_mean": 17.0,
           "diff": 0.1667,
           "effect_size": 0.013
+        },
+        "feat_dist_52w_low": {
+          "top_mean": 0.3131,
+          "bottom_mean": 0.3146,
+          "diff": -0.0015,
+          "effect_size": -0.011
         },
         "snap_wick_ratio": {
           "top_mean": 0.3258,
@@ -13008,6 +13008,12 @@
           "diff": 0.0756,
           "effect_size": 0.546
         },
+        "feat_accumulation_score": {
+          "top_mean": 3.0,
+          "bottom_mean": 4.2083,
+          "diff": -1.2083,
+          "effect_size": -0.483
+        },
         "r4_htf": {
           "top_mean": 3.125,
           "bottom_mean": 1.9583,
@@ -13021,16 +13027,10 @@
           "effect_size": 0.432
         },
         "feat_candles_since_sweep": {
-          "top_mean": 9.125,
+          "top_mean": 9.0,
           "bottom_mean": 6.7368,
-          "diff": 2.3882,
-          "effect_size": 0.403
-        },
-        "feat_accumulation_score": {
-          "top_mean": 3.125,
-          "bottom_mean": 4.0833,
-          "diff": -0.9583,
-          "effect_size": -0.371
+          "diff": 2.2632,
+          "effect_size": 0.382
         },
         "feat_vwap_dist": {
           "top_mean": -0.042,
@@ -13172,9 +13172,9 @@
         },
         "snap_pivot_str": {
           "top_mean": 2.585,
-          "bottom_mean": 1.6738,
-          "diff": 0.9113,
-          "effect_size": 0.089
+          "bottom_mean": 1.8521,
+          "diff": 0.7329,
+          "effect_size": 0.071
         },
         "r3_liquidity": {
           "top_mean": 11.5,
@@ -13214,9 +13214,9 @@
         },
         "feat_dist_swing_low": {
           "top_mean": 0.0405,
-          "bottom_mean": 0.0395,
-          "diff": 0.0009,
-          "effect_size": 0.008
+          "bottom_mean": 0.0397,
+          "diff": 0.0008,
+          "effect_size": 0.006
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -13334,12 +13334,6 @@
           "diff": -0.25,
           "effect_size": -0.645
         },
-        "feat_dist_swing_low": {
-          "top_mean": -0.0231,
-          "bottom_mean": 0.0254,
-          "diff": -0.0484,
-          "effect_size": -0.607
-        },
         "feat_vwap_dist": {
           "top_mean": -0.056,
           "bottom_mean": -0.0269,
@@ -13351,6 +13345,12 @@
           "bottom_mean": 10.6,
           "diff": 3.9714,
           "effect_size": 0.575
+        },
+        "feat_dist_swing_low": {
+          "top_mean": -0.0199,
+          "bottom_mean": 0.0254,
+          "diff": -0.0453,
+          "effect_size": -0.573
         },
         "feat_vol_contraction": {
           "top_mean": -0.0282,
@@ -13646,12 +13646,12 @@
         "health": "ok"
       },
       "feat_dist_52w_low": {
-        "n_non_null": 634,
-        "missing_ratio": 0.0078,
+        "n_non_null": 622,
+        "missing_ratio": 0.0266,
         "zero_ratio": 0.0016,
-        "variance": 0.035453,
-        "n_unique": 597,
-        "info_gain_mfe": 0.5198,
+        "variance": 0.035375,
+        "n_unique": 587,
+        "info_gain_mfe": 0.6552,
         "health": "ok"
       },
       "feat_dist_last_bos": {
@@ -13753,15 +13753,6 @@
         "info_gain_mfe": 0.1589,
         "health": "ok"
       },
-      "feat_accumulation_score": {
-        "n_non_null": 639,
-        "missing_ratio": 0.0,
-        "zero_ratio": 0.0595,
-        "variance": 6.979253,
-        "n_unique": 11,
-        "info_gain_mfe": 0.1586,
-        "health": "ok"
-      },
       "feat_vol_spike_ratio": {
         "n_non_null": 639,
         "missing_ratio": 0.0,
@@ -13784,9 +13775,9 @@
         "n_non_null": 639,
         "missing_ratio": 0.0,
         "zero_ratio": 0.0141,
-        "variance": 156.228092,
+        "variance": 156.214648,
         "n_unique": 556,
-        "info_gain_mfe": 0.1109,
+        "info_gain_mfe": 0.1128,
         "health": "ok"
       },
       "r4_htf": {
@@ -14063,7 +14054,7 @@
         "n_non_null": 639,
         "missing_ratio": 0.0,
         "zero_ratio": 0.0031,
-        "variance": 0.018689,
+        "variance": 0.018668,
         "n_unique": 567,
         "info_gain_mfe": 0.0,
         "health": "low_info"
@@ -14099,8 +14090,17 @@
         "n_non_null": 524,
         "missing_ratio": 0.18,
         "zero_ratio": 0.0,
-        "variance": 27.104258,
+        "variance": 27.30858,
         "n_unique": 19,
+        "info_gain_mfe": 0.0,
+        "health": "low_info"
+      },
+      "feat_accumulation_score": {
+        "n_non_null": 639,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0563,
+        "variance": 6.970732,
+        "n_unique": 11,
         "info_gain_mfe": 0.0,
         "health": "low_info"
       },
@@ -14108,7 +14108,7 @@
         "n_non_null": 639,
         "missing_ratio": 0.0,
         "zero_ratio": 0.3052,
-        "variance": 2.353172,
+        "variance": 2.356307,
         "n_unique": 10,
         "info_gain_mfe": 0.0,
         "health": "low_info"
@@ -14154,9 +14154,9 @@
       "price_ok",
       "sv_depth"
     ],
-    "n_ok": 20,
+    "n_ok": 19,
     "n_sparse": 0,
-    "n_low_info": 25,
+    "n_low_info": 26,
     "n_zero_var": 0,
     "n_mostly_zero": 11
   },

@@ -78,9 +78,6 @@ def load_signal_data(db_path: str = DB_PATH) -> pd.DataFrame:
         SELECT
             s.id, s.symbol, s.signal_date, s.signal_type, s.raw_score,
             bq.bq_score, bq.mfe_20d, bq.mae_20d, bq.classification,
-            bq.time_to_recovery, bq.drawdown_duration,
-            bq.r10d, bq.r20d, bq.mfe_40d, bq.mfe_60d,
-            bq.bq_gain, bq.bq_drawdown, bq.bq_recovery,
             {feat_select}
         FROM signals s
         JOIN bottom_quality bq ON bq.signal_id = s.id

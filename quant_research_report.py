@@ -78,10 +78,10 @@ ENTRY_SCORE_GATE     = 40
 TOTAL_EGX_STOCKS     = 27   # إجمالي أسهم الكون
 
 # ── Retention Thresholds (Phase 0 Constraints) ────────────────────────────────
-RETENTION_TARGET  = 0.98   # الهدف
-RETENTION_WARN    = 0.90   # إنذار
-RETENTION_PENALTY = 0.80   # غرامة قوية
-RETENTION_REJECT  = 0.70   # رفض
+RETENTION_TARGET  = 0.95   # الهدف
+RETENTION_WARN    = 0.80   # تحذير — اتشال 20%+ من الإشارات
+RETENTION_PENALTY = 0.60   # غرامة — اتشال 40%+ من الإشارات
+RETENTION_REJECT  = 0.40   # رفض — اتشال أكثر من 60% من الإشارات
 
 # ── Optimization Score Weights ─────────────────────────────────────────────────
 OPT_WEIGHTS = {
@@ -324,9 +324,9 @@ def _opt_score(m: dict, base_m: dict, n: int, base_n: int,
     if ret < RETENTION_REJECT:
         score *= 0.3
     elif ret < RETENTION_PENALTY:
-        score *= 0.6
+        score *= 0.65
     elif ret < RETENTION_WARN:
-        score *= 0.85
+        score *= 0.88
 
     return round(min(100, score), 1)
 
@@ -407,18 +407,18 @@ def phase0_constraints(df: pd.DataFrame, df_all: pd.DataFrame) -> str:
       <th>العتبة</th><th>Retention %</th><th>حالة التوصية</th><th>الإجراء</th>
     </tr></thead>
     <tbody>
-      <tr><td>≥ 98%</td>
+      <tr><td>≥ 95%</td>
           <td><span class="badge b-high">هدف مثالي</span></td>
           <td>✅ مقبول بالكامل</td><td>تطبيق مباشر</td></tr>
-      <tr><td>90–98%</td>
+      <tr><td>80–95%</td>
           <td><span class="badge b-med">⚠ تحذير</span></td>
-          <td>مقبول مع تحفظ</td><td>دراسة إضافية مطلوبة</td></tr>
-      <tr><td>80–90%</td>
+          <td>مقبول مع تحفظ — اتشال 20-5% من الإشارات</td><td>دراسة إضافية</td></tr>
+      <tr><td>40–80%</td>
           <td><span class="badge b-low">⛔ غرامة</span></td>
-          <td>غرامة في OPT Score</td><td>رفض إلا لأداء استثنائي</td></tr>
-      <tr><td>< 80%</td>
+          <td>غرامة في OPT Score — اتشال 20-60%</td><td>رفض إلا لأداء استثنائي</td></tr>
+      <tr><td>< 40%</td>
           <td><span class="badge b-low">❌ رفض</span></td>
-          <td>مرفوض تلقائياً</td><td>رفض</td></tr>
+          <td>مرفوض — اتشال أكثر من 60% من الإشارات</td><td>رفض</td></tr>
     </tbody>
   </table>
   </div>

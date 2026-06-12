@@ -281,7 +281,6 @@ def _discover_rulefit(df: pd.DataFrame, feat_cols: list[str]) -> list[dict]:
     try:
         rfit = RuleFitRegressor(
             max_rules=300,
-            model_type="r",
             random_state=42,
         )
         rfit.fit(X, y, feature_names=feat_cols)
@@ -446,7 +445,7 @@ def _discover_bayes(df: pd.DataFrame, feat_cols: list[str]) -> list[dict]:
                 listwidthprior=1,
                 maxcardinality=2,
                 minsupport=float(MIN_RULE_SAMPLES) / n,
-                class1_label="high_mfe",
+                class1label="high_mfe",
             )
         brl = brl_cls(**kwargs)
         brl.fit(X_disc, y_binary, feature_names=disc_feat_names)

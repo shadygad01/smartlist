@@ -53,33 +53,42 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
     with open(SIGNAL_HISTORY, encoding="utf-8") as f:
         history: dict = json.load(f)
 
-    # Collect eligible signals
+    # Collect eligible signals — فقط أول يوم Buy/Strong Buy بعد Wait
+    # (نقطة الدخول الفعلية، ليس كل يوم استمرت فيه الإشارة)
     eligible = []
     for symbol, entries in history.items():
         if not isinstance(entries, list):
             entries = [entries]
-        for entry in entries:
+        entries_sorted = sorted(entries, key=lambda e: e.get("date", ""))
+
+        prev_signal = "Wait"
+        for entry in entries_sorted:
             sig_date = entry.get("date", "")
             signal   = entry.get("signal", "")
-            if signal not in ("Buy", "Strong Buy"):
-                continue
-            try:
-                d = date.fromisoformat(sig_date)
-            except ValueError:
-                continue
-            if d > CUTOFF_DATE:
-                continue   # too recent — not enough forward data
-            eligible.append({
-                "id":          f"{symbol}_{sig_date}",
-                "symbol":      symbol,
-                "signal_date": sig_date,
-                "signal_type": signal,
-                "raw_score":   int(entry.get("score", 0)),
-                "price":       float(entry.get("price", 0)),
-                "r1_price":    int(entry.get("r1", 0)) if entry.get("r1") is not None else None,
-            })
+            is_buy      = signal in ("Buy", "Strong Buy")
+            prev_is_buy = prev_signal in ("Buy", "Strong Buy")
 
-    print(f"Eligible Buy/Strong Buy signals (≥{MIN_DAYS_OLD}d old): {len(eligible)}")
+            if is_buy and not prev_is_buy:
+                # أول يوم في run شراء جديد = نقطة دخول فعلية
+                try:
+                    d = date.fromisoformat(sig_date)
+                except ValueError:
+                    prev_signal = signal
+                    continue
+                if d <= CUTOFF_DATE:
+                    eligible.append({
+                        "id":          f"{symbol}_{sig_date}",
+                        "symbol":      symbol,
+                        "signal_date": sig_date,
+                        "signal_type": signal,
+                        "raw_score":   int(entry.get("score", 0)),
+                        "price":       float(entry.get("price", 0)),
+                        "r1_price":    int(entry.get("r1", 0)) if entry.get("r1") is not None else None,
+                    })
+
+            prev_signal = signal
+
+    print(f"Entry signals (first Buy after Wait, ≥{MIN_DAYS_OLD}d old): {len(eligible)}")
 
     # Check which are already in bottom_quality (BQ computed)
     conn = get_conn(db_path)

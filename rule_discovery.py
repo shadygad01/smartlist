@@ -64,7 +64,12 @@ SNAP_COLS = [
     "snap_num_touches", "snap_sweep_size", "snap_vol_exp", "snap_reclaim_spd",
     "snap_dist_lo", "snap_prem_disc",
 ]
-ALL_FEAT_COLS = FEAT_COLS + SNAP_COLS
+# Individual SMC indicator scores (stored in signals table, previously unused by ML)
+SMC_SCORE_COLS = [
+    "r1_price", "r2_ob", "r3_liquidity", "r4_htf",
+    "r5_avwap", "r6_macd", "r7_div", "r8_demand",
+]
+ALL_FEAT_COLS = FEAT_COLS + SNAP_COLS + SMC_SCORE_COLS
 
 
 # ─────────────────────────────────────────────────────────────────────────────

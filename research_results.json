@@ -86,6 +86,22 @@
   },
   "mutual_information": {
     "mfe_20d": {
+      "feat_dist_52w_low": 1.0,
+      "feat_dist_last_bos": 0.5275,
+      "feat_atr_compression": 0.5154,
+      "snap_compression": 0.5129,
+      "feat_dist_20d_low": 0.2936,
+      "snap_dist_lo": 0.2904,
+      "feat_candles_since_bos": 0.2705,
+      "feat_dist_50d_low": 0.2541,
+      "feat_down_days_pct": 0.1503,
+      "snap_prem_disc": 0.142,
+      "feat_vol_contraction": 0.1394,
+      "feat_dealing_range_pos": 0.1364,
+      "snap_atr": 0.1356,
+      "snap_pivot_str": 0.1284,
+      "snap_consol_len": 0.0703,
+      "snap_wick_ratio": 0.0486,
       "raw_score": 0.0,
       "r1_price": 0.0,
       "sv_hit": 0.0,
@@ -99,10 +115,47 @@
       "equal_lows": 0.0,
       "price_ok": 0.0,
       "snap_bos": 0.0,
-      "snap_choch": 0.0
+      "snap_choch": 0.0,
+      "snap_num_touches": 0.0,
+      "snap_sweep_size": 0.0,
+      "snap_vol_exp": 0.0,
+      "snap_reclaim_spd": 0.0,
+      "feat_dist_swing_low": 0.0,
+      "feat_sweep_depth_pct": 0.0,
+      "feat_equal_lows_count": 0.0,
+      "feat_vol_spike_ratio": 0.0,
+      "feat_candles_since_sweep": 0.0,
+      "feat_accumulation_score": 0.0,
+      "feat_consec_red": 0.0,
+      "feat_vwap_dist": 0.0
     },
     "bq_score": {
-      "r1_price": 1.0,
+      "feat_candles_since_bos": 1.0,
+      "feat_atr_compression": 0.8221,
+      "snap_compression": 0.8207,
+      "snap_atr": 0.7643,
+      "feat_equal_lows_count": 0.7441,
+      "snap_num_touches": 0.7299,
+      "snap_wick_ratio": 0.7218,
+      "feat_down_days_pct": 0.4956,
+      "snap_prem_disc": 0.4062,
+      "feat_dealing_range_pos": 0.4048,
+      "feat_dist_last_bos": 0.3964,
+      "snap_dist_lo": 0.3882,
+      "feat_dist_20d_low": 0.387,
+      "snap_choch": 0.2566,
+      "feat_consec_red": 0.1453,
+      "feat_vol_spike_ratio": 0.1409,
+      "feat_dist_52w_low": 0.1316,
+      "snap_sweep_size": 0.0989,
+      "feat_sweep_depth_pct": 0.0974,
+      "r1_price": 0.0871,
+      "feat_vol_contraction": 0.085,
+      "snap_bos": 0.0629,
+      "snap_reclaim_spd": 0.0238,
+      "snap_pivot_str": 0.0198,
+      "feat_candles_since_sweep": 0.0091,
+      "feat_vwap_dist": 0.0002,
       "raw_score": 0.0,
       "sv_hit": 0.0,
       "hvn_hit": 0.0,
@@ -114,117 +167,153 @@
       "wick_rejection": 0.0,
       "equal_lows": 0.0,
       "price_ok": 0.0,
-      "snap_bos": 0.0,
-      "snap_choch": 0.0
+      "snap_consol_len": 0.0,
+      "snap_vol_exp": 0.0,
+      "feat_dist_swing_low": 0.0,
+      "feat_accumulation_score": 0.0,
+      "feat_dist_50d_low": 0.0
     }
   },
   "probability_analysis": {
-    "auc": 0.457,
+    "auc": 0.698,
     "n_train": 146,
     "n_test": 63,
     "base_win_rate": 0.5873,
     "win_threshold_pct": 8.0,
-    "high_conf_n": 23,
-    "high_conf_wins": 12,
-    "high_conf_precision": 0.5217,
+    "high_conf_n": 5,
+    "high_conf_wins": 5,
+    "high_conf_precision": 1.0,
     "top5_features": [
       [
-        "raw_score",
-        0.7249
+        "snap_atr",
+        0.0638
       ],
       [
-        "r1_price",
-        0.2751
+        "feat_dist_last_bos",
+        0.0628
       ],
       [
-        "sv_hit",
-        0.0
+        "feat_atr_compression",
+        0.0551
       ],
       [
-        "hvn_hit",
-        0.0
+        "feat_candles_since_sweep",
+        0.055
       ],
       [
-        "rsi_div",
-        0.0
+        "snap_compression",
+        0.0487
       ]
     ]
   },
   "rf_mfe": {
     "model": "RandomForest",
-    "r2": -0.799,
-    "mae": 0.0874,
+    "r2": 0.188,
+    "mae": 0.0945,
     "importance": {
-      "raw_score": 0.38930576127756966,
-      "r1_price": 0.06917100692198196,
-      "sv_hit": 7.401486830834377e-18,
-      "hvn_hit": 0.0,
-      "rsi_div": 1.850371707708594e-17,
-      "macd_div": 0.0,
-      "htf_hh": 2.2204460492503132e-17,
-      "htf_hl": 7.401486830834377e-18,
-      "sweep_detected": 3.7007434154171884e-18,
-      "wick_rejection": 1.4802973661668754e-17,
-      "equal_lows": 2.2204460492503132e-17,
-      "price_ok": -3.7007434154171884e-18,
-      "snap_bos": 1.4802973661668754e-17,
-      "snap_choch": 2.2204460492503132e-17
+      "raw_score": 0.02378133346528312,
+      "r1_price": 0.003497406612775705,
+      "sv_hit": 1.295260195396016e-17,
+      "hvn_hit": 1.4802973661668754e-17,
+      "rsi_div": 3.7007434154171884e-18,
+      "macd_div": 9.25185853854297e-18,
+      "htf_hh": 9.25185853854297e-18,
+      "htf_hl": 2.4054832200211726e-17,
+      "sweep_detected": 5.551115123125783e-18,
+      "wick_rejection": 1.1102230246251566e-17,
+      "equal_lows": 1.6653345369377347e-17,
+      "price_ok": 1.295260195396016e-17,
+      "snap_atr": 0.024419629236973307,
+      "snap_wick_ratio": 0.043838864648231904,
+      "snap_compression": 0.028092250646966847,
+      "snap_consol_len": 0.015868235657698012,
+      "snap_bos": -0.0003493899828908148,
+      "snap_choch": 0.0010195259690843647,
+      "snap_pivot_str": 0.03923502536082857,
+      "snap_num_touches": 0.013469653231160273,
+      "snap_sweep_size": 0.022696727794117744,
+      "snap_vol_exp": 0.06084721700879895,
+      "snap_reclaim_spd": 0.010136223744945681,
+      "snap_dist_lo": 0.0037266302292761943,
+      "snap_prem_disc": 0.04149958045426563,
+      "feat_dist_swing_low": 0.016088940480779662,
+      "feat_dealing_range_pos": 0.005543893808425468,
+      "feat_candles_since_bos": 0.021785869172255452,
+      "feat_dist_last_bos": 0.024888331420828795,
+      "feat_sweep_depth_pct": 0.01604337626431964,
+      "feat_equal_lows_count": 0.0027967411220004325,
+      "feat_vol_spike_ratio": 0.00972965099421141,
+      "feat_candles_since_sweep": 0.01829200580863728,
+      "feat_accumulation_score": 0.01342185823783907,
+      "feat_consec_red": 0.004001095077909254,
+      "feat_down_days_pct": 0.021842561540966615,
+      "feat_atr_compression": 0.013171858168586376,
+      "feat_vol_contraction": 0.04962496875724064,
+      "feat_dist_20d_low": -0.0010206264479321989,
+      "feat_dist_50d_low": 0.03708196456343234,
+      "feat_dist_52w_low": 0.13428796736236975,
+      "feat_vwap_dist": 0.015797142810915404
     },
-    "n_train": 146,
-    "n_test": 63
+    "n_train": 72,
+    "n_test": 32
   },
   "rf_bq": {
     "model": "RandomForest",
-    "r2": -0.219,
-    "mae": 22.9797,
+    "r2": -0.039,
+    "mae": 25.1845,
     "importance": {
-      "raw_score": 0.4694702942787251,
-      "r1_price": 0.02489343553739715,
-      "sv_hit": 7.401486830834377e-18,
-      "hvn_hit": 7.401486830834377e-18,
-      "rsi_div": 1.4802973661668754e-17,
-      "macd_div": 1.4802973661668754e-17,
-      "htf_hh": 1.850371707708594e-17,
-      "htf_hl": 0.0,
-      "sweep_detected": 0.0,
-      "wick_rejection": 3.7007434154171884e-18,
-      "equal_lows": 0.0,
-      "price_ok": 3.7007434154171884e-18,
-      "snap_bos": 1.1102230246251566e-17,
-      "snap_choch": 2.2204460492503132e-17
+      "raw_score": 0.0026255354375918586,
+      "r1_price": 0.002313060939176367,
+      "sv_hit": -3.7007434154171884e-18,
+      "hvn_hit": -1.4802973661668754e-17,
+      "rsi_div": -1.4802973661668754e-17,
+      "macd_div": -7.401486830834377e-18,
+      "htf_hh": -3.7007434154171884e-18,
+      "htf_hl": -3.7007434154171884e-18,
+      "sweep_detected": -7.401486830834377e-18,
+      "wick_rejection": -7.401486830834377e-18,
+      "equal_lows": -7.401486830834377e-18,
+      "price_ok": -3.7007434154171884e-18,
+      "snap_atr": 0.08225290334536936,
+      "snap_wick_ratio": 0.006396255983954965,
+      "snap_compression": 0.03658930095443074,
+      "snap_consol_len": 0.005528648745485884,
+      "snap_bos": -0.0012020775150526019,
+      "snap_choch": 0.0014992798137967583,
+      "snap_pivot_str": 0.009581820451545608,
+      "snap_num_touches": 0.008322315023665218,
+      "snap_sweep_size": 0.0001056557669853284,
+      "snap_vol_exp": 0.005414277173750602,
+      "snap_reclaim_spd": 0.048643631024893094,
+      "snap_dist_lo": 0.0012121366421950163,
+      "snap_prem_disc": 0.09251044621945353,
+      "feat_dist_swing_low": 0.00242049295583455,
+      "feat_dealing_range_pos": 0.0009819952136031719,
+      "feat_candles_since_bos": 0.04310274582918912,
+      "feat_dist_last_bos": 0.060899423820878165,
+      "feat_sweep_depth_pct": -0.0013288059602115764,
+      "feat_equal_lows_count": -0.0018803752532982583,
+      "feat_vol_spike_ratio": 0.002172709811946175,
+      "feat_candles_since_sweep": 0.017399717226208866,
+      "feat_accumulation_score": 0.045047632782640346,
+      "feat_consec_red": 0.012604760692912843,
+      "feat_down_days_pct": -0.00026272880330522295,
+      "feat_atr_compression": -0.009340955504516815,
+      "feat_vol_contraction": -0.005054530611514912,
+      "feat_dist_20d_low": 0.00377223374969918,
+      "feat_dist_50d_low": 0.00578036491634478,
+      "feat_dist_52w_low": 0.02486777753318696,
+      "feat_vwap_dist": 0.05193192808262295
     },
-    "n_train": 146,
-    "n_test": 63
+    "n_train": 72,
+    "n_test": 32
   },
   "gbm_mfe": {
     "model": "LightGBM",
-    "r2": -0.243,
-    "mae": 0.0733,
+    "r2": 0.218,
+    "mae": 0.0926,
     "importance": {
-      "raw_score": 0.9166666666666666,
-      "r1_price": 0.08333333333333333,
-      "sv_hit": 0.0,
-      "hvn_hit": 0.0,
-      "rsi_div": 0.0,
-      "macd_div": 0.0,
-      "htf_hh": 0.0,
-      "htf_hl": 0.0,
-      "sweep_detected": 0.0,
-      "wick_rejection": 0.0,
-      "equal_lows": 0.0,
-      "price_ok": 0.0,
-      "snap_bos": 0.0,
-      "snap_choch": 0.0
-    },
-    "n_train": 146,
-    "n_test": 63
-  },
-  "gbm_bq": {
-    "model": "LightGBM",
-    "r2": -0.006,
-    "mae": 20.6906,
-    "importance": {
-      "raw_score": 1.0,
+      "raw_score": 0.046413502109704644,
       "r1_price": 0.0,
       "sv_hit": 0.0,
       "hvn_hit": 0.0,
@@ -236,195 +325,152 @@
       "wick_rejection": 0.0,
       "equal_lows": 0.0,
       "price_ok": 0.0,
+      "snap_atr": 0.02531645569620253,
+      "snap_wick_ratio": 0.08016877637130802,
+      "snap_compression": 0.06751054852320675,
+      "snap_consol_len": 0.02531645569620253,
       "snap_bos": 0.0,
-      "snap_choch": 0.0
+      "snap_choch": 0.0,
+      "snap_pivot_str": 0.046413502109704644,
+      "snap_num_touches": 0.012658227848101266,
+      "snap_sweep_size": 0.02531645569620253,
+      "snap_vol_exp": 0.06751054852320675,
+      "snap_reclaim_spd": 0.004219409282700422,
+      "snap_dist_lo": 0.0,
+      "snap_prem_disc": 0.08438818565400844,
+      "feat_dist_swing_low": 0.02109704641350211,
+      "feat_dealing_range_pos": 0.0,
+      "feat_candles_since_bos": 0.03375527426160337,
+      "feat_dist_last_bos": 0.04219409282700422,
+      "feat_sweep_depth_pct": 0.0,
+      "feat_equal_lows_count": 0.0,
+      "feat_vol_spike_ratio": 0.016877637130801686,
+      "feat_candles_since_sweep": 0.016877637130801686,
+      "feat_accumulation_score": 0.016877637130801686,
+      "feat_consec_red": 0.0,
+      "feat_down_days_pct": 0.04219409282700422,
+      "feat_atr_compression": 0.0,
+      "feat_vol_contraction": 0.10126582278481013,
+      "feat_dist_20d_low": 0.0,
+      "feat_dist_50d_low": 0.05063291139240506,
+      "feat_dist_52w_low": 0.1518987341772152,
+      "feat_vwap_dist": 0.02109704641350211
     },
-    "n_train": 146,
-    "n_test": 63
+    "n_train": 72,
+    "n_test": 32
   },
-  "model_comparison_mfe": {
-    "target": "mfe_20d",
-    "best_model": "LightGBM",
-    "best_r2": -0.243,
-    "rf": {
-      "model": "RandomForest",
-      "r2": -0.799,
-      "mae": 0.0874,
-      "importance": {
-        "raw_score": -0.22604362155638794,
-        "r1_price": -0.07364930564540555,
-        "sv_hit": 2.960594732333751e-17,
-        "hvn_hit": 2.960594732333751e-17,
-        "rsi_div": 1.4802973661668754e-17,
-        "macd_div": -1.4802973661668754e-17,
-        "htf_hh": 0.0,
-        "htf_hl": 2.960594732333751e-17,
-        "sweep_detected": 0.0,
-        "wick_rejection": 0.0,
-        "equal_lows": 1.4802973661668754e-17,
-        "price_ok": 0.0,
-        "snap_bos": 5.921189464667501e-17,
-        "snap_choch": 0.0
-      },
-      "n_train": 146,
-      "n_test": 63
-    },
-    "gbm": {
-      "model": "LightGBM",
-      "r2": -0.243,
-      "mae": 0.0733,
-      "importance": {
-        "raw_score": 0.9166666666666666,
-        "r1_price": 0.08333333333333333,
-        "sv_hit": 0.0,
-        "hvn_hit": 0.0,
-        "rsi_div": 0.0,
-        "macd_div": 0.0,
-        "htf_hh": 0.0,
-        "htf_hl": 0.0,
-        "sweep_detected": 0.0,
-        "wick_rejection": 0.0,
-        "equal_lows": 0.0,
-        "price_ok": 0.0,
-        "snap_bos": 0.0,
-        "snap_choch": 0.0
-      },
-      "n_train": 146,
-      "n_test": 63
-    },
-    "xgb": {
-      "model": "XGBoost",
-      "r2": -0.249,
-      "mae": 0.0735,
-      "importance": {
-        "raw_score": "0.60913604",
-        "r1_price": "0.39086393",
-        "sv_hit": "0.0",
-        "hvn_hit": "0.0",
-        "rsi_div": "0.0",
-        "macd_div": "0.0",
-        "htf_hh": "0.0",
-        "htf_hl": "0.0",
-        "sweep_detected": "0.0",
-        "wick_rejection": "0.0",
-        "equal_lows": "0.0",
-        "price_ok": "0.0",
-        "snap_bos": "0.0",
-        "snap_choch": "0.0"
-      },
-      "n_train": 146,
-      "n_test": 63,
-      "_fitted": "XGBRegressor(base_score=None, booster=None, callbacks=None,\n             colsample_bylevel=None, colsample_bynode=None,\n             colsample_bytree=0.8, device=None, early_stopping_rounds=30,\n             enable_categorical=False, eval_metric='rmse', feature_types=None,\n             feature_weights=None, gamma=None, grow_policy=None,\n             importance_type=None, interaction_constraints=None,\n             learning_rate=0.05, max_bin=None, max_cat_threshold=None,\n             max_cat_to_onehot=None, max_delta_step=None, max_depth=4,\n             max_leaves=None, min_child_weight=None, missing=nan,\n             monotone_constraints=None, multi_strategy=None, n_estimators=300,\n             n_jobs=None, num_parallel_tree=None, ...)"
-    },
-    "shap_importance": {},
-    "ensemble_importance": {
-      "raw_score": 0.4333,
-      "r1_price": 0.1335,
+  "gbm_bq": {
+    "model": "LightGBM",
+    "r2": -0.029,
+    "mae": 25.6329,
+    "importance": {
+      "raw_score": 0.0,
+      "r1_price": 0.0,
       "sv_hit": 0.0,
       "hvn_hit": 0.0,
       "rsi_div": 0.0,
-      "macd_div": -0.0,
+      "macd_div": 0.0,
       "htf_hh": 0.0,
       "htf_hl": 0.0,
       "sweep_detected": 0.0,
       "wick_rejection": 0.0,
       "equal_lows": 0.0,
       "price_ok": 0.0,
+      "snap_atr": 0.2,
+      "snap_wick_ratio": 0.0,
+      "snap_compression": 0.1,
+      "snap_consol_len": 0.0,
       "snap_bos": 0.0,
-      "snap_choch": 0.0
+      "snap_choch": 0.0,
+      "snap_pivot_str": 0.0,
+      "snap_num_touches": 0.0,
+      "snap_sweep_size": 0.0,
+      "snap_vol_exp": 0.0,
+      "snap_reclaim_spd": 0.1,
+      "snap_dist_lo": 0.0,
+      "snap_prem_disc": 0.2,
+      "feat_dist_swing_low": 0.0,
+      "feat_dealing_range_pos": 0.0,
+      "feat_candles_since_bos": 0.1,
+      "feat_dist_last_bos": 0.1,
+      "feat_sweep_depth_pct": 0.0,
+      "feat_equal_lows_count": 0.0,
+      "feat_vol_spike_ratio": 0.0,
+      "feat_candles_since_sweep": 0.0,
+      "feat_accumulation_score": 0.1,
+      "feat_consec_red": 0.0,
+      "feat_down_days_pct": 0.0,
+      "feat_atr_compression": 0.0,
+      "feat_vol_contraction": 0.0,
+      "feat_dist_20d_low": 0.0,
+      "feat_dist_50d_low": 0.0,
+      "feat_dist_52w_low": 0.0,
+      "feat_vwap_dist": 0.1
     },
-    "top20_features": [
-      [
-        "raw_score",
-        0.4333
-      ],
-      [
-        "r1_price",
-        0.1335
-      ],
-      [
-        "sweep_detected",
-        0.0
-      ],
-      [
-        "wick_rejection",
-        0.0
-      ],
-      [
-        "htf_hh",
-        0.0
-      ],
-      [
-        "snap_choch",
-        0.0
-      ],
-      [
-        "macd_div",
-        0.0
-      ],
-      [
-        "htf_hl",
-        0.0
-      ],
-      [
-        "rsi_div",
-        0.0
-      ],
-      [
-        "hvn_hit",
-        0.0
-      ],
-      [
-        "price_ok",
-        0.0
-      ],
-      [
-        "equal_lows",
-        0.0
-      ],
-      [
-        "snap_bos",
-        0.0
-      ],
-      [
-        "sv_hit",
-        0.0
-      ]
-    ]
+    "n_train": 72,
+    "n_test": 32
   },
-  "model_comparison_bq": {
-    "target": "bq_score",
+  "model_comparison_mfe": {
+    "target": "mfe_20d",
     "best_model": "LightGBM",
-    "best_r2": -0.006,
+    "best_r2": 0.218,
     "rf": {
       "model": "RandomForest",
-      "r2": -0.219,
-      "mae": 22.9797,
+      "r2": 0.188,
+      "mae": 0.0945,
       "importance": {
-        "raw_score": -0.11091882288509947,
-        "r1_price": -0.10262625785041139,
-        "sv_hit": 0.0,
-        "hvn_hit": 7.401486830834377e-17,
-        "rsi_div": 0.0,
-        "macd_div": 7.401486830834377e-17,
-        "htf_hh": 2.960594732333751e-17,
-        "htf_hl": 4.4408920985006264e-17,
-        "sweep_detected": 8.881784197001253e-17,
-        "wick_rejection": 0.0,
-        "equal_lows": 1.4802973661668754e-17,
-        "price_ok": 7.401486830834377e-17,
-        "snap_bos": 1.4802973661668754e-17,
-        "snap_choch": 1.4802973661668754e-17
+        "raw_score": 0.004711831751427753,
+        "r1_price": 0.004189626451102709,
+        "sv_hit": -4.4408920985006264e-17,
+        "hvn_hit": -8.141635513917814e-17,
+        "rsi_div": -5.921189464667501e-17,
+        "macd_div": -5.921189464667501e-17,
+        "htf_hh": -7.401486830834377e-17,
+        "htf_hl": -7.401486830834377e-17,
+        "sweep_detected": -6.661338147750939e-17,
+        "wick_rejection": -1.0362081563168128e-16,
+        "equal_lows": -4.4408920985006264e-17,
+        "price_ok": -2.2204460492503132e-17,
+        "snap_atr": 0.026762061251690582,
+        "snap_wick_ratio": 0.0007866822216193799,
+        "snap_compression": -0.011941545935339493,
+        "snap_consol_len": 0.004556486934589432,
+        "snap_bos": -0.000797559931563363,
+        "snap_choch": 0.0008781038763373698,
+        "snap_pivot_str": 0.033326599333609486,
+        "snap_num_touches": 0.0036203850765396933,
+        "snap_sweep_size": 0.013470455480268321,
+        "snap_vol_exp": 0.05647831951198894,
+        "snap_reclaim_spd": 0.008325485697082202,
+        "snap_dist_lo": 0.0007065209171046879,
+        "snap_prem_disc": 0.002210136163053981,
+        "feat_dist_swing_low": 0.007658715509616395,
+        "feat_dealing_range_pos": -0.0026244247662982278,
+        "feat_candles_since_bos": -0.005011797572581641,
+        "feat_dist_last_bos": 0.003959232856310805,
+        "feat_sweep_depth_pct": 0.01797350505727843,
+        "feat_equal_lows_count": 0.0019869644880015896,
+        "feat_vol_spike_ratio": -0.0027590331539561735,
+        "feat_candles_since_sweep": 0.01349038610374731,
+        "feat_accumulation_score": 0.004209795820554466,
+        "feat_consec_red": 0.0012043803116368545,
+        "feat_down_days_pct": 0.0031761533368621048,
+        "feat_atr_compression": 0.004687432674345378,
+        "feat_vol_contraction": 0.003434052244152334,
+        "feat_dist_20d_low": -0.0024825057917289136,
+        "feat_dist_50d_low": 0.019894946861324172,
+        "feat_dist_52w_low": 0.14625313527226383,
+        "feat_vwap_dist": 0.0018915248301593745
       },
-      "n_train": 146,
-      "n_test": 63
+      "n_train": 72,
+      "n_test": 32
     },
     "gbm": {
       "model": "LightGBM",
-      "r2": -0.006,
-      "mae": 20.6906,
+      "r2": 0.218,
+      "mae": 0.0926,
       "importance": {
-        "raw_score": 1.0,
+        "raw_score": 0.046413502109704644,
         "r1_price": 0.0,
         "sv_hit": 0.0,
         "hvn_hit": 0.0,
@@ -436,19 +482,47 @@
         "wick_rejection": 0.0,
         "equal_lows": 0.0,
         "price_ok": 0.0,
+        "snap_atr": 0.02531645569620253,
+        "snap_wick_ratio": 0.08016877637130802,
+        "snap_compression": 0.06751054852320675,
+        "snap_consol_len": 0.02531645569620253,
         "snap_bos": 0.0,
-        "snap_choch": 0.0
+        "snap_choch": 0.0,
+        "snap_pivot_str": 0.046413502109704644,
+        "snap_num_touches": 0.012658227848101266,
+        "snap_sweep_size": 0.02531645569620253,
+        "snap_vol_exp": 0.06751054852320675,
+        "snap_reclaim_spd": 0.004219409282700422,
+        "snap_dist_lo": 0.0,
+        "snap_prem_disc": 0.08438818565400844,
+        "feat_dist_swing_low": 0.02109704641350211,
+        "feat_dealing_range_pos": 0.0,
+        "feat_candles_since_bos": 0.03375527426160337,
+        "feat_dist_last_bos": 0.04219409282700422,
+        "feat_sweep_depth_pct": 0.0,
+        "feat_equal_lows_count": 0.0,
+        "feat_vol_spike_ratio": 0.016877637130801686,
+        "feat_candles_since_sweep": 0.016877637130801686,
+        "feat_accumulation_score": 0.016877637130801686,
+        "feat_consec_red": 0.0,
+        "feat_down_days_pct": 0.04219409282700422,
+        "feat_atr_compression": 0.0,
+        "feat_vol_contraction": 0.10126582278481013,
+        "feat_dist_20d_low": 0.0,
+        "feat_dist_50d_low": 0.05063291139240506,
+        "feat_dist_52w_low": 0.1518987341772152,
+        "feat_vwap_dist": 0.02109704641350211
       },
-      "n_train": 146,
-      "n_test": 63
+      "n_train": 72,
+      "n_test": 32
     },
     "xgb": {
       "model": "XGBoost",
-      "r2": -0.008,
-      "mae": 20.6859,
+      "r2": 0.192,
+      "mae": 0.0944,
       "importance": {
-        "raw_score": "0.59408367",
-        "r1_price": "0.40591636",
+        "raw_score": "0.014947045",
+        "r1_price": "0.010656651",
         "sv_hit": "0.0",
         "hvn_hit": "0.0",
         "rsi_div": "0.0",
@@ -459,17 +533,329 @@
         "wick_rejection": "0.0",
         "equal_lows": "0.0",
         "price_ok": "0.0",
+        "snap_atr": "0.01639482",
+        "snap_wick_ratio": "0.060750265",
+        "snap_compression": "0.0295327",
+        "snap_consol_len": "0.020482754",
         "snap_bos": "0.0",
-        "snap_choch": "0.0"
+        "snap_choch": "0.0039119893",
+        "snap_pivot_str": "0.035931744",
+        "snap_num_touches": "0.040041596",
+        "snap_sweep_size": "0.03911443",
+        "snap_vol_exp": "0.05521551",
+        "snap_reclaim_spd": "0.029484188",
+        "snap_dist_lo": "0.020575088",
+        "snap_prem_disc": "0.032443985",
+        "feat_dist_swing_low": "0.024571676",
+        "feat_dealing_range_pos": "0.039947137",
+        "feat_candles_since_bos": "0.05874222",
+        "feat_dist_last_bos": "0.03383169",
+        "feat_sweep_depth_pct": "0.05134417",
+        "feat_equal_lows_count": "0.011862166",
+        "feat_vol_spike_ratio": "0.023158614",
+        "feat_candles_since_sweep": "0.03388155",
+        "feat_accumulation_score": "0.027813287",
+        "feat_consec_red": "0.02084908",
+        "feat_down_days_pct": "0.017548345",
+        "feat_atr_compression": "0.067200705",
+        "feat_vol_contraction": "0.03597887",
+        "feat_dist_20d_low": "0.0",
+        "feat_dist_50d_low": "0.046105333",
+        "feat_dist_52w_low": "0.06026061",
+        "feat_vwap_dist": "0.03742168"
       },
-      "n_train": 146,
-      "n_test": 63,
+      "n_train": 72,
+      "n_test": 32,
       "_fitted": "XGBRegressor(base_score=None, booster=None, callbacks=None,\n             colsample_bylevel=None, colsample_bynode=None,\n             colsample_bytree=0.8, device=None, early_stopping_rounds=30,\n             enable_categorical=False, eval_metric='rmse', feature_types=None,\n             feature_weights=None, gamma=None, grow_policy=None,\n             importance_type=None, interaction_constraints=None,\n             learning_rate=0.05, max_bin=None, max_cat_threshold=None,\n             max_cat_to_onehot=None, max_delta_step=None, max_depth=4,\n             max_leaves=None, min_child_weight=None, missing=nan,\n             monotone_constraints=None, multi_strategy=None, n_estimators=300,\n             n_jobs=None, num_parallel_tree=None, ...)"
     },
     "shap_importance": {},
     "ensemble_importance": {
-      "raw_score": 0.4944,
-      "r1_price": 0.1011,
+      "raw_score": 0.022,
+      "r1_price": 0.0049,
+      "sv_hit": -0.0,
+      "hvn_hit": -0.0,
+      "rsi_div": -0.0,
+      "macd_div": -0.0,
+      "htf_hh": -0.0,
+      "htf_hl": -0.0,
+      "sweep_detected": -0.0,
+      "wick_rejection": -0.0,
+      "equal_lows": -0.0,
+      "price_ok": -0.0,
+      "snap_atr": 0.0228,
+      "snap_wick_ratio": 0.0472,
+      "snap_compression": 0.0284,
+      "snap_consol_len": 0.0168,
+      "snap_bos": -0.0003,
+      "snap_choch": 0.0016,
+      "snap_pivot_str": 0.0386,
+      "snap_num_touches": 0.0188,
+      "snap_sweep_size": 0.026,
+      "snap_vol_exp": 0.0597,
+      "snap_reclaim_spd": 0.014,
+      "snap_dist_lo": 0.0071,
+      "snap_prem_disc": 0.0397,
+      "feat_dist_swing_low": 0.0178,
+      "feat_dealing_range_pos": 0.0124,
+      "feat_candles_since_bos": 0.0292,
+      "feat_dist_last_bos": 0.0267,
+      "feat_sweep_depth_pct": 0.0231,
+      "feat_equal_lows_count": 0.0046,
+      "feat_vol_spike_ratio": 0.0124,
+      "feat_candles_since_sweep": 0.0214,
+      "feat_accumulation_score": 0.0163,
+      "feat_consec_red": 0.0074,
+      "feat_down_days_pct": 0.021,
+      "feat_atr_compression": 0.024,
+      "feat_vol_contraction": 0.0469,
+      "feat_dist_20d_low": -0.0008,
+      "feat_dist_50d_low": 0.0389,
+      "feat_dist_52w_low": 0.1195,
+      "feat_vwap_dist": 0.0201
+    },
+    "top20_features": [
+      [
+        "feat_dist_52w_low",
+        0.1195
+      ],
+      [
+        "snap_vol_exp",
+        0.0597
+      ],
+      [
+        "snap_wick_ratio",
+        0.0472
+      ],
+      [
+        "feat_vol_contraction",
+        0.0469
+      ],
+      [
+        "snap_prem_disc",
+        0.0397
+      ],
+      [
+        "feat_dist_50d_low",
+        0.0389
+      ],
+      [
+        "snap_pivot_str",
+        0.0386
+      ],
+      [
+        "feat_candles_since_bos",
+        0.0292
+      ],
+      [
+        "snap_compression",
+        0.0284
+      ],
+      [
+        "feat_dist_last_bos",
+        0.0267
+      ],
+      [
+        "snap_sweep_size",
+        0.026
+      ],
+      [
+        "feat_atr_compression",
+        0.024
+      ],
+      [
+        "feat_sweep_depth_pct",
+        0.0231
+      ],
+      [
+        "snap_atr",
+        0.0228
+      ],
+      [
+        "raw_score",
+        0.022
+      ],
+      [
+        "feat_candles_since_sweep",
+        0.0214
+      ],
+      [
+        "feat_down_days_pct",
+        0.021
+      ],
+      [
+        "feat_vwap_dist",
+        0.0201
+      ],
+      [
+        "snap_num_touches",
+        0.0188
+      ],
+      [
+        "feat_dist_swing_low",
+        0.0178
+      ]
+    ]
+  },
+  "model_comparison_bq": {
+    "target": "bq_score",
+    "best_model": "XGBoost",
+    "best_r2": -0.017,
+    "rf": {
+      "model": "RandomForest",
+      "r2": -0.039,
+      "mae": 25.1845,
+      "importance": {
+        "raw_score": 0.0029021417503676704,
+        "r1_price": 0.0030522437567057042,
+        "sv_hit": 1.6283271027835628e-16,
+        "hvn_hit": 1.924386576016938e-16,
+        "rsi_div": 2.220446049250313e-16,
+        "macd_div": 1.924386576016938e-16,
+        "htf_hh": 2.220446049250313e-16,
+        "htf_hl": 1.924386576016938e-16,
+        "sweep_detected": 1.6283271027835628e-16,
+        "wick_rejection": 2.0724163126336256e-16,
+        "equal_lows": 2.0724163126336256e-16,
+        "price_ok": 2.0724163126336256e-16,
+        "snap_atr": -0.01318838661852236,
+        "snap_wick_ratio": 0.006985023935820041,
+        "snap_compression": -0.028042796182276807,
+        "snap_consol_len": 0.0019145949819437587,
+        "snap_bos": -0.004008310060210185,
+        "snap_choch": 0.0013971192551872403,
+        "snap_pivot_str": 0.009727281806182564,
+        "snap_num_touches": 0.004489260094661019,
+        "snap_sweep_size": -0.005377376932058449,
+        "snap_vol_exp": -0.002742891304997371,
+        "snap_reclaim_spd": 0.008574524099572623,
+        "snap_dist_lo": -0.004551453431219713,
+        "snap_prem_disc": -0.00995821512218568,
+        "feat_dist_swing_low": -0.000318028176661637,
+        "feat_dealing_range_pos": -0.015872019145587134,
+        "feat_candles_since_bos": -0.00798901668324327,
+        "feat_dist_last_bos": 0.019797695283512946,
+        "feat_sweep_depth_pct": -0.005715223840846069,
+        "feat_equal_lows_count": -0.004521501013192827,
+        "feat_vol_spike_ratio": -0.009709160752215062,
+        "feat_candles_since_sweep": 0.030798868904835696,
+        "feat_accumulation_score": 0.000990531130561593,
+        "feat_consec_red": -0.0009809572283483892,
+        "feat_down_days_pct": -0.00845091521322067,
+        "feat_atr_compression": -0.042363822018067016,
+        "feat_vol_contraction": -0.027018122446059428,
+        "feat_dist_20d_low": -0.005511065001203071,
+        "feat_dist_50d_low": -0.0016785403346205817,
+        "feat_dist_52w_low": 0.038671110132748036,
+        "feat_vwap_dist": 0.00032771233049196563
+      },
+      "n_train": 72,
+      "n_test": 32
+    },
+    "gbm": {
+      "model": "LightGBM",
+      "r2": -0.029,
+      "mae": 25.6329,
+      "importance": {
+        "raw_score": 0.0,
+        "r1_price": 0.0,
+        "sv_hit": 0.0,
+        "hvn_hit": 0.0,
+        "rsi_div": 0.0,
+        "macd_div": 0.0,
+        "htf_hh": 0.0,
+        "htf_hl": 0.0,
+        "sweep_detected": 0.0,
+        "wick_rejection": 0.0,
+        "equal_lows": 0.0,
+        "price_ok": 0.0,
+        "snap_atr": 0.2,
+        "snap_wick_ratio": 0.0,
+        "snap_compression": 0.1,
+        "snap_consol_len": 0.0,
+        "snap_bos": 0.0,
+        "snap_choch": 0.0,
+        "snap_pivot_str": 0.0,
+        "snap_num_touches": 0.0,
+        "snap_sweep_size": 0.0,
+        "snap_vol_exp": 0.0,
+        "snap_reclaim_spd": 0.1,
+        "snap_dist_lo": 0.0,
+        "snap_prem_disc": 0.2,
+        "feat_dist_swing_low": 0.0,
+        "feat_dealing_range_pos": 0.0,
+        "feat_candles_since_bos": 0.1,
+        "feat_dist_last_bos": 0.1,
+        "feat_sweep_depth_pct": 0.0,
+        "feat_equal_lows_count": 0.0,
+        "feat_vol_spike_ratio": 0.0,
+        "feat_candles_since_sweep": 0.0,
+        "feat_accumulation_score": 0.1,
+        "feat_consec_red": 0.0,
+        "feat_down_days_pct": 0.0,
+        "feat_atr_compression": 0.0,
+        "feat_vol_contraction": 0.0,
+        "feat_dist_20d_low": 0.0,
+        "feat_dist_50d_low": 0.0,
+        "feat_dist_52w_low": 0.0,
+        "feat_vwap_dist": 0.1
+      },
+      "n_train": 72,
+      "n_test": 32
+    },
+    "xgb": {
+      "model": "XGBoost",
+      "r2": -0.017,
+      "mae": 25.1496,
+      "importance": {
+        "raw_score": "0.00846866",
+        "r1_price": "0.0063041667",
+        "sv_hit": "0.0",
+        "hvn_hit": "0.0",
+        "rsi_div": "0.0",
+        "macd_div": "0.0",
+        "htf_hh": "0.0",
+        "htf_hl": "0.0",
+        "sweep_detected": "0.0",
+        "wick_rejection": "0.0",
+        "equal_lows": "0.0",
+        "price_ok": "0.0",
+        "snap_atr": "0.026468724",
+        "snap_wick_ratio": "0.021053618",
+        "snap_compression": "0.039552726",
+        "snap_consol_len": "0.028474253",
+        "snap_bos": "0.0029296265",
+        "snap_choch": "0.0055785896",
+        "snap_pivot_str": "0.0331713",
+        "snap_num_touches": "0.038797077",
+        "snap_sweep_size": "0.014026553",
+        "snap_vol_exp": "0.039210286",
+        "snap_reclaim_spd": "0.020411372",
+        "snap_dist_lo": "0.018502979",
+        "snap_prem_disc": "0.079878",
+        "feat_dist_swing_low": "0.015337714",
+        "feat_dealing_range_pos": "0.04546081",
+        "feat_candles_since_bos": "0.028439833",
+        "feat_dist_last_bos": "0.06602508",
+        "feat_sweep_depth_pct": "0.0062521165",
+        "feat_equal_lows_count": "0.0",
+        "feat_vol_spike_ratio": "0.037213404",
+        "feat_candles_since_sweep": "0.027461248",
+        "feat_accumulation_score": "0.01780346",
+        "feat_consec_red": "0.0782034",
+        "feat_down_days_pct": "0.019451749",
+        "feat_atr_compression": "0.04998632",
+        "feat_vol_contraction": "0.03708658",
+        "feat_dist_20d_low": "0.03639169",
+        "feat_dist_50d_low": "0.038977392",
+        "feat_dist_52w_low": "0.05244675",
+        "feat_vwap_dist": "0.060634494"
+      },
+      "n_train": 72,
+      "n_test": 32
+    },
+    "shap_importance": {
+      "raw_score": 0.0144,
+      "r1_price": 0.0027,
       "sv_hit": 0.0,
       "hvn_hit": 0.0,
       "rsi_div": 0.0,
@@ -480,65 +866,161 @@
       "wick_rejection": 0.0,
       "equal_lows": 0.0,
       "price_ok": 0.0,
+      "snap_atr": 0.0062,
+      "snap_wick_ratio": 0.0335,
+      "snap_compression": 0.0519,
+      "snap_consol_len": 0.0221,
       "snap_bos": 0.0,
-      "snap_choch": 0.0
+      "snap_choch": 0.0,
+      "snap_pivot_str": 0.0583,
+      "snap_num_touches": 0.0,
+      "snap_sweep_size": 0.0025,
+      "snap_vol_exp": 0.0142,
+      "snap_reclaim_spd": 0.0,
+      "snap_dist_lo": 0.0,
+      "snap_prem_disc": 0.1529,
+      "feat_dist_swing_low": 0.0035,
+      "feat_dealing_range_pos": 0.0,
+      "feat_candles_since_bos": 0.0671,
+      "feat_dist_last_bos": 0.0781,
+      "feat_sweep_depth_pct": 0.0,
+      "feat_equal_lows_count": 0.0,
+      "feat_vol_spike_ratio": 0.034,
+      "feat_candles_since_sweep": 0.0533,
+      "feat_accumulation_score": 0.0184,
+      "feat_consec_red": 0.0746,
+      "feat_down_days_pct": 0.0025,
+      "feat_atr_compression": 0.0473,
+      "feat_vol_contraction": 0.0786,
+      "feat_dist_20d_low": 0.0,
+      "feat_dist_50d_low": 0.1148,
+      "feat_dist_52w_low": 0.0294,
+      "feat_vwap_dist": 0.0396
+    },
+    "ensemble_importance": {
+      "raw_score": 0.0038,
+      "r1_price": 0.0031,
+      "sv_hit": 0.0,
+      "hvn_hit": 0.0,
+      "rsi_div": 0.0,
+      "macd_div": 0.0,
+      "htf_hh": 0.0,
+      "htf_hl": 0.0,
+      "sweep_detected": 0.0,
+      "wick_rejection": 0.0,
+      "equal_lows": 0.0,
+      "price_ok": 0.0,
+      "snap_atr": 0.0711,
+      "snap_wick_ratio": 0.0093,
+      "snap_compression": 0.0372,
+      "snap_consol_len": 0.0101,
+      "snap_bos": -0.0004,
+      "snap_choch": 0.0023,
+      "snap_pivot_str": 0.0143,
+      "snap_num_touches": 0.0144,
+      "snap_sweep_size": 0.0029,
+      "snap_vol_exp": 0.0122,
+      "snap_reclaim_spd": 0.043,
+      "snap_dist_lo": 0.0047,
+      "snap_prem_disc": 0.09,
+      "feat_dist_swing_low": 0.005,
+      "feat_dealing_range_pos": 0.0099,
+      "feat_candles_since_bos": 0.0402,
+      "feat_dist_last_bos": 0.0619,
+      "feat_sweep_depth_pct": 0.0002,
+      "feat_equal_lows_count": -0.0015,
+      "feat_vol_spike_ratio": 0.0092,
+      "feat_candles_since_sweep": 0.0194,
+      "feat_accumulation_score": 0.0396,
+      "feat_consec_red": 0.0257,
+      "feat_down_days_pct": 0.0037,
+      "feat_atr_compression": 0.0025,
+      "feat_vol_contraction": 0.0034,
+      "feat_dist_20d_low": 0.0103,
+      "feat_dist_50d_low": 0.0124,
+      "feat_dist_52w_low": 0.0304,
+      "feat_vwap_dist": 0.0537
     },
     "top20_features": [
       [
-        "raw_score",
-        0.4944
+        "snap_prem_disc",
+        0.1214
       ],
       [
-        "r1_price",
-        0.1011
+        "feat_dist_last_bos",
+        0.07
       ],
       [
-        "sweep_detected",
-        0.0
+        "feat_dist_50d_low",
+        0.0636
       ],
       [
-        "wick_rejection",
-        0.0
+        "feat_candles_since_bos",
+        0.0536
       ],
       [
-        "htf_hh",
-        0.0
+        "feat_consec_red",
+        0.0502
       ],
       [
-        "snap_choch",
-        0.0
+        "feat_vwap_dist",
+        0.0466
       ],
       [
-        "macd_div",
-        0.0
+        "snap_compression",
+        0.0446
       ],
       [
-        "htf_hl",
-        0.0
+        "snap_reclaim_spd",
+        0.043
       ],
       [
-        "rsi_div",
-        0.0
+        "feat_vol_contraction",
+        0.041
       ],
       [
-        "hvn_hit",
-        0.0
+        "snap_atr",
+        0.0386
       ],
       [
-        "price_ok",
-        0.0
+        "feat_candles_since_sweep",
+        0.0364
       ],
       [
-        "equal_lows",
-        0.0
+        "snap_pivot_str",
+        0.0363
       ],
       [
-        "snap_bos",
-        0.0
+        "feat_dist_52w_low",
+        0.0299
       ],
       [
-        "sv_hit",
-        0.0
+        "feat_accumulation_score",
+        0.029
+      ],
+      [
+        "feat_atr_compression",
+        0.0249
+      ],
+      [
+        "feat_vol_spike_ratio",
+        0.0216
+      ],
+      [
+        "snap_wick_ratio",
+        0.0214
+      ],
+      [
+        "snap_consol_len",
+        0.0161
+      ],
+      [
+        "snap_num_touches",
+        0.0144
+      ],
+      [
+        "snap_vol_exp",
+        0.0132
       ]
     ]
   },
@@ -547,7 +1029,7 @@
       "current": 30,
       "suggested": 39,
       "change": 9,
-      "reason": "importance rank vs MFE+BQ suggests higher weight; avg_importance=0.0470"
+      "reason": "importance rank vs MFE+BQ suggests higher weight; avg_importance=0.0029"
     },
     "r2_ob": {
       "current": 10,
@@ -876,10 +1358,19 @@
   "pattern_discovery": {
     "n_used": 209,
     "n_clusters": 4,
-    "snap_features_available": 2,
+    "snap_features_available": 11,
     "features_used": [
+      "snap_wick_ratio",
+      "snap_compression",
+      "snap_consol_len",
       "snap_bos",
       "snap_choch",
+      "snap_pivot_str",
+      "snap_num_touches",
+      "snap_sweep_size",
+      "snap_vol_exp",
+      "snap_dist_lo",
+      "snap_prem_disc",
       "sv_hit",
       "hvn_hit",
       "sweep_detected",
@@ -888,20 +1379,56 @@
     ],
     "clusters": [
       {
-        "cluster_id": 0,
-        "cluster_label": "Good Bottom",
-        "n": 209,
-        "mfe_mean": 0.1342,
-        "mae_mean": -0.0621,
-        "bq_mean": 54.62,
+        "cluster_id": 1,
+        "cluster_label": "Excellent Bottom",
+        "n": 29,
+        "mfe_mean": 0.1733,
+        "mae_mean": -0.0749,
+        "bq_mean": 58.76,
         "signatures": {
+          "snap_wick_ratio": {
+            "cluster_mean": 0.4402,
+            "diff_from_global": 0.0443
+          },
+          "snap_compression": {
+            "cluster_mean": 2.4401,
+            "diff_from_global": 1.1995
+          },
+          "snap_consol_len": {
+            "cluster_mean": 10.0345,
+            "diff_from_global": -2.6497
+          },
           "snap_bos": {
-            "cluster_mean": 0.0,
-            "diff_from_global": 0.0
+            "cluster_mean": 0.9655,
+            "diff_from_global": 0.5492
           },
           "snap_choch": {
-            "cluster_mean": 0.0,
-            "diff_from_global": 0.0
+            "cluster_mean": 0.8966,
+            "diff_from_global": 0.1932
+          },
+          "snap_pivot_str": {
+            "cluster_mean": 14.3079,
+            "diff_from_global": 7.7975
+          },
+          "snap_num_touches": {
+            "cluster_mean": 0.3448,
+            "diff_from_global": -2.081
+          },
+          "snap_sweep_size": {
+            "cluster_mean": -0.1637,
+            "diff_from_global": -0.1009
+          },
+          "snap_vol_exp": {
+            "cluster_mean": 1.8187,
+            "diff_from_global": 0.2073
+          },
+          "snap_dist_lo": {
+            "cluster_mean": 0.2426,
+            "diff_from_global": 0.1174
+          },
+          "snap_prem_disc": {
+            "cluster_mean": 0.8175,
+            "diff_from_global": 0.119
           },
           "sv_hit": {
             "cluster_mean": 0.0,
@@ -925,56 +1452,352 @@
           }
         },
         "top_features": [
-          "snap_bos",
-          "snap_choch",
-          "sv_hit",
-          "hvn_hit",
-          "sweep_detected"
+          "snap_pivot_str",
+          "snap_consol_len",
+          "snap_num_touches",
+          "snap_compression",
+          "snap_bos"
         ],
         "cls_breakdown": {
-          "Winner": 86,
-          "Huge Winner": 44,
-          "Loser": 34,
-          "Major Loser": 24,
-          "Neutral": 21
+          "Huge Winner": 13,
+          "Winner": 9,
+          "Major Loser": 5,
+          "Loser": 2
         },
         "symbol_dist": {
-          "RMDA.CA": 11,
-          "OIH.CA": 11,
-          "FWRY.CA": 11,
-          "EMFD.CA": 10,
-          "PHDC.CA": 10
+          "RMDA.CA": 4,
+          "HELI.CA": 4,
+          "ETEL.CA": 3,
+          "RAYA.CA": 3,
+          "ABUK.CA": 3
+        }
+      },
+      {
+        "cluster_id": 2,
+        "cluster_label": "Excellent Bottom",
+        "n": 67,
+        "mfe_mean": 0.1627,
+        "mae_mean": -0.041,
+        "bq_mean": 65.71,
+        "signatures": {
+          "snap_wick_ratio": {
+            "cluster_mean": 0.2822,
+            "diff_from_global": -0.1137
+          },
+          "snap_compression": {
+            "cluster_mean": 1.0367,
+            "diff_from_global": -0.2039
+          },
+          "snap_consol_len": {
+            "cluster_mean": 13.5672,
+            "diff_from_global": 0.883
+          },
+          "snap_bos": {
+            "cluster_mean": 0.0448,
+            "diff_from_global": -0.3715
+          },
+          "snap_choch": {
+            "cluster_mean": 0.9851,
+            "diff_from_global": 0.2817
+          },
+          "snap_pivot_str": {
+            "cluster_mean": 5.9257,
+            "diff_from_global": -0.5847
+          },
+          "snap_num_touches": {
+            "cluster_mean": 4.0299,
+            "diff_from_global": 1.604
+          },
+          "snap_sweep_size": {
+            "cluster_mean": -0.048,
+            "diff_from_global": 0.0148
+          },
+          "snap_vol_exp": {
+            "cluster_mean": 1.7824,
+            "diff_from_global": 0.171
+          },
+          "snap_dist_lo": {
+            "cluster_mean": 0.0805,
+            "diff_from_global": -0.0448
+          },
+          "snap_prem_disc": {
+            "cluster_mean": 0.6307,
+            "diff_from_global": -0.0679
+          },
+          "sv_hit": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          },
+          "hvn_hit": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          },
+          "sweep_detected": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          },
+          "wick_rejection": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          },
+          "equal_lows": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          }
+        },
+        "top_features": [
+          "snap_num_touches",
+          "snap_consol_len",
+          "snap_pivot_str",
+          "snap_bos",
+          "snap_choch"
+        ],
+        "cls_breakdown": {
+          "Winner": 33,
+          "Huge Winner": 17,
+          "Loser": 9,
+          "Neutral": 7,
+          "Major Loser": 1
+        },
+        "symbol_dist": {
+          "ORWE.CA": 7,
+          "ARCC.CA": 5,
+          "PHDC.CA": 5,
+          "EGAL.CA": 5,
+          "BTFH.CA": 5
+        }
+      },
+      {
+        "cluster_id": 0,
+        "cluster_label": "Good Bottom",
+        "n": 58,
+        "mfe_mean": 0.1097,
+        "mae_mean": -0.0644,
+        "bq_mean": 49.35,
+        "signatures": {
+          "snap_wick_ratio": {
+            "cluster_mean": 0.495,
+            "diff_from_global": 0.0991
+          },
+          "snap_compression": {
+            "cluster_mean": 1.1343,
+            "diff_from_global": -0.1063
+          },
+          "snap_consol_len": {
+            "cluster_mean": 14.6724,
+            "diff_from_global": 1.9882
+          },
+          "snap_bos": {
+            "cluster_mean": 0.1724,
+            "diff_from_global": -0.2439
+          },
+          "snap_choch": {
+            "cluster_mean": 0.0,
+            "diff_from_global": -0.7033
+          },
+          "snap_pivot_str": {
+            "cluster_mean": 2.3319,
+            "diff_from_global": -4.1785
+          },
+          "snap_num_touches": {
+            "cluster_mean": 2.9483,
+            "diff_from_global": 0.5224
+          },
+          "snap_sweep_size": {
+            "cluster_mean": -0.0224,
+            "diff_from_global": 0.0405
+          },
+          "snap_vol_exp": {
+            "cluster_mean": 1.0023,
+            "diff_from_global": -0.6091
+          },
+          "snap_dist_lo": {
+            "cluster_mean": 0.1092,
+            "diff_from_global": -0.016
+          },
+          "snap_prem_disc": {
+            "cluster_mean": 0.5915,
+            "diff_from_global": -0.1071
+          },
+          "sv_hit": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          },
+          "hvn_hit": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          },
+          "sweep_detected": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          },
+          "wick_rejection": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          },
+          "equal_lows": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          }
+        },
+        "top_features": [
+          "snap_pivot_str",
+          "snap_consol_len",
+          "snap_choch",
+          "snap_vol_exp",
+          "snap_num_touches"
+        ],
+        "cls_breakdown": {
+          "Winner": 28,
+          "Loser": 11,
+          "Major Loser": 7,
+          "Neutral": 7,
+          "Huge Winner": 5
+        },
+        "symbol_dist": {
+          "ADIB.CA": 5,
+          "EFID.CA": 5,
+          "GBCO.CA": 4,
+          "EAST.CA": 4,
+          "OIH.CA": 4
+        }
+      },
+      {
+        "cluster_id": 3,
+        "cluster_label": "Good Bottom",
+        "n": 55,
+        "mfe_mean": 0.1047,
+        "mae_mean": -0.0788,
+        "bq_mean": 44.49,
+        "signatures": {
+          "snap_wick_ratio": {
+            "cluster_mean": 0.4064,
+            "diff_from_global": 0.0105
+          },
+          "snap_compression": {
+            "cluster_mean": 0.9686,
+            "diff_from_global": -0.272
+          },
+          "snap_consol_len": {
+            "cluster_mean": 10.9091,
+            "diff_from_global": -1.7751
+          },
+          "snap_bos": {
+            "cluster_mean": 0.8364,
+            "diff_from_global": 0.4201
+          },
+          "snap_choch": {
+            "cluster_mean": 1.0,
+            "diff_from_global": 0.2967
+          },
+          "snap_pivot_str": {
+            "cluster_mean": 7.5176,
+            "diff_from_global": 1.0073
+          },
+          "snap_num_touches": {
+            "cluster_mean": 1.0182,
+            "diff_from_global": -1.4077
+          },
+          "snap_sweep_size": {
+            "cluster_mean": -0.0705,
+            "diff_from_global": -0.0076
+          },
+          "snap_vol_exp": {
+            "cluster_mean": 1.9361,
+            "diff_from_global": 0.3247
+          },
+          "snap_dist_lo": {
+            "cluster_mean": 0.1348,
+            "diff_from_global": 0.0096
+          },
+          "snap_prem_disc": {
+            "cluster_mean": 0.8315,
+            "diff_from_global": 0.1329
+          },
+          "sv_hit": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          },
+          "hvn_hit": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          },
+          "sweep_detected": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          },
+          "wick_rejection": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          },
+          "equal_lows": {
+            "cluster_mean": 0.0,
+            "diff_from_global": 0.0
+          }
+        },
+        "top_features": [
+          "snap_consol_len",
+          "snap_num_touches",
+          "snap_pivot_str",
+          "snap_bos",
+          "snap_vol_exp"
+        ],
+        "cls_breakdown": {
+          "Winner": 16,
+          "Loser": 12,
+          "Major Loser": 11,
+          "Huge Winner": 9,
+          "Neutral": 7
+        },
+        "symbol_dist": {
+          "OIH.CA": 5,
+          "EMFD.CA": 4,
+          "FWRY.CA": 4,
+          "EFID.CA": 3,
+          "COMI.CA": 3
         }
       }
     ],
     "top_discriminating_features": [
       [
-        "snap_bos",
-        0.0
+        "snap_dist_lo",
+        0.869
+      ],
+      [
+        "snap_sweep_size",
+        0.8595
       ],
       [
         "snap_choch",
-        0.0
+        0.8366
       ],
       [
-        "sv_hit",
-        0.0
+        "snap_pivot_str",
+        0.7201
       ],
       [
-        "hvn_hit",
-        0.0
+        "snap_bos",
+        0.6629
       ],
       [
-        "sweep_detected",
-        0.0
+        "snap_compression",
+        0.5073
       ],
       [
-        "wick_rejection",
-        0.0
+        "snap_prem_disc",
+        0.37
       ],
       [
-        "equal_lows",
-        0.0
+        "snap_num_touches",
+        0.3228
+      ],
+      [
+        "snap_vol_exp",
+        0.0816
+      ],
+      [
+        "snap_consol_len",
+        0.0726
       ]
     ],
     "mfe_distribution": {
@@ -1006,1465 +1829,1465 @@
     },
     "pca_coords": [
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -3.01,
+        "y": -0.195,
+        "cluster": 1,
         "mfe": 0.273,
         "symbol": "ETEL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.204,
+        "y": 1.303,
+        "cluster": 2,
         "mfe": 0.0388,
         "symbol": "EMFD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.149,
+        "y": -0.109,
+        "cluster": 3,
         "mfe": 0.1201,
         "symbol": "PHDC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -3.133,
+        "y": 0.825,
+        "cluster": 3,
         "mfe": 0.0093,
         "symbol": "EFID.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -3.254,
+        "y": -2.141,
+        "cluster": 1,
         "mfe": 0.3137,
         "symbol": "RAYA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.107,
+        "y": -1.94,
         "cluster": 0,
         "mfe": 0.0642,
         "symbol": "GBCO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.707,
+        "y": 2.637,
+        "cluster": 3,
         "mfe": 0.3762,
         "symbol": "HELI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.602,
+        "y": 2.991,
+        "cluster": 2,
         "mfe": 0.1034,
         "symbol": "ARCC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.026,
+        "y": 1.343,
+        "cluster": 2,
         "mfe": 0.0449,
         "symbol": "ORWE.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -3.14,
+        "y": 0.122,
+        "cluster": 1,
         "mfe": 0.0255,
         "symbol": "ISPH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.34,
+        "y": 0.987,
+        "cluster": 3,
         "mfe": 0.3805,
         "symbol": "RMDA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.736,
+        "y": 0.161,
+        "cluster": 3,
         "mfe": 0.0157,
         "symbol": "OIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.331,
+        "y": -0.575,
+        "cluster": 3,
         "mfe": 0.0663,
         "symbol": "COMI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.183,
+        "y": -0.636,
+        "cluster": 3,
         "mfe": 0.041,
         "symbol": "EAST.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -3.988,
+        "y": -0.727,
+        "cluster": 1,
         "mfe": 0.0922,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.215,
+        "y": 0.699,
+        "cluster": 2,
         "mfe": 0.1745,
         "symbol": "ORHD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.166,
+        "y": -0.99,
+        "cluster": 3,
         "mfe": 0.0127,
         "symbol": "JUFO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.12,
+        "y": 1.462,
+        "cluster": 2,
         "mfe": 0.1666,
         "symbol": "MCQE.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.845,
+        "y": -0.197,
+        "cluster": 3,
         "mfe": 0.0946,
         "symbol": "TMGH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.011,
+        "y": -3.775,
+        "cluster": 1,
         "mfe": 0.3052,
         "symbol": "RAYA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.156,
+        "y": -0.592,
+        "cluster": 1,
         "mfe": 0.049,
         "symbol": "ISPH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.827,
+        "y": -1.223,
         "cluster": 0,
         "mfe": 0.07,
         "symbol": "EAST.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.207,
+        "y": -1.359,
         "cluster": 0,
         "mfe": 0.1982,
         "symbol": "ADIB.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.579,
+        "y": 0.024,
+        "cluster": 2,
         "mfe": 0.1138,
         "symbol": "PHDC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.408,
+        "y": -0.883,
+        "cluster": 1,
         "mfe": 0.0245,
         "symbol": "HRHO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.2,
+        "y": -0.454,
         "cluster": 0,
         "mfe": 0.0836,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.3,
+        "y": -0.824,
         "cluster": 0,
         "mfe": 0.0242,
         "symbol": "OIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.82,
+        "y": -0.853,
         "cluster": 0,
         "mfe": 0.0958,
         "symbol": "TMGH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.069,
+        "y": -1.102,
         "cluster": 0,
         "mfe": 0.0325,
         "symbol": "EFIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -5.065,
+        "y": 4.055,
+        "cluster": 1,
         "mfe": 0.3502,
         "symbol": "RMDA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.323,
+        "y": -0.351,
         "cluster": 0,
         "mfe": 0.1304,
         "symbol": "CCAP.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.153,
+        "y": 0.387,
+        "cluster": 3,
         "mfe": 0.0227,
         "symbol": "EMFD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.939,
+        "y": -1.031,
         "cluster": 0,
         "mfe": 0.0034,
         "symbol": "EFID.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.033,
+        "y": -0.725,
+        "cluster": 3,
         "mfe": 0.2357,
         "symbol": "RAYA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.298,
+        "y": -1.658,
         "cluster": 0,
         "mfe": 0.0291,
         "symbol": "GBCO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.69,
+        "y": 1.837,
+        "cluster": 3,
         "mfe": 0.0885,
         "symbol": "ARCC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.432,
+        "y": 0.424,
+        "cluster": 3,
         "mfe": 0.1741,
         "symbol": "MCQE.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.899,
+        "y": -0.835,
+        "cluster": 3,
         "mfe": 0.0174,
         "symbol": "COMI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -5.421,
+        "y": 0.473,
+        "cluster": 1,
         "mfe": 0.0101,
         "symbol": "ETEL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.669,
+        "y": -0.421,
+        "cluster": 3,
         "mfe": 0.0319,
         "symbol": "EAST.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.229,
+        "y": -1.633,
+        "cluster": 1,
         "mfe": 0.0336,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.576,
+        "y": 2.719,
+        "cluster": 3,
         "mfe": 0.0048,
         "symbol": "ORWE.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.84,
+        "y": -0.927,
         "cluster": 0,
         "mfe": 0.0242,
         "symbol": "OIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.84,
+        "y": -1.675,
+        "cluster": 1,
         "mfe": 0.3305,
         "symbol": "ABUK.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.602,
+        "y": 1.371,
+        "cluster": 3,
         "mfe": 0.0717,
         "symbol": "ORHD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.369,
+        "y": -1.549,
         "cluster": 0,
         "mfe": 0.0392,
         "symbol": "EAST.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.651,
+        "y": 0.174,
+        "cluster": 3,
         "mfe": 0.0,
         "symbol": "EFIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.602,
+        "y": 1.374,
+        "cluster": 3,
         "mfe": 0.0181,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.365,
+        "y": -0.115,
+        "cluster": 2,
         "mfe": 0.0187,
         "symbol": "GBCO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.212,
+        "y": -0.941,
         "cluster": 0,
         "mfe": 0.0242,
         "symbol": "OIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.491,
+        "y": 0.455,
+        "cluster": 3,
         "mfe": 0.0267,
         "symbol": "TMGH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.111,
+        "y": -1.124,
+        "cluster": 3,
         "mfe": 0.0168,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.312,
+        "y": 0.783,
+        "cluster": 2,
         "mfe": 0.0222,
         "symbol": "ORWE.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.364,
+        "y": -1.716,
         "cluster": 0,
         "mfe": 0.4089,
         "symbol": "ABUK.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.738,
+        "y": -0.768,
         "cluster": 0,
         "mfe": 0.01,
         "symbol": "COMI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.322,
+        "y": -2.218,
         "cluster": 0,
         "mfe": 0.0093,
         "symbol": "ORHD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -4.172,
+        "y": 0.403,
+        "cluster": 1,
         "mfe": 0.2913,
         "symbol": "HELI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.595,
+        "y": 0.534,
+        "cluster": 3,
         "mfe": -0.0303,
         "symbol": "EAST.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 3.242,
+        "y": -0.823,
         "cluster": 0,
         "mfe": -0.0187,
         "symbol": "COMI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.798,
+        "y": -2.413,
         "cluster": 0,
         "mfe": -0.0085,
         "symbol": "ETEL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.517,
+        "y": -0.479,
+        "cluster": 2,
         "mfe": 0.3629,
         "symbol": "ABUK.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -4.342,
+        "y": -0.82,
+        "cluster": 1,
         "mfe": 0.2555,
         "symbol": "HELI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.094,
+        "y": 0.593,
+        "cluster": 2,
         "mfe": 0.0226,
         "symbol": "ARCC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.133,
+        "y": 0.761,
+        "cluster": 2,
         "mfe": 0.3532,
         "symbol": "EGAL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.019,
+        "y": -0.217,
+        "cluster": 2,
         "mfe": 0.0693,
         "symbol": "ARCC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -4.546,
+        "y": -3.518,
+        "cluster": 1,
         "mfe": 0.0994,
         "symbol": "RMDA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -3.606,
+        "y": 0.13,
+        "cluster": 1,
         "mfe": 0.2196,
         "symbol": "ABUK.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 3.039,
+        "y": -1.604,
         "cluster": 0,
         "mfe": 0.1106,
         "symbol": "ADIB.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -3.722,
+        "y": -3.603,
+        "cluster": 1,
         "mfe": 0.1212,
         "symbol": "RMDA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.292,
+        "y": 0.751,
+        "cluster": 2,
         "mfe": 0.2012,
         "symbol": "CCAP.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.624,
+        "y": 0.217,
+        "cluster": 2,
         "mfe": 0.0011,
         "symbol": "PHDC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.889,
+        "y": 1.782,
+        "cluster": 2,
         "mfe": 0.0188,
         "symbol": "EFID.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.682,
+        "y": -4.026,
+        "cluster": 1,
         "mfe": 0.1648,
         "symbol": "RMDA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.4,
+        "y": -0.292,
+        "cluster": 2,
         "mfe": 0.013,
         "symbol": "ORWE.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.023,
+        "y": -2.746,
+        "cluster": 1,
         "mfe": 0.1436,
         "symbol": "HELI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.718,
+        "y": -0.202,
         "cluster": 0,
         "mfe": 0.1709,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.595,
+        "y": 1.046,
+        "cluster": 2,
         "mfe": 0.165,
         "symbol": "COMI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.045,
+        "y": -0.982,
         "cluster": 0,
         "mfe": 0.0813,
         "symbol": "EMFD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.898,
+        "y": 0.256,
         "cluster": 0,
         "mfe": 0.0519,
         "symbol": "HRHO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.464,
+        "y": 0.278,
+        "cluster": 3,
         "mfe": 0.2778,
         "symbol": "OIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.69,
+        "y": 1.179,
+        "cluster": 2,
         "mfe": 0.2176,
         "symbol": "COMI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": -0.387,
+        "y": -1.582,
         "cluster": 0,
         "mfe": 0.1095,
         "symbol": "EGAL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -3.847,
+        "y": -1.381,
+        "cluster": 1,
         "mfe": 0.0107,
         "symbol": "ABUK.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.093,
+        "y": -0.706,
         "cluster": 0,
         "mfe": 0.1424,
         "symbol": "EMFD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.08,
+        "y": 0.007,
+        "cluster": 2,
         "mfe": 0.2534,
         "symbol": "ORHD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.514,
+        "y": -0.555,
         "cluster": 0,
         "mfe": 0.0654,
         "symbol": "EFID.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -3.412,
+        "y": -1.58,
+        "cluster": 1,
         "mfe": 0.0542,
         "symbol": "HELI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.616,
+        "y": 0.956,
+        "cluster": 3,
         "mfe": 0.2481,
         "symbol": "OIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.654,
+        "y": -0.453,
+        "cluster": 3,
         "mfe": 0.1903,
         "symbol": "CCAP.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.82,
+        "y": 1.154,
+        "cluster": 2,
         "mfe": 0.1368,
         "symbol": "EFIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.893,
+        "y": -0.06,
+        "cluster": 2,
         "mfe": 0.1914,
         "symbol": "ADIB.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.754,
+        "y": 0.802,
+        "cluster": 2,
         "mfe": 0.1615,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.387,
+        "y": 0.318,
+        "cluster": 2,
         "mfe": 0.3793,
         "symbol": "PHDC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.838,
+        "y": 0.418,
+        "cluster": 2,
         "mfe": 0.0814,
         "symbol": "HRHO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 3.327,
+        "y": 0.875,
+        "cluster": 2,
         "mfe": 0.0756,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.947,
+        "y": 3.143,
+        "cluster": 2,
         "mfe": 0.2467,
         "symbol": "ARCC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 2.707,
+        "y": 0.94,
+        "cluster": 2,
         "mfe": 0.0401,
         "symbol": "ORWE.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.204,
+        "y": 0.658,
+        "cluster": 2,
         "mfe": 0.1392,
         "symbol": "EMFD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 3.16,
+        "y": -0.736,
         "cluster": 0,
         "mfe": 0.2304,
         "symbol": "ADIB.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.505,
+        "y": 0.434,
         "cluster": 0,
         "mfe": 0.4303,
         "symbol": "PHDC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.468,
+        "y": 1.688,
+        "cluster": 3,
         "mfe": 0.1874,
         "symbol": "ARCC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.089,
+        "y": 1.841,
+        "cluster": 2,
         "mfe": 0.1481,
         "symbol": "ETEL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.97,
+        "y": -1.815,
         "cluster": 0,
         "mfe": 0.1283,
         "symbol": "ABUK.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.584,
+        "y": 0.892,
+        "cluster": 2,
         "mfe": 0.1628,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.714,
+        "y": -0.003,
+        "cluster": 3,
         "mfe": 0.2206,
         "symbol": "OIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.194,
+        "y": 0.405,
+        "cluster": 2,
         "mfe": 0.2639,
         "symbol": "TMGH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 3.44,
+        "y": 0.206,
         "cluster": 0,
         "mfe": 0.1752,
         "symbol": "EFIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.52,
+        "y": 0.87,
+        "cluster": 2,
         "mfe": 0.2588,
         "symbol": "ADIB.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 2.985,
+        "y": 1.63,
+        "cluster": 2,
         "mfe": 0.0753,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.161,
+        "y": 0.179,
+        "cluster": 2,
         "mfe": 0.1827,
         "symbol": "COMI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.198,
+        "y": 1.65,
+        "cluster": 3,
         "mfe": 0.1656,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.596,
+        "y": 0.216,
         "cluster": 0,
         "mfe": 0.1816,
         "symbol": "EMFD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 2.224,
+        "y": 0.827,
+        "cluster": 2,
         "mfe": 0.3309,
         "symbol": "ORHD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 2.105,
+        "y": 0.303,
+        "cluster": 2,
         "mfe": 0.1423,
         "symbol": "HRHO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 2.109,
+        "y": 1.105,
+        "cluster": 2,
         "mfe": 0.2972,
         "symbol": "RAYA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.715,
+        "y": -1.455,
         "cluster": 0,
         "mfe": 0.2714,
         "symbol": "HELI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 2.02,
+        "y": 0.482,
+        "cluster": 2,
         "mfe": 0.1711,
         "symbol": "RMDA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.071,
+        "y": 0.81,
+        "cluster": 2,
         "mfe": 0.1209,
         "symbol": "EAST.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.595,
+        "y": 2.186,
+        "cluster": 2,
         "mfe": 0.737,
         "symbol": "PHDC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.847,
+        "y": 0.889,
+        "cluster": 3,
         "mfe": 0.341,
         "symbol": "ORHD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.947,
+        "y": 2.651,
+        "cluster": 2,
         "mfe": 0.1411,
         "symbol": "EFID.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.629,
+        "y": 1.879,
+        "cluster": 2,
         "mfe": 0.1273,
         "symbol": "JUFO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.4,
+        "y": 1.579,
+        "cluster": 2,
         "mfe": 0.1221,
         "symbol": "GBCO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.948,
+        "y": 0.933,
+        "cluster": 2,
         "mfe": 0.0563,
         "symbol": "ORWE.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.855,
+        "y": 2.201,
+        "cluster": 2,
         "mfe": 0.1858,
         "symbol": "ISPH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.162,
+        "y": 1.639,
+        "cluster": 2,
         "mfe": 0.1409,
         "symbol": "MCQE.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.305,
+        "y": 0.404,
+        "cluster": 2,
         "mfe": 0.0734,
         "symbol": "EGAL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.851,
+        "y": 0.814,
+        "cluster": 2,
         "mfe": 0.2182,
         "symbol": "EMFD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.785,
+        "y": 0.831,
+        "cluster": 3,
         "mfe": 0.1366,
         "symbol": "JUFO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.239,
+        "y": 1.741,
+        "cluster": 2,
         "mfe": 0.3477,
         "symbol": "RAYA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.519,
+        "y": 1.465,
+        "cluster": 2,
         "mfe": 0.6881,
         "symbol": "PHDC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 2.729,
+        "y": 1.331,
+        "cluster": 2,
         "mfe": 0.1168,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.187,
+        "y": 0.668,
+        "cluster": 2,
         "mfe": 0.2567,
         "symbol": "HELI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.419,
+        "y": 0.948,
+        "cluster": 2,
         "mfe": 0.1768,
         "symbol": "ISPH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -3.508,
+        "y": 0.285,
+        "cluster": 1,
         "mfe": 0.0817,
         "symbol": "ETEL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.838,
+        "y": -1.556,
         "cluster": 0,
         "mfe": 0.1237,
         "symbol": "EGAL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.145,
+        "y": 0.227,
+        "cluster": 3,
         "mfe": 0.1109,
         "symbol": "EFIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.242,
+        "y": 2.653,
+        "cluster": 3,
         "mfe": 0.1038,
         "symbol": "EFID.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.079,
+        "y": 0.295,
+        "cluster": 2,
         "mfe": 0.1625,
         "symbol": "RMDA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.899,
+        "y": 0.977,
+        "cluster": 3,
         "mfe": 0.0506,
         "symbol": "OIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.906,
+        "y": -0.187,
+        "cluster": 1,
         "mfe": 0.0894,
         "symbol": "ADIB.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.56,
+        "y": 1.449,
+        "cluster": 3,
         "mfe": 0.1368,
         "symbol": "RMDA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 3.62,
+        "y": -0.791,
         "cluster": 0,
         "mfe": 0.1774,
         "symbol": "EGAL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.013,
+        "y": 0.766,
+        "cluster": 3,
         "mfe": 0.039,
         "symbol": "ABUK.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.125,
+        "y": 1.866,
+        "cluster": 3,
         "mfe": 0.1622,
         "symbol": "EMFD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 3.237,
+        "y": 0.889,
+        "cluster": 2,
         "mfe": 0.1409,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.124,
+        "y": 0.477,
+        "cluster": 3,
         "mfe": 0.0751,
         "symbol": "GBCO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.435,
+        "y": 0.308,
+        "cluster": 2,
         "mfe": 0.2497,
         "symbol": "HELI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.83,
+        "y": -0.827,
         "cluster": 0,
         "mfe": 0.4856,
         "symbol": "CCAP.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.374,
+        "y": -0.237,
+        "cluster": 3,
         "mfe": 0.0712,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -3.389,
+        "y": 0.151,
+        "cluster": 1,
         "mfe": 0.0874,
         "symbol": "TMGH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -5.475,
+        "y": -0.524,
+        "cluster": 1,
         "mfe": 0.3384,
         "symbol": "PHDC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -3.508,
+        "y": -0.719,
+        "cluster": 1,
         "mfe": 0.2417,
         "symbol": "ORHD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.118,
+        "y": -0.083,
+        "cluster": 2,
         "mfe": 0.0921,
         "symbol": "OIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.337,
+        "y": -0.169,
+        "cluster": 3,
         "mfe": 0.0165,
         "symbol": "ABUK.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.887,
+        "y": -0.992,
         "cluster": 0,
         "mfe": 0.1305,
         "symbol": "ADIB.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.199,
+        "y": 0.273,
+        "cluster": 3,
         "mfe": 0.0044,
         "symbol": "EFID.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.961,
+        "y": -1.128,
         "cluster": 0,
         "mfe": 0.1166,
         "symbol": "GBCO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.776,
+        "y": -0.4,
         "cluster": 0,
         "mfe": 0.1481,
         "symbol": "RMDA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.58,
+        "y": -0.882,
         "cluster": 0,
         "mfe": 0.0976,
         "symbol": "EFIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.967,
+        "y": -1.351,
         "cluster": 0,
         "mfe": 0.0993,
         "symbol": "ARCC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.041,
+        "y": -0.896,
         "cluster": 0,
         "mfe": 0.0736,
         "symbol": "COMI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.485,
+        "y": -0.255,
+        "cluster": 3,
         "mfe": 0.0897,
         "symbol": "ETEL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.791,
+        "y": 0.295,
+        "cluster": 2,
         "mfe": 0.1261,
         "symbol": "EGAL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.859,
+        "y": -1.798,
         "cluster": 0,
         "mfe": 0.0365,
         "symbol": "EAST.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.348,
+        "y": -0.974,
         "cluster": 0,
         "mfe": 0.1179,
         "symbol": "ADIB.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.757,
+        "y": -0.854,
         "cluster": 0,
         "mfe": 0.1358,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.911,
+        "y": -0.744,
+        "cluster": 1,
         "mfe": 0.4155,
         "symbol": "PHDC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.705,
+        "y": -0.944,
+        "cluster": 3,
         "mfe": 0.2798,
         "symbol": "ORHD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.624,
+        "y": -1.683,
         "cluster": 0,
         "mfe": 0.0203,
         "symbol": "EFID.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.081,
+        "y": 0.209,
+        "cluster": 3,
         "mfe": 0.0767,
         "symbol": "HRHO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.532,
+        "y": -1.231,
         "cluster": 0,
         "mfe": 0.0658,
         "symbol": "JUFO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.516,
+        "y": -0.104,
+        "cluster": 3,
         "mfe": 0.0921,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -3.764,
+        "y": 0.124,
+        "cluster": 1,
         "mfe": 0.2177,
         "symbol": "RAYA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.233,
+        "y": 0.943,
+        "cluster": 2,
         "mfe": 0.0848,
         "symbol": "ORWE.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.761,
+        "y": -0.667,
         "cluster": 0,
         "mfe": 0.1395,
         "symbol": "ISPH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.172,
+        "y": 0.063,
+        "cluster": 2,
         "mfe": 0.0779,
         "symbol": "OIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.857,
+        "y": -0.811,
         "cluster": 0,
         "mfe": 0.109,
         "symbol": "GBCO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.686,
+        "y": -0.392,
         "cluster": 0,
         "mfe": 0.1507,
         "symbol": "RMDA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 3.015,
+        "y": -0.919,
         "cluster": 0,
         "mfe": 0.0864,
         "symbol": "EAST.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 0.049,
+        "y": -0.657,
         "cluster": 0,
         "mfe": 0.0444,
         "symbol": "ABUK.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.085,
+        "y": -1.29,
         "cluster": 0,
         "mfe": 0.1159,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.868,
+        "y": -0.424,
+        "cluster": 3,
         "mfe": 0.1549,
         "symbol": "EMFD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.436,
+        "y": -1.41,
         "cluster": 0,
         "mfe": 0.0201,
         "symbol": "EFID.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.459,
+        "y": 0.411,
+        "cluster": 3,
         "mfe": 0.0525,
         "symbol": "HRHO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.445,
+        "y": 0.462,
+        "cluster": 2,
         "mfe": 0.0885,
         "symbol": "BTFH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.76,
+        "y": -0.675,
+        "cluster": 3,
         "mfe": 0.2719,
         "symbol": "RAYA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.077,
+        "y": 0.324,
+        "cluster": 3,
         "mfe": 0.0366,
         "symbol": "MCQE.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.276,
+        "y": -0.618,
         "cluster": 0,
         "mfe": 0.0487,
         "symbol": "COMI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.099,
+        "y": -0.249,
         "cluster": 0,
         "mfe": 0.1671,
         "symbol": "ISPH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.515,
+        "y": -0.705,
         "cluster": 0,
         "mfe": 0.1558,
         "symbol": "RMDA.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.188,
+        "y": 2.321,
+        "cluster": 3,
         "mfe": 0.0536,
         "symbol": "ETEL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -1.336,
+        "y": 1.08,
+        "cluster": 3,
         "mfe": 0.0602,
         "symbol": "FWRY.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.744,
+        "y": -1.355,
         "cluster": 0,
         "mfe": 0.0363,
         "symbol": "EFID.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 2.038,
+        "y": -1.161,
         "cluster": 0,
         "mfe": 0.0761,
         "symbol": "JUFO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.533,
+        "y": 0.277,
+        "cluster": 3,
         "mfe": 0.0692,
         "symbol": "GBCO.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.006,
+        "y": -0.163,
+        "cluster": 1,
         "mfe": 0.2627,
         "symbol": "CCAP.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 2.043,
+        "y": 0.763,
+        "cluster": 2,
         "mfe": 0.1311,
         "symbol": "EGAL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.177,
+        "y": 1.716,
+        "cluster": 2,
         "mfe": 0.0655,
         "symbol": "ADIB.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -2.436,
+        "y": 0.044,
+        "cluster": 3,
         "mfe": 0.125,
         "symbol": "EMFD.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.301,
+        "y": 0.523,
+        "cluster": 2,
         "mfe": 0.1014,
         "symbol": "ARCC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.703,
+        "y": -0.162,
+        "cluster": 3,
         "mfe": 0.007,
         "symbol": "COMI.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.783,
+        "y": -0.002,
+        "cluster": 2,
         "mfe": 0.0278,
         "symbol": "EAST.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 1.79,
+        "y": -0.591,
         "cluster": 0,
         "mfe": 0.013,
         "symbol": "OIH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.266,
+        "y": -0.399,
+        "cluster": 3,
         "mfe": 0.0432,
         "symbol": "TMGH.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 0.165,
+        "y": 1.194,
+        "cluster": 2,
         "mfe": 0.0883,
         "symbol": "EGAL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -0.027,
+        "y": 0.633,
+        "cluster": 3,
         "mfe": 0.015,
         "symbol": "ETEL.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": -5.52,
+        "y": -1.531,
+        "cluster": 1,
         "mfe": 0.1245,
         "symbol": "PHDC.CA"
       },
       {
-        "x": 0.0,
-        "y": 0.0,
-        "cluster": 0,
+        "x": 1.138,
+        "y": 0.32,
+        "cluster": 2,
         "mfe": 0.1091,
         "symbol": "ORWE.CA"
       }
@@ -2476,11 +3299,149 @@
       "n_top": 3,
       "mfe_threshold": 0.1421,
       "conditions": {
+        "feat_candles_since_sweep": {
+          "top_mean": 11.0,
+          "bottom_mean": 2.0,
+          "diff": 9.0,
+          "effect_size": 7.794
+        },
+        "snap_consol_len": {
+          "top_mean": 11.0,
+          "bottom_mean": 18.5714,
+          "diff": -7.5714,
+          "effect_size": -6.871
+        },
+        "feat_candles_since_bos": {
+          "top_mean": 28.3333,
+          "bottom_mean": 6.7143,
+          "diff": 21.619,
+          "effect_size": 4.459
+        },
+        "feat_dist_52w_low": {
+          "top_mean": 0.4146,
+          "bottom_mean": 0.468,
+          "diff": -0.0534,
+          "effect_size": -4.219
+        },
+        "feat_dist_last_bos": {
+          "top_mean": -0.0844,
+          "bottom_mean": -0.0071,
+          "diff": -0.0773,
+          "effect_size": -3.458
+        },
+        "feat_dist_50d_low": {
+          "top_mean": 0.1634,
+          "bottom_mean": 0.2639,
+          "diff": -0.1005,
+          "effect_size": -2.639
+        },
+        "feat_down_days_pct": {
+          "top_mean": 0.5833,
+          "bottom_mean": 0.35,
+          "diff": 0.2333,
+          "effect_size": 2.465
+        },
+        "snap_pivot_str": {
+          "top_mean": 7.59,
+          "bottom_mean": 3.1029,
+          "diff": 4.4871,
+          "effect_size": 1.53
+        },
+        "feat_accumulation_score": {
+          "top_mean": 7.0,
+          "bottom_mean": 3.1429,
+          "diff": 3.8571,
+          "effect_size": 1.261
+        },
+        "feat_dist_swing_low": {
+          "top_mean": 0.09,
+          "bottom_mean": 0.0386,
+          "diff": 0.0515,
+          "effect_size": 1.252
+        },
+        "snap_choch": {
+          "top_mean": 1.0,
+          "bottom_mean": 0.4286,
+          "diff": 0.5714,
+          "effect_size": 1.234
+        },
+        "snap_wick_ratio": {
+          "top_mean": -0.0207,
+          "bottom_mean": 0.4598,
+          "diff": -0.4806,
+          "effect_size": -1.149
+        },
+        "snap_sweep_size": {
+          "top_mean": -0.0719,
+          "bottom_mean": -0.0318,
+          "diff": -0.0401,
+          "effect_size": -0.998
+        },
+        "feat_sweep_depth_pct": {
+          "top_mean": -0.0719,
+          "bottom_mean": -0.0318,
+          "diff": -0.0401,
+          "effect_size": -0.998
+        },
+        "snap_reclaim_spd": {
+          "top_mean": 0.0098,
+          "bottom_mean": 0.0348,
+          "diff": -0.025,
+          "effect_size": -0.971
+        },
+        "snap_bos": {
+          "top_mean": 0.0,
+          "bottom_mean": 0.4286,
+          "diff": -0.4286,
+          "effect_size": -0.926
+        },
+        "feat_vol_spike_ratio": {
+          "top_mean": 1.9267,
+          "bottom_mean": 1.4036,
+          "diff": 0.5231,
+          "effect_size": 0.925
+        },
+        "snap_vol_exp": {
+          "top_mean": 1.6143,
+          "bottom_mean": 1.1547,
+          "diff": 0.4596,
+          "effect_size": 0.768
+        },
+        "snap_compression": {
+          "top_mean": 1.2841,
+          "bottom_mean": 1.0119,
+          "diff": 0.2722,
+          "effect_size": 0.75
+        },
+        "feat_atr_compression": {
+          "top_mean": 1.2841,
+          "bottom_mean": 1.0119,
+          "diff": 0.2722,
+          "effect_size": 0.75
+        },
+        "feat_vwap_dist": {
+          "top_mean": 0.0092,
+          "bottom_mean": 0.0269,
+          "diff": -0.0177,
+          "effect_size": -0.738
+        },
         "raw_score": {
           "top_mean": 70.3333,
           "bottom_mean": 73.1429,
           "diff": -2.8095,
           "effect_size": -0.659
+        },
+        "snap_prem_disc": {
+          "top_mean": 0.6263,
+          "bottom_mean": 0.7234,
+          "diff": -0.0971,
+          "effect_size": -0.514
+        },
+        "feat_dealing_range_pos": {
+          "top_mean": 0.6263,
+          "bottom_mean": 0.7234,
+          "diff": -0.0971,
+          "effect_size": -0.514
         },
         "r1_price": {
           "top_mean": 21.0,
@@ -2488,6 +3449,42 @@
           "diff": -0.5714,
           "effect_size": -0.408
         },
+        "snap_dist_lo": {
+          "top_mean": 0.1126,
+          "bottom_mean": 0.1209,
+          "diff": -0.0083,
+          "effect_size": -0.188
+        },
+        "feat_dist_20d_low": {
+          "top_mean": 0.1126,
+          "bottom_mean": 0.1209,
+          "diff": -0.0083,
+          "effect_size": -0.188
+        },
+        "feat_consec_red": {
+          "top_mean": 0.3333,
+          "bottom_mean": 0.4286,
+          "diff": -0.0952,
+          "effect_size": -0.175
+        },
+        "snap_num_touches": {
+          "top_mean": 2.3333,
+          "bottom_mean": 2.5714,
+          "diff": -0.2381,
+          "effect_size": -0.126
+        },
+        "feat_equal_lows_count": {
+          "top_mean": 2.3333,
+          "bottom_mean": 2.5714,
+          "diff": -0.2381,
+          "effect_size": -0.126
+        },
+        "feat_vol_contraction": {
+          "top_mean": 0.0135,
+          "bottom_mean": 0.002,
+          "diff": 0.0115,
+          "effect_size": 0.125
+        },
         "sv_hit": {
           "top_mean": 0.0,
           "bottom_mean": 0.0,
@@ -2547,26 +3544,14 @@
           "bottom_mean": 0.0,
           "diff": 0.0,
           "effect_size": 0.0
-        },
-        "snap_bos": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
-          "diff": 0.0,
-          "effect_size": 0.0
-        },
-        "snap_choch": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
-          "diff": 0.0,
-          "effect_size": 0.0
         }
       },
       "top5_summary": [
-        "raw_score: أقل (70.333 vs 73.143)",
-        "r1_price: أقل (21.000 vs 21.571)",
-        "sv_hit: أقل (0.000 vs 0.000)",
-        "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)"
+        "feat_candles_since_sweep: أعلى (11.000 vs 2.000)",
+        "snap_consol_len: أقل (11.000 vs 18.571)",
+        "feat_candles_since_bos: أعلى (28.333 vs 6.714)",
+        "feat_dist_52w_low: أقل (0.415 vs 0.468)",
+        "feat_dist_last_bos: أقل (-0.084 vs -0.007)"
       ]
     },
     "EFID.CA": {
@@ -2574,17 +3559,179 @@
       "n_top": 3,
       "mfe_threshold": 0.0581,
       "conditions": {
+        "feat_dist_52w_low": {
+          "top_mean": 0.568,
+          "bottom_mean": 0.5993,
+          "diff": -0.0313,
+          "effect_size": -2.462
+        },
+        "feat_dist_swing_low": {
+          "top_mean": 0.0786,
+          "bottom_mean": 0.1409,
+          "diff": -0.0624,
+          "effect_size": -1.896
+        },
+        "feat_dist_50d_low": {
+          "top_mean": 0.119,
+          "bottom_mean": 0.198,
+          "diff": -0.079,
+          "effect_size": -1.549
+        },
+        "snap_dist_lo": {
+          "top_mean": 0.1077,
+          "bottom_mean": 0.161,
+          "diff": -0.0533,
+          "effect_size": -1.423
+        },
+        "feat_dist_20d_low": {
+          "top_mean": 0.1077,
+          "bottom_mean": 0.161,
+          "diff": -0.0533,
+          "effect_size": -1.423
+        },
+        "snap_consol_len": {
+          "top_mean": 4.6667,
+          "bottom_mean": 11.2857,
+          "diff": -6.619,
+          "effect_size": -1.262
+        },
+        "snap_vol_exp": {
+          "top_mean": 3.4443,
+          "bottom_mean": 1.5999,
+          "diff": 1.8445,
+          "effect_size": 1.149
+        },
+        "feat_consec_red": {
+          "top_mean": 0.0,
+          "bottom_mean": 1.4286,
+          "diff": -1.4286,
+          "effect_size": -1.019
+        },
+        "feat_accumulation_score": {
+          "top_mean": 5.6667,
+          "bottom_mean": 3.1429,
+          "diff": 2.5238,
+          "effect_size": 1.014
+        },
+        "snap_num_touches": {
+          "top_mean": 5.0,
+          "bottom_mean": 2.5714,
+          "diff": 2.4286,
+          "effect_size": 0.955
+        },
+        "feat_equal_lows_count": {
+          "top_mean": 5.0,
+          "bottom_mean": 2.5714,
+          "diff": 2.4286,
+          "effect_size": 0.955
+        },
+        "snap_bos": {
+          "top_mean": 0.0,
+          "bottom_mean": 0.4286,
+          "diff": -0.4286,
+          "effect_size": -0.926
+        },
         "raw_score": {
           "top_mean": 73.3333,
           "bottom_mean": 69.4286,
           "diff": 3.9048,
           "effect_size": 0.78
         },
+        "feat_candles_since_sweep": {
+          "top_mean": 9.0,
+          "bottom_mean": 13.5,
+          "diff": -4.5,
+          "effect_size": -0.74
+        },
+        "feat_vol_spike_ratio": {
+          "top_mean": 2.982,
+          "bottom_mean": 2.0704,
+          "diff": 0.9116,
+          "effect_size": 0.725
+        },
         "r1_price": {
           "top_mean": 21.6667,
           "bottom_mean": 20.4286,
           "diff": 1.2381,
           "effect_size": 0.709
+        },
+        "snap_reclaim_spd": {
+          "top_mean": 0.0209,
+          "bottom_mean": 0.0384,
+          "diff": -0.0175,
+          "effect_size": -0.599
+        },
+        "snap_prem_disc": {
+          "top_mean": 0.6608,
+          "bottom_mean": 0.7468,
+          "diff": -0.086,
+          "effect_size": -0.584
+        },
+        "feat_dealing_range_pos": {
+          "top_mean": 0.6608,
+          "bottom_mean": 0.7468,
+          "diff": -0.086,
+          "effect_size": -0.584
+        },
+        "snap_compression": {
+          "top_mean": 0.924,
+          "bottom_mean": 1.189,
+          "diff": -0.265,
+          "effect_size": -0.547
+        },
+        "feat_atr_compression": {
+          "top_mean": 0.924,
+          "bottom_mean": 1.189,
+          "diff": -0.265,
+          "effect_size": -0.547
+        },
+        "feat_down_days_pct": {
+          "top_mean": 0.4333,
+          "bottom_mean": 0.4571,
+          "diff": -0.0238,
+          "effect_size": -0.491
+        },
+        "snap_choch": {
+          "top_mean": 0.6667,
+          "bottom_mean": 0.4286,
+          "diff": 0.2381,
+          "effect_size": 0.436
+        },
+        "feat_vwap_dist": {
+          "top_mean": 0.0288,
+          "bottom_mean": 0.0383,
+          "diff": -0.0095,
+          "effect_size": -0.246
+        },
+        "feat_vol_contraction": {
+          "top_mean": 0.0226,
+          "bottom_mean": 0.0358,
+          "diff": -0.0132,
+          "effect_size": -0.12
+        },
+        "snap_wick_ratio": {
+          "top_mean": 0.421,
+          "bottom_mean": 0.4635,
+          "diff": -0.0425,
+          "effect_size": -0.105
+        },
+        "snap_sweep_size": {
+          "top_mean": -0.0546,
+          "bottom_mean": -0.0585,
+          "diff": 0.0038,
+          "effect_size": 0.088
+        },
+        "feat_sweep_depth_pct": {
+          "top_mean": -0.0546,
+          "bottom_mean": -0.0585,
+          "diff": 0.0038,
+          "effect_size": 0.088
+        },
+        "snap_pivot_str": {
+          "top_mean": 7.8567,
+          "bottom_mean": 7.3971,
+          "diff": 0.4595,
+          "effect_size": 0.071
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -2645,26 +3792,14 @@
           "bottom_mean": 0.0,
           "diff": 0.0,
           "effect_size": 0.0
-        },
-        "snap_bos": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
-          "diff": 0.0,
-          "effect_size": 0.0
-        },
-        "snap_choch": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
-          "diff": 0.0,
-          "effect_size": 0.0
         }
       },
       "top5_summary": [
-        "raw_score: أعلى (73.333 vs 69.429)",
-        "r1_price: أعلى (21.667 vs 20.429)",
-        "sv_hit: أقل (0.000 vs 0.000)",
-        "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)"
+        "feat_dist_52w_low: أقل (0.568 vs 0.599)",
+        "feat_dist_swing_low: أقل (0.079 vs 0.141)",
+        "feat_dist_50d_low: أقل (0.119 vs 0.198)",
+        "snap_dist_lo: أقل (0.108 vs 0.161)",
+        "feat_dist_20d_low: أقل (0.108 vs 0.161)"
       ]
     },
     "EMFD.CA": {
@@ -2672,11 +3807,179 @@
       "n_top": 3,
       "mfe_threshold": 0.1604,
       "conditions": {
+        "snap_consol_len": {
+          "top_mean": 10.3333,
+          "bottom_mean": 16.8571,
+          "diff": -6.5238,
+          "effect_size": -1.95
+        },
+        "snap_dist_lo": {
+          "top_mean": 0.0545,
+          "bottom_mean": 0.1135,
+          "diff": -0.059,
+          "effect_size": -1.589
+        },
+        "feat_dist_20d_low": {
+          "top_mean": 0.0545,
+          "bottom_mean": 0.1135,
+          "diff": -0.059,
+          "effect_size": -1.589
+        },
+        "feat_down_days_pct": {
+          "top_mean": 0.3667,
+          "bottom_mean": 0.4857,
+          "diff": -0.119,
+          "effect_size": -1.271
+        },
+        "snap_compression": {
+          "top_mean": 0.7684,
+          "bottom_mean": 0.9538,
+          "diff": -0.1855,
+          "effect_size": -1.19
+        },
+        "feat_atr_compression": {
+          "top_mean": 0.7684,
+          "bottom_mean": 0.9538,
+          "diff": -0.1855,
+          "effect_size": -1.19
+        },
+        "feat_vol_spike_ratio": {
+          "top_mean": 2.8797,
+          "bottom_mean": 1.8804,
+          "diff": 0.9992,
+          "effect_size": 0.949
+        },
+        "feat_dist_52w_low": {
+          "top_mean": 0.203,
+          "bottom_mean": 0.2534,
+          "diff": -0.0503,
+          "effect_size": -0.826
+        },
+        "feat_accumulation_score": {
+          "top_mean": 1.6667,
+          "bottom_mean": 3.8571,
+          "diff": -2.1905,
+          "effect_size": -0.765
+        },
+        "feat_dist_swing_low": {
+          "top_mean": 0.0431,
+          "bottom_mean": 0.0823,
+          "diff": -0.0392,
+          "effect_size": -0.685
+        },
+        "feat_dist_last_bos": {
+          "top_mean": 0.0093,
+          "bottom_mean": -0.0172,
+          "diff": 0.0265,
+          "effect_size": 0.679
+        },
+        "snap_sweep_size": {
+          "top_mean": -0.0298,
+          "bottom_mean": -0.053,
+          "diff": 0.0231,
+          "effect_size": 0.647
+        },
+        "feat_sweep_depth_pct": {
+          "top_mean": -0.0298,
+          "bottom_mean": -0.053,
+          "diff": 0.0231,
+          "effect_size": 0.647
+        },
+        "snap_wick_ratio": {
+          "top_mean": 0.4129,
+          "bottom_mean": 0.5337,
+          "diff": -0.1209,
+          "effect_size": -0.621
+        },
+        "feat_candles_since_bos": {
+          "top_mean": 6.3333,
+          "bottom_mean": 13.4286,
+          "diff": -7.0952,
+          "effect_size": -0.565
+        },
+        "snap_pivot_str": {
+          "top_mean": 3.83,
+          "bottom_mean": 6.3743,
+          "diff": -2.5443,
+          "effect_size": -0.56
+        },
+        "snap_vol_exp": {
+          "top_mean": 2.3997,
+          "bottom_mean": 1.7621,
+          "diff": 0.6375,
+          "effect_size": 0.553
+        },
+        "feat_vwap_dist": {
+          "top_mean": 0.0164,
+          "bottom_mean": 0.0294,
+          "diff": -0.013,
+          "effect_size": -0.487
+        },
+        "feat_consec_red": {
+          "top_mean": 0.3333,
+          "bottom_mean": 0.1429,
+          "diff": 0.1905,
+          "effect_size": 0.436
+        },
+        "snap_reclaim_spd": {
+          "top_mean": 0.0207,
+          "bottom_mean": 0.0306,
+          "diff": -0.0099,
+          "effect_size": -0.318
+        },
+        "feat_vol_contraction": {
+          "top_mean": 0.037,
+          "bottom_mean": 0.0133,
+          "diff": 0.0237,
+          "effect_size": 0.231
+        },
+        "snap_bos": {
+          "top_mean": 0.3333,
+          "bottom_mean": 0.4286,
+          "diff": -0.0952,
+          "effect_size": -0.175
+        },
+        "snap_prem_disc": {
+          "top_mean": 0.7671,
+          "bottom_mean": 0.7929,
+          "diff": -0.0258,
+          "effect_size": -0.174
+        },
+        "feat_dealing_range_pos": {
+          "top_mean": 0.7671,
+          "bottom_mean": 0.7929,
+          "diff": -0.0258,
+          "effect_size": -0.174
+        },
+        "feat_dist_50d_low": {
+          "top_mean": 0.1333,
+          "bottom_mean": 0.14,
+          "diff": -0.0068,
+          "effect_size": -0.099
+        },
+        "snap_choch": {
+          "top_mean": 0.6667,
+          "bottom_mean": 0.7143,
+          "diff": -0.0476,
+          "effect_size": -0.093
+        },
         "raw_score": {
           "top_mean": 76.3333,
           "bottom_mean": 77.0,
           "diff": -0.6667,
           "effect_size": -0.088
+        },
+        "snap_num_touches": {
+          "top_mean": 2.3333,
+          "bottom_mean": 2.5714,
+          "diff": -0.2381,
+          "effect_size": -0.073
+        },
+        "feat_equal_lows_count": {
+          "top_mean": 2.3333,
+          "bottom_mean": 2.5714,
+          "diff": -0.2381,
+          "effect_size": -0.073
         },
         "r1_price": {
           "top_mean": 22.6667,
@@ -2743,26 +4046,14 @@
           "bottom_mean": 0.0,
           "diff": 0.0,
           "effect_size": 0.0
-        },
-        "snap_bos": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
-          "diff": 0.0,
-          "effect_size": 0.0
-        },
-        "snap_choch": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
-          "diff": 0.0,
-          "effect_size": 0.0
         }
       },
       "top5_summary": [
-        "raw_score: أقل (76.333 vs 77.000)",
-        "r1_price: أقل (22.667 vs 22.714)",
-        "sv_hit: أقل (0.000 vs 0.000)",
-        "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)"
+        "snap_consol_len: أقل (10.333 vs 16.857)",
+        "snap_dist_lo: أقل (0.054 vs 0.114)",
+        "feat_dist_20d_low: أقل (0.054 vs 0.114)",
+        "feat_down_days_pct: أقل (0.367 vs 0.486)",
+        "snap_compression: أقل (0.768 vs 0.954)"
       ]
     },
     "FWRY.CA": {
@@ -2770,11 +4061,185 @@
       "n_top": 3,
       "mfe_threshold": 0.1622,
       "conditions": {
+        "feat_dist_last_bos": {
+          "top_mean": -0.1382,
+          "bottom_mean": -0.0246,
+          "diff": -0.1136,
+          "effect_size": -2.62
+        },
+        "feat_candles_since_bos": {
+          "top_mean": 27.0,
+          "bottom_mean": 6.875,
+          "diff": 20.125,
+          "effect_size": 2.591
+        },
+        "snap_vol_exp": {
+          "top_mean": 2.843,
+          "bottom_mean": 1.337,
+          "diff": 1.506,
+          "effect_size": 1.901
+        },
+        "feat_dist_swing_low": {
+          "top_mean": 0.062,
+          "bottom_mean": 0.1589,
+          "diff": -0.0969,
+          "effect_size": -1.583
+        },
+        "feat_dist_50d_low": {
+          "top_mean": 0.1241,
+          "bottom_mean": 0.1974,
+          "diff": -0.0733,
+          "effect_size": -1.583
+        },
+        "snap_dist_lo": {
+          "top_mean": 0.0754,
+          "bottom_mean": 0.1509,
+          "diff": -0.0756,
+          "effect_size": -1.442
+        },
+        "feat_dist_20d_low": {
+          "top_mean": 0.0754,
+          "bottom_mean": 0.1509,
+          "diff": -0.0756,
+          "effect_size": -1.442
+        },
+        "feat_down_days_pct": {
+          "top_mean": 0.5333,
+          "bottom_mean": 0.4313,
+          "diff": 0.1021,
+          "effect_size": 1.422
+        },
+        "snap_bos": {
+          "top_mean": 0.0,
+          "bottom_mean": 0.625,
+          "diff": -0.625,
+          "effect_size": -1.369
+        },
+        "feat_vol_spike_ratio": {
+          "top_mean": 2.5333,
+          "bottom_mean": 1.6141,
+          "diff": 0.9192,
+          "effect_size": 1.278
+        },
+        "snap_wick_ratio": {
+          "top_mean": 0.1643,
+          "bottom_mean": 0.5282,
+          "diff": -0.3639,
+          "effect_size": -1.115
+        },
+        "feat_vol_contraction": {
+          "top_mean": 0.044,
+          "bottom_mean": -0.0109,
+          "diff": 0.0549,
+          "effect_size": 1.014
+        },
+        "feat_vwap_dist": {
+          "top_mean": 0.0058,
+          "bottom_mean": 0.0626,
+          "diff": -0.0568,
+          "effect_size": -1.013
+        },
+        "feat_candles_since_sweep": {
+          "top_mean": 8.0,
+          "bottom_mean": 3.6667,
+          "diff": 4.3333,
+          "effect_size": 0.953
+        },
+        "snap_reclaim_spd": {
+          "top_mean": 0.0071,
+          "bottom_mean": 0.0463,
+          "diff": -0.0393,
+          "effect_size": -0.929
+        },
+        "feat_dist_52w_low": {
+          "top_mean": 0.5231,
+          "bottom_mean": 0.557,
+          "diff": -0.0339,
+          "effect_size": -0.912
+        },
+        "snap_consol_len": {
+          "top_mean": 18.3333,
+          "bottom_mean": 12.625,
+          "diff": 5.7083,
+          "effect_size": 0.843
+        },
+        "feat_accumulation_score": {
+          "top_mean": 2.6667,
+          "bottom_mean": 4.0,
+          "diff": -1.3333,
+          "effect_size": -0.7
+        },
+        "feat_consec_red": {
+          "top_mean": 0.0,
+          "bottom_mean": 0.625,
+          "diff": -0.625,
+          "effect_size": -0.668
+        },
+        "snap_num_touches": {
+          "top_mean": 2.0,
+          "bottom_mean": 1.0,
+          "diff": 1.0,
+          "effect_size": 0.64
+        },
+        "feat_equal_lows_count": {
+          "top_mean": 2.0,
+          "bottom_mean": 1.0,
+          "diff": 1.0,
+          "effect_size": 0.64
+        },
+        "snap_sweep_size": {
+          "top_mean": -0.0391,
+          "bottom_mean": -0.0765,
+          "diff": 0.0374,
+          "effect_size": 0.538
+        },
+        "feat_sweep_depth_pct": {
+          "top_mean": -0.0391,
+          "bottom_mean": -0.0765,
+          "diff": 0.0374,
+          "effect_size": 0.538
+        },
+        "snap_compression": {
+          "top_mean": 1.0688,
+          "bottom_mean": 1.3314,
+          "diff": -0.2626,
+          "effect_size": -0.364
+        },
+        "feat_atr_compression": {
+          "top_mean": 1.0688,
+          "bottom_mean": 1.3314,
+          "diff": -0.2626,
+          "effect_size": -0.364
+        },
+        "snap_prem_disc": {
+          "top_mean": 0.6237,
+          "bottom_mean": 0.6938,
+          "diff": -0.0701,
+          "effect_size": -0.346
+        },
+        "feat_dealing_range_pos": {
+          "top_mean": 0.6237,
+          "bottom_mean": 0.6938,
+          "diff": -0.0701,
+          "effect_size": -0.346
+        },
         "r1_price": {
           "top_mean": 22.0,
           "bottom_mean": 21.5,
           "diff": 0.5,
           "effect_size": 0.204
+        },
+        "snap_choch": {
+          "top_mean": 0.6667,
+          "bottom_mean": 0.75,
+          "diff": -0.0833,
+          "effect_size": -0.17
+        },
+        "snap_pivot_str": {
+          "top_mean": 5.17,
+          "bottom_mean": 6.3325,
+          "diff": -1.1625,
+          "effect_size": -0.155
         },
         "raw_score": {
           "top_mean": 74.3333,
@@ -2841,26 +4306,14 @@
           "bottom_mean": 0.0,
           "diff": 0.0,
           "effect_size": 0.0
-        },
-        "snap_bos": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
-          "diff": 0.0,
-          "effect_size": 0.0
-        },
-        "snap_choch": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
-          "diff": 0.0,
-          "effect_size": 0.0
         }
       },
       "top5_summary": [
-        "r1_price: أعلى (22.000 vs 21.500)",
-        "raw_score: أعلى (74.333 vs 73.375)",
-        "sv_hit: أقل (0.000 vs 0.000)",
-        "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)"
+        "feat_dist_last_bos: أقل (-0.138 vs -0.025)",
+        "feat_candles_since_bos: أعلى (27.000 vs 6.875)",
+        "snap_vol_exp: أعلى (2.843 vs 1.337)",
+        "feat_dist_swing_low: أقل (0.062 vs 0.159)",
+        "feat_dist_50d_low: أقل (0.124 vs 0.197)"
       ]
     },
     "OIH.CA": {
@@ -2868,6 +4321,156 @@
       "n_top": 3,
       "mfe_threshold": 0.1563,
       "conditions": {
+        "feat_dist_50d_low": {
+          "top_mean": 0.1321,
+          "bottom_mean": 0.2323,
+          "diff": -0.1002,
+          "effect_size": -2.497
+        },
+        "feat_down_days_pct": {
+          "top_mean": 0.2667,
+          "bottom_mean": 0.4,
+          "diff": -0.1333,
+          "effect_size": -2.248
+        },
+        "feat_vol_contraction": {
+          "top_mean": 0.1009,
+          "bottom_mean": -0.043,
+          "diff": 0.1439,
+          "effect_size": 2.199
+        },
+        "snap_bos": {
+          "top_mean": 1.0,
+          "bottom_mean": 0.25,
+          "diff": 0.75,
+          "effect_size": 1.837
+        },
+        "snap_sweep_size": {
+          "top_mean": -0.0902,
+          "bottom_mean": -0.043,
+          "diff": -0.0472,
+          "effect_size": -1.565
+        },
+        "feat_sweep_depth_pct": {
+          "top_mean": -0.0902,
+          "bottom_mean": -0.043,
+          "diff": -0.0472,
+          "effect_size": -1.565
+        },
+        "snap_vol_exp": {
+          "top_mean": 2.09,
+          "bottom_mean": 1.1671,
+          "diff": 0.9229,
+          "effect_size": 1.448
+        },
+        "feat_candles_since_bos": {
+          "top_mean": 1.6667,
+          "bottom_mean": 8.125,
+          "diff": -6.4583,
+          "effect_size": -1.438
+        },
+        "snap_prem_disc": {
+          "top_mean": 0.864,
+          "bottom_mean": 0.6379,
+          "diff": 0.2262,
+          "effect_size": 1.416
+        },
+        "feat_dealing_range_pos": {
+          "top_mean": 0.864,
+          "bottom_mean": 0.6379,
+          "diff": 0.2262,
+          "effect_size": 1.416
+        },
+        "snap_compression": {
+          "top_mean": 0.9958,
+          "bottom_mean": 1.28,
+          "diff": -0.2842,
+          "effect_size": -1.186
+        },
+        "feat_atr_compression": {
+          "top_mean": 0.9958,
+          "bottom_mean": 1.28,
+          "diff": -0.2842,
+          "effect_size": -1.186
+        },
+        "snap_choch": {
+          "top_mean": 1.0,
+          "bottom_mean": 0.5,
+          "diff": 0.5,
+          "effect_size": 1.061
+        },
+        "snap_pivot_str": {
+          "top_mean": 7.0667,
+          "bottom_mean": 4.02,
+          "diff": 3.0467,
+          "effect_size": 0.993
+        },
+        "snap_consol_len": {
+          "top_mean": 12.6667,
+          "bottom_mean": 6.75,
+          "diff": 5.9167,
+          "effect_size": 0.954
+        },
+        "feat_candles_since_sweep": {
+          "top_mean": 14.3333,
+          "bottom_mean": 17.5,
+          "diff": -3.1667,
+          "effect_size": -0.876
+        },
+        "feat_vol_spike_ratio": {
+          "top_mean": 2.119,
+          "bottom_mean": 1.533,
+          "diff": 0.586,
+          "effect_size": 0.871
+        },
+        "feat_dist_52w_low": {
+          "top_mean": 0.6029,
+          "bottom_mean": 0.589,
+          "diff": 0.0139,
+          "effect_size": 0.833
+        },
+        "snap_num_touches": {
+          "top_mean": 1.6667,
+          "bottom_mean": 1.0,
+          "diff": 0.6667,
+          "effect_size": 0.562
+        },
+        "feat_equal_lows_count": {
+          "top_mean": 1.6667,
+          "bottom_mean": 1.0,
+          "diff": 0.6667,
+          "effect_size": 0.562
+        },
+        "feat_consec_red": {
+          "top_mean": 0.6667,
+          "bottom_mean": 0.375,
+          "diff": 0.2917,
+          "effect_size": 0.342
+        },
+        "feat_dist_swing_low": {
+          "top_mean": 0.0918,
+          "bottom_mean": 0.0713,
+          "diff": 0.0206,
+          "effect_size": 0.332
+        },
+        "feat_vwap_dist": {
+          "top_mean": 0.0454,
+          "bottom_mean": 0.0333,
+          "diff": 0.012,
+          "effect_size": 0.319
+        },
+        "snap_dist_lo": {
+          "top_mean": 0.1321,
+          "bottom_mean": 0.1165,
+          "diff": 0.0156,
+          "effect_size": 0.309
+        },
+        "feat_dist_20d_low": {
+          "top_mean": 0.1321,
+          "bottom_mean": 0.1165,
+          "diff": 0.0156,
+          "effect_size": 0.309
+        },
         "raw_score": {
           "top_mean": 73.0,
           "bottom_mean": 71.375,
@@ -2880,6 +4483,30 @@
           "diff": 0.4583,
           "effect_size": 0.208
         },
+        "snap_wick_ratio": {
+          "top_mean": 0.4167,
+          "bottom_mean": 0.4583,
+          "diff": -0.0417,
+          "effect_size": -0.157
+        },
+        "snap_reclaim_spd": {
+          "top_mean": 0.0474,
+          "bottom_mean": 0.0414,
+          "diff": 0.0061,
+          "effect_size": 0.154
+        },
+        "feat_accumulation_score": {
+          "top_mean": 5.3333,
+          "bottom_mean": 5.75,
+          "diff": -0.4167,
+          "effect_size": -0.147
+        },
+        "feat_dist_last_bos": {
+          "top_mean": 0.0129,
+          "bottom_mean": 0.0103,
+          "diff": 0.0025,
+          "effect_size": 0.058
+        },
         "sv_hit": {
           "top_mean": 0.0,
           "bottom_mean": 0.0,
@@ -2939,26 +4566,14 @@
           "bottom_mean": 0.0,
           "diff": 0.0,
           "effect_size": 0.0
-        },
-        "snap_bos": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
-          "diff": 0.0,
-          "effect_size": 0.0
-        },
-        "snap_choch": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
-          "diff": 0.0,
-          "effect_size": 0.0
         }
       },
       "top5_summary": [
-        "raw_score: أعلى (73.000 vs 71.375)",
-        "r1_price: أعلى (21.333 vs 20.875)",
-        "sv_hit: أقل (0.000 vs 0.000)",
-        "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)"
+        "feat_dist_50d_low: أقل (0.132 vs 0.232)",
+        "feat_down_days_pct: أقل (0.267 vs 0.400)",
+        "feat_vol_contraction: أعلى (0.101 vs -0.043)",
+        "snap_bos: أعلى (1.000 vs 0.250)",
+        "snap_sweep_size: أقل (-0.090 vs -0.043)"
       ]
     },
     "PHDC.CA": {
@@ -2966,11 +4581,131 @@
       "n_top": 3,
       "mfe_threshold": 0.4266,
       "conditions": {
+        "snap_vol_exp": {
+          "top_mean": 3.4313,
+          "bottom_mean": 1.295,
+          "diff": 2.1363,
+          "effect_size": 3.807
+        },
+        "feat_vol_spike_ratio": {
+          "top_mean": 3.0267,
+          "bottom_mean": 1.5987,
+          "diff": 1.428,
+          "effect_size": 2.837
+        },
+        "feat_accumulation_score": {
+          "top_mean": 2.6667,
+          "bottom_mean": 5.8571,
+          "diff": -3.1905,
+          "effect_size": -1.786
+        },
+        "feat_dist_52w_low": {
+          "top_mean": 0.2722,
+          "bottom_mean": 0.3831,
+          "diff": -0.1109,
+          "effect_size": -1.418
+        },
+        "snap_choch": {
+          "top_mean": 0.6667,
+          "bottom_mean": 1.0,
+          "diff": -0.3333,
+          "effect_size": -1.155
+        },
+        "feat_candles_since_bos": {
+          "top_mean": 21.0,
+          "bottom_mean": 8.5714,
+          "diff": 12.4286,
+          "effect_size": 1.136
+        },
+        "feat_dist_last_bos": {
+          "top_mean": -0.0866,
+          "bottom_mean": -0.0068,
+          "diff": -0.0798,
+          "effect_size": -1.135
+        },
+        "snap_wick_ratio": {
+          "top_mean": 0.0022,
+          "bottom_mean": 0.5219,
+          "diff": -0.5197,
+          "effect_size": -1.095
+        },
+        "feat_dist_50d_low": {
+          "top_mean": 0.074,
+          "bottom_mean": 0.2036,
+          "diff": -0.1296,
+          "effect_size": -1.069
+        },
+        "feat_down_days_pct": {
+          "top_mean": 0.5167,
+          "bottom_mean": 0.3929,
+          "diff": 0.1238,
+          "effect_size": 1.038
+        },
         "raw_score": {
           "top_mean": 77.0,
           "bottom_mean": 70.0,
           "diff": 7.0,
           "effect_size": 1.003
+        },
+        "snap_reclaim_spd": {
+          "top_mean": 0.0063,
+          "bottom_mean": 0.0794,
+          "diff": -0.0731,
+          "effect_size": -1.001
+        },
+        "snap_bos": {
+          "top_mean": 0.0,
+          "bottom_mean": 0.4286,
+          "diff": -0.4286,
+          "effect_size": -0.926
+        },
+        "snap_dist_lo": {
+          "top_mean": 0.074,
+          "bottom_mean": 0.1803,
+          "diff": -0.1063,
+          "effect_size": -0.907
+        },
+        "feat_dist_20d_low": {
+          "top_mean": 0.074,
+          "bottom_mean": 0.1803,
+          "diff": -0.1063,
+          "effect_size": -0.907
+        },
+        "snap_sweep_size": {
+          "top_mean": -0.0439,
+          "bottom_mean": -0.1491,
+          "diff": 0.1052,
+          "effect_size": 0.901
+        },
+        "feat_sweep_depth_pct": {
+          "top_mean": -0.0439,
+          "bottom_mean": -0.1491,
+          "diff": 0.1052,
+          "effect_size": 0.901
+        },
+        "snap_compression": {
+          "top_mean": 1.0397,
+          "bottom_mean": 1.4686,
+          "diff": -0.429,
+          "effect_size": -0.886
+        },
+        "feat_atr_compression": {
+          "top_mean": 1.0397,
+          "bottom_mean": 1.4686,
+          "diff": -0.429,
+          "effect_size": -0.886
+        },
+        "feat_dist_swing_low": {
+          "top_mean": 0.0614,
+          "bottom_mean": 0.1741,
+          "diff": -0.1127,
+          "effect_size": -0.867
+        },
+        "feat_vwap_dist": {
+          "top_mean": 0.0096,
+          "bottom_mean": 0.0798,
+          "diff": -0.0702,
+          "effect_size": -0.83
         },
         "r1_price": {
           "top_mean": 22.3333,
@@ -2978,6 +4713,54 @@
           "diff": 1.7619,
           "effect_size": 0.804
         },
+        "snap_num_touches": {
+          "top_mean": 2.3333,
+          "bottom_mean": 1.0,
+          "diff": 1.3333,
+          "effect_size": 0.792
+        },
+        "feat_equal_lows_count": {
+          "top_mean": 2.3333,
+          "bottom_mean": 1.0,
+          "diff": 1.3333,
+          "effect_size": 0.792
+        },
+        "feat_vol_contraction": {
+          "top_mean": 0.0752,
+          "bottom_mean": 0.0317,
+          "diff": 0.0435,
+          "effect_size": 0.65
+        },
+        "snap_pivot_str": {
+          "top_mean": 6.1433,
+          "bottom_mean": 10.0943,
+          "diff": -3.951,
+          "effect_size": -0.648
+        },
+        "snap_prem_disc": {
+          "top_mean": 0.5845,
+          "bottom_mean": 0.7014,
+          "diff": -0.1169,
+          "effect_size": -0.605
+        },
+        "feat_dealing_range_pos": {
+          "top_mean": 0.5845,
+          "bottom_mean": 0.7014,
+          "diff": -0.1169,
+          "effect_size": -0.605
+        },
+        "snap_consol_len": {
+          "top_mean": 14.3333,
+          "bottom_mean": 11.0,
+          "diff": 3.3333,
+          "effect_size": 0.52
+        },
+        "feat_consec_red": {
+          "top_mean": 0.0,
+          "bottom_mean": 0.1429,
+          "diff": -0.1429,
+          "effect_size": -0.436
+        },
         "sv_hit": {
           "top_mean": 0.0,
           "bottom_mean": 0.0,
@@ -3038,25 +4821,19 @@
           "diff": 0.0,
           "effect_size": 0.0
         },
-        "snap_bos": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
-          "diff": 0.0,
-          "effect_size": 0.0
-        },
-        "snap_choch": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
+        "feat_candles_since_sweep": {
+          "top_mean": 8.0,
+          "bottom_mean": 8.0,
           "diff": 0.0,
           "effect_size": 0.0
         }
       },
       "top5_summary": [
-        "raw_score: أعلى (77.000 vs 70.000)",
-        "r1_price: أعلى (22.333 vs 20.571)",
-        "sv_hit: أقل (0.000 vs 0.000)",
-        "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)"
+        "snap_vol_exp: أعلى (3.431 vs 1.295)",
+        "feat_vol_spike_ratio: أعلى (3.027 vs 1.599)",
+        "feat_accumulation_score: أقل (2.667 vs 5.857)",
+        "feat_dist_52w_low: أقل (0.272 vs 0.383)",
+        "snap_choch: أقل (0.667 vs 1.000)"
       ]
     },
     "RMDA.CA": {
@@ -3064,17 +4841,191 @@
       "n_top": 3,
       "mfe_threshold": 0.1679,
       "conditions": {
+        "feat_vol_contraction": {
+          "top_mean": 0.2064,
+          "bottom_mean": -0.0901,
+          "diff": 0.2965,
+          "effect_size": 4.708
+        },
+        "feat_dist_52w_low": {
+          "top_mean": 0.2038,
+          "bottom_mean": 0.3242,
+          "diff": -0.1204,
+          "effect_size": -3.121
+        },
+        "feat_accumulation_score": {
+          "top_mean": 1.3333,
+          "bottom_mean": 5.0,
+          "diff": -3.6667,
+          "effect_size": -2.13
+        },
         "raw_score": {
           "top_mean": 75.0,
           "bottom_mean": 69.875,
           "diff": 5.125,
           "effect_size": 1.909
         },
+        "feat_vol_spike_ratio": {
+          "top_mean": 4.1517,
+          "bottom_mean": 1.284,
+          "diff": 2.8677,
+          "effect_size": 1.847
+        },
+        "snap_vol_exp": {
+          "top_mean": 5.2233,
+          "bottom_mean": 1.0455,
+          "diff": 4.1778,
+          "effect_size": 1.483
+        },
         "r1_price": {
           "top_mean": 22.0,
           "bottom_mean": 20.625,
           "diff": 1.375,
           "effect_size": 1.47
+        },
+        "snap_consol_len": {
+          "top_mean": 5.0,
+          "bottom_mean": 13.75,
+          "diff": -8.75,
+          "effect_size": -1.139
+        },
+        "snap_pivot_str": {
+          "top_mean": 12.72,
+          "bottom_mean": 7.6288,
+          "diff": 5.0912,
+          "effect_size": 1.11
+        },
+        "snap_choch": {
+          "top_mean": 1.0,
+          "bottom_mean": 0.5,
+          "diff": 0.5,
+          "effect_size": 1.061
+        },
+        "snap_wick_ratio": {
+          "top_mean": 0.5891,
+          "bottom_mean": 0.514,
+          "diff": 0.075,
+          "effect_size": 0.762
+        },
+        "snap_prem_disc": {
+          "top_mean": 0.6285,
+          "bottom_mean": 0.751,
+          "diff": -0.1225,
+          "effect_size": -0.738
+        },
+        "feat_dealing_range_pos": {
+          "top_mean": 0.6285,
+          "bottom_mean": 0.751,
+          "diff": -0.1225,
+          "effect_size": -0.738
+        },
+        "feat_consec_red": {
+          "top_mean": 0.0,
+          "bottom_mean": 0.625,
+          "diff": -0.625,
+          "effect_size": -0.668
+        },
+        "snap_sweep_size": {
+          "top_mean": -0.1195,
+          "bottom_mean": -0.077,
+          "diff": -0.0424,
+          "effect_size": -0.654
+        },
+        "feat_sweep_depth_pct": {
+          "top_mean": -0.1195,
+          "bottom_mean": -0.077,
+          "diff": -0.0424,
+          "effect_size": -0.654
+        },
+        "feat_dist_50d_low": {
+          "top_mean": 0.2023,
+          "bottom_mean": 0.2513,
+          "diff": -0.049,
+          "effect_size": -0.572
+        },
+        "feat_vwap_dist": {
+          "top_mean": 0.0368,
+          "bottom_mean": 0.0665,
+          "diff": -0.0296,
+          "effect_size": -0.543
+        },
+        "snap_dist_lo": {
+          "top_mean": 0.1309,
+          "bottom_mean": 0.1692,
+          "diff": -0.0383,
+          "effect_size": -0.443
+        },
+        "feat_dist_20d_low": {
+          "top_mean": 0.1309,
+          "bottom_mean": 0.1692,
+          "diff": -0.0383,
+          "effect_size": -0.443
+        },
+        "snap_compression": {
+          "top_mean": 1.497,
+          "bottom_mean": 2.4149,
+          "diff": -0.9179,
+          "effect_size": -0.425
+        },
+        "feat_atr_compression": {
+          "top_mean": 1.497,
+          "bottom_mean": 2.4149,
+          "diff": -0.9179,
+          "effect_size": -0.425
+        },
+        "snap_reclaim_spd": {
+          "top_mean": 0.0693,
+          "bottom_mean": 0.0507,
+          "diff": 0.0186,
+          "effect_size": 0.388
+        },
+        "feat_candles_since_sweep": {
+          "top_mean": 13.3333,
+          "bottom_mean": 11.0,
+          "diff": 2.3333,
+          "effect_size": 0.326
+        },
+        "snap_bos": {
+          "top_mean": 0.6667,
+          "bottom_mean": 0.5,
+          "diff": 0.1667,
+          "effect_size": 0.306
+        },
+        "feat_down_days_pct": {
+          "top_mean": 0.4,
+          "bottom_mean": 0.375,
+          "diff": 0.025,
+          "effect_size": 0.294
+        },
+        "feat_dist_swing_low": {
+          "top_mean": 0.1272,
+          "bottom_mean": 0.139,
+          "diff": -0.0118,
+          "effect_size": -0.152
+        },
+        "feat_dist_last_bos": {
+          "top_mean": -0.0129,
+          "bottom_mean": -0.018,
+          "diff": 0.0051,
+          "effect_size": 0.134
+        },
+        "feat_candles_since_bos": {
+          "top_mean": 8.6667,
+          "bottom_mean": 7.5,
+          "diff": 1.1667,
+          "effect_size": 0.113
+        },
+        "snap_num_touches": {
+          "top_mean": 2.3333,
+          "bottom_mean": 2.25,
+          "diff": 0.0833,
+          "effect_size": 0.031
+        },
+        "feat_equal_lows_count": {
+          "top_mean": 2.3333,
+          "bottom_mean": 2.25,
+          "diff": 0.0833,
+          "effect_size": 0.031
         },
         "sv_hit": {
           "top_mean": 0.0,
@@ -3135,26 +5086,14 @@
           "bottom_mean": 0.0,
           "diff": 0.0,
           "effect_size": 0.0
-        },
-        "snap_bos": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
-          "diff": 0.0,
-          "effect_size": 0.0
-        },
-        "snap_choch": {
-          "top_mean": 0.0,
-          "bottom_mean": 0.0,
-          "diff": 0.0,
-          "effect_size": 0.0
         }
       },
       "top5_summary": [
+        "feat_vol_contraction: أعلى (0.206 vs -0.090)",
+        "feat_dist_52w_low: أقل (0.204 vs 0.324)",
+        "feat_accumulation_score: أقل (1.333 vs 5.000)",
         "raw_score: أعلى (75.000 vs 69.875)",
-        "r1_price: أعلى (22.000 vs 20.625)",
-        "sv_hit: أقل (0.000 vs 0.000)",
-        "hvn_hit: أقل (0.000 vs 0.000)",
-        "rsi_div: أقل (0.000 vs 0.000)"
+        "feat_vol_spike_ratio: أعلى (4.152 vs 1.284)"
       ]
     }
   },
@@ -3263,6 +5202,150 @@
   ],
   "feature_health": {
     "features": {
+      "feat_dist_52w_low": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.025837,
+        "n_unique": 203,
+        "info_gain_mfe": 1.0,
+        "health": "ok"
+      },
+      "feat_dist_last_bos": {
+        "n_non_null": 200,
+        "missing_ratio": 0.0431,
+        "zero_ratio": 0.005,
+        "variance": 0.003038,
+        "n_unique": 184,
+        "info_gain_mfe": 0.5275,
+        "health": "ok"
+      },
+      "feat_atr_compression": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.728202,
+        "n_unique": 208,
+        "info_gain_mfe": 0.5154,
+        "health": "ok"
+      },
+      "snap_compression": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.728202,
+        "n_unique": 208,
+        "info_gain_mfe": 0.5129,
+        "health": "ok"
+      },
+      "feat_dist_20d_low": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.004345,
+        "n_unique": 196,
+        "info_gain_mfe": 0.2936,
+        "health": "ok"
+      },
+      "snap_dist_lo": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.004345,
+        "n_unique": 196,
+        "info_gain_mfe": 0.2904,
+        "health": "ok"
+      },
+      "feat_candles_since_bos": {
+        "n_non_null": 200,
+        "missing_ratio": 0.0431,
+        "zero_ratio": 0.0,
+        "variance": 104.169246,
+        "n_unique": 35,
+        "info_gain_mfe": 0.2705,
+        "health": "ok"
+      },
+      "feat_dist_50d_low": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.009825,
+        "n_unique": 198,
+        "info_gain_mfe": 0.2541,
+        "health": "ok"
+      },
+      "feat_down_days_pct": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.009009,
+        "n_unique": 12,
+        "info_gain_mfe": 0.1503,
+        "health": "ok"
+      },
+      "snap_prem_disc": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.031496,
+        "n_unique": 202,
+        "info_gain_mfe": 0.142,
+        "health": "ok"
+      },
+      "feat_vol_contraction": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.007001,
+        "n_unique": 204,
+        "info_gain_mfe": 0.1394,
+        "health": "ok"
+      },
+      "feat_dealing_range_pos": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.031496,
+        "n_unique": 202,
+        "info_gain_mfe": 0.1364,
+        "health": "ok"
+      },
+      "snap_atr": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 6.644688,
+        "n_unique": 203,
+        "info_gain_mfe": 0.1356,
+        "health": "ok"
+      },
+      "snap_pivot_str": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0191,
+        "variance": 26.349408,
+        "n_unique": 190,
+        "info_gain_mfe": 0.1284,
+        "health": "ok"
+      },
+      "snap_consol_len": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.11,
+        "variance": 49.486336,
+        "n_unique": 20,
+        "info_gain_mfe": 0.0703,
+        "health": "ok"
+      },
+      "snap_wick_ratio": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0287,
+        "variance": 0.133175,
+        "n_unique": 174,
+        "info_gain_mfe": 0.0486,
+        "health": "ok"
+      },
       "raw_score": {
         "n_non_null": 209,
         "missing_ratio": 0.0,
@@ -3374,20 +5457,128 @@
       "snap_bos": {
         "n_non_null": 209,
         "missing_ratio": 0.0,
-        "zero_ratio": 1.0,
-        "variance": 0.0,
-        "n_unique": 1,
+        "zero_ratio": 0.5837,
+        "variance": 0.244157,
+        "n_unique": 2,
         "info_gain_mfe": 0.0,
-        "health": "zero_variance"
+        "health": "low_info"
       },
       "snap_choch": {
         "n_non_null": 209,
         "missing_ratio": 0.0,
-        "zero_ratio": 1.0,
-        "variance": 0.0,
-        "n_unique": 1,
+        "zero_ratio": 0.2967,
+        "variance": 0.209652,
+        "n_unique": 2,
         "info_gain_mfe": 0.0,
-        "health": "zero_variance"
+        "health": "low_info"
+      },
+      "snap_num_touches": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.2967,
+        "variance": 6.764906,
+        "n_unique": 14,
+        "info_gain_mfe": 0.0,
+        "health": "low_info"
+      },
+      "snap_sweep_size": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.003327,
+        "n_unique": 195,
+        "info_gain_mfe": 0.0,
+        "health": "low_info"
+      },
+      "snap_vol_exp": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 1.682868,
+        "n_unique": 199,
+        "info_gain_mfe": 0.0,
+        "health": "low_info"
+      },
+      "snap_reclaim_spd": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.001612,
+        "n_unique": 196,
+        "info_gain_mfe": 0.0,
+        "health": "low_info"
+      },
+      "feat_dist_swing_low": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.004703,
+        "n_unique": 199,
+        "info_gain_mfe": 0.0,
+        "health": "low_info"
+      },
+      "feat_sweep_depth_pct": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.003327,
+        "n_unique": 195,
+        "info_gain_mfe": 0.0,
+        "health": "low_info"
+      },
+      "feat_equal_lows_count": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.2967,
+        "variance": 6.764906,
+        "n_unique": 14,
+        "info_gain_mfe": 0.0,
+        "health": "low_info"
+      },
+      "feat_vol_spike_ratio": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.9951,
+        "n_unique": 200,
+        "info_gain_mfe": 0.0,
+        "health": "low_info"
+      },
+      "feat_candles_since_sweep": {
+        "n_non_null": 112,
+        "missing_ratio": 0.4641,
+        "zero_ratio": 0.0,
+        "variance": 31.116795,
+        "n_unique": 19,
+        "info_gain_mfe": 0.0,
+        "health": "low_info"
+      },
+      "feat_accumulation_score": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0766,
+        "variance": 6.856919,
+        "n_unique": 11,
+        "info_gain_mfe": 0.0,
+        "health": "low_info"
+      },
+      "feat_consec_red": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.6699,
+        "variance": 1.129279,
+        "n_unique": 6,
+        "info_gain_mfe": 0.0,
+        "health": "low_info"
+      },
+      "feat_vwap_dist": {
+        "n_non_null": 209,
+        "missing_ratio": 0.0,
+        "zero_ratio": 0.0,
+        "variance": 0.001912,
+        "n_unique": 192,
+        "info_gain_mfe": 0.0,
+        "health": "low_info"
       }
     },
     "auto_excluded": [
@@ -3400,18 +5591,15 @@
       "sweep_detected",
       "wick_rejection",
       "equal_lows",
-      "price_ok",
-      "snap_bos",
-      "snap_choch"
+      "price_ok"
     ],
-    "n_ok": 0,
+    "n_ok": 16,
     "n_sparse": 0,
-    "n_low_info": 2,
-    "n_zero_var": 12,
+    "n_low_info": 16,
+    "n_zero_var": 10,
     "n_mostly_zero": 0
   },
   "warnings": [
-    "rf_mfe: R²=-0.799 — weak predictive signal. More data needed before acting on weight suggestions.",
-    "rf_bq: R²=-0.219 — weak predictive signal. More data needed before acting on weight suggestions."
+    "rf_bq: R²=-0.039 — weak predictive signal. More data needed before acting on weight suggestions."
   ]
 }

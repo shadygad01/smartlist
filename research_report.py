@@ -1014,22 +1014,33 @@ def _build_pattern_clusters_section(res: dict) -> str:
     pd = res.get("pattern_discovery", {})
     if not pd:
         return ""
-    clusters = pd.get("clusters", {})
+    clusters_raw = pd.get("clusters", [])
     top_feats = pd.get("top_discriminating_features", [])
-    n_total = pd.get("n_signals", 0)
+    n_total = pd.get("n_used", pd.get("n_signals", 0))
+    algo    = pd.get("algorithm", "")
+    sil     = pd.get("silhouette_score")
+
+    # clusters is a list of dicts (one per cluster)
+    if isinstance(clusters_raw, dict):
+        clusters = list(clusters_raw.values())
+    else:
+        clusters = list(clusters_raw)
+
     if not clusters:
         return ""
 
+    algo_tag = f" — {algo}" if algo else ""
+    sil_tag  = f" (silhouette: {sil:.3f})" if sil else ""
     html = (
         '<div class="section">'
-        '<h2>Pattern Clusters — K-Means اكتشاف أنماط تلقائي</h2>'
+        f'<h2>Pattern Clusters{algo_tag} — اكتشاف أنماط تلقائي</h2>'
         f'<p style="font-size:.85em;color:#666">'
-        f'مبني على {n_total} إشارة — مُرتَّبة بـ MFE تنازلياً</p>'
+        f'مبني على {n_total} إشارة{sil_tag} — مُرتَّبة بـ MFE تنازلياً</p>'
     )
 
     if top_feats:
         feats_str = " | ".join(f"<code>{f}</code>" for f in top_feats[:8])
-        html += f'<p style="font-size:.83em;color:#555">أكثر المتغيرات تمييزاً بين الـ clusters: {feats_str}</p>'
+        html += f'<p style="font-size:.83em;color:#555">أكثر المتغيرات تمييزاً: {feats_str}</p>'
 
     html += (
         '<table><thead><tr>'
@@ -1039,22 +1050,26 @@ def _build_pattern_clusters_section(res: dict) -> str:
         '</tr></thead><tbody>'
     )
 
-    sorted_clusters = sorted(clusters.items(),
-                             key=lambda x: x[1].get("mfe_mean", 0), reverse=True)
-    for cid, cv in sorted_clusters:
-        n = cv.get("n", 0)
+    sorted_clusters = sorted(clusters, key=lambda c: c.get("mfe_mean") or 0, reverse=True)
+    for cv in sorted_clusters:
+        cid  = cv.get("cluster_id", "?")
+        n    = cv.get("n", 0)
         mfe_m = cv.get("mfe_mean")
         mae_m = cv.get("mae_mean")
-        bq_m = cv.get("bq_mean")
-        profile = cv.get("profile", {})
+        bq_m  = cv.get("bq_mean")
+        label = cv.get("cluster_label", "")
 
-        top_profile = sorted(profile.items(), key=lambda x: abs(x[1]), reverse=True)[:4]
+        # signatures: {feat: {cluster_mean, diff_from_global}}
+        sigs = cv.get("signatures", {})
+        top_sigs = sorted(sigs.items(), key=lambda x: abs(x[1].get("diff_from_global", 0)), reverse=True)[:4]
         profile_str = " | ".join(
-            f"<code>{k}</code>: {v:+.2f}" for k, v in top_profile
+            f"<code>{k}</code>: {v.get('diff_from_global', 0):+.2f}" for k, v in top_sigs
         )
+        if not profile_str:
+            profile_str = " | ".join(f"<code>{f}</code>" for f in cv.get("top_features", [])[:4])
 
         html += (
-            f"<tr><td><strong>C{cid}</strong></td>"
+            f"<tr><td><strong>C{cid}</strong><br><small style='color:#888'>{label}</small></td>"
             f"<td>{n}</td>"
             f"<td>{_mfe_badge(mfe_m)}</td>"
             f"<td>{_pct(mae_m)}</td>"

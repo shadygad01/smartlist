@@ -415,8 +415,16 @@ def _model_comparison(X_tr, y_tr, X_te, y_te, feature_names, target_label: str) 
 def _correlation_analysis(df: pd.DataFrame) -> dict:
     """
     ارتباط Spearman لكل فيتشر مع MFE و BQ Score (لا تفترض توزيعاً خطياً).
+    يستخدم ALL_FEATURE_COLS (تشمل snap_* و feat_*) مع تصفية الأعمدة ذات التباين الصفري.
     """
-    cols  = [c for c in FEATURE_COLS if c in df.columns]
+    # استخدم ALL_FEATURE_COLS لتشمل snap_* و feat_*
+    cols_base = [c for c in ALL_FEATURE_COLS if c in df.columns]
+    # تصفية إضافية: تجاهل أعمدة ذات بيانات غير كافية أو تباين صفري
+    cols = [
+        c for c in cols_base
+        if df[c].notna().sum() >= 10          # minimum non-null check
+        and df[c].nunique() > 1               # zero-variance filter
+    ]
     targets = {t: t for t in [TARGET_MFE, TARGET_BQ, "mae_20d"]
                if t in df.columns}
 

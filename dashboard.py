@@ -265,6 +265,85 @@ def _section_edge(ed):
     return _card("Edge Discovery / Self-Learning", "🧠", kpis + tbl, "edge_report.html")
 
 
+def _section_quant():
+    """Reads key metrics from egx_research.db for the quant report card."""
+    if not Path(DB_PATH).exists():
+        return _card("Quant Research", "📐",
+                     "<p style='color:#aaa;font-size:13px;'>لا توجد بيانات بعد</p>",
+                     "quant_research_report.html")
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        rows = conn.execute("""
+            SELECT b.r20d, b.mfe_20d, b.mae_20d
+            FROM signals s
+            JOIN bottom_quality b ON b.signal_id = s.id
+            WHERE b.mfe_20d IS NOT NULL
+        """).fetchall()
+        conn.close()
+    except Exception:
+        return _card("Quant Research", "📐",
+                     "<p style='color:#aaa;font-size:13px;'>خطأ في قراءة البيانات</p>",
+                     "quant_research_report.html")
+
+    if not rows:
+        return _card("Quant Research", "📐",
+                     "<p style='color:#aaa;font-size:13px;'>لا توجد إشارات ناضجة بعد</p>",
+                     "quant_research_report.html")
+
+    r20ds = [r[0] for r in rows if r[0] is not None]
+    mfes  = [r[1] for r in rows if r[1] is not None]
+    maes  = [abs(r[2]) for r in rows if r[2] is not None]
+    n     = len(mfes)
+
+    # CAGR
+    cagr = ((1 + sum(r20ds) / len(r20ds)) ** (252 / 20) - 1 * 100) if r20ds else 0
+    mean_r = sum(r20ds) / len(r20ds) if r20ds else 0
+    cagr   = ((1 + mean_r) ** (252 / 20) - 1) * 100
+
+    # Profit Factor
+    gains  = sum(r for r in r20ds if r > 0)
+    losses = sum(abs(r) for r in r20ds if r < 0)
+    pf     = round(gains / losses, 2) if losses > 0 else 0
+
+    # Avg MFE
+    avg_mfe = round(sum(mfes) / n * 100, 1) if n else 0
+
+    # Calmar
+    avg_mae = sum(maes) / len(maes) if maes else 0
+    calmar  = round((cagr / 100) / avg_mae, 2) if avg_mae > 0 else 0
+
+    # Max DD
+    max_dd = round(max(maes) * 100, 1) if maes else 0
+
+    # Win Rate (MFE >= 8%)
+    win_rate = round(sum(1 for m in mfes if m >= 0.08) / n * 100, 1) if n else 0
+
+    cats = {"large": 0, "medium": 0, "small": 0, "flat": 0}
+    for m in mfes:
+        if m >= 0.20:   cats["large"]  += 1
+        elif m >= 0.10: cats["medium"] += 1
+        elif m >= 0.05: cats["small"]  += 1
+        else:           cats["flat"]   += 1
+
+    kpis = _kpi_row(
+        ("CAGR",          f"{cagr:.0f}%",    "#155724" if cagr > 20 else "#856404"),
+        ("Profit Factor", f"{pf:.2f}",        "#155724" if pf > 1.5 else "#856404"),
+        ("Avg MFE",       f"+{avg_mfe:.1f}%", "#155724"),
+        ("Calmar",        f"{calmar:.2f}",    "#1a3c5e"),
+        ("Max DD",        f"{max_dd:.1f}%",   "#721c24"),
+        ("Win Rate",      f"{win_rate:.0f}%", "#155724" if win_rate > 40 else "#856404"),
+        ("إشارات",        str(n),            "#333"),
+    )
+    bars = (
+        _bar("MFE < 5% (ضعيف)",   cats["flat"],   n, "#e74c3c") +
+        _bar("MFE 5–10%",         cats["small"],  n, "#f39c12") +
+        _bar("MFE 10–20%",        cats["medium"], n, "#27ae60") +
+        _bar("MFE > 20% (كبير)", cats["large"],  n, "#2980b9")
+    )
+    content = kpis + "<div style='margin-top:12px;'>" + bars + "</div>"
+    return _card("Quant Research — 7 Phases", "📐", content, "quant_research_report.html")
+
+
 def _section_behavior(beh):
     if not beh or beh.get("n", 0) == 0:
         return _card("Behavior Report", "🔍", "<p style='color:#aaa;font-size:13px;'>لا توجد بيانات بعد</p>", "behavior_report.html")
@@ -305,6 +384,7 @@ def build_dashboard() -> str:
         '<a href="heatmap.html" style="color:#8fb8d8;text-decoration:none;">🗺️ Heatmap</a>',
         '<a href="backtest_report.html" style="color:#8fb8d8;text-decoration:none;">📊 Backtest</a>',
         '<a href="research_report.html" style="color:#8fb8d8;text-decoration:none;">🔬 Research</a>',
+        '<a href="quant_research_report.html" style="color:#8fb8d8;text-decoration:none;">📐 Quant</a>',
         '<a href="edge_report.html" style="color:#8fb8d8;text-decoration:none;">🧠 Edge</a>',
         '<a href="behavior_report.html" style="color:#8fb8d8;text-decoration:none;">🔍 Behavior</a>',
     ])
@@ -312,6 +392,7 @@ def build_dashboard() -> str:
     body = f"""
 {_section_backtest(bt)}
 {_section_behavior(beh)}
+{_section_quant()}
 {_section_research(rr)}
 {_section_edge(ed)}
 """

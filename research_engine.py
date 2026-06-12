@@ -755,18 +755,18 @@ def _mutual_information(df: pd.DataFrame) -> dict:
     if not SKLEARN_OK:
         return {}
 
-    cols    = [c for c in FEATURE_COLS if c in df.columns]
+    cols    = _get_feature_cols(df)
     results = {}
 
     for target, tname in [(TARGET_MFE, "mfe_20d"), (TARGET_BQ, "bq_score")]:
         if target not in df.columns:
             continue
-        valid = df[cols + [target]].dropna()
-        if len(valid) < MIN_SAMPLES:
+        target_mask = df[target].notna()
+        if target_mask.sum() < MIN_SAMPLES:
             continue
 
-        X  = valid[cols].fillna(0).values
-        y  = valid[target].values
+        X  = df.loc[target_mask, cols].fillna(0).values
+        y  = df.loc[target_mask, target].values
 
         try:
             mi_vals = mutual_info_regression(X, y, random_state=42)
@@ -797,16 +797,16 @@ def _probability_analysis(df: pd.DataFrame) -> dict:
     if not SKLEARN_OK:
         return {"error": "scikit-learn not installed"}
 
-    cols  = [c for c in FEATURE_COLS if c in df.columns]
-    valid = df[cols + ["mfe_20d"]].dropna()
+    cols  = _get_feature_cols(df)
+    target_mask = df["mfe_20d"].notna()
 
-    if len(valid) < MIN_SAMPLES:
-        return {"error": f"Need {MIN_SAMPLES} signals, have {len(valid)}"}
+    if target_mask.sum() < MIN_SAMPLES:
+        return {"error": f"Need {MIN_SAMPLES} signals, have {target_mask.sum()}"}
 
-    y = (valid["mfe_20d"] >= WIN_MFE_THRESHOLD).astype(int)
-    X = valid[cols]
+    y = (df.loc[target_mask, "mfe_20d"] >= WIN_MFE_THRESHOLD).astype(int)
+    X = df.loc[target_mask, cols].fillna(0)
 
-    split   = int(len(valid) * TRAIN_SPLIT_PCT)
+    split   = int(len(X) * TRAIN_SPLIT_PCT)
     X_tr, X_te = X.iloc[:split], X.iloc[split:]
     y_tr, y_te = y.iloc[:split], y.iloc[split:]
 
@@ -944,7 +944,6 @@ def _per_stock_ml(df: pd.DataFrame) -> dict:
 
     result = {}
     base   = df.dropna(subset=["mfe_20d", "symbol"])
-    feats  = [c for c in ALL_FEATURE_COLS if c in base.columns]
 
     for sym in sorted(base["symbol"].unique()):
         sub = base[base["symbol"] == sym].sort_values("signal_date")
@@ -952,16 +951,20 @@ def _per_stock_ml(df: pd.DataFrame) -> dict:
         if n < MIN_PER_STOCK_ML:
             continue
 
+        # فيتشرز متاحة فعلاً لهذا السهم
+        feats = [c for c in ALL_FEATURE_COLS
+                 if c in sub.columns and sub[c].notna().sum() >= max(3, MIN_PER_STOCK_ML // 10)]
+
         sym_result = {"n": n, "mfe_model": None, "bq_model": None}
 
         for target, key in [(TARGET_MFE, "mfe_model"), (TARGET_BQ, "bq_model")]:
-            valid = sub[feats + [target]].dropna()
-            if len(valid) < MIN_PER_STOCK_ML:
+            target_mask = sub[target].notna()
+            if target_mask.sum() < MIN_PER_STOCK_ML:
                 continue
 
-            X = valid[feats]
-            y = valid[target]
-            split = max(10, int(len(valid) * TRAIN_SPLIT_PCT))
+            X = sub.loc[target_mask, feats].fillna(0)
+            y = sub.loc[target_mask, target]
+            split = max(10, int(len(X) * TRAIN_SPLIT_PCT))
             X_tr, X_te = X.iloc[:split], X.iloc[split:]
             y_tr, y_te = y.iloc[:split], y.iloc[split:]
 

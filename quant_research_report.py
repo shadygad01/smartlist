@@ -75,6 +75,24 @@ HOLD_DAYS       = 20     # افتراض فترة الاحتفاظ 20 يوم تد
 PRICE_GATE_NORMAL    = 16
 PRICE_GATE_WHITELIST = 15
 ENTRY_SCORE_GATE     = 40
+TOTAL_EGX_STOCKS     = 27   # إجمالي أسهم الكون
+
+# ── Retention Thresholds (Phase 0 Constraints) ────────────────────────────────
+RETENTION_TARGET  = 0.98   # الهدف
+RETENTION_WARN    = 0.90   # إنذار
+RETENTION_PENALTY = 0.80   # غرامة قوية
+RETENTION_REJECT  = 0.70   # رفض
+
+# ── Optimization Score Weights ─────────────────────────────────────────────────
+OPT_WEIGHTS = {
+    "cagr":      0.30,
+    "pf":        0.20,
+    "calmar":    0.15,
+    "avg_mfe":   0.15,
+    "retention": 0.10,
+    "coverage":  0.05,
+    "stocks":    0.05,
+}
 
 PHILOSOPHY_NOTE = """
 <div style="background:#1a3c5e;color:#fff;border-radius:6px;padding:10px 16px;
@@ -170,8 +188,9 @@ def _metrics(sub: pd.DataFrame) -> dict:
     يُستخدم r20d للعائد الفعلي — mfe_20d للإمكانية — mae_20d للمخاطرة.
     """
     n = len(sub)
-    result = {"n": n, "cagr": None, "pf": None, "avg_mfe": None,
-              "calmar": None, "max_dd": None, "win_rate": None}
+    n_stocks = sub["symbol"].nunique() if "symbol" in sub.columns else 0
+    result = {"n": n, "n_stocks": n_stocks, "cagr": None, "pf": None,
+              "avg_mfe": None, "calmar": None, "max_dd": None, "win_rate": None}
     if n < 3:
         return result
 
@@ -210,40 +229,107 @@ def _metrics(sub: pd.DataFrame) -> dict:
     return result
 
 
-def _fmt_metrics(m: dict, base: dict | None = None) -> list:
+def _fmt_metrics(m: dict, base: dict | None = None,
+                 base_n: int = 0, show_retention: bool = False) -> list:
     """
-    يُرجع قائمة خلايا HTML بالترتيب:
-    CAGR | PF | Avg MFE | Calmar | Max DD | Win Rate
+    يُرجع قائمة خلايا HTML:
+    N | Retention | CAGR | PF | Avg MFE | Calmar | Max DD | Win Rate | OPT Score
     """
-    def _fmt(v, fmt, suffix=""):
-        return f"{v:{fmt}}{suffix}" if v is not None else "—"
-
-    def _delta_badge(val, bval, hi, lo, fmt, suffix=""):
+    def _delta_badge(val, bval, hi, lo, fmt):
         if val is None:
             return "—"
-        s = f"{val:{fmt}}{suffix}"
+        s = f"{val:{fmt}}"
         cls = "b-high" if val >= hi else ("b-low" if val < lo else "b-med")
         if base and bval is not None:
             d = val - bval
             sign = "+" if d > 0 else ""
-            s += f' <span style="font-size:.75em;color:#666">({sign}{d:{fmt}})</span>'
+            s += f' <span style="font-size:.73em;color:#aaa">({sign}{d:{fmt}})</span>'
         return f'<span class="badge {cls}">{s}</span>'
 
-    bm = base or {}
-    cagr_s  = _delta_badge(m["cagr"],    bm.get("cagr"),    0.20, 0.05, ".0%")
-    pf_s    = _delta_badge(m["pf"],      bm.get("pf"),      1.5,  1.0,  ".2f")
-    mfe_s   = _delta_badge(m["avg_mfe"], bm.get("avg_mfe"), 0.12, 0.05, ".1%")
-    cal_s   = _delta_badge(m["calmar"],  bm.get("calmar"),  2.0,  0.5,  ".2f")
-    dd_s    = _fmt(m["max_dd"],   ".1%") if m["max_dd"] is not None else "—"
-    wr_s    = f"{m['win_rate']:.0%}" if m["win_rate"] is not None else "—"
+    bm   = base or {}
+    n    = m["n"]
+    ret  = _retention_badge(n, base_n) if (show_retention and base_n > 0) else ""
+    cagr_s = _delta_badge(m["cagr"],    bm.get("cagr"),    0.20, 0.05, ".0%")
+    pf_s   = _delta_badge(m["pf"],      bm.get("pf"),      1.5,  1.0,  ".2f")
+    mfe_s  = _delta_badge(m["avg_mfe"], bm.get("avg_mfe"), 0.12, 0.05, ".1%")
+    cal_s  = _delta_badge(m["calmar"],  bm.get("calmar"),  2.0,  0.5,  ".2f")
+    dd_s   = f"{m['max_dd']:.1%}"  if m["max_dd"]  is not None else "—"
+    wr_s   = f"{m['win_rate']:.0%}"if m["win_rate"] is not None else "—"
 
-    return [str(m["n"]), cagr_s, pf_s, mfe_s, cal_s, dd_s, wr_s]
+    cells = [str(n)]
+    if show_retention and base_n > 0:
+        cells.append(ret)
+        opt = _opt_score(m, bm, n, base_n, m.get("n_stocks", 0))
+        cells += [cagr_s, pf_s, mfe_s, cal_s, dd_s, wr_s,
+                  f'<span class="badge {"b-high" if opt>=60 else "b-low" if opt<35 else "b-med"}">{opt:.0f}</span>']
+    else:
+        cells += [cagr_s, pf_s, mfe_s, cal_s, dd_s, wr_s]
+    return cells
 
 
-METRICS_HEADERS = ["N", "CAGR", "Profit Factor", "Avg MFE", "Calmar", "Max DD", "Win Rate"]
+def _metrics_headers(with_retention: bool = False) -> list:
+    base = ["N"]
+    if with_retention:
+        base += ["Retention %", "CAGR", "Profit Factor", "Avg MFE",
+                 "Calmar", "Max DD", "Win Rate", "OPT Score"]
+    else:
+        base += ["CAGR", "Profit Factor", "Avg MFE", "Calmar", "Max DD", "Win Rate"]
+    return base
+
+
+METRICS_HEADERS = _metrics_headers(with_retention=False)
 
 
 # ── HTML helpers ───────────────────────────────────────────────────────────────
+
+def _retention_badge(n: int, base_n: int) -> str:
+    """يُظهر نسبة الاحتفاظ مع badge ملون + تحذير إن كانت أقل من العتبة."""
+    if base_n == 0:
+        return "—"
+    r = n / base_n
+    if r >= RETENTION_TARGET:
+        cls, note = "b-high", ""
+    elif r >= RETENTION_WARN:
+        cls, note = "b-med", " ⚠"
+    elif r >= RETENTION_PENALTY:
+        cls, note = "b-low", " ⛔"
+    else:
+        cls, note = "b-low", " ❌ رفض"
+    return f'<span class="badge {cls}">{r:.0%}{note}</span>'
+
+
+def _opt_score(m: dict, base_m: dict, n: int, base_n: int,
+               n_stocks: int = 0) -> float:
+    """
+    درجة التحسين المركّبة 0-100.
+    تُعاقَب العوامل ذات الاحتفاظ المنخفض تلقائياً.
+    """
+    def _norm(val, base, cap):
+        if val is None or base is None or base == 0:
+            return 0.0
+        return min(1.0, max(0.0, val / cap))
+
+    ret = (n / base_n) if base_n > 0 else 0
+    cov = (n_stocks / TOTAL_EGX_STOCKS) if n_stocks else (ret * 0.9)
+
+    score  = OPT_WEIGHTS["cagr"]     * _norm(m.get("cagr"),    None, 0.5) * 100
+    score += OPT_WEIGHTS["pf"]       * _norm(m.get("pf"),      None, 3.0) * 100
+    score += OPT_WEIGHTS["calmar"]   * _norm(m.get("calmar"),  None, 5.0) * 100
+    score += OPT_WEIGHTS["avg_mfe"]  * _norm(m.get("avg_mfe"), None, 0.3) * 100
+    score += OPT_WEIGHTS["retention"]* ret * 100
+    score += OPT_WEIGHTS["coverage"] * cov * 100
+    score += OPT_WEIGHTS["stocks"]   * cov * 100
+
+    # عقوبة الاحتفاظ المنخفض
+    if ret < RETENTION_REJECT:
+        score *= 0.3
+    elif ret < RETENTION_PENALTY:
+        score *= 0.6
+    elif ret < RETENTION_WARN:
+        score *= 0.85
+
+    return round(min(100, score), 1)
+
 
 def _badge(val: float, hi: float, lo: float, fmt: str = ".1%") -> str:
     cls = "b-high" if val >= hi else ("b-low" if val < lo else "b-med")
@@ -270,6 +356,82 @@ def _tbl(headers: list, rows: list) -> str:
     return (f'<div class="tbl-wrap"><table>'
             f'<thead><tr>{ths}</tr></thead>'
             f'<tbody>{trs}</tbody></table></div>')
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PHASE 0 — Operational Constraints
+# ══════════════════════════════════════════════════════════════════════════════
+
+def phase0_constraints(df: pd.DataFrame, df_all: pd.DataFrame) -> str:
+    n_mat   = len(df)
+    n_all   = len(df_all)
+    n_stk   = df_all["symbol"].nunique() if "symbol" in df_all.columns else 0
+
+    # Signals per year / month
+    if "signal_date" in df_all.columns and len(df_all) > 1:
+        dates = pd.to_datetime(df_all["signal_date"])
+        span_days = (dates.max() - dates.min()).days or 1
+        sig_yr  = round(n_all / span_days * 365, 1)
+        sig_mo  = round(n_all / span_days * 30,  1)
+    else:
+        sig_yr = sig_mo = 0
+
+    coverage = f"{n_stk}/{TOTAL_EGX_STOCKS}"
+
+    html = f"""
+<div class="section" style="border-right:6px solid #c0392b;">
+  <h2 style="color:#c0392b;">المرحلة 0: القيود التشغيلية
+    <span class="phase-badge" style="background:#c0392b;">Operational Constraints</span>
+  </h2>
+
+  <div style="background:#fff3f3;border:1px solid #f5c6cb;border-radius:8px;
+              padding:14px 18px;margin:10px 0;font-size:.88em;line-height:1.9">
+    <strong>الهدف الأساسي:</strong> ماسح فرص قيعان — <em>ليس</em> تعظيم الدقة أو Win Rate<br>
+    <strong>الأولوية القصوى:</strong> الحفاظ على تدفق الإشارات<br>
+    <strong>قاعدة الرفض:</strong> أي توصية تُخفّض الإشارات > 5% تُرفَض إلا بأداء استثنائي<br>
+    <strong>الحل المفضّل:</strong> <em>حافة أعلى مع عدد إشارات مشابه</em> — ليس إشارات أقل بإحصاءات أجمل
+  </div>
+
+  <div class="kpi-row">
+    {_kpi(str(n_all),      "إجمالي الإشارات")}
+    {_kpi(str(n_mat),      "إشارات ناضجة")}
+    {_kpi(str(int(sig_yr)),"إشارة / سنة")}
+    {_kpi(str(int(sig_mo)),"إشارة / شهر")}
+    {_kpi(coverage,        "تغطية السوق")}
+    {_kpi(str(n_stk),      "أسهم مُغطّاة")}
+  </div>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr>
+      <th>العتبة</th><th>Retention %</th><th>حالة التوصية</th><th>الإجراء</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>≥ 98%</td>
+          <td><span class="badge b-high">هدف مثالي</span></td>
+          <td>✅ مقبول بالكامل</td><td>تطبيق مباشر</td></tr>
+      <tr><td>90–98%</td>
+          <td><span class="badge b-med">⚠ تحذير</span></td>
+          <td>مقبول مع تحفظ</td><td>دراسة إضافية مطلوبة</td></tr>
+      <tr><td>80–90%</td>
+          <td><span class="badge b-low">⛔ غرامة</span></td>
+          <td>غرامة في OPT Score</td><td>رفض إلا لأداء استثنائي</td></tr>
+      <tr><td>< 80%</td>
+          <td><span class="badge b-low">❌ رفض</span></td>
+          <td>مرفوض تلقائياً</td><td>رفض</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div style="background:#1a3c5e;color:#fff;border-radius:6px;padding:10px 16px;
+              margin:10px 0;font-size:.83em;line-height:1.8">
+    <strong>صيغة OPT Score:</strong>
+    CAGR×30% + Profit Factor×20% + Calmar×15% + Avg MFE×15%
+    + Signal Retention×10% + Market Coverage×5% + Unique Stocks×5%<br>
+    <span style="opacity:.75">الاحتفاظ المنخفض يُطبَّق عليه ضارب تخفيض تلقائي: &lt;90%→×0.85 | &lt;80%→×0.60 | &lt;70%→×0.30</span>
+  </div>
+</div>"""
+    return html, n_mat   # returns base_n for use in subsequent phases
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -522,25 +684,30 @@ def phase3_weight_validation(df: pd.DataFrame) -> str:
 # PHASE 4 — Gate Analysis
 # ══════════════════════════════════════════════════════════════════════════════
 
-def phase4_gate_analysis(df: pd.DataFrame) -> str:
+def phase4_gate_analysis(df: pd.DataFrame, base_n: int = 0) -> str:
     if df.empty or "mfe_20d" not in df.columns:
         return ('<div class="section"><h2>المرحلة 4: تحليل العتبات</h2>'
                 '<p class="warn">بيانات غير كافية</p></div>')
 
-    base_m = _metrics(df)
+    _base_n = base_n or len(df)
+    base_m  = _metrics(df)
+    gate_headers = ["العتبة"] + _metrics_headers(with_retention=True) + ["ملاحظة"]
 
     def _gate_rows(col: str, thresholds: list, cur_thresh=None) -> list:
         rows = []
         for t in thresholds:
-            mask  = df[col] >= t
-            sub   = df.loc[mask].copy()
-            m     = _metrics(sub)
-            cells = _fmt_metrics(m, base_m)
-            note  = " ◀ حالي" if t == cur_thresh else ""
+            mask = df[col] >= t
+            sub  = df.loc[mask].copy()
+            m    = _metrics(sub)
+            ret  = m["n"] / _base_n if _base_n > 0 else 0
+            # highlight current threshold
+            note = " ◀ حالي" if t == cur_thresh else ""
+            # reject flag
+            if ret < RETENTION_REJECT and t != cur_thresh:
+                note = " ❌ رفض (Retention<70%)"
+            cells = _fmt_metrics(m, base_m, base_n=_base_n, show_retention=True)
             rows.append([str(t)] + cells + [note])
         return rows
-
-    gate_headers = ["العتبة"] + METRICS_HEADERS + ["ملاحظة"]
 
     pg_rows = _gate_rows("r1_price",    list(range(10, 25)), PRICE_GATE_NORMAL) \
               if "r1_price"    in df.columns else []
@@ -553,12 +720,11 @@ def phase4_gate_analysis(df: pd.DataFrame) -> str:
 <div class="section">
   <h2>المرحلة 4: تحليل العتبات <span class="phase-badge">Gate Analysis</span></h2>
   {PHILOSOPHY_NOTE}
-  <p style="font-size:.85em;color:#555">
-    الترتيب: CAGR → PF → Avg MFE → Calmar → Max DD.
-    الفارق (+/-) محسوب من قاعدة الكل.
-    Win Rate مُدرَج كمقياس كامل — الترتيب يبدأ من CAGR.
-  </p>
   <div class="frozen-note">⚠ العتبات مجمّدة في النظام — النتائج للبحث فقط</div>
+  <p style="font-size:.84em;color:#555">
+    <strong>Retention %</strong>: نسبة الإشارات المحتفَظ بها بعد تطبيق العتبة من القاعدة ({_base_n} إشارة).
+    <strong>OPT Score</strong>: الدرجة المركّبة (CAGR×30 + PF×20 + Calmar×15 + MFE×15 + Retention×10 + Coverage×10) مع عقوبة الاحتفاظ المنخفض.
+  </p>
 
   <h3 style="color:#1a3c5e;margin:14px 0 6px">PRICE_GATE — r1_price ≥ x</h3>
   {_tbl(gate_headers, pg_rows) if pg_rows else '<p class="warn">r1_price غير متوفر</p>'}
@@ -592,11 +758,12 @@ def _edge_test(df: pd.DataFrame, mask: pd.Series) -> tuple:
     return m, p
 
 
-def phase5_edge_discovery(df: pd.DataFrame) -> str:
+def phase5_edge_discovery(df: pd.DataFrame, base_n: int = 0) -> str:
     if df.empty or "mfe_20d" not in df.columns:
         return ('<div class="section"><h2>المرحلة 5: اكتشاف الحافة</h2>'
                 '<p class="warn">بيانات غير كافية</p></div>')
 
+    _base_n  = base_n or len(df)
     base_m   = _metrics(df)
     available= [c for c in R_COLS
                 if c in df.columns and df[c].notna().sum() >= MIN_N_EDGE]
@@ -664,8 +831,12 @@ def phase5_edge_discovery(df: pd.DataFrame) -> str:
         cal_s     = f"{m['calmar']:.2f}"             if m["calmar"]   is not None else "—"
         wr_s      = f'{m["win_rate"]:.0%}' \
                     if m["win_rate"] is not None else '—'
-        rows.append([e["combo"], deg_s, str(m["n"]),
-                     cagr_lift, pf_s, mfe_s, cal_s, p_s, wr_s])
+        ret_s     = _retention_badge(m["n"], _base_n)
+        opt       = _opt_score(m, base_m, m["n"], _base_n, m.get("n_stocks", 0))
+        opt_cls   = "b-high" if opt >= 60 else ("b-low" if opt < 35 else "b-med")
+        rows.append([e["combo"], deg_s, str(m["n"]), ret_s,
+                     cagr_lift, pf_s, mfe_s, cal_s, p_s, wr_s,
+                     f'<span class="badge {opt_cls}">{opt:.0f}</span>'])
 
     cagr_s = f"{base_m['cagr']:.0%}" if base_m["cagr"] is not None else "—"
     mfe_bs = f"{base_mfe:.1%}"
@@ -675,18 +846,18 @@ def phase5_edge_discovery(df: pd.DataFrame) -> str:
   <h2>المرحلة 5: اكتشاف الحافة <span class="phase-badge">Edge Discovery</span></h2>
   {PHILOSOPHY_NOTE}
   <div class="kpi-row">
-    {_kpi(cagr_s,  "CAGR قاعدي")}
-    {_kpi(mfe_bs,  "Avg MFE قاعدي")}
+    {_kpi(cagr_s,        "CAGR قاعدي")}
+    {_kpi(mfe_bs,        "Avg MFE قاعدي")}
+    {_kpi(str(_base_n),  "إجمالي الإشارات")}
     {_kpi(str(len(sig)), "حافة ذات دلالة")}
   </div>
-  <p style="font-size:.85em;color:#555">
-    مرتَّب: CAGR Lift ← ثم Avg MFE.
-    فلترة: p ≤ 0.25 و N ≥ {MIN_N_EDGE}.
-    Win Rate مُدرَج كمقياس كامل — الترتيب يبدأ من CAGR.
+  <p style="font-size:.84em;color:#555">
+    مرتَّب: CAGR Lift ← ثم Avg MFE. فلترة: p ≤ 0.25 و N ≥ {MIN_N_EDGE}.
+    <strong>Retention</strong>: نسبة الإشارات التي تُحقق هذا الشرط — الحافات ذات الاحتفاظ العالي أكثر عملية.
+    <strong>OPT Score</strong>: درجة مركّبة تُعاقِب الاحتفاظ المنخفض.
   </p>
   {_tbl(
-    ["التركيبة","نوع","N","CAGR Lift","PF","Avg MFE","Calmar","p-val",
-     "Win Rate"],
+    ["التركيبة","نوع","N","Retention","CAGR Lift","PF","Avg MFE","Calmar","p-val","Win Rate","OPT"],
     rows
   ) if rows else '<p class="warn">لا حوافّ ذات دلالة</p>'}
 </div>"""
@@ -874,6 +1045,10 @@ def build_report() -> str:
 
     sections = []
 
+    print("[QuantReport] Phase 0: Operational Constraints…")
+    s0, base_n = phase0_constraints(df, df_all)
+    sections.append(s0)
+
     print("[QuantReport] Phase 1: Data Audit…")
     s1, dq_score = phase1_data_audit(df, df_all)
     sections.append(s1)
@@ -886,10 +1061,10 @@ def build_report() -> str:
     sections.append(phase3_weight_validation(df))
 
     print("[QuantReport] Phase 4: Gate Analysis…")
-    sections.append(phase4_gate_analysis(df))
+    sections.append(phase4_gate_analysis(df, base_n=base_n))
 
     print("[QuantReport] Phase 5: Edge Discovery…")
-    sections.append(phase5_edge_discovery(df))
+    sections.append(phase5_edge_discovery(df, base_n=base_n))
 
     print("[QuantReport] Phase 6: Cluster Profiles…")
     sections.append(phase6_clusters(df))

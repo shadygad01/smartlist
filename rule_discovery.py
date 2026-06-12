@@ -276,7 +276,6 @@ def _discover_rulefit(df: pd.DataFrame, feat_cols: list[str]) -> list[dict]:
     try:
         rfit = RuleFitRegressor(
             max_rules=300,
-            rfmode="regress",
             model_type="r",
             random_state=42,
         )
@@ -326,8 +325,9 @@ def _discretize(df: pd.DataFrame, feat_cols: list[str]) -> tuple[pd.DataFrame, d
     bin_df = pd.DataFrame(index=df.index)
     for i, col in enumerate(feat_cols):
         edges = bin_edges[i]
-        for b in range(N_BINS):
-            label    = BIN_LABELS[b]
+        actual_bins = len(edges) - 1          # may be < N_BINS for low-variance cols
+        for b in range(actual_bins):
+            label    = BIN_LABELS[b] if b < len(BIN_LABELS) else f"bin{b}"
             bin_col  = f"{col}_{label}"
             lo       = round(float(edges[b]),   4)
             hi       = round(float(edges[b+1]), 4) if b+1 < len(edges) else None

@@ -196,6 +196,22 @@ def _compute_bq(sig: dict, df: pd.DataFrame) -> dict | None:
     days_to_peak   = int(all_highs.argmax()) + 1
     days_to_trough = int(all_lows.argmin())  + 1
 
+    # ── Time to recovery: first day after trough where close ≥ entry_price ────
+    trough_idx = int(all_lows.argmin())
+    time_to_recovery = None
+    for i in range(trough_idx, len(window_full)):
+        if float(window_full["Close"].iloc[i]) >= entry_price:
+            time_to_recovery = i + 1
+            break
+
+    # ── Drawdown duration: consecutive days from start where close < entry ─────
+    drawdown_duration = 0
+    for i in range(len(window_full)):
+        if float(window_full["Close"].iloc[i]) < entry_price:
+            drawdown_duration += 1
+        else:
+            break
+
     # ── Classification (based on 20-day metrics) ──────────────────────────────
     if   mfe_20 >= 0.20:
         classification = "Huge Winner"
@@ -286,9 +302,11 @@ def _compute_bq(sig: dict, df: pd.DataFrame) -> dict | None:
         "mae_40d":       mae_40d,
         "mfe_60d":       mfe_60d,
         "mae_60d":       mae_60d,
-        "days_to_peak":  days_to_peak,
-        "days_to_trough": days_to_trough,
-        "classification": classification,
+        "days_to_peak":     days_to_peak,
+        "days_to_trough":   days_to_trough,
+        "classification":   classification,
+        "time_to_recovery": time_to_recovery,
+        "drawdown_duration": drawdown_duration,
     }
 
 

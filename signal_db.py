@@ -109,20 +109,48 @@ def _migrate_schema(conn: sqlite3.Connection):
         if col not in existing:
             conn.execute(f"ALTER TABLE signals ADD COLUMN {col} {defn}")
 
+    # Migrate signals — Phase 1 computed features (feat_*)
+    feat_cols = {
+        "feat_dist_swing_low":       "REAL",
+        "feat_dealing_range_pos":    "REAL",
+        "feat_candles_since_bos":    "INTEGER",
+        "feat_dist_last_bos":        "REAL",
+        "feat_sweep_depth_pct":      "REAL",
+        "feat_equal_lows_count":     "INTEGER",
+        "feat_vol_spike_ratio":      "REAL",
+        "feat_candles_since_sweep":  "INTEGER",
+        "feat_accumulation_score":   "REAL",
+        "feat_consec_red":           "INTEGER",
+        "feat_down_days_pct":        "REAL",
+        "feat_atr_compression":      "REAL",
+        "feat_vol_contraction":      "REAL",
+        "feat_dist_20d_low":         "REAL",
+        "feat_dist_50d_low":         "REAL",
+        "feat_dist_52w_low":         "REAL",
+        "feat_vwap_dist":            "REAL",
+        "feat_rs_vs_egx30":          "REAL",
+        "feat_egx30_trend_val":      "REAL",
+    }
+    for col, defn in feat_cols.items():
+        if col not in existing:
+            conn.execute(f"ALTER TABLE signals ADD COLUMN {col} {defn}")
+
     # Migrate bottom_quality table
     bq_existing = {r[1] for r in conn.execute("PRAGMA table_info(bottom_quality)").fetchall()}
     bq_new_cols = {
-        "r1d":          "REAL",
-        "r3d":          "REAL",
-        "r40d":         "REAL",
-        "r60d":         "REAL",
-        "mfe_40d":      "REAL",
-        "mfe_60d":      "REAL",
-        "mae_40d":      "REAL",
-        "mae_60d":      "REAL",
-        "days_to_peak":   "INTEGER",
-        "days_to_trough": "INTEGER",
-        "classification": "TEXT",
+        "r1d":               "REAL",
+        "r3d":               "REAL",
+        "r40d":              "REAL",
+        "r60d":              "REAL",
+        "mfe_40d":           "REAL",
+        "mfe_60d":           "REAL",
+        "mae_40d":           "REAL",
+        "mae_60d":           "REAL",
+        "days_to_peak":      "INTEGER",
+        "days_to_trough":    "INTEGER",
+        "classification":    "TEXT",
+        "time_to_recovery":  "INTEGER",
+        "drawdown_duration": "INTEGER",
     }
     for col, defn in bq_new_cols.items():
         if col not in bq_existing:
@@ -569,38 +597,42 @@ def upsert_bottom_quality(signal_id: str, bq: dict, db_path: str = DB_PATH):
              bq_reversal, bq_volume, mfe_20d, mae_20d,
              r1d, r3d, r5d, r10d, r20d, days_to_7pct,
              r40d, r60d, mfe_40d, mfe_60d, mae_40d, mae_60d,
-             days_to_peak, days_to_trough, classification, computed_at)
+             days_to_peak, days_to_trough, classification,
+             time_to_recovery, drawdown_duration, computed_at)
             VALUES
             (:sid, :bq, :g, :d, :r, :rv, :v,
              :mfe, :mae,
              :r1, :r3, :r5, :r10, :r20, :days,
              :r40, :r60, :mfe40, :mfe60, :mae40, :mae60,
-             :dtp, :dtt, :cls, :now)
+             :dtp, :dtt, :cls,
+             :ttr, :ddr, :now)
             ON CONFLICT(signal_id) DO UPDATE SET
-              bq_score      = excluded.bq_score,
-              bq_gain       = excluded.bq_gain,
-              bq_drawdown   = excluded.bq_drawdown,
-              bq_recovery   = excluded.bq_recovery,
-              bq_reversal   = excluded.bq_reversal,
-              bq_volume     = excluded.bq_volume,
-              mfe_20d       = excluded.mfe_20d,
-              mae_20d       = excluded.mae_20d,
-              r1d           = excluded.r1d,
-              r3d           = excluded.r3d,
-              r5d           = excluded.r5d,
-              r10d          = excluded.r10d,
-              r20d          = excluded.r20d,
-              days_to_7pct  = excluded.days_to_7pct,
-              r40d          = COALESCE(excluded.r40d,    r40d),
-              r60d          = COALESCE(excluded.r60d,    r60d),
-              mfe_40d       = COALESCE(excluded.mfe_40d, mfe_40d),
-              mfe_60d       = COALESCE(excluded.mfe_60d, mfe_60d),
-              mae_40d       = COALESCE(excluded.mae_40d, mae_40d),
-              mae_60d       = COALESCE(excluded.mae_60d, mae_60d),
-              days_to_peak   = excluded.days_to_peak,
-              days_to_trough = excluded.days_to_trough,
-              classification = excluded.classification,
-              computed_at   = excluded.computed_at
+              bq_score         = excluded.bq_score,
+              bq_gain          = excluded.bq_gain,
+              bq_drawdown      = excluded.bq_drawdown,
+              bq_recovery      = excluded.bq_recovery,
+              bq_reversal      = excluded.bq_reversal,
+              bq_volume        = excluded.bq_volume,
+              mfe_20d          = excluded.mfe_20d,
+              mae_20d          = excluded.mae_20d,
+              r1d              = excluded.r1d,
+              r3d              = excluded.r3d,
+              r5d              = excluded.r5d,
+              r10d             = excluded.r10d,
+              r20d             = excluded.r20d,
+              days_to_7pct     = excluded.days_to_7pct,
+              r40d             = COALESCE(excluded.r40d,    r40d),
+              r60d             = COALESCE(excluded.r60d,    r60d),
+              mfe_40d          = COALESCE(excluded.mfe_40d, mfe_40d),
+              mfe_60d          = COALESCE(excluded.mfe_60d, mfe_60d),
+              mae_40d          = COALESCE(excluded.mae_40d, mae_40d),
+              mae_60d          = COALESCE(excluded.mae_60d, mae_60d),
+              days_to_peak     = excluded.days_to_peak,
+              days_to_trough   = excluded.days_to_trough,
+              classification   = excluded.classification,
+              time_to_recovery = excluded.time_to_recovery,
+              drawdown_duration= excluded.drawdown_duration,
+              computed_at      = excluded.computed_at
         """, {
             "sid": signal_id,
             "bq":  bq.get("bq_score"),    "g":   bq.get("bq_gain"),
@@ -617,8 +649,43 @@ def upsert_bottom_quality(signal_id: str, bq: dict, db_path: str = DB_PATH):
             "dtp":  bq.get("days_to_peak"),
             "dtt":  bq.get("days_to_trough"),
             "cls":  bq.get("classification"),
+            "ttr":  bq.get("time_to_recovery"),
+            "ddr":  bq.get("drawdown_duration"),
             "now":  datetime.now().isoformat(),
         })
+    conn.close()
+
+
+def upsert_signal_features(signal_id: str, features: dict, db_path: str = DB_PATH):
+    """
+    Updates feat_* and snap_* feature columns for an existing signal row.
+    Called by backfill_research_db after compute_entry_features().
+    Only sets columns that have non-None values.
+    """
+    if not features:
+        return
+    _safe = {
+        "feat_dist_swing_low", "feat_dealing_range_pos", "feat_candles_since_bos",
+        "feat_dist_last_bos", "feat_sweep_depth_pct", "feat_equal_lows_count",
+        "feat_vol_spike_ratio", "feat_candles_since_sweep", "feat_accumulation_score",
+        "feat_consec_red", "feat_down_days_pct", "feat_atr_compression",
+        "feat_vol_contraction", "feat_dist_20d_low", "feat_dist_50d_low",
+        "feat_dist_52w_low", "feat_vwap_dist", "feat_rs_vs_egx30",
+        "feat_egx30_trend_val",
+        "snap_atr", "snap_wick_ratio", "snap_compression", "snap_consol_len",
+        "snap_bos", "snap_bos_dist", "snap_choch", "snap_pivot_str",
+        "snap_num_touches", "snap_sweep_size", "snap_vol_exp",
+        "snap_reclaim_spd", "snap_dist_lo", "snap_prem_disc",
+    }
+    cols = [c for c, v in features.items() if v is not None and c in _safe]
+    if not cols:
+        return
+    set_clause = ", ".join(f'"{c}" = :{c}' for c in cols)
+    params = {c: features[c] for c in cols}
+    params["__id"] = signal_id
+    conn = get_conn(db_path)
+    with conn:
+        conn.execute(f'UPDATE signals SET {set_clause} WHERE id = :__id', params)
     conn.close()
 
 
@@ -674,7 +741,8 @@ def get_mature_signals(db_path: str = DB_PATH) -> list:
                b.mfe_20d, b.mae_20d,
                b.r1d, b.r3d, b.r5d, b.r10d, b.r20d, b.days_to_7pct,
                b.r40d, b.r60d, b.mfe_40d, b.mfe_60d, b.mae_40d, b.mae_60d,
-               b.days_to_peak, b.days_to_trough, b.classification
+               b.days_to_peak, b.days_to_trough, b.classification,
+               b.time_to_recovery, b.drawdown_duration
         FROM signals s
         JOIN bottom_quality b ON s.id = b.signal_id
         ORDER BY s.signal_date

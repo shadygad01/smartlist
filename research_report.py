@@ -1049,6 +1049,156 @@ def _build_pattern_clusters_section(res: dict) -> str:
     return html
 
 
+def _build_fingerprints_section(res: dict) -> str:
+    """Top 5 Bottom Fingerprints from pattern_discovery."""
+    pd_res = res.get("pattern_discovery", {})
+    fps    = pd_res.get("top_fingerprints", [])
+    algo   = pd_res.get("algorithm", "KMeans")
+    sil    = pd_res.get("silhouette_score")
+    if not fps:
+        return ""
+
+    sil_str = f"  |  Silhouette: {sil:.3f}" if sil is not None else ""
+    html = (
+        '<div class="section">'
+        f'<h2>Top 5 Bottom Fingerprints — أفضل أنماط القاع المكتشفة تلقائياً</h2>'
+        f'<p style="font-size:.85em;color:#666">خوارزمية: <strong>{algo}</strong>{sil_str}</p>'
+    )
+
+    for fp in fps:
+        rank  = fp.get("rank", "?")
+        label = fp.get("label", "")
+        n     = fp.get("n", 0)
+        mfe_m = fp.get("mfe_mean")
+        mae_m = fp.get("mae_mean")
+        bq_m  = fp.get("bq_mean")
+        ttr_m = fp.get("time_to_recovery_mean")
+        ddr_m = fp.get("drawdown_duration_mean")
+
+        rank_color = "#198754" if rank == 1 else ("#2a6496" if rank <= 3 else "#555")
+        html += (
+            f'<div class="rec-box" style="margin-bottom:10px">'
+            f'<h3 style="color:{rank_color}">'
+            f'#{rank} — {label}  <small style="font-weight:400;color:#888">(n={n})</small>'
+            f'</h3>'
+        )
+
+        # KPIs row
+        html += '<div class="kpi-row">'
+        if mfe_m is not None:
+            html += f'<div class="kpi"><div class="val">{_mfe_badge(mfe_m)}</div><div class="lbl">MFE متوسط</div></div>'
+        if mae_m is not None:
+            html += f'<div class="kpi"><div class="val">{_pct(abs(mae_m))}</div><div class="lbl">MAE متوسط</div></div>'
+        if bq_m is not None:
+            html += f'<div class="kpi"><div class="val">{_bq_badge(bq_m)}</div><div class="lbl">BQ متوسط</div></div>'
+        if ttr_m is not None:
+            html += f'<div class="kpi"><div class="val">{ttr_m:.0f}d</div><div class="lbl">وقت الانتعاش</div></div>'
+        if ddr_m is not None:
+            html += f'<div class="kpi"><div class="val">{ddr_m:.0f}d</div><div class="lbl">مدة التراجع</div></div>'
+        html += '</div>'
+
+        # Feature values
+        fv = fp.get("feature_values", {})
+        if fv:
+            parts = []
+            for feat, vals in fv.items():
+                mean_v = vals.get("mean", 0)
+                diff_v = vals.get("vs_global", 0)
+                arrow  = "↑" if diff_v > 0 else ("↓" if diff_v < 0 else "→")
+                color  = "#198754" if diff_v > 0 else ("#dc3545" if diff_v < 0 else "#888")
+                parts.append(
+                    f'<code>{feat}</code>: {mean_v:.3f} '
+                    f'<span style="color:{color}">{arrow}{abs(diff_v):.3f}</span>'
+                )
+            html += '<p style="font-size:.82em;line-height:1.8">' + "  |  ".join(parts) + '</p>'
+
+        html += '</div>'
+
+    html += '</div>'
+    return html
+
+
+def _build_feature_health_section(res: dict) -> str:
+    """Phase 6: Feature Health Report table."""
+    fh = res.get("feature_health", {})
+    if not fh or not fh.get("features"):
+        return ""
+
+    features   = fh["features"]
+    auto_excl  = fh.get("auto_excluded", [])
+    n_ok       = fh.get("n_ok", 0)
+    n_sparse   = fh.get("n_sparse", 0)
+    n_low_info = fh.get("n_low_info", 0)
+    n_zero_var = fh.get("n_zero_var", 0)
+    n_mostly_z = fh.get("n_mostly_zero", 0)
+
+    html = (
+        '<div class="section">'
+        '<h2>Feature Health Report — جودة المتغيرات البحثية (Phase 6)</h2>'
+        '<div class="kpi-row">'
+        f'<div class="kpi"><div class="val" style="color:#198754">{n_ok}</div><div class="lbl">✓ سليم</div></div>'
+        f'<div class="kpi"><div class="val" style="color:#ffc107">{n_low_info}</div><div class="lbl">معلومات ضعيفة</div></div>'
+        f'<div class="kpi"><div class="val" style="color:#dc3545">{n_sparse + n_zero_var + n_mostly_z}</div><div class="lbl">مستبعد تلقائياً</div></div>'
+        '</div>'
+    )
+
+    if auto_excl:
+        excl_str = ", ".join(f"<code>{c}</code>" for c in auto_excl[:15])
+        html += (
+            f'<div class="warn">المتغيرات المستبعدة تلقائياً ({len(auto_excl)}): {excl_str}'
+            + (' ...' if len(auto_excl) > 15 else '') + '</div>'
+        )
+
+    # Show top 20 by info gain, then any excluded ones
+    sorted_feats = sorted(features.items(), key=lambda x: -x[1]["info_gain_mfe"])
+    shown = sorted_feats[:25]
+
+    health_colors = {
+        "ok":            "#198754",
+        "low_info":      "#856404",
+        "too_sparse":    "#721c24",
+        "zero_variance": "#721c24",
+        "mostly_zero":   "#721c24",
+    }
+    health_labels = {
+        "ok":            "سليم",
+        "low_info":      "معلومات ضعيفة",
+        "too_sparse":    "بيانات شحيحة",
+        "zero_variance": "تباين صفري",
+        "mostly_zero":   "أغلبه أصفار",
+    }
+
+    html += (
+        '<table><thead><tr>'
+        '<th>المتغير</th><th>حالة</th><th>غائب%</th>'
+        '<th>أصفار%</th><th>قيم فريدة</th><th>Info Gain (MFE)</th>'
+        '</tr></thead><tbody>'
+    )
+
+    for col, v in shown:
+        hc    = v.get("health", "ok")
+        color = health_colors.get(hc, "#333")
+        label = health_labels.get(hc, hc)
+        ig    = v.get("info_gain_mfe", 0)
+        ig_bar_w = int(min(ig * 100, 100))
+        ig_bar = (f'<div style="display:inline-block;background:#2a6496;height:10px;'
+                  f'width:{ig_bar_w}px;border-radius:2px;vertical-align:middle"></div> {ig:.3f}')
+
+        html += (
+            f"<tr>"
+            f"<td><code style='font-size:.82em'>{col}</code></td>"
+            f"<td><span style='color:{color};font-weight:600'>{label}</span></td>"
+            f"<td>{v.get('missing_ratio',0)*100:.0f}%</td>"
+            f"<td>{v.get('zero_ratio',0)*100:.0f}%</td>"
+            f"<td>{v.get('n_unique',0)}</td>"
+            f"<td>{ig_bar}</td>"
+            f"</tr>"
+        )
+
+    html += '</tbody></table></div>'
+    return html
+
+
 def _build_model_comparison_section(res: dict) -> str:
     mc_mfe = res.get("model_comparison_mfe", {})
     mc_bq  = res.get("model_comparison_bq",  {})
@@ -1185,7 +1335,9 @@ def build_report(db_path: str = DB_PATH) -> str:
   {_build_probability_section(res)}
   {_build_edge_discovery_section(res)}
   {_build_distribution_section(res)}
+  {_build_fingerprints_section(res)}
   {_build_pattern_clusters_section(res)}
+  {_build_feature_health_section(res)}
   {_build_model_comparison_section(res)}
   {_build_correlation_section(res)}
   {_build_mutual_info_section(res)}

@@ -150,6 +150,38 @@ jobs:
           cp backtest_report.html  web_deploy/backtest_report.html  || true
         continue-on-error: true
 
+      - name: Run Logic Analyzer
+        if: always()
+        run: |
+          python logic_analyzer.py || true
+          python - <<'PYEOF'
+          import glob, shutil
+          files = sorted(glob.glob("logic_analysis_report_*.html"))
+          if files:
+              shutil.copy(files[-1], "web_deploy/logic_analysis_report.html")
+              print(f"Copied {files[-1]} -> web_deploy/logic_analysis_report.html")
+          else:
+              print("WARNING: no logic_analysis_report_*.html found")
+          PYEOF
+          cp logic_analysis_results.json web_deploy/ || true
+        continue-on-error: true
+
+      - name: Run Weight Optimizer
+        if: always()
+        run: |
+          python weight_optimizer.py || true
+          python - <<'PYEOF'
+          import glob, shutil
+          files = sorted(glob.glob("weight_optimizer_report_*.html"))
+          if files:
+              shutil.copy(files[-1], "web_deploy/weight_optimizer_report.html")
+              print(f"Copied {files[-1]} -> web_deploy/weight_optimizer_report.html")
+          else:
+              print("WARNING: no weight_optimizer_report_*.html found")
+          PYEOF
+          cp optimization_results.json web_deploy/ || true
+        continue-on-error: true
+
       - name: Generate Master Dashboard
         if: always()
         run: |

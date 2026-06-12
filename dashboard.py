@@ -344,6 +344,103 @@ def _section_quant():
     return _card("Quant Research — 7 Phases", "📐", content, "quant_research_report.html")
 
 
+def _section_logic_analyzer():
+    """Card for logic analyzer — reads from logic_analysis_results.json."""
+    LOGIC_JSON = "logic_analysis_results.json"
+    res = _load(LOGIC_JSON)
+    if not res:
+        return _card("Logic Analyzer", "🔬",
+                     "<p style='color:#aaa;font-size:13px;'>لا توجد نتائج بعد</p>",
+                     "logic_analysis_report.html")
+
+    n       = res.get("n_signals", 0)
+    r20d    = res.get("baseline_r20d", 0)
+    mfe_v   = res.get("baseline_mfe", 0)
+    pf_v    = res.get("baseline_pf", 0)
+    recs    = res.get("summary_recommendations", [])
+    findings = res.get("critical_findings", [])
+    fi_map  = res.get("function_impact", {})
+
+    # Most harmful function
+    harmful = [(k, v['delta_r20d']) for k, v in fi_map.items() if v.get('delta_r20d', 0) < -0.005]
+    harmful.sort(key=lambda x: x[1])
+
+    finding_html = ""
+    if findings:
+        items = "".join(
+            f"<li style='font-size:11px;color:#c04000;margin:2px 0'>{f[:80]}</li>"
+            for f in findings[:3]
+        )
+        finding_html = (
+            f"<div style='margin-top:8px;background:#fff3cd;padding:8px 10px;"
+            f"border-radius:6px;color:#856404;font-size:11px;'>"
+            f"<strong>⚠️ Critical Findings:</strong><ul style='padding-left:14px;margin-top:4px'>{items}</ul></div>"
+        )
+
+    kpis = _kpi_row(
+        ("إشارات", str(n), "#333"),
+        ("Avg r20d", f"{r20d*100:+.1f}%", "#155724" if r20d > 0 else "#721c24"),
+        ("Avg MFE",  f"{mfe_v*100:.1f}%", "#155724"),
+        ("PF",       f"{pf_v:.2f}",       "#155724" if pf_v > 1.5 else "#856404"),
+        ("توصيات",   str(len(recs)),       "#1a3c5e"),
+    )
+    content = kpis + finding_html
+    return _card("Logic Analyzer — sc_* Functions", "🔬", content, "logic_analysis_report.html")
+
+
+def _section_weight_optimizer():
+    """Card for weight optimizer report — reads from optimization_results.json."""
+    OPTIM_JSON = "optimization_results.json"
+    res = _load(OPTIM_JSON)
+    if not res:
+        return _card("Weight Optimizer", "⚖️",
+                     "<p style='color:#aaa;font-size:13px;'>لا توجد نتائج بعد</p>",
+                     "weight_optimizer_report.html")
+
+    base    = res.get("baseline", {})
+    n       = base.get("n", 0)
+    exp_ret = base.get("expected_return", 0)
+    mfe_v   = base.get("mfe", 0)
+    pf_v    = base.get("profit_factor", 1)
+    recs    = res.get("top_recommendations", [])
+    harmful = res.get("harmful_indicators", [])
+    oos_imp = res.get("oos_improvement", 0)
+
+    top_rec = recs[0] if recs else {}
+    top_txt = ""
+    if top_rec:
+        delta = top_rec.get("delta_ret", 0)
+        top_txt = (
+            f"<div style='margin-top:10px;font-size:12px;background:#e8f4fd;"
+            f"padding:8px 10px;border-radius:6px;color:#1a5276;'>"
+            f"🎯 أفضل توصية: <strong>{top_rec.get('indicator','')}</strong> — "
+            f"<strong>{top_rec.get('change','')[:60]}</strong><br>"
+            f"ΔExp Ret: <strong>{delta*100:+.1f}%</strong> · "
+            f"Retention: {top_rec.get('retention',1)*100:.0f}%</div>"
+        )
+
+    harm_txt = ""
+    if harmful:
+        names = ", ".join(h.get("label", "") for h in harmful)
+        harm_txt = (
+            f"<div style='margin-top:8px;font-size:11px;background:#fff3cd;"
+            f"padding:6px 10px;border-radius:6px;color:#856404;'>"
+            f"⚠️ مؤشرات ذات تأثير سلبي: {names}</div>"
+        )
+
+    oos_cls = "#155724" if oos_imp > 0.002 else ("#856404" if oos_imp >= 0 else "#721c24")
+    kpis = _kpi_row(
+        ("إشارات", str(n), "#333"),
+        ("Avg Return", f"{exp_ret*100:+.1f}%", "#155724" if exp_ret > 0 else "#721c24"),
+        ("Avg MFE", f"{mfe_v*100:.1f}%", "#155724"),
+        ("Profit Factor", f"{pf_v:.2f}", "#155724" if pf_v > 1.5 else "#856404"),
+        ("OOS Improve", f"{oos_imp*100:+.2f}%", oos_cls),
+        ("توصيات", str(len(recs)), "#1a3c5e"),
+    )
+    content = kpis + top_txt + harm_txt
+    return _card("Weight Optimizer — Quant Engine", "⚖️", content, "weight_optimizer_report.html")
+
+
 def _section_behavior(beh):
     if not beh or beh.get("n", 0) == 0:
         return _card("Behavior Report", "🔍", "<p style='color:#aaa;font-size:13px;'>لا توجد بيانات بعد</p>", "behavior_report.html")
@@ -385,6 +482,8 @@ def build_dashboard() -> str:
         '<a href="backtest_report.html" style="color:#8fb8d8;text-decoration:none;">📊 Backtest</a>',
         '<a href="research_report.html" style="color:#8fb8d8;text-decoration:none;">🔬 Research</a>',
         '<a href="quant_research_report.html" style="color:#8fb8d8;text-decoration:none;">📐 Quant</a>',
+        '<a href="weight_optimizer_report.html" style="color:#8fb8d8;text-decoration:none;">⚖️ Optimizer</a>',
+        '<a href="logic_analysis_report.html" style="color:#8fb8d8;text-decoration:none;">🔬 Logic</a>',
         '<a href="edge_report.html" style="color:#8fb8d8;text-decoration:none;">🧠 Edge</a>',
         '<a href="behavior_report.html" style="color:#8fb8d8;text-decoration:none;">🔍 Behavior</a>',
     ])
@@ -393,6 +492,8 @@ def build_dashboard() -> str:
 {_section_backtest(bt)}
 {_section_behavior(beh)}
 {_section_quant()}
+{_section_weight_optimizer()}
+{_section_logic_analyzer()}
 {_section_research(rr)}
 {_section_edge(ed)}
 """

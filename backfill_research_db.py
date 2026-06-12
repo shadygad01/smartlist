@@ -333,28 +333,23 @@ def backfill_derived_features(db_path: str = DB_PATH):
     else:
         print("[derived] discount_depth: nothing to update")
 
-    # ── 2. sv_hit / hvn_hit → NULL where = 0 ─────────────────────────────────
+    # ── 2-4. Binary flags: NULL only for uncomputed signals (r2_ob IS NULL)  ──
+    # IMPORTANT: only touch signals that backfill_smc_scores() hasn't computed yet.
+    # Once r2_ob is set by backfill_smc_scores(), sv_hit=0 is a valid computed value
+    # (no stopping volume found), NOT a default placeholder — must not overwrite.
     with conn:
-        conn.execute("UPDATE signals SET sv_hit = NULL WHERE sv_hit = 0")
-        conn.execute("UPDATE signals SET hvn_hit = NULL WHERE hvn_hit = 0")
-    print("[derived] sv_hit → NULL + hvn_hit → NULL done")
+        conn.execute("UPDATE signals SET sv_hit  = NULL WHERE sv_hit  = 0 AND r2_ob IS NULL")
+        conn.execute("UPDATE signals SET hvn_hit = NULL WHERE hvn_hit = 0 AND r2_ob IS NULL")
+        conn.execute("UPDATE signals SET rsi_div = NULL WHERE rsi_div = 0 AND r2_ob IS NULL")
+        conn.execute("UPDATE signals SET macd_div= NULL WHERE macd_div= 0 AND r2_ob IS NULL")
+        conn.execute("UPDATE signals SET htf_hh  = NULL WHERE htf_hh  = 0 AND r2_ob IS NULL")
+        conn.execute("UPDATE signals SET htf_hl  = NULL WHERE htf_hl  = 0 AND r2_ob IS NULL")
+    print("[derived] binary flags → NULL (uncomputed signals only) done")
 
-    # ── 3. rsi_div / macd_div → NULL where = 0 ───────────────────────────────
+    # ── 5. price_ok = 1 for uncomputed signals (all logged signals passed price gate) ─
     with conn:
-        conn.execute("UPDATE signals SET rsi_div = NULL WHERE rsi_div = 0")
-        conn.execute("UPDATE signals SET macd_div = NULL WHERE macd_div = 0")
-    print("[derived] rsi_div / macd_div → NULL done")
-
-    # ── 4. htf_hh / htf_hl → NULL where = 0 ─────────────────────────────────
-    with conn:
-        conn.execute("UPDATE signals SET htf_hh = NULL WHERE htf_hh = 0")
-        conn.execute("UPDATE signals SET htf_hl = NULL WHERE htf_hl = 0")
-    print("[derived] htf_hh / htf_hl → NULL done")
-
-    # ── 5. price_ok = 1 for all signals (all logged signals passed price gate) ─
-    with conn:
-        conn.execute("UPDATE signals SET price_ok = 1 WHERE price_ok = 0")
-    print("[derived] price_ok = 1 for all signals done")
+        conn.execute("UPDATE signals SET price_ok = 1 WHERE price_ok = 0 AND r2_ob IS NULL")
+    print("[derived] price_ok = 1 for uncomputed signals done")
 
     # ── 6. is_ramadan / is_cbe / stock_tier where NULL ────────────────────────
     rows = conn.execute(
@@ -380,6 +375,24 @@ def backfill_derived_features(db_path: str = DB_PATH):
         print(f"[derived] is_ramadan / is_cbe / stock_tier filled for {len(rows)} signals")
     else:
         print("[derived] is_ramadan / is_cbe / stock_tier: nothing to update")
+
+    # ── 7. sector where NULL — from main.py SECTORS dict ─────────────────────
+    from main import SECTORS
+    rows = conn.execute(
+        "SELECT id, symbol FROM signals WHERE sector IS NULL"
+    ).fetchall()
+    if rows:
+        with conn:
+            for sig_id, symbol in rows:
+                sector_val = SECTORS.get(symbol)
+                if sector_val:
+                    conn.execute(
+                        "UPDATE signals SET sector = ? WHERE id = ?",
+                        (sector_val, sig_id)
+                    )
+        print(f"[derived] sector filled for {len(rows)} signals")
+    else:
+        print("[derived] sector: nothing to update")
 
     conn.close()
 

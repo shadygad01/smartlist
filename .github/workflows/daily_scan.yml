@@ -124,6 +124,22 @@ jobs:
           </body></html>
           HTML
 
+      - name: Run Edge Discovery Engine
+        if: always()
+        run: |
+          python rule_discovery.py
+          python edge_report.py
+          python - <<'PYEOF'
+          import glob, shutil
+          files = sorted(glob.glob("edge_discovery_report_*.html"))
+          if files:
+              shutil.copy(files[-1], "web_deploy/edge_report.html")
+              print(f"Copied {files[-1]} -> web_deploy/edge_report.html")
+          else:
+              print("WARNING: no edge_discovery_report_*.html found")
+          PYEOF
+        continue-on-error: true
+
       - name: Save research results
         if: always()
         run: |
@@ -133,13 +149,6 @@ jobs:
           git diff --staged --quiet || git commit -m "Auto-update research DB [skip ci]"
           git pull origin main --rebase || true
           git push || true
-
-      - name: Run Edge Discovery Engine
-        if: always()
-        run: |
-          python rule_discovery.py || true
-          python edge_report.py || true
-          cp edge_discovery_report_*.html web_deploy/edge_report.html 2>/dev/null || true
 
       - name: Deploy to GitHub Pages
         if: always()

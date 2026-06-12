@@ -2815,7 +2815,7 @@ def save_scan_results(results):
         print(f"❌ Error saving results: {e}")
 
 
-_SIGNAL_HISTORY_DAYS = 365  # keep rolling window of this many days
+_SIGNAL_HISTORY_DAYS = 1825  # keep 5 years — protects historical backtest data for ML
 
 def save_signal_history(results):
     """

@@ -397,6 +397,74 @@ def backfill_derived_features(db_path: str = DB_PATH):
     conn.close()
 
 
+def backfill_gate_derived(db_path: str = DB_PATH):
+    """
+    يملأ القيم المضمونة رياضياً من منطق الـ gate في main.py دون الحاجة لـ OHLCV:
+
+    1. r3_liquidity = 20  لكل إشارة Buy/Strong Buy/Very Strong Buy/Institutional Buy
+       ← مضمون: الـ gate يشترط r3 == W_LIQ (20) لهذه الأنواع
+    2. sweep_detected = 1  لنفس الإشارات (r3=20 يعني Sweep & Reverse مؤكد)
+    3. equal_lows           من feat_equal_lows_count (نفس منطق sc_liquidity تماماً)
+
+    لا يُعدِّل الإشارات التي سبق حسابها (r2_ob IS NOT NULL).
+    """
+    # Signal types guaranteed to have r3=20 by the gate (main.py line 1348)
+    GATE_TYPES = ("'Buy'", "'Strong Buy'", "'Very Strong Buy'", "'Institutional Buy'")
+    gate_in = ", ".join(GATE_TYPES)
+
+    conn = get_conn(db_path)
+
+    # ── 1 & 2. r3=20 و sweep_detected=1 لإشارات الـ gate ──────────────────────
+    rows = conn.execute(f"""
+        SELECT id FROM signals
+        WHERE signal_type IN ({gate_in})
+          AND r2_ob IS NULL
+          AND (r3_liquidity IS NULL OR sweep_detected = 0)
+    """).fetchall()
+    if rows:
+        with conn:
+            conn.execute(f"""
+                UPDATE signals
+                SET r3_liquidity = 20, sweep_detected = 1
+                WHERE signal_type IN ({gate_in})
+                  AND r2_ob IS NULL
+            """)
+        print(f"[gate] r3_liquidity=20 + sweep_detected=1 لـ {len(rows)} إشارة")
+    else:
+        print("[gate] r3_liquidity / sweep_detected: nothing to update")
+
+    # ── 3. equal_lows من feat_equal_lows_count (نفس منطق sc_liquidity: count >= 3)
+    # sc_liquidity: "Equal Lows x{eql_count}" when eql_count >= 3, within 0.5%
+    # feat_equal_lows_count: نفس المفهوم من feature_extractor
+    # equal_lows = True فقط لما مفيش sweep ومفيش wick — يعني Early Buy فقط
+    rows_eq = conn.execute("""
+        SELECT id, feat_equal_lows_count
+        FROM signals
+        WHERE feat_equal_lows_count IS NOT NULL
+          AND r2_ob IS NULL
+          AND equal_lows = 0
+    """).fetchall()
+    if rows_eq:
+        updates = [(1 if (cnt or 0) >= 3 else 0, sid) for sid, cnt in rows_eq]
+        with conn:
+            conn.executemany(
+                "UPDATE signals SET equal_lows = ? WHERE id = ?",
+                updates
+            )
+        filled = sum(1 for v, _ in updates if v == 1)
+        print(f"[gate] equal_lows computed for {len(rows_eq)} signals ({filled} = True)")
+    else:
+        print("[gate] equal_lows: nothing to update")
+
+    # Summary
+    r3_filled  = conn.execute("SELECT COUNT(*) FROM signals WHERE r3_liquidity IS NOT NULL").fetchone()[0]
+    swp_filled = conn.execute("SELECT COUNT(*) FROM signals WHERE sweep_detected = 1").fetchone()[0]
+    eq_filled  = conn.execute("SELECT COUNT(*) FROM signals WHERE equal_lows = 1").fetchone()[0]
+    print(f"[gate] حالة DB: r3_liquidity={r3_filled}/642  sweep=1: {swp_filled}/642  equal_lows=1: {eq_filled}/642")
+
+    conn.close()
+
+
 def backfill_smc_scores(db_path: str = DB_PATH):
     """
     يحسب r1-r8 والأعلام الثنائية (sv_hit, rsi_div, htf_hh, sweep_detected, ...)
@@ -578,6 +646,7 @@ def main(db_path: str = DB_PATH, dry_run: bool = False):
     run_backfill(db_path=db_path, dry_run=dry_run)
     if not dry_run:
         backfill_derived_features(db_path=db_path)
+        backfill_gate_derived(db_path=db_path)
         backfill_smc_scores(db_path=db_path)
 
 

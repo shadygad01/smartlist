@@ -448,13 +448,25 @@ def _discover_bayes(df: pd.DataFrame, feat_cols: list[str]) -> list[dict]:
         print(f"  [bayes] fit failed: {exc}")
         return []
 
-    # ── Extract rule strings from IF-THEN output ──────────────────────────────
-    # New imodels BRL: str(brl) gives "IF cond THEN probability: X%"
+    # ── Extract sequential rules from IF-THEN/ELSE IF output ─────────────────
+    # BRL outputs: "IF cond THEN prob%", "ELSE IF cond THEN prob%", "ELSE prob%"
+    # Each rule in the list applies to samples NOT covered by prior rules.
+    # We must evaluate them sequentially with a remaining_mask to avoid overlap.
     raw_lines = str(brl).splitlines()
-    # Pattern: "IF cond1 AND cond2 THEN ..."  (conditions before THEN)
-    if_lines = [l.strip() for l in raw_lines if l.strip().upper().startswith("IF ")]
+    if_lines: list[str] = []
+    for l in raw_lines:
+        stripped = l.strip()
+        upper = stripped.upper()
+        if upper.startswith("IF ") or upper.startswith("ELSE IF "):
+            # Normalize: strip leading "ELSE " so all start with "IF "
+            normalized = re.sub(r"^ELSE\s+", "", stripped, flags=re.IGNORECASE).strip()
+            if_lines.append(normalized)
 
     results: list[dict] = []
+    remaining_mask = pd.Series(True, index=df.index)
+    # Accumulated negations of prior single-condition rules (for full sequential context)
+    prior_neg: list[tuple] = []
+
     for line in if_lines:
         # Extract the antecedent: everything between "IF" and "THEN"
         m = re.match(r"IF\s+(.+?)\s+THEN", line, re.IGNORECASE)
@@ -466,7 +478,6 @@ def _discover_bayes(df: pd.DataFrame, feat_cols: list[str]) -> list[dict]:
         antecedents = []
         for part in parts:
             part = part.strip()
-            # "feat_name > 0.5" means the binary bin == 1
             fm = re.match(r"([\w_]+)\s*[><=!]+\s*[\d.]+", part)
             if fm and fm.group(1) in bin_info:
                 antecedents.append(fm.group(1))
@@ -475,12 +486,39 @@ def _discover_bayes(df: pd.DataFrame, feat_cols: list[str]) -> list[dict]:
         conditions = _bin_conditions(antecedents, bin_info)
         if not conditions:
             continue
-        mask = _eval_rule(df, conditions)
-        if mask is None or mask.sum() < MIN_RULE_SAMPLES:
+        rule_mask = _eval_rule(df, conditions)
+        if rule_mask is None:
             continue
-        stats = _compute_rule_stats(df, mask, _rule_text(conditions), "bayes", conditions)
+
+        # Sequential mask: only samples not yet covered by any prior rule
+        seq_mask = remaining_mask & rule_mask
+        remaining_mask = remaining_mask & ~rule_mask  # advance coverage window
+
+        # Build full conditions = accumulated prior negations + this rule's conditions.
+        # This gives each sequential rule a unique dedup key that includes its context.
+        full_conditions = prior_neg + conditions
+
+        if seq_mask.sum() < MIN_RULE_SAMPLES:
+            # Still advance prior_neg for subsequent rules
+            if len(conditions) == 1:
+                feat, op, val = conditions[0]
+                neg_op = "<=" if op == ">" else ">" if op == "<=" else None
+                if neg_op:
+                    prior_neg = prior_neg + [(feat, neg_op, val)]
+            continue
+
+        stats = _compute_rule_stats(df, seq_mask, _rule_text(full_conditions), "bayes", full_conditions)
         if stats:
             results.append(stats)
+
+        # Accumulate negation of this rule for the next rule's context.
+        # Only flip simple single-condition rules (OR-logic of multi-condition
+        # negations can't be expressed as AND, so skip those).
+        if len(conditions) == 1:
+            feat, op, val = conditions[0]
+            neg_op = "<=" if op == ">" else ">" if op == "<=" else None
+            if neg_op:
+                prior_neg = prior_neg + [(feat, neg_op, val)]
 
     return results
 

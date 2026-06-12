@@ -29,20 +29,107 @@ WIN_THRESHOLD = 0.07   # r20d >= 7% = win
 
 # ── I/O ───────────────────────────────────────────────────────────────────────
 
-def _load_signals(days_back: int = 0) -> list:
-    if not os.path.exists(EXTENDED_LOG):
-        return []
+def _outcome_cat(r20d: float) -> str:
+    if r20d >= 0.20: return "large"
+    if r20d >= 0.08: return "medium"
+    if r20d >= 0.04: return "small"
+    return "flat"
+
+
+def _load_signals_from_db(days_back: int = 0) -> list:
+    """Read resolved signals from egx_research.db (fallback when extended_signal_log absent)."""
     try:
-        with open(EXTENDED_LOG, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception:
+        from signal_db import DB_PATH, get_conn
+    except ImportError:
         return []
 
-    signals = data.get("signals", [])
-    if days_back > 0:
-        cutoff = (date.today() - timedelta(days=days_back)).isoformat()
-        signals = [s for s in signals if s.get("date", "") >= cutoff]
+    try:
+        conn = get_conn(DB_PATH)
+        where = ""
+        if days_back > 0:
+            cutoff = (date.today() - timedelta(days=days_back)).isoformat()
+            where = f"WHERE s.signal_date >= '{cutoff}'"
+        rows = conn.execute(f"""
+            SELECT
+                s.id, s.symbol, s.signal_date, s.signal_type, s.raw_score,
+                s.r1_price, s.r2_ob, s.r3_liquidity, s.r4_htf,
+                s.r5_avwap, s.r6_macd, s.r7_div, s.r8_demand,
+                s.price, s.discount_depth,
+                s.is_ramadan, s.is_cbe, s.stock_tier, s.sector,
+                b.r20d, b.mfe_20d, b.mae_20d
+            FROM signals s
+            JOIN bottom_quality b ON b.signal_id = s.id
+            {where}
+            ORDER BY s.signal_date
+        """).fetchall()
+        conn.close()
+    except Exception as e:
+        print(f"[Report] DB load error: {e}")
+        return []
+
+    signals = []
+    for row in rows:
+        (sig_id, symbol, sig_date, sig_type, raw_score,
+         r1, r2, r3, r4, r5, r6, r7, r8,
+         price, disc_depth,
+         is_ram, is_cbe, stock_tier, sector,
+         r20d, mfe, mae) = row
+
+        if r20d is None:
+            continue
+
+        r20d_f = float(r20d)
+        signals.append({
+            "id":        sig_id,
+            "symbol":    symbol,
+            "date":      sig_date,
+            "signal":    sig_type or "buy",
+            "raw_score": int(raw_score) if raw_score is not None else 0,
+            "outcome":   _outcome_cat(r20d_f),
+            "r20d":      r20d_f,
+            "mfe":       float(mfe) if mfe is not None else None,
+            "mae":       float(mae) if mae is not None else None,
+            "category":  _outcome_cat(r20d_f),
+            "smc": {
+                "r1_price":    int(r1) if r1 is not None else 0,
+                "r2_ob":       int(r2) if r2 is not None else 0,
+                "r3_liquidity":int(r3) if r3 is not None else 0,
+                "r4_htf":      int(r4) if r4 is not None else 0,
+                "r5_avwap":    int(r5) if r5 is not None else 0,
+                "r6_macd":     int(r6) if r6 is not None else 0,
+                "r7_div":      int(r7) if r7 is not None else 0,
+                "r8_demand":   int(r8) if r8 is not None else 0,
+            },
+            "context": {
+                "is_ramadan":  bool(is_ram),
+                "is_cbe":      bool(is_cbe),
+                "stock_tier":  float(stock_tier) if stock_tier else 1.0,
+                "sector":      sector or "",
+            },
+            "price_ctx": {
+                "discount_depth": float(disc_depth) if disc_depth is not None else 0.0,
+            },
+        })
     return signals
+
+
+def _load_signals(days_back: int = 0) -> list:
+    # Try extended_signal_log.json first (live signals logged by extended_logger)
+    if os.path.exists(EXTENDED_LOG):
+        try:
+            with open(EXTENDED_LOG, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            signals = data.get("signals", [])
+            if days_back > 0:
+                cutoff = (date.today() - timedelta(days=days_back)).isoformat()
+                signals = [s for s in signals if s.get("date", "") >= cutoff]
+            if signals:
+                return signals
+        except Exception:
+            pass
+
+    # Fallback: read from egx_research.db (historical + live signals with BQ)
+    return _load_signals_from_db(days_back)
 
 
 # ── Statistics Helpers ────────────────────────────────────────────────────────

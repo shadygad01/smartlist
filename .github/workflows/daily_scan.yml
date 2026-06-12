@@ -108,7 +108,7 @@ jobs:
         if: always()
         run: |
           python rule_discovery.py || true
-          python edge_report.py --force || true
+          python edge_report.py || true
           cp edge_discovery_report_*.html web_deploy/edge_report.html 2>/dev/null || true
 
       - name: Deploy to GitHub Pages

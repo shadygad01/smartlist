@@ -63,16 +63,35 @@ def _download_egx30(earliest: date) -> "pd.DataFrame | None":
 
 def _insert_minimal_signal(conn: sqlite3.Connection, sig_id: str, symbol: str,
                             sig_date: str, signal_type: str, raw_score: int,
-                            price: float, r1_price: "int | None" = None):
-    """Insert a minimal signals row, or update r1_price if already exists."""
+                            price: float, r1_price: "int | None" = None,
+                            r2_ob: "int | None" = None,
+                            r3_liquidity: "int | None" = None,
+                            r4_htf: "int | None" = None,
+                            r5_avwap: "int | None" = None,
+                            r6_macd: "int | None" = None,
+                            r7_div: "int | None" = None,
+                            r8_demand: "int | None" = None):
+    """Insert a minimal signals row, or update r-scores if already exists."""
     conn.execute("""
         INSERT INTO signals
-          (id, symbol, signal_date, signal_type, raw_score, r1_price, price, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          (id, symbol, signal_date, signal_type, raw_score,
+           r1_price, r2_ob, r3_liquidity, r4_htf,
+           r5_avwap, r6_macd, r7_div, r8_demand,
+           price, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
-          r1_price = excluded.r1_price
-    """, (sig_id, symbol, sig_date, signal_type, raw_score, r1_price, price,
-          datetime.utcnow().isoformat()))
+          r1_price    = excluded.r1_price,
+          r2_ob       = COALESCE(excluded.r2_ob,       signals.r2_ob),
+          r3_liquidity= COALESCE(excluded.r3_liquidity, signals.r3_liquidity),
+          r4_htf      = COALESCE(excluded.r4_htf,      signals.r4_htf),
+          r5_avwap    = COALESCE(excluded.r5_avwap,    signals.r5_avwap),
+          r6_macd     = COALESCE(excluded.r6_macd,     signals.r6_macd),
+          r7_div      = COALESCE(excluded.r7_div,      signals.r7_div),
+          r8_demand   = COALESCE(excluded.r8_demand,   signals.r8_demand)
+    """, (sig_id, symbol, sig_date, signal_type, raw_score,
+          r1_price, r2_ob, r3_liquidity, r4_htf,
+          r5_avwap, r6_macd, r7_div, r8_demand,
+          price, datetime.utcnow().isoformat()))
 
 
 # ── Main backfill ─────────────────────────────────────────────────────────────
@@ -105,14 +124,24 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
                     prev_signal = signal
                     continue
                 if d <= CUTOFF_DATE:
+                    def _ri(key):
+                        v = entry.get(key)
+                        return int(v) if v is not None else None
                     eligible.append({
-                        "id":          f"{symbol}_{sig_date}",
-                        "symbol":      symbol,
-                        "signal_date": sig_date,
-                        "signal_type": signal,
-                        "raw_score":   int(entry.get("score", 0)),
-                        "price":       float(entry.get("price", 0)),
-                        "r1_price":    int(entry.get("r1", 0)) if entry.get("r1") is not None else None,
+                        "id":           f"{symbol}_{sig_date}",
+                        "symbol":       symbol,
+                        "signal_date":  sig_date,
+                        "signal_type":  signal,
+                        "raw_score":    int(entry.get("score", 0)),
+                        "price":        float(entry.get("price", 0)),
+                        "r1_price":     _ri("r1"),
+                        "r2_ob":        _ri("r2"),
+                        "r3_liquidity": _ri("r3"),
+                        "r4_htf":       _ri("r4"),
+                        "r5_avwap":     _ri("r5"),
+                        "r6_macd":      _ri("r6"),
+                        "r7_div":       _ri("r7"),
+                        "r8_demand":    _ri("r8"),
                     })
 
             prev_signal = signal
@@ -209,13 +238,20 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
                         with conn:
                             _insert_minimal_signal(
                                 conn,
-                                sig_id      = sig["id"],
-                                symbol      = sig["symbol"],
-                                sig_date    = sig["signal_date"],
-                                signal_type = sig["signal_type"],
-                                raw_score   = sig["raw_score"],
-                                price       = sig["price"],
-                                r1_price    = sig.get("r1_price"),
+                                sig_id       = sig["id"],
+                                symbol       = sig["symbol"],
+                                sig_date     = sig["signal_date"],
+                                signal_type  = sig["signal_type"],
+                                raw_score    = sig["raw_score"],
+                                price        = sig["price"],
+                                r1_price     = sig.get("r1_price"),
+                                r2_ob        = sig.get("r2_ob"),
+                                r3_liquidity = sig.get("r3_liquidity"),
+                                r4_htf       = sig.get("r4_htf"),
+                                r5_avwap     = sig.get("r5_avwap"),
+                                r6_macd      = sig.get("r6_macd"),
+                                r7_div       = sig.get("r7_div"),
+                                r8_demand    = sig.get("r8_demand"),
                             )
                         upsert_bottom_quality(sig["id"], bq, db_path=db_path)
                         cls = bq.get("classification", "?")

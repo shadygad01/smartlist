@@ -53,7 +53,7 @@ BUY_SIGNALS         = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Bu
 def _score_day(symbol: str, df_slice: pd.DataFrame, sig_date: date):
     """
     Run the full SMC scoring pipeline on df_slice (data up to and including sig_date).
-    Returns (signal_str, adj_score, price, r1_score) — same fields as live scanner.
+    Returns (signal_str, adj_score, price, r1, r2, r3, r4, r5, r6, r7, r8).
     """
     try:
         cur = float(df_slice["Close"].iloc[-1])
@@ -93,18 +93,18 @@ def _score_day(symbol: str, df_slice: pd.DataFrame, sig_date: date):
         _entry_score_gate = 35 if symbol in WHITELIST else 40
 
         if total < 35:
-            return "Skip", score, cur, r1
+            return "Skip", score, cur, r1, r2, r3, r4, r5, r6, r7, r8
         if r1 < PRICE_GATE:
-            return "Wait", score, cur, r1
+            return "Wait", score, cur, r1, r2, r3, r4, r5, r6, r7, r8
         if score < _entry_score_gate:
-            return "Wait", score, cur, r1
+            return "Wait", score, cur, r1, r2, r3, r4, r5, r6, r7, r8
         if r3 < W_LIQ:
-            return "Early Buy", score, cur, r1
+            return "Early Buy", score, cur, r1, r2, r3, r4, r5, r6, r7, r8
 
-        return sig_info(score)[0], score, cur, r1
+        return sig_info(score)[0], score, cur, r1, r2, r3, r4, r5, r6, r7, r8
 
     except Exception:
-        return "Skip", 0, 0.0, 0
+        return "Skip", 0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0
 
 
 # ── Main backtest ──────────────────────────────────────────────────────────────
@@ -161,7 +161,14 @@ def run_backtest(
         existing = history.get(symbol, [])
         if not isinstance(existing, list):
             existing = [existing]
-        existing_dates = {e["date"] for e in existing if isinstance(e, dict)}
+
+        # Index existing entries by date for fast lookup and overwrite
+        existing_by_date = {e["date"]: e for e in existing if isinstance(e, dict)}
+        # Dates that already have all r-scores — skip re-computation
+        complete_dates = {
+            d for d, e in existing_by_date.items()
+            if e.get("r2") is not None
+        }
 
         new_entries: list[dict] = []
         prev_signal = "Wait"
@@ -171,46 +178,53 @@ def run_backtest(
             sig_date = df_full.index[i].date()
             date_str = sig_date.isoformat()
 
-            sig, score, price, r1 = _score_day(symbol, df_slice, sig_date)
+            sig, score, price, r1, r2, r3, r4, r5, r6, r7, r8 = \
+                _score_day(symbol, df_slice, sig_date)
 
             is_buy      = sig in BUY_SIGNALS
             prev_is_buy = prev_signal in BUY_SIGNALS
 
             # ── Record Wait→Buy transition (the entry signal backfill cares about)
             if is_buy and not prev_is_buy:
-                if date_str not in existing_dates:
-                    new_entries.append({
-                        "date":   date_str,
-                        "score":  score,
-                        "price":  round(price, 2),
-                        "r1":     r1,
+                if date_str not in complete_dates:
+                    entry = {
+                        "date": date_str, "score": score,
+                        "price": round(price, 2),
+                        "r1": r1, "r2": r2, "r3": r3, "r4": r4,
+                        "r5": r5, "r6": r6, "r7": r7, "r8": r8,
                         "signal": sig,
-                    })
-                    existing_dates.add(date_str)
-                    total_buy_signals += 1
+                    }
+                    new_entries.append(entry)
+                    existing_by_date[date_str] = entry
+                    complete_dates.add(date_str)
+                    if date_str not in {e["date"] for e in existing}:
+                        total_buy_signals += 1
 
             # ── Record Buy→Wait transition so backfill resets its state machine
             elif prev_is_buy and not is_buy and sig != "Skip":
-                if date_str not in existing_dates:
-                    new_entries.append({
-                        "date":   date_str,
-                        "score":  score,
-                        "price":  round(price, 2),
-                        "r1":     r1,
+                if date_str not in complete_dates:
+                    entry = {
+                        "date": date_str, "score": score,
+                        "price": round(price, 2),
+                        "r1": r1, "r2": r2, "r3": r3, "r4": r4,
+                        "r5": r5, "r6": r6, "r7": r7, "r8": r8,
                         "signal": sig,
-                    })
-                    existing_dates.add(date_str)
+                    }
+                    new_entries.append(entry)
+                    existing_by_date[date_str] = entry
+                    complete_dates.add(date_str)
 
             if sig != "Skip":
                 prev_signal = sig
 
         buy_count = sum(1 for e in new_entries if e["signal"] in BUY_SIGNALS)
-        print(f"  New entries: {len(new_entries)}  (buy signals: {buy_count})", flush=True)
+        print(f"  New/updated entries: {len(new_entries)}  (buy signals: {buy_count})", flush=True)
         total_entries += len(new_entries)
 
         if new_entries and not dry_run:
+            # Merge: existing (keep live signals) + new/updated historical
             merged = sorted(
-                existing + new_entries,
+                existing_by_date.values(),
                 key=lambda e: e.get("date", ""),
             )
             history[symbol] = merged

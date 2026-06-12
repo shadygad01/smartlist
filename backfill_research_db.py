@@ -53,8 +53,9 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
     with open(SIGNAL_HISTORY, encoding="utf-8") as f:
         history: dict = json.load(f)
 
-    # Collect eligible signals — فقط أول يوم Buy/Strong Buy بعد Wait
+    # Collect eligible signals — فقط أول يوم Buy/Strong Buy/Early Buy بعد Wait
     # (نقطة الدخول الفعلية، ليس كل يوم استمرت فيه الإشارة)
+    BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy", "Early Buy"}
     eligible = []
     for symbol, entries in history.items():
         if not isinstance(entries, list):
@@ -65,8 +66,8 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
         for entry in entries_sorted:
             sig_date = entry.get("date", "")
             signal   = entry.get("signal", "")
-            is_buy      = signal in ("Buy", "Strong Buy")
-            prev_is_buy = prev_signal in ("Buy", "Strong Buy")
+            is_buy      = signal in BUY_SIGNALS
+            prev_is_buy = prev_signal in BUY_SIGNALS
 
             if is_buy and not prev_is_buy:
                 # أول يوم في run شراء جديد = نقطة دخول فعلية
@@ -88,7 +89,7 @@ def run_backfill(db_path: str = DB_PATH, dry_run: bool = False):
 
             prev_signal = signal
 
-    print(f"Entry signals (first Buy after Wait, ≥{MIN_DAYS_OLD}d old): {len(eligible)}")
+    print(f"Entry signals (first Buy/Early Buy after Wait, ≥{MIN_DAYS_OLD}d old): {len(eligible)}")
 
     # Check which are already in bottom_quality (BQ computed)
     conn = get_conn(db_path)

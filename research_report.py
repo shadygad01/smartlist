@@ -1390,6 +1390,13 @@ def build_report(db_path: str = DB_PATH) -> str:
   {_build_mature_signals_section(db_path)}
 
   <div class="footer">
+    <a href="edge_report.html"
+       style="display:inline-block;margin-bottom:10px;padding:8px 18px;
+              background:#1a3c5e;color:#fff;border-radius:6px;
+              text-decoration:none;font-weight:700">
+      ⚡ Edge Discovery Report →
+    </a>
+    <br>
     النظام لا يُعدّل نفسه تلقائياً — جميع التوصيات تحتاج مراجعة يدوية.<br>
     EGX Research Platform · {today}
   </div>

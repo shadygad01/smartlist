@@ -119,17 +119,21 @@ def _bar(label, value, total, color="#2a6496"):
 
 
 def _rule_row(i, rule):
-    cond = rule.get("condition", rule.get("rule_text", "—"))
-    mfe  = rule.get("mfe_mean", rule.get("avg_mfe", 0))
+    cond = rule.get("rule_text", rule.get("condition", "—"))
+    # mfe_mean stored as pct (e.g. 32.16) in edge_discovery_results.json
+    mfe  = rule.get("mfe_mean", 0)
     wr   = rule.get("win_rate", 0)
-    n    = rule.get("n", rule.get("support", 0))
-    exp  = rule.get("expectancy", mfe * wr if mfe and wr else 0)
+    n    = rule.get("n", 0)
+    exp  = rule.get("expectancy", 0)
+    src  = rule.get("source", rule.get("method", ""))
+    src_color = {"dt":"#084298","rulefit":"#155724","assoc":"#856404","bayes":"#6f42c1"}.get(src,"#666")
     return f"""
 <tr style="border-bottom:1px solid #f0f0f0;{'background:#f9f9f9;' if i%2 else ''}">
-  <td style="padding:7px 10px;font-size:11px;color:#444;max-width:350px;">{cond[:90]}{'…' if len(str(cond))>90 else ''}</td>
-  <td style="padding:7px 10px;text-align:center;font-weight:700;color:#155724;font-size:12px;">+{mfe*100:.1f}%</td>
+  <td style="padding:7px 10px;font-size:11px;color:#444;max-width:350px;">{str(cond)[:90]}{'…' if len(str(cond))>90 else ''}</td>
+  <td style="padding:7px 10px;text-align:center;font-weight:700;color:#155724;font-size:12px;">+{mfe:.1f}%</td>
   <td style="padding:7px 10px;text-align:center;font-weight:700;color:#084298;font-size:12px;">{wr*100:.0f}%</td>
   <td style="padding:7px 10px;text-align:center;color:#666;font-size:11px;">{n}</td>
+  <td style="padding:7px 10px;text-align:center;font-size:10px;color:{src_color};font-weight:600;">{src}</td>
 </tr>"""
 
 
@@ -249,6 +253,7 @@ def _section_edge(ed):
   <th style="padding:6px 10px;font-size:11px;">Avg MFE</th>
   <th style="padding:6px 10px;font-size:11px;">Win Rate</th>
   <th style="padding:6px 10px;font-size:11px;">N</th>
+  <th style="padding:6px 10px;font-size:11px;">Method</th>
 </tr></thead>
 <tbody>{rule_rows}</tbody>
 </table></div>""" if rule_rows else ""

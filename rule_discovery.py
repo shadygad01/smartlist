@@ -253,8 +253,10 @@ def _discover_dt(df: pd.DataFrame, feat_cols: list[str]) -> list[dict]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _parse_rulefit_rule(rule_str: str) -> list[tuple]:
+    """Parse RuleFit rule string — handles both 'and' and '&' separators."""
     conditions = []
-    for part in re.split(r"\s*&\s*", rule_str.strip()):
+    # Split on ' and ' (lowercase, imodels new API) or ' & '
+    for part in re.split(r"\s+and\s+|\s*&\s*", rule_str.strip(), flags=re.IGNORECASE):
         m = re.match(r"([\w.]+)\s*(<=|>=|<|>|==)\s*([-\d.eE+]+)", part.strip())
         if m:
             feat, op, val = m.groups()
@@ -279,27 +281,20 @@ def _discover_rulefit(df: pd.DataFrame, feat_cols: list[str]) -> list[dict]:
     y = df["mfe_pct"].values
 
     try:
-        rfit = RuleFitRegressor(
-            max_rules=300,
-            random_state=42,
-        )
+        rfit = RuleFitRegressor(max_rules=300, random_state=42)
         rfit.fit(X, y, feature_names=feat_cols)
-        rules_df = rfit.get_rules()
+        # New imodels API: rules_ is a list of Rule objects (no get_rules())
+        raw_rules = getattr(rfit, "rules_", None)
+        if raw_rules is None:
+            print("  [rulefit] rules_ attribute not found — skipping")
+            return []
     except Exception as exc:
         print(f"  [rulefit] failed: {exc}")
         return []
 
-    if rules_df is None or rules_df.empty:
-        return []
-
-    type_col = "type" if "type" in rules_df.columns else None
-    if type_col:
-        rules_df = rules_df[rules_df[type_col] == "rule"]
-    rules_df = rules_df[rules_df["coef"].abs() > 1e-9].copy()
-
     results: list[dict] = []
-    for _, row in rules_df.iterrows():
-        rule_str = str(row.get("rule", ""))
+    for rule_obj in raw_rules:
+        rule_str = getattr(rule_obj, "rule", None) or str(rule_obj)
         if not rule_str:
             continue
         conditions = _parse_rulefit_rule(rule_str)
@@ -453,35 +448,28 @@ def _discover_bayes(df: pd.DataFrame, feat_cols: list[str]) -> list[dict]:
         print(f"  [bayes] fit failed: {exc}")
         return []
 
-    # ── Extract rule strings ──────────────────────────────────────────────────
-    raw_rules: list[str] = []
-    for attr in ("rules_", "d_", "rule_list_"):
-        val = getattr(brl, attr, None)
-        if val is not None:
-            if isinstance(val, list):
-                raw_rules = [str(r) for r in val]
-            break
-    if not raw_rules:
-        try:
-            raw_rules = str(brl).splitlines()
-        except Exception:
-            pass
+    # ── Extract rule strings from IF-THEN output ──────────────────────────────
+    # New imodels BRL: str(brl) gives "IF cond THEN probability: X%"
+    raw_lines = str(brl).splitlines()
+    # Pattern: "IF cond1 AND cond2 THEN ..."  (conditions before THEN)
+    if_lines = [l.strip() for l in raw_lines if l.strip().upper().startswith("IF ")]
 
-    if not raw_rules:
-        return []
-
-    # ── Parse each rule string back to conditions ─────────────────────────────
     results: list[dict] = []
-    for rstr in raw_rules:
-        # BRL rules look like: "cond1 AND cond2" or "cond1 & cond2"
-        parts = re.split(r"\bAND\b|&", rstr.strip(), flags=re.IGNORECASE)
+    for line in if_lines:
+        # Extract the antecedent: everything between "IF" and "THEN"
+        m = re.match(r"IF\s+(.+?)\s+THEN", line, re.IGNORECASE)
+        if not m:
+            continue
+        antecedent_str = m.group(1)
+        # Split on AND
+        parts = re.split(r"\bAND\b", antecedent_str, flags=re.IGNORECASE)
         antecedents = []
         for part in parts:
             part = part.strip()
-            # Match: feat_col_low == 1 or feat_col_high == 1 etc.
-            m = re.search(r"([\w_]+)\s*==\s*1", part)
-            if m and m.group(1) in bin_info:
-                antecedents.append(m.group(1))
+            # "feat_name > 0.5" means the binary bin == 1
+            fm = re.match(r"([\w_]+)\s*[><=!]+\s*[\d.]+", part)
+            if fm and fm.group(1) in bin_info:
+                antecedents.append(fm.group(1))
         if not antecedents:
             continue
         conditions = _bin_conditions(antecedents, bin_info)

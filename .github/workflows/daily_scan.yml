@@ -198,6 +198,22 @@ jobs:
           cp system_audit_results.json web_deploy/ || true
         continue-on-error: true
 
+      - name: Run Adaptive Learning Engine
+        if: always()
+        run: |
+          python adaptive_learning.py || true
+          python - <<'PYEOF'
+          import glob, shutil
+          files = sorted(glob.glob("adaptive_learning_report_*.html"))
+          if files:
+              shutil.copy(files[-1], "web_deploy/adaptive_learning_report.html")
+              print(f"Copied {files[-1]} -> web_deploy/adaptive_learning_report.html")
+          else:
+              print("WARNING: no adaptive_learning_report_*.html found")
+          PYEOF
+          cp adaptive_learning_results.json web_deploy/ || true
+        continue-on-error: true
+
       - name: Generate Master Dashboard
         if: always()
         run: |

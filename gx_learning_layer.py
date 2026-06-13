@@ -724,6 +724,340 @@ def _kpi_row(items: list) -> str:
     return f'<div style="display:flex;gap:10px;flex-wrap:wrap;">{cells}</div>'
 
 
+# ═══════════════════════════════════════════════════════════════
+# CONTEXT-AWARE INTELLIGENCE LAYER (⑪-⑮)
+# ═══════════════════════════════════════════════════════════════
+
+def _build_context_intelligence(db_path: str = "egx_research.db") -> dict:
+    """
+    Sections ⑪-⑮: context-aware decomposition from v_all_signals.
+    Reads live SQLite DB, tags signals, computes 5 HTML section bodies.
+    Returns dict with keys: decomp, ctx_tags, sensitivity, failures, successes.
+    """
+    import sqlite3
+    from collections import Counter
+
+    SCORE_COLS = ["r1_price", "r2_ob", "r3_liquidity", "r4_htf",
+                  "r5_avwap", "r6_macd", "r7_div", "r8_demand"]
+    SCORE_MAX  = {"r1_price": 30, "r2_ob": 10, "r3_liquidity": 10, "r4_htf": 20,
+                  "r5_avwap": 10, "r6_macd": 10, "r7_div": 5, "r8_demand": 5}
+    WIN_THRESH  =  0.07
+    LOSS_THRESH =  0.0
+
+    NA = '<div style="color:#555;font-size:12px;padding:10px;">No data available.</div>'
+    _empty = {"decomp": NA, "ctx_tags": NA, "sensitivity": NA, "failures": NA, "successes": NA}
+
+    try:
+        if not os.path.exists(db_path):
+            return _empty
+
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("""
+            SELECT
+                r1_price, r2_ob, r3_liquidity, r4_htf, r5_avwap, r6_macd, r7_div, r8_demand,
+                COALESCE(sweep_detected, 0)  AS sweep_detected,
+                COALESCE(wick_rejection, 0)  AS wick_rejection,
+                COALESCE(equal_lows, 0)      AS equal_lows,
+                COALESCE(htf_hh, 0)          AS htf_hh,
+                COALESCE(htf_hl, 0)          AS htf_hl,
+                COALESCE(rsi_div, 0)         AS rsi_div,
+                COALESCE(macd_div, 0)        AS macd_div,
+                COALESCE(sv_hit, 0)          AS sv_hit,
+                COALESCE(hvn_hit, 0)         AS hvn_hit,
+                r20d
+            FROM v_all_signals
+            WHERE r20d IS NOT NULL
+        """).fetchall()
+        conn.close()
+        rows = [dict(r) for r in rows]
+
+        if not rows:
+            return _empty
+
+        def _tag(s):
+            ht_hl = int(s.get("htf_hl") or 0)
+            ht_hh = int(s.get("htf_hh") or 0)
+            regime = "trend" if ht_hl == 1 else ("range" if ht_hh == 0 and ht_hl == 0 else "mixed")
+
+            r6 = float(s.get("r6_macd") or 0)
+            r7 = float(s.get("r7_div")  or 0)
+            md = int(s.get("macd_div")  or 0)
+            rd = int(s.get("rsi_div")   or 0)
+            vol = "high" if (r6 + r7 >= 8 and (md or rd)) else ("low" if r6 + r7 <= 4 else "medium")
+
+            sw = int(s.get("sweep_detected")  or 0)
+            eq = int(s.get("equal_lows")      or 0)
+            wk = int(s.get("wick_rejection")  or 0)
+            struct = "expansion" if sw else ("compression" if eq else ("reversal" if wk else "unknown"))
+
+            hv = int(s.get("hvn_hit") or 0)
+            sv = int(s.get("sv_hit")  or 0)
+            r3 = float(s.get("r3_liquidity") or 0)
+            liq = "strong" if (hv or sv) else ("moderate" if r3 >= 7 else "weak")
+            return regime, vol, struct, liq
+
+        tagged = []
+        for s in rows:
+            r20d = float(s.get("r20d") or 0)
+            reg, vol, struct, liq = _tag(s)
+            tagged.append({**s, "r20d": r20d, "regime": reg, "vol": vol, "struct": struct, "liq": liq})
+
+        total  = len(tagged)
+        wins   = [s for s in tagged if s["r20d"] >= WIN_THRESH]
+        losses = [s for s in tagged if s["r20d"] <  LOSS_THRESH]
+
+        # ─── ⑪ Score Contribution Decomposition ──────────────
+        def _avg(lst, col):
+            vals = [float(v.get(col) or 0) for v in lst]
+            return sum(vals) / len(vals) if vals else 0.0
+
+        decomp_rows = ""
+        for col in SCORE_COLS:
+            mx    = SCORE_MAX[col]
+            wa    = _avg(wins,   col)
+            la    = _avg(losses, col)
+            wp    = wa / mx * 100 if mx else 0
+            lp    = la / mx * 100 if mx else 0
+            delta = wp - lp
+            dc    = "#6aa84f" if delta > 5 else ("#d6a740" if delta > 0 else "#cc4444")
+            bw    = (f'<div style="background:#1e2533;border-radius:3px;height:5px;width:100%;margin-top:2px;">'
+                     f'<div style="background:#6aa84f;width:{min(100, wp):.0f}%;height:5px;border-radius:3px;"></div></div>')
+            bl    = (f'<div style="background:#1e2533;border-radius:3px;height:5px;width:100%;margin-top:2px;">'
+                     f'<div style="background:#cc4444;width:{min(100, lp):.0f}%;height:5px;border-radius:3px;"></div></div>')
+            decomp_rows += (
+                f"<tr>"
+                f"<td style='color:#aab;font-size:12px;white-space:nowrap;'>{col}</td>"
+                f"<td style='color:#555;font-size:11px;text-align:center;'>/{mx}</td>"
+                f"<td style='min-width:110px;'><div style='color:#6aa84f;font-size:12px;text-align:right;'>{wa:.1f} ({wp:.0f}%)</div>{bw}</td>"
+                f"<td style='min-width:110px;'><div style='color:#cc4444;font-size:12px;text-align:right;'>{la:.1f} ({lp:.0f}%)</div>{bl}</td>"
+                f"<td style='color:{dc};font-size:13px;font-weight:700;text-align:right;'>{delta:+.0f}pp</td>"
+                f"</tr>"
+            )
+
+        decomp_html = (
+            f'<div style="color:#888;font-size:12px;margin-bottom:10px;">'
+            f'Wins: <strong style="color:#6aa84f;">{len(wins)}</strong> (r20d&nbsp;&ge;&nbsp;7%)&nbsp;&nbsp;|&nbsp;&nbsp;'
+            f'Losses: <strong style="color:#cc4444;">{len(losses)}</strong> (r20d&nbsp;&lt;&nbsp;0%)&nbsp;&nbsp;|&nbsp;&nbsp;'
+            f'Total resolved: <strong>{total}</strong></div>'
+            f'<div style="overflow-x:auto;">'
+            f'<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+            f'<thead><tr style="border-bottom:1px solid #1e2d40;">'
+            f'<th style="color:#5b8dee;padding:8px 6px;text-align:left;">Component</th>'
+            f'<th style="color:#5b8dee;padding:8px 6px;">Max</th>'
+            f'<th style="color:#6aa84f;padding:8px 6px;text-align:right;">Wins avg (% of max)</th>'
+            f'<th style="color:#cc4444;padding:8px 6px;text-align:right;">Losses avg (% of max)</th>'
+            f'<th style="color:#5b8dee;padding:8px 6px;text-align:right;">&Delta; (pp)</th>'
+            f'</tr></thead>'
+            f'<tbody>{decomp_rows}</tbody>'
+            f'</table></div>'
+            f'<div style="color:#666;font-size:11px;margin-top:6px;">'
+            f'&Delta; = Win% &minus; Loss% (percentage points of max score). Positive = component stronger in wins.</div>'
+        )
+
+        # ─── ⑫ Context Tag Summary ────────────────────────────
+        ctx_tables = ""
+        for tag_key, tag_vals, label in [
+            ("regime", ["trend", "range", "mixed"],                         "Market Regime"),
+            ("vol",    ["high", "medium", "low"],                           "Volatility State"),
+            ("struct", ["expansion", "compression", "reversal", "unknown"], "Structure State"),
+            ("liq",    ["strong", "moderate", "weak"],                      "Liquidity State"),
+        ]:
+            t_rows = ""
+            for val in tag_vals:
+                sub = [s for s in tagged if s[tag_key] == val]
+                n   = len(sub)
+                if n == 0:
+                    t_rows += (f"<tr><td style='color:#aab;font-size:12px;'>{val}</td>"
+                               f"<td colspan='4' style='color:#444;text-align:center;font-size:11px;'>— no data —</td></tr>")
+                    continue
+                r20ds  = [s["r20d"] for s in sub]
+                wr     = sum(1 for r in r20ds if r >= WIN_THRESH) / n
+                mean_r = sum(r20ds) / n
+                gw     = sum(r for r in r20ds if r > 0)
+                gl     = abs(sum(r for r in r20ds if r < 0))
+                pf     = gw / gl if gl > 0 else (99.0 if gw > 0 else 0.0)
+                pct    = n / total * 100
+                wr_c   = "#6aa84f" if wr >= 0.55 else ("#d6a740" if wr >= 0.40 else "#cc4444")
+                mr_c   = "#6aa84f" if mean_r >= WIN_THRESH else ("#d6a740" if mean_r >= 0 else "#cc4444")
+                t_rows += (
+                    f"<tr>"
+                    f"<td style='color:#e8eaf0;font-size:12px;'>{val}</td>"
+                    f"<td style='color:#aab;font-size:12px;text-align:center;'>{n} ({pct:.0f}%)</td>"
+                    f"<td style='color:{wr_c};font-size:12px;text-align:right;'>{wr*100:.0f}%</td>"
+                    f"<td style='color:#aab;font-size:12px;text-align:right;'>{pf:.2f}</td>"
+                    f"<td style='color:{mr_c};font-size:12px;text-align:right;'>{mean_r*100:+.1f}%</td>"
+                    f"</tr>"
+                )
+            ctx_tables += (
+                f'<div style="margin-bottom:18px;">'
+                f'<div style="color:#5b8dee;font-size:11px;letter-spacing:1px;margin-bottom:6px;">{label.upper()}</div>'
+                f'<div style="overflow-x:auto;">'
+                f'<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+                f'<thead><tr style="border-bottom:1px solid #1e2d40;">'
+                f'<th style="color:#5b8dee;padding:6px;text-align:left;">State</th>'
+                f'<th style="color:#5b8dee;padding:6px;text-align:center;">N (%)</th>'
+                f'<th style="color:#5b8dee;padding:6px;text-align:right;">WR</th>'
+                f'<th style="color:#5b8dee;padding:6px;text-align:right;">PF</th>'
+                f'<th style="color:#5b8dee;padding:6px;text-align:right;">Avg r20d</th>'
+                f'</tr></thead>'
+                f'<tbody>{t_rows}</tbody>'
+                f'</table></div></div>'
+            )
+
+        ctx_html = ctx_tables
+
+        # ─── ⑬ Conditional Sensitivity ───────────────────────
+        regime_vals = ["trend", "range", "mixed"]
+        vol_vals    = ["high", "medium", "low"]
+
+        hdr = "<th style='color:#5b8dee;padding:6px 8px;text-align:left;'>Regime &times; Vol</th>"
+        for v in vol_vals:
+            hdr += f"<th style='color:#5b8dee;padding:6px 8px;text-align:center;'>{v}</th>"
+
+        s_rows = ""
+        for reg in regime_vals:
+            row = f"<td style='color:#aab;font-size:12px;font-weight:600;padding:6px 8px;'>{reg}</td>"
+            for vol in vol_vals:
+                sub = [s for s in tagged if s["regime"] == reg and s["vol"] == vol]
+                if not sub:
+                    row += "<td style='color:#333;text-align:center;font-size:11px;'>—</td>"
+                    continue
+                n      = len(sub)
+                mean_r = sum(s["r20d"] for s in sub) / n
+                wr     = sum(1 for s in sub if s["r20d"] >= WIN_THRESH) / n
+                col    = "#6aa84f" if mean_r >= WIN_THRESH else ("#d6a740" if mean_r >= 0 else "#cc4444")
+                row += (f"<td style='text-align:center;padding:6px;'>"
+                        f"<div style='color:{col};font-size:12px;font-weight:600;'>{mean_r*100:+.1f}%</div>"
+                        f"<div style='color:#666;font-size:10px;'>WR {wr*100:.0f}% &middot; n={n}</div></td>")
+            s_rows += f"<tr style='border-bottom:1px solid #1a2535;'>{row}</tr>"
+
+        cross_table = (
+            f'<div style="color:#5b8dee;font-size:11px;letter-spacing:1px;margin-bottom:6px;">REGIME &times; VOLATILITY (avg r20d)</div>'
+            f'<div style="overflow-x:auto;margin-bottom:20px;">'
+            f'<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+            f'<thead><tr style="border-bottom:1px solid #1e2d40;">{hdr}</tr></thead>'
+            f'<tbody>{s_rows}</tbody>'
+            f'</table></div>'
+        )
+
+        disc_rows = ""
+        for reg in regime_vals:
+            sub_reg = [s for s in tagged if s["regime"] == reg]
+            if not sub_reg:
+                continue
+            for bin_label, lo, hi in [("low 0-15", 0, 15), ("medium 16-22", 16, 22), ("high 23-30", 23, 30)]:
+                sub = [s for s in sub_reg if lo <= float(s.get("r1_price") or 0) <= hi]
+                if not sub:
+                    continue
+                n      = len(sub)
+                mean_r = sum(s["r20d"] for s in sub) / n
+                col    = "#6aa84f" if mean_r >= WIN_THRESH else ("#d6a740" if mean_r >= 0 else "#cc4444")
+                disc_rows += (
+                    f"<tr style='border-bottom:1px solid #1a2535;'>"
+                    f"<td style='color:#aab;font-size:12px;padding:6px;'>{reg}</td>"
+                    f"<td style='color:#888;font-size:12px;padding:6px;'>{bin_label}</td>"
+                    f"<td style='color:#aab;font-size:12px;text-align:center;padding:6px;'>{n}</td>"
+                    f"<td style='color:{col};font-size:12px;text-align:right;font-weight:600;padding:6px;'>{mean_r*100:+.1f}%</td>"
+                    f"</tr>"
+                )
+
+        no_disc = '<tr><td colspan="4" style="color:#444;text-align:center;padding:10px;">—</td></tr>'
+        disc_table = (
+            f'<div style="color:#5b8dee;font-size:11px;letter-spacing:1px;margin-bottom:6px;">DISCOUNT DEPTH (r1_price score) &times; REGIME</div>'
+            f'<div style="overflow-x:auto;">'
+            f'<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+            f'<thead><tr style="border-bottom:1px solid #1e2d40;">'
+            f'<th style="color:#5b8dee;padding:6px;text-align:left;">Regime</th>'
+            f'<th style="color:#5b8dee;padding:6px;">Discount Score Bin</th>'
+            f'<th style="color:#5b8dee;padding:6px;text-align:center;">N</th>'
+            f'<th style="color:#5b8dee;padding:6px;text-align:right;">Avg r20d</th>'
+            f'</tr></thead>'
+            f'<tbody>{disc_rows if disc_rows else no_disc}</tbody>'
+            f'</table></div>'
+        )
+
+        sens_html = cross_table + disc_table
+
+        # ─── ⑭ Failure Signatures ────────────────────────────
+        fctr = Counter()
+        fmap: dict = {}
+        for s in losses:
+            key = f"regime={s['regime']} · vol={s['vol']} · struct={s['struct']}"
+            fctr[key] += 1
+            fmap.setdefault(key, []).append(s["r20d"])
+
+        fail_rows = ""
+        for rank, (pattern, n) in enumerate(fctr.most_common(5), 1):
+            mean_loss = sum(fmap[pattern]) / len(fmap[pattern]) * 100
+            pct_of    = n / len(losses) * 100 if losses else 0
+            fail_rows += (
+                f'<div style="display:flex;gap:10px;margin-bottom:8px;padding:10px 14px;'
+                f'background:#160a0a;border-radius:6px;border-left:3px solid #cc4444;">'
+                f'<span style="color:#cc4444;font-size:14px;min-width:24px;font-weight:700;">#{rank}</span>'
+                f'<div style="flex:1;">'
+                f'<div style="color:#e8c0b0;font-size:12px;font-weight:600;">{pattern}</div>'
+                f'<div style="color:#8899aa;font-size:11px;margin-top:3px;">'
+                f'{n} signals &middot; {pct_of:.0f}% of losses &middot; avg r20d = {mean_loss:+.1f}%'
+                f'</div></div></div>'
+            )
+
+        if not fail_rows:
+            fail_rows = '<div style="color:#555;font-size:12px;padding:10px;">Insufficient loss data (need r20d &lt; 0%).</div>'
+
+        fail_html = (
+            f'<div style="color:#888;font-size:12px;margin-bottom:10px;">'
+            f'Based on <strong style="color:#cc4444;">{len(losses)}</strong> losing signals (r20d &lt; 0%).'
+            f' Avoid these context combinations:</div>'
+            + fail_rows
+        )
+
+        # ─── ⑮ Success Pattern Summary ───────────────────────
+        wctr = Counter()
+        wmap: dict = {}
+        for s in wins:
+            key = f"regime={s['regime']} · vol={s['vol']} · struct={s['struct']}"
+            wctr[key] += 1
+            wmap.setdefault(key, []).append(s["r20d"])
+
+        win_rows = ""
+        for rank, (pattern, n) in enumerate(wctr.most_common(5), 1):
+            mean_win = sum(wmap[pattern]) / len(wmap[pattern]) * 100
+            pct_of   = n / len(wins) * 100 if wins else 0
+            win_rows += (
+                f'<div style="display:flex;gap:10px;margin-bottom:8px;padding:10px 14px;'
+                f'background:#0a160a;border-radius:6px;border-left:3px solid #6aa84f;">'
+                f'<span style="color:#6aa84f;font-size:14px;min-width:24px;font-weight:700;">#{rank}</span>'
+                f'<div style="flex:1;">'
+                f'<div style="color:#b0e8c0;font-size:12px;font-weight:600;">{pattern}</div>'
+                f'<div style="color:#8899aa;font-size:11px;margin-top:3px;">'
+                f'{n} signals &middot; {pct_of:.0f}% of wins &middot; avg r20d = {mean_win:+.1f}%'
+                f'</div></div></div>'
+            )
+
+        if not win_rows:
+            win_rows = '<div style="color:#555;font-size:12px;padding:10px;">Insufficient win data (need r20d &ge; 7%).</div>'
+
+        success_html = (
+            f'<div style="color:#888;font-size:12px;margin-bottom:10px;">'
+            f'Based on <strong style="color:#6aa84f;">{len(wins)}</strong> winning signals (r20d &ge; 7%).'
+            f' Favor these context combinations:</div>'
+            + win_rows
+        )
+
+        return {
+            "decomp":      decomp_html,
+            "ctx_tags":    ctx_html,
+            "sensitivity": sens_html,
+            "failures":    fail_html,
+            "successes":   success_html,
+        }
+
+    except Exception as exc:
+        err = f'<div style="color:#d6a740;font-size:12px;padding:10px;">Context intelligence unavailable: {exc}</div>'
+        return {"decomp": err, "ctx_tags": err, "sensitivity": err, "failures": err, "successes": err}
+
+
 def build_html(gx: dict, stats: dict, perf: dict, perf_trends: dict,
                all_recs: list, edges: list, mods: list,
                overfitting: list, src: dict, memory: dict) -> str:
@@ -1099,6 +1433,9 @@ def build_html(gx: dict, stats: dict, perf: dict, perf_trends: dict,
     </div>
     {combo_support}"""
 
+    # ── Context Intelligence Sections (⑪-⑮) ─────────────────
+    ctx_intel = _build_context_intelligence()
+
     # ── Assemble ──────────────────────────────────────────────
     html = f"""<!DOCTYPE html>
 <html lang="ar" dir="ltr">
@@ -1129,6 +1466,11 @@ def build_html(gx: dict, stats: dict, perf: dict, perf_trends: dict,
     {_card("⑧ Self-Critique / Adversarial Review", critique_body, "#cc8844")}
     {_card("⑨ Executive Summary", exec_summary, "#5b8dee")}
     {_card("⑩ Learning Accumulation Roadmap", roadmap_card_body, "#5b8dee")}
+    {_card("⑪ Score Contribution Decomposition (Wins vs Losses)", ctx_intel['decomp'], "#82d46a")}
+    {_card("⑫ Context Tag Performance Summary", ctx_intel['ctx_tags'], "#5b8dee")}
+    {_card("⑬ Conditional Sensitivity Map", ctx_intel['sensitivity'], "#d6a740")}
+    {_card("⑭ Failure Signature Extraction", ctx_intel['failures'], "#cc4444")}
+    {_card("⑮ Success Pattern Summary", ctx_intel['successes'], "#6aa84f")}
 
     <div style="text-align:center;color:#444;font-size:11px;margin-top:20px;padding:10px;">
       GX Learning Intelligence Layer · EGX30 Scanner · {TODAY}

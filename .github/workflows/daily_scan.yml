@@ -115,7 +115,7 @@ jobs:
           path: |
             egx_research.db
             historical_backtest_results.json
-            historical_backtest_report_*.html
+            reports/historical_backtest_report_*.html
           retention-days: 1
 
   # ── B ── Research reports (parallel with C) ───────────────────────────────
@@ -161,9 +161,9 @@ jobs:
           python - <<'PYEOF'
           import glob, shutil
           for pattern, dest in [
-              ("historical_backtest_report_*.html", "web_deploy/historical_backtest_report.html"),
-              ("research_report_*.html",            "web_deploy/research_report.html"),
-              ("quant_research_report_*.html",      "web_deploy/quant_research_report.html"),
+              ("reports/historical_backtest_report_*.html", "web_deploy/historical_backtest_report.html"),
+              ("reports/research_report_*.html",            "web_deploy/research_report.html"),
+              ("reports/quant_research_report_*.html",      "web_deploy/quant_research_report.html"),
           ]:
               files = sorted(glob.glob(pattern))
               if files:

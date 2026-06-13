@@ -28,6 +28,11 @@ on:
         required: false
         default: 'false'
         type: boolean
+      full_rebuild:
+        description: 'Force full rebuild — ignore all caches'
+        required: false
+        default: 'false'
+        type: boolean
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -90,6 +95,7 @@ jobs:
           python backfill_hist_features.py || true
           python extend_metrics.py || true
           python -c "from backfill_research_db import ensure_combined_view; ensure_combined_view()" || true
+          python cache_orchestrator.py --symbols || true
 
       - name: Save state to git
         run: |
@@ -97,7 +103,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git add open_positions.json positions_history.json scan_results.json \
                   signal_history.json signal_log.json learned_weights.json \
-                  egx_research.db research_results.json || true
+                  egx_research.db research_results.json \
+                  changed_symbols.json || true
           git diff --staged --quiet || git commit -m "Auto-update positions and research DB [skip ci]"
           git push || true
 
@@ -132,18 +139,23 @@ jobs:
         with:
           name: egx-research-db
 
-      - name: Generate reports
+      - name: Restore research cache
+        uses: actions/cache@v4
+        with:
+          path: cache_metadata/
+          key: research-cache-${{ runner.os }}
+          restore-keys: research-cache-
+
+      - name: Generate reports (incremental)
         env:
           WEB_OUT: ./web_deploy
           REPORT_EMAIL_FROM: ${{ secrets.EMAIL_USER }}
           REPORT_EMAIL_TO: ${{ secrets.REPORT_EMAIL_TO }}
           REPORT_EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          FULL_REBUILD: ${{ github.event.inputs.full_rebuild == 'true' && 'true' || 'false' }}
         run: |
           mkdir -p web_deploy
-          (python heatmap.py || true) &
-          (python research_report.py --no-email --force || true) &
-          (python quant_research_report.py || true) &
-          wait
+          python cache_orchestrator.py --mode research
           python - <<'PYEOF'
           import glob, shutil
           for pattern, dest in [
@@ -160,6 +172,13 @@ jobs:
           PYEOF
           cp historical_backtest_results.json web_deploy/ || true
           cp manifest.json sw.js icon.svg web_deploy/ || true
+
+      - name: Save research cache
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: cache_metadata/
+          key: research-cache-${{ runner.os }}
 
       - name: Upload research artifacts
         uses: actions/upload-artifact@v4
@@ -189,23 +208,25 @@ jobs:
         with:
           name: egx-research-db
 
-      - name: Run intelligence engines — tier 1 (parallel)
-        run: |
-          (python rule_discovery.py && python edge_report.py || true) &
-          (python behavior_report.py && python backtest_analysis.py || true) &
-          (python logic_analyzer.py || true) &
-          (python weight_optimizer.py || true) &
-          (python system_audit.py || true) &
-          (python adaptive_learning.py || true) &
-          (python gx_learning_layer.py || true) &
-          wait
+      - name: Restore learning cache
+        uses: actions/cache@v4
+        with:
+          path: cache_metadata/
+          key: intelligence-cache-${{ runner.os }}
+          restore-keys: intelligence-cache-
+
+      - name: Run intelligence engines (incremental)
+        env:
+          FULL_REBUILD: ${{ github.event.inputs.full_rebuild == 'true' && 'true' || 'false' }}
+        run: python cache_orchestrator.py --mode intelligence
         continue-on-error: true
 
-      - name: Run intelligence engines — tier 2 (depends on tier 1)
-        run: |
-          python decision_engine.py || true
-          python discount_zone_miner.py || true
-        continue-on-error: true
+      - name: Save learning cache
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: cache_metadata/
+          key: intelligence-cache-${{ runner.os }}
 
       - name: Collect intelligence artifacts
         run: |
@@ -232,13 +253,15 @@ jobs:
           PYEOF
           cp behavior_report.html     web_deploy/behavior_report.html  || true
           cp backtest_report.html     web_deploy/backtest_report.html   || true
-          cp logic_analysis_results.json    web_deploy/ || true
-          cp optimization_results.json      web_deploy/ || true
-          cp system_audit_results.json      web_deploy/ || true
-          cp adaptive_learning_results.json web_deploy/ || true
-          cp gx_learning_memory.json        web_deploy/ || true
-          cp decision_engine_results.json   web_deploy/ || true
-          cp discount_zone_patterns.json    web_deploy/ || true
+          cp logic_analysis_results.json        web_deploy/ || true
+          cp optimization_results.json          web_deploy/ || true
+          cp system_audit_results.json          web_deploy/ || true
+          cp adaptive_learning_results.json     web_deploy/ || true
+          cp gx_learning_memory.json            web_deploy/ || true
+          cp decision_engine_results.json       web_deploy/ || true
+          cp discount_zone_patterns.json        web_deploy/ || true
+          cp changed_symbols.json               web_deploy/ || true
+          cp incremental_execution_report.json  web_deploy/ || true
 
       - name: Upload intelligence artifacts
         uses: actions/upload-artifact@v4

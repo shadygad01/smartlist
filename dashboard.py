@@ -441,6 +441,73 @@ def _section_weight_optimizer():
     return _card("Weight Optimizer — Quant Engine", "⚖️", content, "weight_optimizer_report.html")
 
 
+def _section_system_audit():
+    """Card for system audit report — reads from system_audit_results.json."""
+    res = _load("system_audit_results.json")
+    if not res:
+        return _card("System Audit", "🕵️",
+                     "<p style='color:#aaa;font-size:13px;'>لا توجد نتائج بعد</p>",
+                     "system_audit_report.html")
+
+    n_sig  = res.get("n_signals", 0)
+    n_rej  = res.get("n_rejected", 0)
+    n_ass  = res.get("n_assumptions", 0)
+    n_prot = res.get("assumptions_protected", 0)
+    n_unt  = res.get("assumptions_untested", 0)
+    pf     = res.get("baseline_pf", 0)
+    r20d   = res.get("baseline_r20d", 0)
+
+    # Top filter damage
+    fd = res.get("filter_damage", [])
+    top_filter = fd[0] if fd else {}
+    filter_txt = ""
+    if top_filter:
+        diff  = top_filter.get("diff", 0)
+        diff_color = "#721c24" if diff < 0 else "#155724"
+        filter_txt = (
+            f"<div style='margin-top:8px;font-size:12px;background:#fff3cd;"
+            f"padding:7px 10px;border-radius:6px;color:#856404;'>"
+            f"⚠️ Biggest filter damage: <strong>{top_filter.get('filter','')}</strong> — "
+            f"<span style='color:{diff_color};font-weight:700'>{diff*100:+.1f}%</span> "
+            f"({top_filter.get('verdict','')[:40]})</div>"
+        )
+
+    # Top discovery
+    disc = res.get("top_discoveries", [])
+    top_disc = disc[0] if disc else {}
+    disc_txt = ""
+    if top_disc:
+        disc_txt = (
+            f"<div style='margin-top:8px;font-size:12px;background:#d4edda;"
+            f"padding:7px 10px;border-radius:6px;color:#155724;'>"
+            f"🔍 Top discovery: <strong>{top_disc.get('combo','')}</strong> → "
+            f"<strong>{top_disc.get('mean',0)*100:+.1f}%</strong> avg return "
+            f"(n={top_disc.get('n','')}, MFE={top_disc.get('mfe',0)*100:.1f}%)</div>"
+        )
+
+    conc = res.get("conclusions", {})
+    q8   = conc.get("q8_highest_impact", "")
+    q8_txt = ""
+    if q8:
+        q8_txt = (
+            f"<div style='margin-top:8px;font-size:11px;background:#e8f4fd;"
+            f"padding:7px 10px;border-radius:6px;color:#0a3622;'>"
+            f"🎯 Highest impact: {q8[:100]}...</div>"
+        )
+
+    kpis = _kpi_row(
+        ("إشارات", str(n_sig), "#333"),
+        ("مرفوضة", str(n_rej), "#856404"),
+        ("Assumptions", str(n_ass), "#1a3c5e"),
+        ("Protected", str(n_prot), "#721c24"),
+        ("Not Tested", str(n_unt), "#856404"),
+        ("Profit Factor", f"{pf:.2f}", "#155724"),
+    )
+    content = kpis + filter_txt + disc_txt + q8_txt
+    return _card("System Audit — Assumption & Blind Spot Analysis", "🕵️",
+                 content, "system_audit_report.html")
+
+
 def _section_behavior(beh):
     if not beh or beh.get("n", 0) == 0:
         return _card("Behavior Report", "🔍", "<p style='color:#aaa;font-size:13px;'>لا توجد بيانات بعد</p>", "behavior_report.html")
@@ -485,6 +552,7 @@ def build_dashboard() -> str:
         '<a href="weight_optimizer_report.html" style="color:#8fb8d8;text-decoration:none;">⚖️ Optimizer</a>',
         '<a href="logic_analysis_report.html" style="color:#8fb8d8;text-decoration:none;">🔬 Logic</a>',
         '<a href="edge_report.html" style="color:#8fb8d8;text-decoration:none;">🧠 Edge</a>',
+        '<a href="system_audit_report.html" style="color:#8fb8d8;text-decoration:none;">🕵️ Audit</a>',
         '<a href="behavior_report.html" style="color:#8fb8d8;text-decoration:none;">🔍 Behavior</a>',
     ])
 
@@ -494,6 +562,7 @@ def build_dashboard() -> str:
 {_section_quant()}
 {_section_weight_optimizer()}
 {_section_logic_analyzer()}
+{_section_system_audit()}
 {_section_research(rr)}
 {_section_edge(ed)}
 """

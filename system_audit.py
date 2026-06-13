@@ -42,23 +42,48 @@ WIN_THRESH = 0.05   # 5% = winner
 
 def load_db_signals():
     conn = get_conn(DB_PATH)
-    df = pd.read_sql('''
-        SELECT s.id, s.symbol, s.signal_date, s.raw_score, s.adj_score,
-               s.r1_price, s.r2_ob, s.r3_liquidity, s.r4_htf, s.r5_avwap,
-               s.r6_macd, s.r7_div, s.r8_demand,
-               s.sweep_detected, s.wick_rejection, s.equal_lows,
-               s.htf_hh, s.htf_hl, s.rsi_div, s.macd_div,
-               s.sv_hit, s.sv_score, s.hvn_hit, s.hvn_score,
-               s.sv_depth, s.price_ok, s.discount_depth,
-               s.price, s.eq, s.buy_hi, s.signal_type,
-               s.is_ramadan, s.stock_mult, s.snap_atr,
-               bq.r20d, bq.mfe_20d, bq.mae_20d, bq.r40d, bq.mfe_40d,
-               bq.mae_40d, bq.days_to_peak, bq.classification
-        FROM signals s JOIN bottom_quality bq ON s.id = bq.signal_id
-    ''', conn)
+    # Use v_all_signals (live + historical) when available
+    views = [r[0] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='view' AND name='v_all_signals'"
+    ).fetchall()]
+    if views:
+        df = pd.read_sql('''
+            SELECT id, symbol, signal_date, raw_score, adj_score,
+                   r1_price, r2_ob, r3_liquidity, r4_htf, r5_avwap,
+                   r6_macd, r7_div, r8_demand,
+                   sweep_detected, wick_rejection, equal_lows,
+                   htf_hh, htf_hl, rsi_div, macd_div,
+                   sv_hit, sv_score, hvn_hit, hvn_score,
+                   price_ok,
+                   close_price AS price,
+                   r20d, mfe_20d, mae_20d,
+                   source
+            FROM v_all_signals
+            WHERE r20d IS NOT NULL
+        ''', conn)
+    else:
+        df = pd.read_sql('''
+            SELECT s.id, s.symbol, s.signal_date, s.raw_score, s.adj_score,
+                   s.r1_price, s.r2_ob, s.r3_liquidity, s.r4_htf, s.r5_avwap,
+                   s.r6_macd, s.r7_div, s.r8_demand,
+                   s.sweep_detected, s.wick_rejection, s.equal_lows,
+                   s.htf_hh, s.htf_hl, s.rsi_div, s.macd_div,
+                   s.sv_hit, s.sv_score, s.hvn_hit, s.hvn_score,
+                   s.price_ok, s.price,
+                   bq.r20d, bq.mfe_20d, bq.mae_20d
+            FROM signals s JOIN bottom_quality bq ON s.id = bq.signal_id
+            WHERE bq.r20d IS NOT NULL
+        ''', conn)
+        df['source'] = 'live'
     conn.close()
+    # Fill optional columns not in hist_signals
+    for col in ['sv_depth', 'discount_depth', 'eq', 'buy_hi', 'signal_type',
+                'is_ramadan', 'stock_mult', 'snap_atr', 'r40d', 'mfe_40d',
+                'mae_40d', 'days_to_peak', 'classification']:
+        if col not in df.columns:
+            df[col] = None
     df['year'] = pd.to_datetime(df['signal_date']).dt.year
-    df['in_buy_zone'] = (df['r1_price'] >= 18).astype(int)  # r1>=18 ≈ in buy zone
+    df['in_buy_zone'] = (df['r1_price'] >= 18).astype(int)
     return df
 
 def load_local_ohlcv(symbol):

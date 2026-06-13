@@ -1,29 +1,41 @@
 {
   "generated_at": "2026-06-13",
   "engine_version": "2.1",
-  "n_signals": 639,
-  "health_score": 52,
+  "n_signals": 1051,
+  "health_score": 51,
   "baseline": {
-    "n": 639,
-    "mean": 0.0461,
-    "median": 0.0368,
-    "wr": 0.4538,
-    "pf": 2.4918,
-    "mfe": 0.1306,
-    "mae": -0.0713
+    "n": 1051,
+    "mean": 0.046,
+    "median": 0.0357,
+    "wr": 0.4462,
+    "pf": 2.4939,
+    "mfe": 0.1297,
+    "mae": -0.0726
   },
   "top3": [
     {
       "id": "IMP-2",
       "name": "Mandatory Sweep Gate (sweep_detected=1)",
-      "model_score": 85,
-      "delta_ret": 0.0091,
-      "delta_mfe": 0.0042,
-      "pf": 3.23,
+      "model_score": 79,
+      "delta_ret": 0.0068,
+      "delta_mfe": 0.003,
+      "pf": 2.98,
       "wf_consistent": true,
       "overfitted": false,
-      "n_retained": 274,
-      "retention": 0.429
+      "n_retained": 477,
+      "retention": 0.454
+    },
+    {
+      "id": "IMP-6",
+      "name": "Combined Fix (OB remove + HTF inversion + Demand inversion)",
+      "model_score": 67,
+      "delta_ret": 0.0008,
+      "delta_mfe": 0.0026,
+      "pf": 2.57,
+      "wf_consistent": true,
+      "overfitted": false,
+      "n_retained": 766,
+      "retention": 0.729
     }
   ],
   "all_improvements": [
@@ -32,48 +44,48 @@
       "name": "Remove Order Block (W_OB → 0)",
       "model_score": 49,
       "delta_ret": 0.0024,
-      "retention": 0.851,
+      "retention": 0.833,
       "wf_consistent": false
     },
     {
       "id": "IMP-2",
       "name": "Mandatory Sweep Gate (sweep_detected=1)",
-      "model_score": 85,
-      "delta_ret": 0.0091,
-      "retention": 0.429,
+      "model_score": 79,
+      "delta_ret": 0.0068,
+      "retention": 0.454,
       "wf_consistent": true
     },
     {
       "id": "IMP-3",
       "name": "HTF Scoring Inversion Fix (HH+HL → 0 pts, HL-only → full pts)",
-      "model_score": 40,
-      "delta_ret": -0.0021,
-      "retention": 0.883,
+      "model_score": 42,
+      "delta_ret": -0.0013,
+      "retention": 0.859,
       "wf_consistent": false
     },
     {
       "id": "IMP-4",
       "name": "Demand Zone Weight Fix (HVN-only→top, SV+HVN→penalized)",
       "model_score": 45,
-      "delta_ret": 0.0001,
-      "retention": 0.998,
+      "delta_ret": -0.0001,
+      "retention": 0.992,
       "wf_consistent": false
     },
     {
       "id": "IMP-5",
       "name": "HVN + HTF_HH Super-Bonus Tier",
       "model_score": 100,
-      "delta_ret": 0.0514,
-      "retention": 0.061,
+      "delta_ret": 0.0264,
+      "retention": 0.085,
       "wf_consistent": true
     },
     {
       "id": "IMP-6",
       "name": "Combined Fix (OB remove + HTF inversion + Demand inversion)",
-      "model_score": 46,
-      "delta_ret": 0.0012,
-      "retention": 0.77,
-      "wf_consistent": false
+      "model_score": 67,
+      "delta_ret": 0.0008,
+      "retention": 0.729,
+      "wf_consistent": true
     }
   ],
   "cross_check_mismatches": [
@@ -82,9 +94,9 @@
       "module_b": "DB Signals",
       "metric": "Total Signal Count",
       "a_value": 2774,
-      "b_value": 639,
+      "b_value": 1051,
       "status": "MISMATCH",
-      "detail": "Backtest uses 2774 signals vs DB 639. Backtest likely includes historical scan data."
+      "detail": "Backtest uses 2774 signals vs DB 1051. Backtest likely includes historical scan data."
     },
     {
       "module_a": "Backtest (score≥55)",
@@ -101,29 +113,36 @@
       "rank": 3,
       "driver": "HTF Scoring Inversion (HH+HL rewarded over HL-only)",
       "severity": 80,
-      "freq_pct": 11.7,
-      "avg_impact": 0.0214
+      "freq_pct": 14.1,
+      "avg_impact": 0.0062
     },
     {
       "rank": 1,
       "driver": "Outright Losing Signals",
-      "severity": 73,
-      "freq_pct": 36.8,
-      "avg_impact": -0.0763
+      "severity": 72,
+      "freq_pct": 36.2,
+      "avg_impact": -0.0766
     },
     {
       "rank": 2,
       "driver": "Order Block Positive Scoring (OB Harmful)",
       "severity": 72,
-      "freq_pct": 14.9,
-      "avg_impact": -0.014
+      "freq_pct": 16.7,
+      "avg_impact": -0.0119
+    },
+    {
+      "rank": 4,
+      "driver": "Demand Zone Paradox (SV+HVN = worst outcome)",
+      "severity": 65,
+      "freq_pct": 0.8,
+      "avg_impact": 0.0096
     },
     {
       "rank": 5,
       "driver": "Low-Score Signal Dilution (score 35–44)",
       "severity": 50,
-      "freq_pct": 19.1,
-      "avg_impact": -0.0071
+      "freq_pct": 24.7,
+      "avg_impact": -0.0086
     }
   ]
 }

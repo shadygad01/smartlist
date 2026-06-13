@@ -62,21 +62,39 @@ RESULTS_FILE = "optimization_results.json"
 
 def load_data(db_path: str = DB_PATH) -> pd.DataFrame:
     conn = get_conn(db_path)
-    df = pd.read_sql("""
-        SELECT s.id, s.symbol, s.signal_date, s.signal_type, s.raw_score,
-               s.r1_price, s.r2_ob, s.r3_liquidity, s.r4_htf,
-               s.r5_avwap, s.r6_macd, s.r7_div, s.r8_demand,
-               bq.r20d, bq.mfe_20d, bq.mae_20d,
-               bq.r40d, bq.mfe_40d, bq.mae_40d,
-               bq.bq_score, bq.time_to_recovery, bq.drawdown_duration,
-               bq.days_to_peak, bq.classification
-        FROM signals s
-        JOIN bottom_quality bq ON s.id = bq.signal_id
-        WHERE bq.r20d IS NOT NULL
-          AND bq.mfe_20d IS NOT NULL
-    """, conn)
+    views = [r[0] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='view' AND name='v_all_signals'"
+    ).fetchall()]
+    if views:
+        df = pd.read_sql("""
+            SELECT id, symbol, signal_date, raw_score,
+                   r1_price, r2_ob, r3_liquidity, r4_htf,
+                   r5_avwap, r6_macd, r7_div, r8_demand,
+                   r20d, mfe_20d, mae_20d,
+                   source
+            FROM v_all_signals
+            WHERE r20d IS NOT NULL AND mfe_20d IS NOT NULL
+        """, conn)
+    else:
+        df = pd.read_sql("""
+            SELECT s.id, s.symbol, s.signal_date, s.signal_type, s.raw_score,
+                   s.r1_price, s.r2_ob, s.r3_liquidity, s.r4_htf,
+                   s.r5_avwap, s.r6_macd, s.r7_div, s.r8_demand,
+                   bq.r20d, bq.mfe_20d, bq.mae_20d,
+                   bq.r40d, bq.mfe_40d, bq.mae_40d,
+                   bq.bq_score, bq.time_to_recovery, bq.drawdown_duration,
+                   bq.days_to_peak, bq.classification
+            FROM signals s
+            JOIN bottom_quality bq ON s.id = bq.signal_id
+            WHERE bq.r20d IS NOT NULL
+              AND bq.mfe_20d IS NOT NULL
+        """, conn)
+        df['source'] = 'live'
     conn.close()
-
+    for col in ['signal_type', 'r40d', 'mfe_40d', 'mae_40d', 'bq_score',
+                'time_to_recovery', 'drawdown_duration', 'days_to_peak', 'classification']:
+        if col not in df.columns:
+            df[col] = None
     df['signal_date'] = pd.to_datetime(df['signal_date'])
     df = df.sort_values('signal_date').reset_index(drop=True)
 

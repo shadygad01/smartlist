@@ -671,6 +671,89 @@ def backfill_smc_scores(db_path: str = DB_PATH):
     print(f"\n[smc_backfill] تمّ — تحديث={total_ok}  تخطّي={total_skip}  خطأ={total_err}")
 
 
+def ensure_combined_view(db_path: str = DB_PATH):
+    """Create or refresh v_all_signals VIEW (live signals + historical backtest)."""
+    conn = sqlite3.connect(db_path)
+    conn.execute("DROP VIEW IF EXISTS v_all_signals")
+    conn.execute("""
+        CREATE VIEW v_all_signals AS
+        SELECT
+            s.id,
+            s.symbol,
+            s.signal_date,
+            COALESCE(s.price, 0)                AS close_price,
+            s.raw_score,
+            COALESCE(s.adj_score, s.raw_score)  AS adj_score,
+            COALESCE(s.r1_price, 0)             AS r1_price,
+            COALESCE(s.r2_ob, 0)                AS r2_ob,
+            COALESCE(s.r3_liquidity, 0)         AS r3_liquidity,
+            COALESCE(s.r4_htf, 0)               AS r4_htf,
+            COALESCE(s.r5_avwap, 0)             AS r5_avwap,
+            COALESCE(s.r6_macd, 0)              AS r6_macd,
+            COALESCE(s.r7_div, 0)               AS r7_div,
+            COALESCE(s.r8_demand, 0)            AS r8_demand,
+            COALESCE(s.sweep_detected, 0)       AS sweep_detected,
+            COALESCE(s.wick_rejection, 0)       AS wick_rejection,
+            COALESCE(s.equal_lows, 0)           AS equal_lows,
+            COALESCE(s.htf_hh, 0)               AS htf_hh,
+            COALESCE(s.htf_hl, 0)               AS htf_hl,
+            COALESCE(s.rsi_div, 0)              AS rsi_div,
+            COALESCE(s.macd_div, 0)             AS macd_div,
+            COALESCE(s.sv_hit, 0)               AS sv_hit,
+            COALESCE(s.hvn_hit, 0)              AS hvn_hit,
+            COALESCE(s.sv_score, 0)             AS sv_score,
+            COALESCE(s.hvn_score, 0)            AS hvn_score,
+            COALESCE(s.price_ok, 1)             AS price_ok,
+            b.r20d,
+            b.mfe_20d,
+            b.mae_20d,
+            'live'                              AS source
+        FROM signals s
+        JOIN bottom_quality b ON b.signal_id = s.id
+        WHERE b.r20d IS NOT NULL
+
+        UNION ALL
+
+        SELECT
+            -(hs.id)        AS id,
+            hs.symbol,
+            hs.signal_date,
+            hs.close_price,
+            hs.raw_score,
+            hs.adj_score,
+            hs.r1_price,
+            hs.r2_ob,
+            hs.r3_liquidity,
+            hs.r4_htf,
+            hs.r5_avwap,
+            hs.r6_macd,
+            hs.r7_div,
+            hs.r8_demand,
+            hs.sweep_detected,
+            hs.wick_rejection,
+            hs.equal_lows,
+            hs.htf_hh,
+            hs.htf_hl,
+            hs.rsi_div,
+            hs.macd_div,
+            hs.sv_hit,
+            hs.hvn_hit,
+            hs.sv_score,
+            hs.hvn_score,
+            hs.price_ok,
+            hs.r20d,
+            hs.mfe_20d,
+            hs.mae_20d,
+            'historical'    AS source
+        FROM hist_signals hs
+        WHERE hs.r20d IS NOT NULL
+    """)
+    conn.commit()
+    n = conn.execute("SELECT COUNT(*) FROM v_all_signals").fetchone()[0]
+    conn.close()
+    print(f"[backfill] v_all_signals VIEW refreshed — {n} total signals")
+
+
 def main(db_path: str = DB_PATH, dry_run: bool = False):
     run_backfill(db_path=db_path, dry_run=dry_run)
     if not dry_run:
@@ -678,6 +761,7 @@ def main(db_path: str = DB_PATH, dry_run: bool = False):
         backfill_gate_derived(db_path=db_path)
         backfill_smc_scores(db_path=db_path)
         backfill_binary_flags(db_path=db_path)
+        ensure_combined_view(db_path=db_path)
 
 
 def backfill_binary_flags(db_path: str = DB_PATH):

@@ -107,21 +107,44 @@ CURRENT_PARAMS = {
 
 def load_data(db_path: str = DB_PATH) -> pd.DataFrame:
     conn = get_conn(db_path)
-    df = pd.read_sql("""
-        SELECT s.id, s.symbol, s.signal_date, s.signal_type, s.raw_score,
-               s.r1_price, s.r2_ob, s.r3_liquidity, s.r4_htf,
-               s.r5_avwap, s.r6_macd, s.r7_div, s.r8_demand,
-               s.sweep_detected, s.wick_rejection, s.equal_lows,
-               s.htf_hh, s.htf_hl, s.rsi_div, s.macd_div,
-               s.sv_hit, s.hvn_hit, s.sv_score, s.hvn_score,
-               s.price_ok, s.discount_depth,
-               bq.r20d, bq.mfe_20d, bq.mae_20d,
-               bq.r40d, bq.bq_score, bq.classification
-        FROM signals s
-        JOIN bottom_quality bq ON s.id = bq.signal_id
-        WHERE bq.r20d IS NOT NULL
-    """, conn)
+    views = [r[0] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='view' AND name='v_all_signals'"
+    ).fetchall()]
+    if views:
+        df = pd.read_sql("""
+            SELECT id, symbol, signal_date, raw_score,
+                   r1_price, r2_ob, r3_liquidity, r4_htf,
+                   r5_avwap, r6_macd, r7_div, r8_demand,
+                   sweep_detected, wick_rejection, equal_lows,
+                   htf_hh, htf_hl, rsi_div, macd_div,
+                   sv_hit, hvn_hit, sv_score, hvn_score,
+                   price_ok,
+                   r20d, mfe_20d, mae_20d,
+                   source
+            FROM v_all_signals
+            WHERE r20d IS NOT NULL
+        """, conn)
+        df['source'] = df.get('source', 'live')
+    else:
+        df = pd.read_sql("""
+            SELECT s.id, s.symbol, s.signal_date, s.signal_type, s.raw_score,
+                   s.r1_price, s.r2_ob, s.r3_liquidity, s.r4_htf,
+                   s.r5_avwap, s.r6_macd, s.r7_div, s.r8_demand,
+                   s.sweep_detected, s.wick_rejection, s.equal_lows,
+                   s.htf_hh, s.htf_hl, s.rsi_div, s.macd_div,
+                   s.sv_hit, s.hvn_hit, s.sv_score, s.hvn_score,
+                   s.price_ok,
+                   bq.r20d, bq.mfe_20d, bq.mae_20d,
+                   bq.r40d, bq.bq_score, bq.classification
+            FROM signals s
+            JOIN bottom_quality bq ON s.id = bq.signal_id
+            WHERE bq.r20d IS NOT NULL
+        """, conn)
+        df['source'] = 'live'
     conn.close()
+    for col in ['signal_type', 'discount_depth', 'r40d', 'bq_score', 'classification']:
+        if col not in df.columns:
+            df[col] = None
     df['signal_date'] = pd.to_datetime(df['signal_date'])
     return df.sort_values('signal_date').reset_index(drop=True)
 

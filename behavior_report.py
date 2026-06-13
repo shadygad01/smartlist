@@ -37,7 +37,7 @@ def _outcome_cat(r20d: float) -> str:
 
 
 def _load_signals_from_db(days_back: int = 0) -> list:
-    """Read resolved signals from egx_research.db (fallback when extended_signal_log absent)."""
+    """Read resolved signals from egx_research.db — uses v_all_signals when available."""
     try:
         from signal_db import DB_PATH, get_conn
     except ImportError:
@@ -45,23 +45,47 @@ def _load_signals_from_db(days_back: int = 0) -> list:
 
     try:
         conn = get_conn(DB_PATH)
-        where = ""
-        if days_back > 0:
-            cutoff = (date.today() - timedelta(days=days_back)).isoformat()
-            where = f"WHERE s.signal_date >= '{cutoff}'"
-        rows = conn.execute(f"""
-            SELECT
-                s.id, s.symbol, s.signal_date, s.signal_type, s.raw_score,
-                s.r1_price, s.r2_ob, s.r3_liquidity, s.r4_htf,
-                s.r5_avwap, s.r6_macd, s.r7_div, s.r8_demand,
-                s.price, s.discount_depth,
-                s.is_ramadan, s.is_cbe, s.stock_tier, s.sector,
-                b.r20d, b.mfe_20d, b.mae_20d
-            FROM signals s
-            JOIN bottom_quality b ON b.signal_id = s.id
-            {where}
-            ORDER BY s.signal_date
-        """).fetchall()
+        has_view = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='view' AND name='v_all_signals'"
+        ).fetchone()
+
+        if has_view:
+            where = ""
+            if days_back > 0:
+                cutoff = (date.today() - timedelta(days=days_back)).isoformat()
+                where = f"WHERE signal_date >= '{cutoff}'"
+            rows = conn.execute(f"""
+                SELECT
+                    id, symbol, signal_date,
+                    NULL AS signal_type, raw_score,
+                    r1_price, r2_ob, r3_liquidity, r4_htf,
+                    r5_avwap, r6_macd, r7_div, r8_demand,
+                    close_price AS price, NULL AS discount_depth,
+                    NULL AS is_ramadan, NULL AS is_cbe,
+                    NULL AS stock_tier, NULL AS sector,
+                    r20d, mfe_20d, mae_20d
+                FROM v_all_signals
+                {where}
+                ORDER BY signal_date
+            """).fetchall()
+        else:
+            where = ""
+            if days_back > 0:
+                cutoff = (date.today() - timedelta(days=days_back)).isoformat()
+                where = f"WHERE s.signal_date >= '{cutoff}'"
+            rows = conn.execute(f"""
+                SELECT
+                    s.id, s.symbol, s.signal_date, s.signal_type, s.raw_score,
+                    s.r1_price, s.r2_ob, s.r3_liquidity, s.r4_htf,
+                    s.r5_avwap, s.r6_macd, s.r7_div, s.r8_demand,
+                    s.price, s.discount_depth,
+                    s.is_ramadan, s.is_cbe, s.stock_tier, s.sector,
+                    b.r20d, b.mfe_20d, b.mae_20d
+                FROM signals s
+                JOIN bottom_quality b ON b.signal_id = s.id
+                {where}
+                ORDER BY s.signal_date
+            """).fetchall()
         conn.close()
     except Exception as e:
         print(f"[Report] DB load error: {e}")

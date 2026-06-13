@@ -534,6 +534,150 @@ def _section_behavior(beh):
     return _card("Behavior Report / SMC Analysis", "🔍", kpis + "<div style='margin-top:12px;'>" + bars + "</div>", "behavior_report.html")
 
 
+# ── Research Notes Summary ────────────────────────────────────────────────────
+
+def _section_research_notes():
+    """Aggregate all recommendations/notes from every research module."""
+
+    notes = []  # list of {source, priority, text, color}
+
+    # ── Logic Analyzer ───────────────────────────────────────────────────────
+    la = _load("logic_analysis_results.json")
+    for r in la.get("summary_recommendations", [])[:8]:
+        func    = r.get("function", "")
+        param   = r.get("param", "")
+        current = r.get("current", "")
+        proposed= r.get("proposed", "")
+        impact  = r.get("impact", "")
+        notes.append({
+            "source":   f"🔬 Logic · {func}",
+            "priority": "HIGH" if any(k in impact for k in ["+", "Remove", "Invert"]) else "MEDIUM",
+            "text":     f"<b>{param}</b>: {str(current)[:30]} → <b>{str(proposed)[:60]}</b><br>"
+                        f"<span style='color:#555;font-size:11px;'>{impact[:80]}</span>",
+            "color":    "#0a3622",
+        })
+
+    # ── Weight Optimizer ─────────────────────────────────────────────────────
+    wo = _load("optimization_results.json")
+    for r in wo.get("top_recommendations", [])[:5]:
+        ind    = r.get("indicator", "")
+        change = r.get("change", "")
+        delta  = r.get("delta_ret", 0)
+        conf   = r.get("confidence", 0)
+        delta_s = f"{delta*100:+.1f}%" if delta else ""
+        notes.append({
+            "source":   f"⚖️ Optimizer · {ind}",
+            "priority": "HIGH" if abs(delta or 0) > 0.01 else "MEDIUM",
+            "text":     f"<b>{change[:70]}</b><br>"
+                        f"<span style='color:#555;font-size:11px;'>ΔReturn={delta_s} · Confidence={conf*100:.0f}%</span>",
+            "color":    "#084298",
+        })
+
+    # ── System Audit ─────────────────────────────────────────────────────────
+    sa = _load("system_audit_results.json")
+    conc = sa.get("conclusions", {})
+    for item in conc.get("q3_filters_hurting", [])[:3]:
+        notes.append({
+            "source":   "🕵️ Audit · Filter Damage",
+            "priority": "CRITICAL",
+            "text":     f"<b>يُضعف الأداء:</b> {item}",
+            "color":    "#721c24",
+        })
+    for item in conc.get("q6_remove_entirely", [])[:2]:
+        notes.append({
+            "source":   "🕵️ Audit · Remove",
+            "priority": "CRITICAL",
+            "text":     f"<b>يُوصى بحذفه:</b> {item[:100]}",
+            "color":    "#721c24",
+        })
+    for disc in sa.get("top_discoveries", [])[:3]:
+        notes.append({
+            "source":   "🕵️ Audit · Discovery",
+            "priority": "HIGH",
+            "text":     f"<b>اكتشاف:</b> {disc.get('combo','')} → "
+                        f"<b>+{disc.get('mean',0)*100:.1f}%</b> avg return "
+                        f"(n={disc.get('n','')}, MFE={disc.get('mfe',0)*100:.1f}%)",
+            "color":    "#155724",
+        })
+
+    # ── Edge Discovery ────────────────────────────────────────────────────────
+    ed = _load("edge_discovery_results.json")
+    for r in (ed.get("top_rules", []) or [])[:4]:
+        cond = r.get("rule_text", r.get("condition", ""))
+        mfe  = r.get("mfe_mean", 0)
+        wr   = r.get("win_rate", 0)
+        n_   = r.get("n", 0)
+        notes.append({
+            "source":   "🧠 Edge",
+            "priority": "HIGH" if mfe > 25 else "MEDIUM",
+            "text":     f"<b>{str(cond)[:80]}</b><br>"
+                        f"<span style='color:#555;font-size:11px;'>MFE={mfe:.1f}% · WR={wr*100:.0f}% · n={n_}</span>",
+            "color":    "#6f42c1",
+        })
+
+    # ── Research Report ───────────────────────────────────────────────────────
+    rr = _load("research_results.json")
+    ws = rr.get("weight_suggestions", {})
+    for feat, info in list(ws.items())[:4]:
+        if not isinstance(info, dict):
+            continue
+        direction = info.get("direction", "")
+        impact    = info.get("impact", "")
+        if direction:
+            notes.append({
+                "source":   "📊 Research",
+                "priority": "MEDIUM",
+                "text":     f"<b>{feat}</b>: {direction}<br>"
+                            f"<span style='color:#555;font-size:11px;'>{str(impact)[:80]}</span>",
+                "color":    "#856404",
+            })
+
+    if not notes:
+        return _card(
+            "ملخص التوصيات البحثية", "📋",
+            "<p style='color:#aaa;font-size:13px;'>لا توجد توصيات بعد — شغّل التقارير أولاً</p>",
+        )
+
+    # ── Build HTML ────────────────────────────────────────────────────────────
+    pri_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+    notes.sort(key=lambda x: pri_order.get(x["priority"], 9))
+
+    rows = ""
+    for note in notes:
+        pri   = note["priority"]
+        badge_color = {
+            "CRITICAL": "#721c24", "HIGH": "#155724",
+            "MEDIUM": "#856404",   "LOW":  "#084298",
+        }.get(pri, "#555")
+        badge_bg = {
+            "CRITICAL": "#f8d7da", "HIGH": "#d4edda",
+            "MEDIUM": "#fff3cd",   "LOW":  "#cfe2ff",
+        }.get(pri, "#eee")
+        rows += f"""
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">{note['source']}</td>
+  <td style="padding:8px 10px;">
+    <span style="background:{badge_bg};color:{badge_color};font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">{pri}</span>
+    <span style="font-size:12px;color:{note['color']}">{note['text']}</span>
+  </td>
+</tr>"""
+
+    table = f"""
+<div style="font-size:11px;color:#555;margin-bottom:8px;">
+  {len(notes)} توصية من {len(set(n['source'].split(' ·')[0] for n in notes))} مصادر بحثية
+</div>
+<table style="width:100%;border-collapse:collapse;">
+  <thead><tr style="background:#1a3a5c;color:#fff;font-size:11px;">
+    <th style="padding:7px 10px;text-align:right;">المصدر</th>
+    <th style="padding:7px 10px;text-align:right;">الملاحظة / التوصية</th>
+  </tr></thead>
+  <tbody>{rows}</tbody>
+</table>"""
+
+    return _card("📋 ملخص التوصيات البحثية — كل الأقسام", "📋", table)
+
+
 # ── Main Builder ──────────────────────────────────────────────────────────────
 
 def build_dashboard() -> str:
@@ -542,7 +686,7 @@ def build_dashboard() -> str:
     ed  = _load(EDGE_JSON)
     beh = _load_behavior_kpis()
 
-    now = datetime.now().strftime("%A, %d %B %Y — %H:%M Cairo")
+    now = datetime.now().strftime("%A, %d %B %Y — %H:%M:%S Cairo")
 
     nav_links = " &nbsp;|&nbsp; ".join([
         '<a href="heatmap.html" style="color:#8fb8d8;text-decoration:none;">🗺️ Heatmap</a>',
@@ -557,6 +701,7 @@ def build_dashboard() -> str:
     ])
 
     body = f"""
+{_section_research_notes()}
 {_section_backtest(bt)}
 {_section_behavior(beh)}
 {_section_quant()}
@@ -684,22 +829,46 @@ function fmt(sec) {{
          String(s).padStart(2,'0');
 }}
 
-let reloading = false;
+// Workflow takes ~10 min to run + 2 min Pages deploy
+const WORKFLOW_DURATION_SEC = 12 * 60;
+
+let scheduledTime = null;
+let phase = 'countdown'; // 'countdown' | 'generating' | 'reloading'
+
 function tick() {{
-  if (reloading) return;
-  const {{ time, label }} = nextScanTime();
-  const diffMs = time - new Date();
-  const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+  const now_ = new Date();
+  const next = nextScanTime();
 
-  document.getElementById('cdtimer').textContent = fmt(diffSec);
-  document.getElementById('cdstatus').textContent = label;
+  if (phase === 'countdown') {{
+    if (!scheduledTime) scheduledTime = next.time;
+    const diffMs  = scheduledTime - now_;
+    const diffSec = Math.max(0, Math.floor(diffMs / 1000));
 
-  if (diffSec <= 0) {{
-    reloading = true;
-    document.getElementById('cdtimer').textContent = '⏳';
-    document.getElementById('cdstatus').textContent = 'جاري تحميل التحديث...';
-    // Wait 3 min after scheduled time for workflow + Pages deploy
-    setTimeout(() => location.reload(true), 3 * 60 * 1000);
+    document.getElementById('cdtimer').textContent = fmt(diffSec);
+    document.getElementById('cdstatus').textContent = next.label;
+
+    if (diffSec <= 0) {{
+      phase = 'generating';
+      scheduledTime = now_; // mark start of generating phase
+    }}
+  }} else if (phase === 'generating') {{
+    const elapsedSec = Math.floor((now_ - scheduledTime) / 1000);
+    const remainSec  = Math.max(0, WORKFLOW_DURATION_SEC - elapsedSec);
+    const progress   = Math.min(100, Math.floor(elapsedSec / WORKFLOW_DURATION_SEC * 100));
+
+    document.getElementById('cdtimer').textContent = fmt(remainSec);
+    document.getElementById('cdstatus').textContent =
+      `⚙️ جاري توليد التقرير... ${{progress}}%`;
+
+    // Pulse the box orange during generation
+    document.getElementById('countdown-box').style.background = 'rgba(255,165,0,0.25)';
+
+    if (remainSec <= 0) {{
+      phase = 'reloading';
+      document.getElementById('cdtimer').textContent = '🔄';
+      document.getElementById('cdstatus').textContent = 'جاري تحميل التحديث...';
+      setTimeout(() => location.reload(true), 5000);
+    }}
   }}
 }}
 

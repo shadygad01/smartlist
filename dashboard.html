@@ -28,7 +28,7 @@
 <body>
 <div class="header">
   <h1>EGX Scanner — Dashboard</h1>
-  <div class="sub">آخر تحديث: Saturday, 13 June 2026 — 06:21 Cairo</div>
+  <div class="sub">آخر تحديث: Saturday, 13 June 2026 — 06:58:50 Cairo</div>
   <div class="nav"><a href="heatmap.html" style="color:#8fb8d8;text-decoration:none;">🗺️ Heatmap</a> &nbsp;|&nbsp; <a href="backtest_report.html" style="color:#8fb8d8;text-decoration:none;">📊 Backtest</a> &nbsp;|&nbsp; <a href="research_report.html" style="color:#8fb8d8;text-decoration:none;">🔬 Research</a> &nbsp;|&nbsp; <a href="quant_research_report.html" style="color:#8fb8d8;text-decoration:none;">📐 Quant</a> &nbsp;|&nbsp; <a href="weight_optimizer_report.html" style="color:#8fb8d8;text-decoration:none;">⚖️ Optimizer</a> &nbsp;|&nbsp; <a href="logic_analysis_report.html" style="color:#8fb8d8;text-decoration:none;">🔬 Logic</a> &nbsp;|&nbsp; <a href="edge_report.html" style="color:#8fb8d8;text-decoration:none;">🧠 Edge</a> &nbsp;|&nbsp; <a href="system_audit_report.html" style="color:#8fb8d8;text-decoration:none;">🕵️ Audit</a> &nbsp;|&nbsp; <a href="behavior_report.html" style="color:#8fb8d8;text-decoration:none;">🔍 Behavior</a></div>
   <div id="countdown-box">
     <div class="label">⏱ التحديث القادم</div>
@@ -38,6 +38,169 @@
 </div>
 <div class="container">
 
+
+<div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
+            padding:22px 24px;margin-bottom:20px;">
+  <div style="font-size:22px;margin-bottom:6px;">📋
+    <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">📋 ملخص التوصيات البحثية — كل الأقسام</span>
+  </div>
+  
+<div style="font-size:11px;color:#555;margin-bottom:8px;">
+  18 توصية من 3 مصادر بحثية
+</div>
+<table style="width:100%;border-collapse:collapse;">
+  <thead><tr style="background:#1a3a5c;color:#fff;font-size:11px;">
+    <th style="padding:7px 10px;text-align:right;">المصدر</th>
+    <th style="padding:7px 10px;text-align:right;">الملاحظة / التوصية</th>
+  </tr></thead>
+  <tbody>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">🕵️ Audit · Filter Damage</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#f8d7da;color:#721c24;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">CRITICAL</span>
+    <span style="font-size:12px;color:#721c24"><b>يُضعف الأداء:</b> Stopping Volume: diff=-0.037 (p=0.027)</span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">🕵️ Audit · Remove</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#f8d7da;color:#721c24;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">CRITICAL</span>
+    <span style="font-size:12px;color:#721c24"><b>يُوصى بحذفه:</b> r2_ob (Order Block) — data shows OB reduces return by -1.6%, confirmed</span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">🔬 Logic · sc_price</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#d4edda;color:#155724;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">HIGH</span>
+    <span style="font-size:12px;color:#0a3622"><b>buy_zone_scoring</b>: Linear: 30→18 in Buy Zone → <b>Add bonus for r1=1-10 (near-EQ): multiply by 1.3</b><br><span style='color:#555;font-size:11px;'>+1.5% expected return for r1=1-10 filtered signals</span></span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">🔬 Logic · sc_ob</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#d4edda;color:#155724;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">HIGH</span>
+    <span style="font-size:12px;color:#0a3622"><b>W_OB</b>: 10 → <b>0</b><br><span style='color:#555;font-size:11px;'>Remove OB from scoring. Saves ~1.6% expected return on OB signals</span></span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">🔬 Logic · sc_htf</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#d4edda;color:#155724;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">HIGH</span>
+    <span style="font-size:12px;color:#0a3622"><b>hhhl_full</b>: 1.0 → <b>0.0</b><br><span style='color:#555;font-size:11px;'>When both HH+HL confirmed: give 0 points for HH+HL component</span></span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">⚖️ Optimizer · Total Score</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#d4edda;color:#155724;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">HIGH</span>
+    <span style="font-size:12px;color:#084298"><b>Minimum score gate: raw_score >= 60</b><br><span style='color:#555;font-size:11px;'>ΔReturn=+1.1% · Confidence=70%</span></span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">🕵️ Audit · Discovery</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#d4edda;color:#155724;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">HIGH</span>
+    <span style="font-size:12px;color:#155724"><b>اكتشاف:</b> hvn_hit=1 & price_ok=0 → <b>+14.2%</b> avg return (n=19, MFE=22.0%)</span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">🕵️ Audit · Discovery</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#d4edda;color:#155724;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">HIGH</span>
+    <span style="font-size:12px;color:#155724"><b>اكتشاف:</b> htf_hh=1 & rsi_div=1 → <b>+10.2%</b> avg return (n=19, MFE=17.7%)</span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">🕵️ Audit · Discovery</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#d4edda;color:#155724;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">HIGH</span>
+    <span style="font-size:12px;color:#155724"><b>اكتشاف:</b> htf_hh=1 & hvn_hit=1 → <b>+9.8%</b> avg return (n=39, MFE=18.8%)</span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">🔬 Logic · sc_price</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#fff3cd;color:#856404;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">MEDIUM</span>
+    <span style="font-size:12px;color:#0a3622"><b>buy_zone_pct</b>: 0.15 (15% from lo = Buy Zone) → <b>Consider 0.10 (10% from lo) — tighter Buy Zone focuses on be</b><br><span style='color:#555;font-size:11px;'>Reduces r1=21-30 emphasis, increases r1=1-20 emphasis</span></span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">🔬 Logic · sc_ob</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#fff3cd;color:#856404;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">MEDIUM</span>
+    <span style="font-size:12px;color:#0a3622"><b>OB_penalty</b>: No penalty → <b>Reduce raw_score by 5 when OB detected (treated as overhead </b><br><span style='color:#555;font-size:11px;'>Penalizes OB presence — aligns with data showing OB hurts</span></span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">🔬 Logic · sc_liquidity</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#fff3cd;color:#856404;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">MEDIUM</span>
+    <span style="font-size:12px;color:#0a3622"><b>wick_score</b>: 0.6 → <b>0.15</b><br><span style='color:#555;font-size:11px;'>Reduce rejection wick from 12 to 3 pts — near no-edge in data</span></span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">🔬 Logic · sc_liquidity</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#fff3cd;color:#856404;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">MEDIUM</span>
+    <span style="font-size:12px;color:#0a3622"><b>equal_lows_score</b>: 0.4 → <b>0.25</b><br><span style='color:#555;font-size:11px;'>Reduce equal lows from 8 to 5 pts — weak signal</span></span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">🔬 Logic · sc_htf</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#fff3cd;color:#856404;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">MEDIUM</span>
+    <span style="font-size:12px;color:#0a3622"><b>hhhl_partial_hl</b>: 0.5 → <b>1.0</b><br><span style='color:#555;font-size:11px;'>When HL only: give FULL w3 points — early recovery is the signal</span></span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">⚖️ Optimizer · Liquidity</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#fff3cd;color:#856404;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">MEDIUM</span>
+    <span style="font-size:12px;color:#084298"><b>Minimum threshold: r3_liquidity >= 20 (current: no gate)</b><br><span style='color:#555;font-size:11px;'>ΔReturn=+0.9% · Confidence=88%</span></span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">⚖️ Optimizer · All r1-r8</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#fff3cd;color:#856404;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">MEDIUM</span>
+    <span style="font-size:12px;color:#084298"><b>Rebalance r1-r8 weights based on RF importance + optimization</b><br><span style='color:#555;font-size:11px;'>ΔReturn=+0.6% · Confidence=55%</span></span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">⚖️ Optimizer · Demand Zone</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#fff3cd;color:#856404;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">MEDIUM</span>
+    <span style="font-size:12px;color:#084298"><b>Minimum threshold: r8_demand >= 6 (current: no gate)</b><br><span style='color:#555;font-size:11px;'>ΔReturn=+0.5% · Confidence=69%</span></span>
+  </td>
+</tr>
+<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
+  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">⚖️ Optimizer · HTF Structure + Demand Zone</td>
+  <td style="padding:8px 10px;">
+    <span style="background:#fff3cd;color:#856404;font-size:10px;
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">MEDIUM</span>
+    <span style="font-size:12px;color:#084298"><b>Premium filter: require both r4_htf>0 AND r8_demand>0</b><br><span style='color:#555;font-size:11px;'>ΔReturn=+0.5% · Confidence=70%</span></span>
+  </td>
+</tr></tbody>
+</table>
+  
+</div>
 
 <div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
             padding:22px 24px;margin-bottom:20px;">
@@ -655,22 +818,46 @@ function fmt(sec) {
          String(s).padStart(2,'0');
 }
 
-let reloading = false;
+// Workflow takes ~10 min to run + 2 min Pages deploy
+const WORKFLOW_DURATION_SEC = 12 * 60;
+
+let scheduledTime = null;
+let phase = 'countdown'; // 'countdown' | 'generating' | 'reloading'
+
 function tick() {
-  if (reloading) return;
-  const { time, label } = nextScanTime();
-  const diffMs = time - new Date();
-  const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+  const now_ = new Date();
+  const next = nextScanTime();
 
-  document.getElementById('cdtimer').textContent = fmt(diffSec);
-  document.getElementById('cdstatus').textContent = label;
+  if (phase === 'countdown') {
+    if (!scheduledTime) scheduledTime = next.time;
+    const diffMs  = scheduledTime - now_;
+    const diffSec = Math.max(0, Math.floor(diffMs / 1000));
 
-  if (diffSec <= 0) {
-    reloading = true;
-    document.getElementById('cdtimer').textContent = '⏳';
-    document.getElementById('cdstatus').textContent = 'جاري تحميل التحديث...';
-    // Wait 3 min after scheduled time for workflow + Pages deploy
-    setTimeout(() => location.reload(true), 3 * 60 * 1000);
+    document.getElementById('cdtimer').textContent = fmt(diffSec);
+    document.getElementById('cdstatus').textContent = next.label;
+
+    if (diffSec <= 0) {
+      phase = 'generating';
+      scheduledTime = now_; // mark start of generating phase
+    }
+  } else if (phase === 'generating') {
+    const elapsedSec = Math.floor((now_ - scheduledTime) / 1000);
+    const remainSec  = Math.max(0, WORKFLOW_DURATION_SEC - elapsedSec);
+    const progress   = Math.min(100, Math.floor(elapsedSec / WORKFLOW_DURATION_SEC * 100));
+
+    document.getElementById('cdtimer').textContent = fmt(remainSec);
+    document.getElementById('cdstatus').textContent =
+      `⚙️ جاري توليد التقرير... ${progress}%`;
+
+    // Pulse the box orange during generation
+    document.getElementById('countdown-box').style.background = 'rgba(255,165,0,0.25)';
+
+    if (remainSec <= 0) {
+      phase = 'reloading';
+      document.getElementById('cdtimer').textContent = '🔄';
+      document.getElementById('cdstatus').textContent = 'جاري تحميل التحديث...';
+      setTimeout(() => location.reload(true), 5000);
+    }
   }
 }
 

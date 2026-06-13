@@ -142,9 +142,11 @@ jobs:
       - name: Restore research cache
         uses: actions/cache@v4
         with:
-          path: cache_metadata/
-          key: research-cache-${{ runner.os }}
-          restore-keys: research-cache-
+          path: |
+            cache_metadata/
+            cached_reports/
+          key: research-cache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: research-cache-${{ runner.os }}-
 
       - name: Generate reports (incremental)
         env:
@@ -172,13 +174,24 @@ jobs:
           PYEOF
           cp historical_backtest_results.json web_deploy/ || true
           cp manifest.json sw.js icon.svg web_deploy/ || true
+          # Copy fresh HTML into persistent cache dir so skipped runs still have them
+          mkdir -p cached_reports
+          for f in web_deploy/historical_backtest_report.html web_deploy/research_report.html web_deploy/quant_research_report.html web_deploy/heatmap.html; do
+            [ -f "$f" ] && cp "$f" cached_reports/ || true
+          done
+          # Restore from cache if any HTML was missing this run
+          for f in historical_backtest_report research_report quant_research_report heatmap; do
+            [ ! -f "web_deploy/${f}.html" ] && [ -f "cached_reports/${f}.html" ] && cp "cached_reports/${f}.html" "web_deploy/${f}.html" && echo "Restored ${f}.html from cache" || true
+          done
 
       - name: Save research cache
         if: always()
         uses: actions/cache@v4
         with:
-          path: cache_metadata/
-          key: research-cache-${{ runner.os }}
+          path: |
+            cache_metadata/
+            cached_reports/
+          key: research-cache-${{ runner.os }}-${{ github.run_id }}
 
       - name: Upload research artifacts
         uses: actions/upload-artifact@v4
@@ -216,8 +229,9 @@ jobs:
             gx_learning_memory.json
             discount_zone_patterns.json
             smc_rl_weights.json
-          key: intelligence-cache-${{ runner.os }}
-          restore-keys: intelligence-cache-
+            reports/
+          key: intelligence-cache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: intelligence-cache-${{ runner.os }}-
 
       - name: Run intelligence engines (incremental)
         env:
@@ -234,7 +248,8 @@ jobs:
             gx_learning_memory.json
             discount_zone_patterns.json
             smc_rl_weights.json
-          key: intelligence-cache-${{ runner.os }}
+            reports/
+          key: intelligence-cache-${{ runner.os }}-${{ github.run_id }}
 
       - name: Collect intelligence artifacts
         run: |

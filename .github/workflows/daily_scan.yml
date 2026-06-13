@@ -103,6 +103,7 @@ jobs:
           python backfill_signal_log_smc.py || true
           python historical_backtest.py --append || true
           python backfill_hist_features.py || true
+          python extend_metrics.py || true
           python -c "from backfill_research_db import ensure_combined_view; ensure_combined_view()" || true
           python - <<'PYEOF'
           import glob, shutil

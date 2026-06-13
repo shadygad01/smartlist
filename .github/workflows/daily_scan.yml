@@ -226,6 +226,22 @@ jobs:
           cp adaptive_learning_results.json web_deploy/ || true
         continue-on-error: true
 
+      - name: Run GX Learning Intelligence Layer
+        if: always()
+        run: |
+          python gx_learning_layer.py || true
+          python - <<'PYEOF'
+          import glob, shutil
+          files = sorted(glob.glob("gx_learning_report_*.html"))
+          if files:
+              shutil.copy(files[-1], "web_deploy/gx_learning_report.html")
+              print(f"Copied {files[-1]} -> web_deploy/gx_learning_report.html")
+          else:
+              print("WARNING: no gx_learning_report_*.html found")
+          PYEOF
+          cp gx_learning_memory.json web_deploy/ || true
+        continue-on-error: true
+
       - name: Generate Master Dashboard
         if: always()
         run: |

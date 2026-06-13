@@ -211,7 +211,10 @@ jobs:
       - name: Restore learning cache
         uses: actions/cache@v4
         with:
-          path: cache_metadata/
+          path: |
+            cache_metadata/
+            gx_learning_memory.json
+            discount_zone_patterns.json
           key: intelligence-cache-${{ runner.os }}
           restore-keys: intelligence-cache-
 
@@ -225,7 +228,10 @@ jobs:
         if: always()
         uses: actions/cache@v4
         with:
-          path: cache_metadata/
+          path: |
+            cache_metadata/
+            gx_learning_memory.json
+            discount_zone_patterns.json
           key: intelligence-cache-${{ runner.os }}
 
       - name: Collect intelligence artifacts

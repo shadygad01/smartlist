@@ -1359,7 +1359,18 @@ def run_research(db_path: str = DB_PATH, verbose: bool = True) -> dict:
       segment_analysis   ← تحليل قطاعي ونطاقي
       warnings      ← تحذيرات (حجم البيانات، جودة النموذج)
     """
-    signals = get_mature_signals(db_path=db_path)
+    import sqlite3 as _sqlite3
+    _conn = _sqlite3.connect(db_path)
+    _conn.row_factory = _sqlite3.Row
+    _view_ok = _conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='view' AND name='v_all_signals'"
+    ).fetchone()
+    if _view_ok:
+        _rows = _conn.execute("SELECT * FROM v_all_signals ORDER BY signal_date").fetchall()
+        signals = [dict(r) for r in _rows]
+    else:
+        signals = get_mature_signals(db_path=db_path)
+    _conn.close()
     df_all  = _to_df(signals)
 
     # ML يتدرب على إشارات الدخول الفعلي فقط (Early Buy / Buy / …)

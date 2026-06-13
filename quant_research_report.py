@@ -152,13 +152,19 @@ _CSS = """
 def _load_data() -> pd.DataFrame:
     conn = get_conn()
     try:
-        rows = conn.execute("""
-            SELECT s.*, b.bq_score, b.mfe_20d, b.mfe_40d,
-                   b.mae_20d, b.mae_40d, b.days_to_peak,
-                   b.classification, b.r5d, b.r10d, b.r20d
-            FROM signals s
-            JOIN bottom_quality b ON b.signal_id = s.id
-        """).fetchall()
+        view_exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='view' AND name='v_all_signals'"
+        ).fetchone()
+        if view_exists:
+            rows = conn.execute("SELECT * FROM v_all_signals ORDER BY signal_date").fetchall()
+        else:
+            rows = conn.execute("""
+                SELECT s.*, b.bq_score, b.mfe_20d, b.mfe_40d,
+                       b.mae_20d, b.mae_40d, b.days_to_peak,
+                       b.classification, b.r5d, b.r10d, b.r20d
+                FROM signals s
+                JOIN bottom_quality b ON b.signal_id = s.id
+            """).fetchall()
         if not rows:
             return pd.DataFrame()
         df = pd.DataFrame([dict(r) for r in rows])
@@ -174,7 +180,13 @@ def _load_data() -> pd.DataFrame:
 def _load_all_signals() -> pd.DataFrame:
     conn = get_conn()
     try:
-        rows = conn.execute("SELECT * FROM signals ORDER BY signal_date").fetchall()
+        view_exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='view' AND name='v_all_signals'"
+        ).fetchone()
+        if view_exists:
+            rows = conn.execute("SELECT * FROM v_all_signals ORDER BY signal_date").fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM signals ORDER BY signal_date").fetchall()
         return pd.DataFrame([dict(r) for r in rows]) if rows else pd.DataFrame()
     finally:
         conn.close()

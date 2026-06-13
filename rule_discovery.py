@@ -78,16 +78,25 @@ ALL_FEAT_COLS = FEAT_COLS + SNAP_COLS + SMC_SCORE_COLS
 
 def load_signal_data(db_path: str = DB_PATH) -> pd.DataFrame:
     conn = get_conn(db_path)
-    feat_select = ", ".join(f"s.{c}" for c in ALL_FEAT_COLS)
-    df = pd.read_sql_query(f"""
-        SELECT
-            s.id, s.symbol, s.signal_date, s.signal_type, s.raw_score,
-            bq.bq_score, bq.mfe_20d, bq.mae_20d, bq.classification,
-            {feat_select}
-        FROM signals s
-        JOIN bottom_quality bq ON bq.signal_id = s.id
-        WHERE s.feat_dist_swing_low IS NOT NULL
-    """, conn)
+    view_exists = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='view' AND name='v_all_signals'"
+    ).fetchone()
+    if view_exists:
+        df = pd.read_sql_query(
+            "SELECT * FROM v_all_signals WHERE feat_dist_swing_low IS NOT NULL ORDER BY signal_date",
+            conn,
+        )
+    else:
+        feat_select = ", ".join(f"s.{c}" for c in ALL_FEAT_COLS)
+        df = pd.read_sql_query(f"""
+            SELECT
+                s.id, s.symbol, s.signal_date, s.signal_type, s.raw_score,
+                bq.bq_score, bq.mfe_20d, bq.mae_20d, bq.classification,
+                {feat_select}
+            FROM signals s
+            JOIN bottom_quality bq ON bq.signal_id = s.id
+            WHERE s.feat_dist_swing_low IS NOT NULL
+        """, conn)
     conn.close()
 
     df["mfe_pct"] = df["mfe_20d"] * 100.0

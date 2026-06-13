@@ -114,21 +114,54 @@ def gradient_update(weights: dict, features: dict, predicted: float,
 # ── Data loading ──────────────────────────────────────────────────────────────
 
 def load_signals() -> list[dict]:
+    """
+    Load ALL SMC Buy signals from BOTH tables (no overlap):
+      - signals table (641 rows): from historical OHLCV replay
+        → outcomes in bottom_quality (r20d, r_90d, r_180d, r_252d)
+      - hist_signals (412 rows): from live signal_history.json
+        → outcomes already embedded in hist_signals
+    Combined: ~1053 unique signals, ~824 with 90d outcome.
+    """
     conn = sqlite3.connect(DB_PATH)
-    rows = conn.execute("""
-        SELECT hs.id, hs.symbol, hs.signal_date,
-               hs.r1_price, hs.r2_ob, hs.r3_liquidity, hs.r4_htf,
-               hs.r5_avwap, hs.r6_macd, hs.r7_div, hs.r8_demand,
-               hs.raw_score, hs.r20d, hs.r_90d, hs.r_180d, hs.r_252d,
-               hs.mfe_90d, hs.mae_90d, hs.classification,
-               COALESCE(s.pattern_score, 0)    AS pattern_score,
-               COALESCE(s.market_regime, 'unk') AS market_regime,
-               COALESCE(s.sector, 'unk')        AS sector
-        FROM hist_signals hs
-        LEFT JOIN signals s ON s.id = hs.id
-        WHERE hs.r1_price IS NOT NULL
-        ORDER BY hs.signal_date, hs.symbol
+
+    # ── Source 1: signals table + bottom_quality ─────────────────────────────
+    q1 = conn.execute("""
+        SELECT
+            s.id, s.symbol, s.signal_date,
+            COALESCE(s.r1_price, 0), COALESCE(s.r2_ob, 0),
+            COALESCE(s.r3_liquidity, 0), COALESCE(s.r4_htf, 0),
+            COALESCE(s.r5_avwap, 0),  COALESCE(s.r6_macd, 0),
+            COALESCE(s.r7_div, 0),    COALESCE(s.r8_demand, 0),
+            s.raw_score,
+            bq.r20d, bq.r_90d, bq.r_180d, bq.r_252d,
+            bq.mfe_90d, bq.mae_90d, bq.classification,
+            COALESCE(s.pattern_score, 0),
+            COALESCE(s.market_regime, 'unk'),
+            COALESCE(s.sector, 'unk')
+        FROM signals s
+        LEFT JOIN bottom_quality bq ON bq.signal_id = s.id
+        WHERE s.r1_price IS NOT NULL
     """).fetchall()
+
+    # ── Source 2: hist_signals (disjoint from signals table) ─────────────────
+    q2 = conn.execute("""
+        SELECT
+            hs.id, hs.symbol, hs.signal_date,
+            COALESCE(hs.r1_price, 0), COALESCE(hs.r2_ob, 0),
+            COALESCE(hs.r3_liquidity, 0), COALESCE(hs.r4_htf, 0),
+            COALESCE(hs.r5_avwap, 0), COALESCE(hs.r6_macd, 0),
+            COALESCE(hs.r7_div, 0),   COALESCE(hs.r8_demand, 0),
+            hs.raw_score,
+            hs.r20d, hs.r_90d, hs.r_180d, hs.r_252d,
+            hs.mfe_90d, hs.mae_90d, hs.classification,
+            COALESCE(s2.pattern_score, 0),
+            COALESCE(s2.market_regime, 'unk'),
+            COALESCE(s2.sector, 'unk')
+        FROM hist_signals hs
+        LEFT JOIN signals s2 ON s2.id = hs.id
+        WHERE hs.r1_price IS NOT NULL
+    """).fetchall()
+
     conn.close()
 
     cols = ["id", "symbol", "signal_date",
@@ -137,7 +170,19 @@ def load_signals() -> list[dict]:
             "raw_score", "r20d", "r_90d", "r_180d", "r_252d",
             "mfe_90d", "mae_90d", "classification",
             "pattern_score", "market_regime", "sector"]
-    return [dict(zip(cols, r)) for r in rows]
+
+    # Deduplicate by (symbol, signal_date) — prefer hist_signals if same date
+    seen: set[tuple] = set()
+    result = []
+    for row in sorted(list(q1) + list(q2), key=lambda r: (r[2], r[1])):
+        key = (row[1], row[2])  # (symbol, signal_date)
+        if key not in seen:
+            seen.add(key)
+            result.append(dict(zip(cols, row)))
+
+    print(f"[WF] Loaded {len(result)} unique signals "
+          f"({len(q1)} from signals+bq, {len(q2)} from hist_signals)")
+    return result
 
 
 # ── Walk-forward engine ───────────────────────────────────────────────────────

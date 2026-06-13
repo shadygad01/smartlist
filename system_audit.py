@@ -695,9 +695,11 @@ def discovery_mode(df):
         'r1_price', 'r2_ob', 'r3_liquidity', 'r4_htf', 'r5_avwap',
         'r6_macd', 'r7_div', 'r8_demand',
         'sweep_detected', 'htf_hl', 'htf_hh', 'rsi_div', 'macd_div',
-        'hvn_hit', 'sv_hit', 'discount_depth', 'price_ok',
+        'hvn_hit', 'sv_hit', 'price_ok',
     ]
-    available = [c for c in feature_cols if c in df.columns]
+    # Only include columns that actually have data (discount_depth is None for hist signals)
+    available = [c for c in feature_cols
+                 if c in df.columns and df[c].notna().sum() > 0]
 
     sub = df[available + ['r20d', 'mfe_20d']].dropna()
     if len(sub) < 50:

@@ -727,6 +727,9 @@ def run_rule_discovery(db_path: str = DB_PATH, dry_run: bool = False) -> dict:
         "source_counts":           dict(source_counts),
         "rules":                   ranked,
         "significant_rules":       significant,
+        "top_rules":               sorted(
+            significant, key=lambda x: float(x.get("expectancy", 0) or 0), reverse=True
+        )[:20],
         "per_stock_rules":         ps_rules,
         "bottom_dna":              dna,
         "top_fingerprints":        top_fp,

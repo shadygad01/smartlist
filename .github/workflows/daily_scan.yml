@@ -43,9 +43,11 @@ permissions:
   id-token: write
 
 jobs:
-  scan:
+
+  # ── A ── Core scanner + database preparation ──────────────────────────────
+  scan_core:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,8 +67,6 @@ jobs:
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # FORCE_DAILY=True للـ morning crons بالظبط (السمر والشتا)
-          # بدون ده، لو الـ cron اتأخر ساعة بيعمل continuous scan بدل daily!
           FORCE_DAILY: >-
             ${{
               (github.event.schedule == '0 4 * * 0-4' ||
@@ -82,17 +82,57 @@ jobs:
             }}
         run: python main.py
 
-      - name: Save updated positions
+      - name: Prepare research database
+        run: |
+          python backfill_research_db.py || true
+          python backfill_signal_log_smc.py || true
+          python historical_backtest.py --append || true
+          python backfill_hist_features.py || true
+          python extend_metrics.py || true
+          python -c "from backfill_research_db import ensure_combined_view; ensure_combined_view()" || true
+
+      - name: Save state to git
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git add open_positions.json positions_history.json scan_results.json signal_history.json signal_log.json learned_weights.json egx_research.db || true
-          git diff --staged --quiet || git commit -m "Auto-update positions [skip ci]"
-          git pull --rebase || true
+          git add open_positions.json positions_history.json scan_results.json \
+                  signal_history.json signal_log.json learned_weights.json \
+                  egx_research.db research_results.json || true
+          git diff --staged --quiet || git commit -m "Auto-update positions and research DB [skip ci]"
           git push || true
 
-      - name: Backfill Research DB + Generate Heatmap and Research Report
-        if: always()
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: egx-research-db
+          path: |
+            egx_research.db
+            historical_backtest_results.json
+            historical_backtest_report_*.html
+          retention-days: 1
+
+  # ── B ── Research reports (parallel with C) ───────────────────────────────
+  research_reports:
+    needs: scan_core
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download database
+        uses: actions/download-artifact@v4
+        with:
+          name: egx-research-db
+
+      - name: Generate reports
         env:
           WEB_OUT: ./web_deploy
           REPORT_EMAIL_FROM: ${{ secrets.EMAIL_USER }}
@@ -100,203 +140,175 @@ jobs:
           REPORT_EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
         run: |
           mkdir -p web_deploy
-          python backfill_research_db.py || true
-          python backfill_signal_log_smc.py || true
-          python historical_backtest.py --append || true
-          python backfill_hist_features.py || true
-          python extend_metrics.py || true
-          python -c "from backfill_research_db import ensure_combined_view; ensure_combined_view()" || true
+          (python heatmap.py || true) &
+          (python research_report.py --no-email --force || true) &
+          (python quant_research_report.py || true) &
+          wait
           python - <<'PYEOF'
           import glob, shutil
-          files = sorted(glob.glob("historical_backtest_report_*.html"))
-          if files:
-              shutil.copy(files[-1], "web_deploy/historical_backtest_report.html")
-              print(f"Copied {files[-1]} -> web_deploy/historical_backtest_report.html")
+          for pattern, dest in [
+              ("historical_backtest_report_*.html", "web_deploy/historical_backtest_report.html"),
+              ("research_report_*.html",            "web_deploy/research_report.html"),
+              ("quant_research_report_*.html",      "web_deploy/quant_research_report.html"),
+          ]:
+              files = sorted(glob.glob(pattern))
+              if files:
+                  shutil.copy(files[-1], dest)
+                  print(f"Copied {files[-1]} -> {dest}")
+              else:
+                  print(f"WARNING: no {pattern} found")
           PYEOF
           cp historical_backtest_results.json web_deploy/ || true
-          python heatmap.py
-          python research_report.py --no-email --force || true
-          # copy report (use python glob to avoid shell glob failure)
-          python - <<'PYEOF'
-          import glob, shutil, os
-          files = sorted(glob.glob("research_report_*.html"))
-          if files:
-              shutil.copy(files[-1], "web_deploy/research_report.html")
-              print(f"Copied {files[-1]} -> web_deploy/research_report.html")
-          else:
-              print("WARNING: no research_report_*.html found")
-          PYEOF
-          python quant_research_report.py || true
-          python - <<'PYEOF'
-          import glob, shutil
-          files = sorted(glob.glob("quant_research_report_*.html"))
-          if files:
-              shutil.copy(files[-1], "web_deploy/quant_research_report.html")
-              print(f"Copied {files[-1]} -> web_deploy/quant_research_report.html")
-          else:
-              print("WARNING: no quant_research_report_*.html found")
-          PYEOF
-          cp manifest.json sw.js icon.svg web_deploy/
+          cp manifest.json sw.js icon.svg web_deploy/ || true
 
-      - name: Run Edge Discovery Engine
-        if: always()
+      - name: Upload research artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-web
+          path: web_deploy/
+          retention-days: 1
+
+  # ── C ── Intelligence engines (parallel with B) ───────────────────────────
+  intelligence_jobs:
+    needs: scan_core
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download database
+        uses: actions/download-artifact@v4
+        with:
+          name: egx-research-db
+
+      - name: Run intelligence engines — tier 1 (parallel)
         run: |
-          python rule_discovery.py
-          python edge_report.py
-          python - <<'PYEOF'
-          import glob, shutil
-          files = sorted(glob.glob("edge_discovery_report_*.html"))
-          if files:
-              shutil.copy(files[-1], "web_deploy/edge_report.html")
-              print(f"Copied {files[-1]} -> web_deploy/edge_report.html")
-          else:
-              print("WARNING: no edge_discovery_report_*.html found")
-          PYEOF
+          (python rule_discovery.py && python edge_report.py || true) &
+          (python behavior_report.py && python backtest_analysis.py || true) &
+          (python logic_analyzer.py || true) &
+          (python weight_optimizer.py || true) &
+          (python system_audit.py || true) &
+          (python adaptive_learning.py || true) &
+          (python gx_learning_layer.py || true) &
+          wait
         continue-on-error: true
 
-      - name: Generate Behavior Report and Backtest Report
-        if: always()
-        run: |
-          python behavior_report.py || true
-          python backtest_analysis.py || true
-          cp behavior_report.html web_deploy/behavior_report.html || true
-          cp backtest_report.html  web_deploy/backtest_report.html  || true
-        continue-on-error: true
-
-      - name: Run Logic Analyzer
-        if: always()
-        run: |
-          python logic_analyzer.py || true
-          python - <<'PYEOF'
-          import glob, shutil
-          files = sorted(glob.glob("logic_analysis_report_*.html"))
-          if files:
-              shutil.copy(files[-1], "web_deploy/logic_analysis_report.html")
-              print(f"Copied {files[-1]} -> web_deploy/logic_analysis_report.html")
-          else:
-              print("WARNING: no logic_analysis_report_*.html found")
-          PYEOF
-          cp logic_analysis_results.json web_deploy/ || true
-        continue-on-error: true
-
-      - name: Run Weight Optimizer
-        if: always()
-        run: |
-          python weight_optimizer.py || true
-          python - <<'PYEOF'
-          import glob, shutil
-          files = sorted(glob.glob("weight_optimizer_report_*.html"))
-          if files:
-              shutil.copy(files[-1], "web_deploy/weight_optimizer_report.html")
-              print(f"Copied {files[-1]} -> web_deploy/weight_optimizer_report.html")
-          else:
-              print("WARNING: no weight_optimizer_report_*.html found")
-          PYEOF
-          cp optimization_results.json web_deploy/ || true
-        continue-on-error: true
-
-      - name: Run System Audit
-        if: always()
-        run: |
-          python system_audit.py || true
-          python - <<'PYEOF'
-          import glob, shutil
-          files = sorted(glob.glob("system_audit_report_*.html"))
-          if files:
-              shutil.copy(files[-1], "web_deploy/system_audit_report.html")
-              print(f"Copied {files[-1]} -> web_deploy/system_audit_report.html")
-          else:
-              print("WARNING: no system_audit_report_*.html found")
-          PYEOF
-          cp system_audit_results.json web_deploy/ || true
-        continue-on-error: true
-
-      - name: Run Adaptive Learning Engine
-        if: always()
-        run: |
-          python adaptive_learning.py || true
-          python - <<'PYEOF'
-          import glob, shutil
-          files = sorted(glob.glob("adaptive_learning_report_*.html"))
-          if files:
-              shutil.copy(files[-1], "web_deploy/adaptive_learning_report.html")
-              print(f"Copied {files[-1]} -> web_deploy/adaptive_learning_report.html")
-          else:
-              print("WARNING: no adaptive_learning_report_*.html found")
-          PYEOF
-          cp adaptive_learning_results.json web_deploy/ || true
-        continue-on-error: true
-
-      - name: Run GX Learning Intelligence Layer
-        if: always()
-        run: |
-          python gx_learning_layer.py || true
-          python - <<'PYEOF'
-          import glob, shutil
-          files = sorted(glob.glob("reports/gx_learning_report_*.html"))
-          if files:
-              shutil.copy(files[-1], "web_deploy/gx_learning_report.html")
-              print(f"Copied {files[-1]} -> web_deploy/gx_learning_report.html")
-          else:
-              print("WARNING: no reports/gx_learning_report_*.html found")
-          PYEOF
-          cp gx_learning_memory.json web_deploy/ || true
-        continue-on-error: true
-
-      - name: Run Decision Engine
-        if: always()
+      - name: Run intelligence engines — tier 2 (depends on tier 1)
         run: |
           python decision_engine.py || true
-          python - <<'PYEOF'
-          import glob, shutil
-          files = sorted(glob.glob("reports/decision_engine_report_*.html"))
-          if files:
-              shutil.copy(files[-1], "web_deploy/decision_engine_report.html")
-              print(f"Copied {files[-1]} -> web_deploy/decision_engine_report.html")
-          else:
-              print("WARNING: no reports/decision_engine_report_*.html found")
-          PYEOF
-          cp decision_engine_results.json web_deploy/ || true
+          python discount_zone_miner.py || true
         continue-on-error: true
 
-      - name: Run Discount Zone Pattern Miner
-        if: always()
+      - name: Collect intelligence artifacts
         run: |
-          python discount_zone_miner.py || true
+          mkdir -p web_deploy
           python - <<'PYEOF'
           import glob, shutil
-          files = sorted(glob.glob("reports/discount_zone_report_*.html"))
-          if files:
-              shutil.copy(files[-1], "web_deploy/discount_zone_report.html")
-              print(f"Copied {files[-1]} -> web_deploy/discount_zone_report.html")
-          else:
-              print("WARNING: no reports/discount_zone_report_*.html found")
+          mappings = [
+              ("edge_discovery_report_*.html",         "web_deploy/edge_report.html"),
+              ("logic_analysis_report_*.html",         "web_deploy/logic_analysis_report.html"),
+              ("weight_optimizer_report_*.html",       "web_deploy/weight_optimizer_report.html"),
+              ("system_audit_report_*.html",           "web_deploy/system_audit_report.html"),
+              ("adaptive_learning_report_*.html",      "web_deploy/adaptive_learning_report.html"),
+              ("reports/gx_learning_report_*.html",    "web_deploy/gx_learning_report.html"),
+              ("reports/decision_engine_report_*.html","web_deploy/decision_engine_report.html"),
+              ("reports/discount_zone_report_*.html",  "web_deploy/discount_zone_report.html"),
+          ]
+          for pattern, dest in mappings:
+              files = sorted(glob.glob(pattern))
+              if files:
+                  shutil.copy(files[-1], dest)
+                  print(f"Copied {files[-1]} -> {dest}")
+              else:
+                  print(f"WARNING: no {pattern} found")
           PYEOF
-          cp discount_zone_patterns.json web_deploy/ || true
+          cp behavior_report.html     web_deploy/behavior_report.html  || true
+          cp backtest_report.html     web_deploy/backtest_report.html   || true
+          cp logic_analysis_results.json    web_deploy/ || true
+          cp optimization_results.json      web_deploy/ || true
+          cp system_audit_results.json      web_deploy/ || true
+          cp adaptive_learning_results.json web_deploy/ || true
+          cp gx_learning_memory.json        web_deploy/ || true
+          cp decision_engine_results.json   web_deploy/ || true
+          cp discount_zone_patterns.json    web_deploy/ || true
+
+      - name: Upload intelligence artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: intelligence-web
+          path: web_deploy/
+          retention-days: 1
+
+  # ── D ── Dashboard (after B + C) ─────────────────────────────────────────
+  dashboard_build:
+    needs: [research_reports, intelligence_jobs]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download research artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: research-web
+          path: web_deploy/
+        continue-on-error: true
+
+      - name: Download intelligence artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: intelligence-web
+          path: web_deploy/
         continue-on-error: true
 
       - name: Generate Master Dashboard
-        if: always()
         run: |
           python dashboard.py || true
           cp dashboard.html web_deploy/index.html || true
-        continue-on-error: true
 
-      - name: Save research results
-        if: always()
-        run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add -f egx_research.db research_results.json 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "Auto-update research DB [skip ci]"
-          git pull --rebase || true
-          git push || true
+      - name: Upload final web deploy
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-web-deploy
+          path: web_deploy/
+          retention-days: 1
+
+  # ── E ── Deploy ───────────────────────────────────────────────────────────
+  deploy:
+    needs: dashboard_build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download final web deploy
+        uses: actions/download-artifact@v4
+        with:
+          name: final-web-deploy
+          path: web_deploy/
 
       - name: Deploy to GitHub Pages
-        if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./web_deploy
           force_orphan: true
-          commit_message: "Deploy heatmap + research report [skip ci]"
+          commit_message: "Deploy dashboard [skip ci]"

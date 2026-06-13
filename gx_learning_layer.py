@@ -570,12 +570,22 @@ def compute_gx_score(src: dict, all_recs: list, perf: dict,
         retention   * 0.15
     )
 
-    trend = "Insufficient History"
+    # Trend: use history if available, else infer from performance vs r20d baseline
     if n_hist >= 2:
         hist = memory["performance_history"]
         prev_gx = hist[-2].get("gx_score", gx)
         diff = gx - prev_gx
         trend = "Improving" if diff > 2 else "Degrading" if diff < -2 else "Stable"
+    else:
+        # First run: compare Fibonacci PF vs r20d PF as proxy for system progression
+        pf_fib = perf.get("profit_factor", 1.0)
+        pf_r20 = perf.get("r20d_pf", 1.0)
+        if pf_fib > pf_r20 * 2.5:
+            trend = "Stable — Early Stage (Run #1)"
+        elif gx >= 60:
+            trend = "Stable — Early Stage (Run #1)"
+        else:
+            trend = "Early Stage — Accumulating Data"
 
     return {
         "gx_score":         gx,

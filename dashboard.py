@@ -659,7 +659,21 @@ def _section_research_notes():
 
     notes = []  # list of {source, priority, text, color, conf, delta_ret, delta_n}
 
-    total_signals = 639  # baseline signal count
+    # baseline from v_all_signals (dynamic)
+    total_signals = 639  # fallback
+    avg_r20d_pct  = 4.6  # fallback
+    try:
+        import sqlite3 as _sq
+        _c = _sq.connect(DB_PATH)
+        _row = _c.execute(
+            "SELECT COUNT(*), AVG(r20d) FROM v_all_signals WHERE r20d IS NOT NULL"
+        ).fetchone()
+        if _row and _row[0]:
+            total_signals = _row[0]
+            avg_r20d_pct  = round((_row[1] or 0) * 100, 1)
+        _c.close()
+    except Exception:
+        pass
 
     def _ret_str(v):
         """Format return delta as colored span."""
@@ -992,7 +1006,7 @@ def _section_research_notes():
     table = f"""
 <div style="font-size:11px;color:#555;margin-bottom:8px;">
   {len(notes)} توصية من {n_sources} مصادر بحثية &nbsp;|&nbsp;
-  مرتبة من الأعلى أولوية · <b>Baseline:</b> {total_signals} إشارة · avg r20d=+4.6%
+  مرتبة من الأعلى أولوية · <b>Baseline:</b> {total_signals} إشارة · avg r20d=+{avg_r20d_pct}%
 </div>
 <div style="overflow-x:auto;">
 <table style="width:100%;border-collapse:collapse;font-size:12px;">

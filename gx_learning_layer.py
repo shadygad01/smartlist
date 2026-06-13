@@ -19,7 +19,7 @@ from datetime import date, datetime
 
 TODAY = date.today().isoformat()
 MEMORY_FILE = "gx_learning_memory.json"
-REPORT_OUT = f"gx_learning_report_{TODAY}.html"
+REPORT_OUT = f"reports/gx_learning_report_{TODAY}.html"
 
 # ═══════════════════════════════════════════════════════════════
 # DATA LOADING
@@ -1220,6 +1220,7 @@ def run():
     # 12. Generate HTML
     html = build_html(gx, stats, perf, perf_trends, all_recs,
                       edges_with_stability, mods, overfitting, src, memory)
+    os.makedirs("reports", exist_ok=True)
     with open(REPORT_OUT, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"\n  Report → {REPORT_OUT}")

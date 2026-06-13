@@ -98,7 +98,7 @@ jobs:
           REPORT_EMAIL_TO: ${{ secrets.REPORT_EMAIL_TO }}
           REPORT_EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
         run: |
-          mkdir -p web_deploy
+          mkdir -p web_deploy reports
           python backfill_research_db.py || true
           python backfill_signal_log_smc.py || true
           python historical_backtest.py --append || true
@@ -107,7 +107,7 @@ jobs:
           python -c "from backfill_research_db import ensure_combined_view; ensure_combined_view()" || true
           python - <<'PYEOF'
           import glob, shutil
-          files = sorted(glob.glob("historical_backtest_report_*.html"))
+          files = sorted(glob.glob("reports/historical_backtest_report_*.html"))
           if files:
               shutil.copy(files[-1], "web_deploy/historical_backtest_report.html")
               print(f"Copied {files[-1]} -> web_deploy/historical_backtest_report.html")
@@ -118,22 +118,22 @@ jobs:
           # copy report (use python glob to avoid shell glob failure)
           python - <<'PYEOF'
           import glob, shutil, os
-          files = sorted(glob.glob("research_report_*.html"))
+          files = sorted(glob.glob("reports/research_report_*.html"))
           if files:
               shutil.copy(files[-1], "web_deploy/research_report.html")
               print(f"Copied {files[-1]} -> web_deploy/research_report.html")
           else:
-              print("WARNING: no research_report_*.html found")
+              print("WARNING: no reports/research_report_*.html found")
           PYEOF
           python quant_research_report.py || true
           python - <<'PYEOF'
           import glob, shutil
-          files = sorted(glob.glob("quant_research_report_*.html"))
+          files = sorted(glob.glob("reports/quant_research_report_*.html"))
           if files:
               shutil.copy(files[-1], "web_deploy/quant_research_report.html")
               print(f"Copied {files[-1]} -> web_deploy/quant_research_report.html")
           else:
-              print("WARNING: no quant_research_report_*.html found")
+              print("WARNING: no reports/quant_research_report_*.html found")
           PYEOF
           cp manifest.json sw.js icon.svg web_deploy/
 
@@ -144,12 +144,12 @@ jobs:
           python edge_report.py
           python - <<'PYEOF'
           import glob, shutil
-          files = sorted(glob.glob("edge_discovery_report_*.html"))
+          files = sorted(glob.glob("reports/edge_discovery_report_*.html"))
           if files:
               shutil.copy(files[-1], "web_deploy/edge_report.html")
               print(f"Copied {files[-1]} -> web_deploy/edge_report.html")
           else:
-              print("WARNING: no edge_discovery_report_*.html found")
+              print("WARNING: no reports/edge_discovery_report_*.html found")
           PYEOF
         continue-on-error: true
 
@@ -158,8 +158,8 @@ jobs:
         run: |
           python behavior_report.py || true
           python backtest_analysis.py || true
-          cp behavior_report.html web_deploy/behavior_report.html || true
-          cp backtest_report.html  web_deploy/backtest_report.html  || true
+          cp reports/behavior_report.html web_deploy/behavior_report.html || true
+          cp reports/backtest_report.html  web_deploy/backtest_report.html  || true
         continue-on-error: true
 
       - name: Run Logic Analyzer
@@ -168,12 +168,12 @@ jobs:
           python logic_analyzer.py || true
           python - <<'PYEOF'
           import glob, shutil
-          files = sorted(glob.glob("logic_analysis_report_*.html"))
+          files = sorted(glob.glob("reports/logic_analysis_report_*.html"))
           if files:
               shutil.copy(files[-1], "web_deploy/logic_analysis_report.html")
               print(f"Copied {files[-1]} -> web_deploy/logic_analysis_report.html")
           else:
-              print("WARNING: no logic_analysis_report_*.html found")
+              print("WARNING: no reports/logic_analysis_report_*.html found")
           PYEOF
           cp logic_analysis_results.json web_deploy/ || true
         continue-on-error: true
@@ -184,12 +184,12 @@ jobs:
           python weight_optimizer.py || true
           python - <<'PYEOF'
           import glob, shutil
-          files = sorted(glob.glob("weight_optimizer_report_*.html"))
+          files = sorted(glob.glob("reports/weight_optimizer_report_*.html"))
           if files:
               shutil.copy(files[-1], "web_deploy/weight_optimizer_report.html")
               print(f"Copied {files[-1]} -> web_deploy/weight_optimizer_report.html")
           else:
-              print("WARNING: no weight_optimizer_report_*.html found")
+              print("WARNING: no reports/weight_optimizer_report_*.html found")
           PYEOF
           cp optimization_results.json web_deploy/ || true
         continue-on-error: true
@@ -200,12 +200,12 @@ jobs:
           python system_audit.py || true
           python - <<'PYEOF'
           import glob, shutil
-          files = sorted(glob.glob("system_audit_report_*.html"))
+          files = sorted(glob.glob("reports/system_audit_report_*.html"))
           if files:
               shutil.copy(files[-1], "web_deploy/system_audit_report.html")
               print(f"Copied {files[-1]} -> web_deploy/system_audit_report.html")
           else:
-              print("WARNING: no system_audit_report_*.html found")
+              print("WARNING: no reports/system_audit_report_*.html found")
           PYEOF
           cp system_audit_results.json web_deploy/ || true
         continue-on-error: true
@@ -216,12 +216,12 @@ jobs:
           python adaptive_learning.py || true
           python - <<'PYEOF'
           import glob, shutil
-          files = sorted(glob.glob("adaptive_learning_report_*.html"))
+          files = sorted(glob.glob("reports/adaptive_learning_report_*.html"))
           if files:
               shutil.copy(files[-1], "web_deploy/adaptive_learning_report.html")
               print(f"Copied {files[-1]} -> web_deploy/adaptive_learning_report.html")
           else:
-              print("WARNING: no adaptive_learning_report_*.html found")
+              print("WARNING: no reports/adaptive_learning_report_*.html found")
           PYEOF
           cp adaptive_learning_results.json web_deploy/ || true
         continue-on-error: true
@@ -232,12 +232,12 @@ jobs:
           python gx_learning_layer.py || true
           python - <<'PYEOF'
           import glob, shutil
-          files = sorted(glob.glob("gx_learning_report_*.html"))
+          files = sorted(glob.glob("reports/gx_learning_report_*.html"))
           if files:
               shutil.copy(files[-1], "web_deploy/gx_learning_report.html")
               print(f"Copied {files[-1]} -> web_deploy/gx_learning_report.html")
           else:
-              print("WARNING: no gx_learning_report_*.html found")
+              print("WARNING: no reports/gx_learning_report_*.html found")
           PYEOF
           cp gx_learning_memory.json web_deploy/ || true
         continue-on-error: true

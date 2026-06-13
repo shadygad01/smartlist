@@ -647,7 +647,8 @@ def main():
 
     if not args.no_html:
         html  = build_html(all_rows, live_base, flag_analysis, sym_perf, elapsed, total_new)
-        fname = f"historical_backtest_report_{TODAY}.html"
+        fname = f"reports/historical_backtest_report_{TODAY}.html"
+        os.makedirs("reports", exist_ok=True)
         with open(fname, "w", encoding="utf-8") as f:
             f.write(html)
         print(f"  HTML → {fname}")

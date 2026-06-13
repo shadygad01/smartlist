@@ -981,9 +981,10 @@ def main():
     print("[7] Building report...")
     html = build_html(diag, drivers, base, all_imps, top3, rejected, checks, all_imps)
 
-    out_html = f"adaptive_learning_report_{DATE_STR}.html"
+    out_html = f"reports/adaptive_learning_report_{DATE_STR}.html"
     out_json = "adaptive_learning_results.json"
 
+    os.makedirs("reports", exist_ok=True)
     with open(out_html, 'w', encoding='utf-8') as f:
         f.write(html)
 

@@ -1111,7 +1111,8 @@ def build_report() -> str:
 
 def main():
     html     = build_report()
-    out_path = f"quant_research_report_{TODAY}.html"
+    out_path = f"reports/quant_research_report_{TODAY}.html"
+    os.makedirs("reports", exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"[QuantReport] Written → {out_path}")

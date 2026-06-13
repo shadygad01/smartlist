@@ -1451,9 +1451,10 @@ def main():
         oof_results, conclusions,
     )
 
-    out_html = f"system_audit_report_{DATE_STR}.html"
+    out_html = f"reports/system_audit_report_{DATE_STR}.html"
     out_json = "system_audit_results.json"
 
+    os.makedirs("reports", exist_ok=True)
     with open(out_html, 'w', encoding='utf-8') as fh:
         fh.write(html)
 

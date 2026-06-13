@@ -22,7 +22,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 EXTENDED_LOG  = "extended_signal_log.json"
-REPORT_FILE   = "behavior_report.html"
+REPORT_FILE   = "reports/behavior_report.html"
 TO_EMAIL      = "shady.gad@live.com"
 WIN_THRESHOLD = 0.07   # r20d >= 7% = win
 
@@ -642,6 +642,7 @@ def run(days_back: int = 0, send_email: bool = True):
     print("[Report] Building behavior report...")
     html = build_report(days_back)
 
+    os.makedirs("reports", exist_ok=True)
     with open(REPORT_FILE, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"[Report] Saved → {REPORT_FILE}")

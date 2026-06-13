@@ -54,7 +54,7 @@ R_CURRENT_W = {'r1_price': 30, 'r2_ob': 10, 'r3_liquidity': 20, 'r4_htf': 10,
 WIN_THRESH   = 0.05     # 5% = meaningful win
 RETAIN_MIN   = 0.40     # never kill >60% of signals
 TODAY_STR    = datetime.utcnow().strftime("%Y-%m-%d")
-REPORT_FILE  = f"weight_optimizer_report_{TODAY_STR}.html"
+REPORT_FILE  = f"reports/weight_optimizer_report_{TODAY_STR}.html"
 RESULTS_FILE = "optimization_results.json"
 
 
@@ -1338,6 +1338,7 @@ def main(db_path: str = DB_PATH):
     # Build and save HTML report
     html = build_html(df, base, ind_analysis, score_nl, feat_imp, interactions,
                       opt_weights, redundancy, recommendations, run_ts)
+    os.makedirs("reports", exist_ok=True)
     with open(REPORT_FILE, 'w', encoding='utf-8') as f:
         f.write(html)
     print(f"Report saved → {REPORT_FILE}")

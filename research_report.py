@@ -1358,7 +1358,8 @@ def maybe_run_weekly_report(db_path: str = DB_PATH, send_email: bool = True) -> 
 
     # احفظ HTML محلياً دائماً
     today    = date.today().strftime("%Y-%m-%d")
-    out_path = f"research_report_{today}.html"
+    out_path = f"reports/research_report_{today}.html"
+    os.makedirs("reports", exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"[Report] Saved → {out_path}")
@@ -1386,8 +1387,9 @@ if __name__ == "__main__":
 
     html     = build_report(db_path=args.db)
     today    = date.today().strftime("%Y-%m-%d")
-    out_path = f"research_report_{today}.html"
+    out_path = f"reports/research_report_{today}.html"
 
+    os.makedirs("reports", exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"[Report] Saved → {out_path}")

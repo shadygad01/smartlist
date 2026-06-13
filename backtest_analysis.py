@@ -1362,7 +1362,8 @@ new Chart(document.getElementById('monthlyChart'), {{
     return html
 
 html_content = build_html_report(report)
-html_path = os.path.join(BASE_DIR, "backtest_report.html")
+html_path = os.path.join(BASE_DIR, "reports/backtest_report.html")
+os.makedirs("reports", exist_ok=True)
 with open(html_path, "w", encoding="utf-8") as f:
     f.write(html_content)
 

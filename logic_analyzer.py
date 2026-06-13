@@ -27,7 +27,7 @@ from signal_db import DB_PATH, get_conn
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 TODAY_STR    = datetime.utcnow().strftime("%Y-%m-%d")
-REPORT_FILE  = f"logic_analysis_report_{TODAY_STR}.html"
+REPORT_FILE  = f"reports/logic_analysis_report_{TODAY_STR}.html"
 RESULTS_FILE = "logic_analysis_results.json"
 
 CURRENT_PARAMS = {
@@ -917,6 +917,7 @@ def main(db_path: str = DB_PATH):
 
     print("[4/4] Generating report...")
     html = build_html(df, analyses, cross, summary, run_ts)
+    os.makedirs("reports", exist_ok=True)
     with open(REPORT_FILE, 'w', encoding='utf-8') as f:
         f.write(html)
     print(f"      Report → {REPORT_FILE}")

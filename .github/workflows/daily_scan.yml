@@ -45,7 +45,7 @@ permissions:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -87,7 +87,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git add open_positions.json positions_history.json scan_results.json signal_history.json signal_log.json learned_weights.json egx_research.db || true
           git diff --staged --quiet || git commit -m "Auto-update positions [skip ci]"
-          git pull origin main --rebase || true
+          git pull --rebase || true
           git push || true
 
       - name: Backfill Research DB + Generate Heatmap and Research Report
@@ -288,7 +288,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git add -f egx_research.db research_results.json 2>/dev/null || true
           git diff --staged --quiet || git commit -m "Auto-update research DB [skip ci]"
-          git pull origin main --rebase || true
+          git pull --rebase || true
           git push || true
 
       - name: Deploy to GitHub Pages

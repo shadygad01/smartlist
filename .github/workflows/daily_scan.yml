@@ -226,6 +226,38 @@ jobs:
           cp adaptive_learning_results.json web_deploy/ || true
         continue-on-error: true
 
+      - name: Run Decision Engine
+        if: always()
+        run: |
+          python decision_engine.py || true
+          python - <<'PYEOF'
+          import glob, shutil
+          files = sorted(glob.glob("reports/decision_engine_report_*.html"))
+          if files:
+              shutil.copy(files[-1], "web_deploy/decision_engine_report.html")
+              print(f"Copied {files[-1]} -> web_deploy/decision_engine_report.html")
+          else:
+              print("WARNING: no reports/decision_engine_report_*.html found")
+          PYEOF
+          cp decision_engine_results.json web_deploy/ || true
+        continue-on-error: true
+
+      - name: Run Discount Zone Pattern Miner
+        if: always()
+        run: |
+          python discount_zone_miner.py || true
+          python - <<'PYEOF'
+          import glob, shutil
+          files = sorted(glob.glob("reports/discount_zone_report_*.html"))
+          if files:
+              shutil.copy(files[-1], "web_deploy/discount_zone_report.html")
+              print(f"Copied {files[-1]} -> web_deploy/discount_zone_report.html")
+          else:
+              print("WARNING: no reports/discount_zone_report_*.html found")
+          PYEOF
+          cp discount_zone_patterns.json web_deploy/ || true
+        continue-on-error: true
+
       - name: Generate Master Dashboard
         if: always()
         run: |

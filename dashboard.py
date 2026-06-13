@@ -537,67 +537,143 @@ def _section_behavior(beh):
 # ── Research Notes Summary ────────────────────────────────────────────────────
 
 def _section_research_notes():
-    """Aggregate all recommendations/notes from every research module."""
+    """Aggregate recommendations from ALL 8 research modules."""
+    import re
 
-    notes = []  # list of {source, priority, text, color}
+    notes = []  # list of {source, priority, text, color, conf, delta_ret, delta_n}
+
+    total_signals = 639  # baseline signal count
+
+    def _ret_str(v):
+        """Format return delta as colored span."""
+        if v is None:
+            return "<span style='color:#aaa'>—</span>"
+        color = "#155724" if v > 0 else "#721c24" if v < 0 else "#555"
+        return f"<span style='color:{color};font-weight:700'>{v*100:+.1f}%</span>"
+
+    def _conf_str(p=None, n=None, conf=None):
+        """Format confidence indicator."""
+        parts = []
+        if conf is not None:
+            c = conf * 100
+            color = "#155724" if c >= 80 else "#856404" if c >= 60 else "#721c24"
+            parts.append(f"<span style='color:{color}'>{c:.0f}%</span>")
+        if p is not None:
+            color = "#155724" if p < 0.05 else "#856404" if p < 0.10 else "#721c24"
+            parts.append(f"<span style='color:{color}'>p={p:.3f}</span>")
+        if n is not None:
+            parts.append(f"<span style='color:#555'>n={n}</span>")
+        return " · ".join(parts) if parts else "<span style='color:#aaa'>—</span>"
+
+    def _n_str(n_after, n_before=total_signals):
+        """Format signal count change."""
+        if n_after is None:
+            return "<span style='color:#aaa'>—</span>"
+        diff = n_after - n_before
+        pct  = diff / n_before * 100 if n_before else 0
+        color = "#155724" if diff > 0 else "#721c24" if diff < 0 else "#555"
+        arrow = "▲" if diff > 0 else "▼" if diff < 0 else "—"
+        return (f"<span style='color:{color};font-weight:700'>{arrow}{abs(int(diff))}</span>"
+                f"<span style='color:#888;font-size:10px;'> ({pct:+.0f}%)</span>")
+
+    def _parse_ret(impact_str):
+        """Extract first numeric percent from impact string, e.g. '+1.5%' → 0.015."""
+        m = re.search(r'([+-]?\d+\.?\d*)%', str(impact_str))
+        return float(m.group(1)) / 100 if m else None
 
     # ── Logic Analyzer ───────────────────────────────────────────────────────
-    la = _load("logic_analysis_results.json")
+    la   = _load("logic_analysis_results.json")
+    la_fi = la.get("function_impact", {})
     for r in la.get("summary_recommendations", [])[:8]:
-        func    = r.get("function", "")
-        param   = r.get("param", "")
-        current = r.get("current", "")
-        proposed= r.get("proposed", "")
-        impact  = r.get("impact", "")
+        func     = r.get("function", "")
+        param    = r.get("param", "")
+        current  = r.get("current", "")
+        proposed = r.get("proposed", "")
+        impact   = r.get("impact", "")
+
+        fi       = la_fi.get(func, {})
+        n_pos    = fi.get("n_pos")
+        n_zero   = fi.get("n_zero")
+        delta_r  = fi.get("delta_r20d")  # overall function impact
+        parsed_r = _parse_ret(impact)    # impact from proposed change
+        eff_ret  = parsed_r if parsed_r is not None else delta_r
+
+        # signal count change: if reducing weight, signals shift (estimated via n_pos)
+        n_affected = n_pos  # signals where this function fires
+
         notes.append({
-            "source":   f"🔬 Logic · {func}",
-            "priority": "HIGH" if any(k in impact for k in ["+", "Remove", "Invert"]) else "MEDIUM",
-            "text":     f"<b>{param}</b>: {str(current)[:30]} → <b>{str(proposed)[:60]}</b><br>"
-                        f"<span style='color:#555;font-size:11px;'>{impact[:80]}</span>",
-            "color":    "#0a3622",
+            "source":    f"🔬 Logic · {func}",
+            "priority":  "HIGH" if any(k in impact for k in ["+", "Remove", "Invert", "Reduce"]) else "MEDIUM",
+            "text":      f"<b>{param}</b>: {str(current)[:28]} → <b>{str(proposed)[:55]}</b>",
+            "color":     "#0a3622",
+            "conf":      _conf_str(n=n_pos),
+            "delta_ret": _ret_str(eff_ret),
+            "delta_n":   (f"<span style='color:#555;font-size:11px'>{n_pos}↑ / {n_zero}↓</span>"
+                          if n_pos is not None else "<span style='color:#aaa'>—</span>"),
         })
 
     # ── Weight Optimizer ─────────────────────────────────────────────────────
     wo = _load("optimization_results.json")
     for r in wo.get("top_recommendations", [])[:5]:
-        ind    = r.get("indicator", "")
-        change = r.get("change", "")
-        delta  = r.get("delta_ret", 0)
-        conf   = r.get("confidence", 0)
-        delta_s = f"{delta*100:+.1f}%" if delta else ""
+        ind       = r.get("indicator", "")
+        change    = r.get("change", "")
+        delta     = r.get("delta_ret")
+        conf      = r.get("confidence")
+        retention = r.get("retention")
+        sample_n  = r.get("sample_n")
+        # retention: fraction of signals kept → n_after = total * retention
+        n_after   = int(total_signals * retention) if retention is not None else None
+
         notes.append({
-            "source":   f"⚖️ Optimizer · {ind}",
-            "priority": "HIGH" if abs(delta or 0) > 0.01 else "MEDIUM",
-            "text":     f"<b>{change[:70]}</b><br>"
-                        f"<span style='color:#555;font-size:11px;'>ΔReturn={delta_s} · Confidence={conf*100:.0f}%</span>",
-            "color":    "#084298",
+            "source":    f"⚖️ Optimizer · {ind}",
+            "priority":  "HIGH" if abs(delta or 0) > 0.01 else "MEDIUM",
+            "text":      f"<b>{change[:72]}</b>",
+            "color":     "#084298",
+            "conf":      _conf_str(conf=conf, n=sample_n),
+            "delta_ret": _ret_str(delta),
+            "delta_n":   _n_str(n_after),
         })
 
-    # ── System Audit ─────────────────────────────────────────────────────────
+    # ── System Audit — Filter Damage ─────────────────────────────────────────
     sa = _load("system_audit_results.json")
-    conc = sa.get("conclusions", {})
-    for item in conc.get("q3_filters_hurting", [])[:3]:
+    for fd in sa.get("filter_damage", [])[:5]:
+        filt    = fd.get("filter", "")
+        diff    = fd.get("diff")
+        pval    = fd.get("p_value")
+        n_with  = fd.get("n_with")
+        n_wo    = fd.get("n_without")
+        verdict = fd.get("verdict", "")
+        pri = "CRITICAL" if fd.get("significant") and diff is not None and diff < -0.01 else "HIGH"
+
         notes.append({
-            "source":   "🕵️ Audit · Filter Damage",
-            "priority": "CRITICAL",
-            "text":     f"<b>يُضعف الأداء:</b> {item}",
-            "color":    "#721c24",
+            "source":    f"🕵️ Audit · Filter",
+            "priority":  pri,
+            "text":      f"<b>{filt}</b>: {verdict[:60]}",
+            "color":     "#721c24" if (diff or 0) < 0 else "#155724",
+            "conf":      _conf_str(p=pval, n=n_with),
+            "delta_ret": _ret_str(diff),
+            "delta_n":   (f"<span style='color:#721c24;font-weight:700'>▼{n_wo}</span>"
+                          f"<span style='color:#888;font-size:10px'> لو اشترطناه</span>"
+                          if n_wo is not None else "<span style='color:#aaa'>—</span>"),
         })
-    for item in conc.get("q6_remove_entirely", [])[:2]:
-        notes.append({
-            "source":   "🕵️ Audit · Remove",
-            "priority": "CRITICAL",
-            "text":     f"<b>يُوصى بحذفه:</b> {item[:100]}",
-            "color":    "#721c24",
-        })
+
+    # ── System Audit — Top Discoveries ────────────────────────────────────────
     for disc in sa.get("top_discoveries", [])[:3]:
+        combo = disc.get("combo", "")
+        mean  = disc.get("mean")
+        diff_ = disc.get("diff")
+        pval  = disc.get("p_value")
+        n_    = disc.get("n")
+
         notes.append({
-            "source":   "🕵️ Audit · Discovery",
-            "priority": "HIGH",
-            "text":     f"<b>اكتشاف:</b> {disc.get('combo','')} → "
-                        f"<b>+{disc.get('mean',0)*100:.1f}%</b> avg return "
-                        f"(n={disc.get('n','')}, MFE={disc.get('mfe',0)*100:.1f}%)",
-            "color":    "#155724",
+            "source":    "🕵️ Audit · Discovery",
+            "priority":  "HIGH",
+            "text":      f"<b>اكتشاف:</b> {combo}",
+            "color":     "#155724",
+            "conf":      _conf_str(p=pval, n=n_),
+            "delta_ret": _ret_str(mean),   # absolute return, not delta
+            "delta_n":   (f"<span style='color:#1a3c5e;font-weight:700'>{n_} إشارة</span>"
+                          if n_ is not None else "<span style='color:#aaa'>—</span>"),
         })
 
     # ── Edge Discovery ────────────────────────────────────────────────────────
@@ -607,30 +683,159 @@ def _section_research_notes():
         mfe  = r.get("mfe_mean", 0)
         wr   = r.get("win_rate", 0)
         n_   = r.get("n", 0)
+        exp  = r.get("expectancy", 0)
+
         notes.append({
-            "source":   "🧠 Edge",
-            "priority": "HIGH" if mfe > 25 else "MEDIUM",
-            "text":     f"<b>{str(cond)[:80]}</b><br>"
-                        f"<span style='color:#555;font-size:11px;'>MFE={mfe:.1f}% · WR={wr*100:.0f}% · n={n_}</span>",
-            "color":    "#6f42c1",
+            "source":    "🧠 Edge",
+            "priority":  "HIGH" if mfe > 25 else "MEDIUM",
+            "text":      f"<b>{str(cond)[:80]}</b>",
+            "color":     "#6f42c1",
+            "conf":      _conf_str(n=n_),
+            "delta_ret": (f"<span style='color:#155724;font-weight:700'>MFE {mfe:+.1f}%</span>"
+                          if mfe else "<span style='color:#aaa'>—</span>"),
+            "delta_n":   (f"<span style='color:#1a3c5e;font-weight:700'>{n_} إشارة</span>"
+                          if n_ else "<span style='color:#aaa'>—</span>"),
         })
 
-    # ── Research Report ───────────────────────────────────────────────────────
+    # ── 🔬 Research Report (weight suggestions + RF importance) ─────────────────
     rr = _load("research_results.json")
     ws = rr.get("weight_suggestions", {})
     for feat, info in list(ws.items())[:4]:
         if not isinstance(info, dict):
             continue
         direction = info.get("direction", "")
-        impact    = info.get("impact", "")
-        if direction:
+        w_change  = info.get("change")
+        reason    = info.get("reason", "")
+        imp_m     = re.search(r'avg_importance=(\d+\.\d+)', reason)
+        imp       = float(imp_m.group(1)) if imp_m else None
+        if not direction:
+            continue
+        notes.append({
+            "source":    "🔬 Research",
+            "priority":  "MEDIUM",
+            "text":      (f"<b>{feat}</b>: وزن {w_change:+d} (حالي→مقترح)"
+                          if w_change is not None else f"<b>{feat}</b>: {direction[:60]}"),
+            "color":     "#856404",
+            "conf":      (f"<span style='color:#555'>imp={imp:.4f}</span>" if imp else "—"),
+            "delta_ret": "<span style='color:#aaa'>—</span>",
+            "delta_n":   "<span style='color:#aaa'>—</span>",
+        })
+
+    # ── 🔬 Quant — top RF features for MFE prediction ────────────────────────
+    rf_imp = rr.get("rf_mfe", {}).get("importance", {})
+    if rf_imp:
+        top_feats = sorted(rf_imp.items(), key=lambda x: x[1], reverse=True)[:4]
+        for feat, imp_v in top_feats:
             notes.append({
-                "source":   "📊 Research",
-                "priority": "MEDIUM",
-                "text":     f"<b>{feat}</b>: {direction}<br>"
-                            f"<span style='color:#555;font-size:11px;'>{str(impact)[:80]}</span>",
-                "color":    "#856404",
+                "source":    "📐 Quant · RF",
+                "priority":  "MEDIUM",
+                "text":      f"<b>{feat}</b>: أهم مؤثر على MFE (RF importance={imp_v:.4f})",
+                "color":     "#4a235a",
+                "conf":      f"<span style='color:#555'>n={rr.get('rf_mfe',{}).get('n_train','?')}</span>",
+                "delta_ret": "<span style='color:#aaa'>—</span>",
+                "delta_n":   "<span style='color:#aaa'>—</span>",
             })
+
+    # ── 📊 Backtest — score threshold analysis ───────────────────────────────
+    bt = _load("backtest_report.json")
+    thresholds = bt.get("score_threshold_analysis", [])
+    # Find the threshold with best expectancy / reasonable n_signals
+    best_thr = None
+    for thr in thresholds:
+        n_ = thr.get("n_signals", 0)
+        exp_ = thr.get("expectancy_pct", 0)
+        pf_  = thr.get("profit_factor", 0)
+        if n_ >= 200 and (best_thr is None or
+                          exp_ > best_thr.get("expectancy_pct", 0)):
+            best_thr = thr
+    if best_thr:
+        thr_v  = best_thr.get("score_threshold")
+        n_thr  = best_thr.get("n_signals")
+        exp_t  = best_thr.get("expectancy_pct", 0)
+        wr_t   = best_thr.get("win_rate_pct", 0)
+        pf_t   = best_thr.get("profit_factor", 0)
+        notes.append({
+            "source":    "📊 Backtest · Score",
+            "priority":  "HIGH",
+            "text":      (f"<b>أفضل score threshold = {thr_v}</b>: "
+                          f"WR={wr_t:.0f}% · Exp={exp_t:.1f}% · PF={pf_t:.1f}"),
+            "color":     "#0a3622",
+            "conf":      f"<span style='color:#555'>n={n_thr}</span>",
+            "delta_ret": (f"<span style='color:#155724;font-weight:700'>+{exp_t:.1f}%</span>"
+                          if exp_t > 0 else "<span style='color:#aaa'>—</span>"),
+            "delta_n":   _n_str(n_thr),
+        })
+
+    # Best r1 threshold
+    r1_rows = bt.get("r1_threshold_analysis", [])
+    best_r1 = None
+    for row in r1_rows:
+        n_ = row.get("n_signals", 0)
+        if n_ >= 200 and (best_r1 is None or
+                          row.get("expectancy_pct", 0) > best_r1.get("expectancy_pct", 0)):
+            best_r1 = row
+    if best_r1:
+        r1_v  = best_r1.get("r1_threshold")
+        n_r1  = best_r1.get("n_signals")
+        exp_r = best_r1.get("expectancy_pct", 0)
+        wr_r  = best_r1.get("win_rate_pct", 0)
+        notes.append({
+            "source":    "📊 Backtest · r1",
+            "priority":  "HIGH",
+            "text":      (f"<b>أفضل r1 threshold = {r1_v}</b>: "
+                          f"WR={wr_r:.0f}% · Exp={exp_r:.1f}%"),
+            "color":     "#0a3622",
+            "conf":      f"<span style='color:#555'>n={n_r1}</span>",
+            "delta_ret": f"<span style='color:#155724;font-weight:700'>+{exp_r:.1f}%</span>",
+            "delta_n":   _n_str(n_r1),
+        })
+
+    # ── 🔍 Behavior — DB-derived insights ────────────────────────────────────
+    beh = _load_behavior_kpis()
+    if beh and beh.get("n", 0) > 0:
+        n_b   = beh["n"]
+        wr_b  = beh["win_rate"]
+        ar_b  = beh["avg_r20d"]
+        mfe_b = beh["avg_mfe"]
+        mae_b = beh["avg_mae"]
+        large = beh.get("large", 0)
+        flat  = beh.get("flat", 0)
+        # Note if flat signals are high
+        flat_pct = flat / n_b * 100 if n_b else 0
+        large_pct = large / n_b * 100 if n_b else 0
+        if flat_pct > 25:
+            notes.append({
+                "source":    "🔍 Behavior",
+                "priority":  "HIGH",
+                "text":      (f"<b>{flat_pct:.0f}% من الإشارات flat</b> (عائد <4%) — "
+                              f"النظام يُولِّد كثيراً من الإشارات الضعيفة"),
+                "color":     "#721c24",
+                "conf":      f"<span style='color:#555'>n={n_b}</span>",
+                "delta_ret": f"<span style='color:#aaa'>WR={wr_b:.0f}%</span>",
+                "delta_n":   f"<span style='color:#721c24;font-weight:700'>{flat} flat</span>",
+            })
+        if large_pct > 15:
+            notes.append({
+                "source":    "🔍 Behavior",
+                "priority":  "MEDIUM",
+                "text":      (f"<b>{large_pct:.0f}% إشارات large winners</b> (>20%) — "
+                              f"إشارة جودة عالية · avg MFE={mfe_b:.1f}%"),
+                "color":     "#155724",
+                "conf":      f"<span style='color:#555'>n={n_b}</span>",
+                "delta_ret": f"<span style='color:#155724;font-weight:700'>+{ar_b:.1f}%</span>",
+                "delta_n":   f"<span style='color:#155724'>{large} large</span>",
+            })
+        # General baseline note
+        notes.append({
+            "source":    "🔍 Behavior",
+            "priority":  "LOW",
+            "text":      (f"Baseline: WR={wr_b:.0f}% · avg r20d=+{ar_b:.1f}% · "
+                          f"MFE={mfe_b:.1f}% · MAE=-{mae_b:.1f}%"),
+            "color":     "#555",
+            "conf":      f"<span style='color:#555'>n={n_b}</span>",
+            "delta_ret": f"<span style='color:#155724'>+{ar_b:.1f}%</span>",
+            "delta_n":   f"<span style='color:#333'>{n_b} إشارة</span>",
+        })
 
     if not notes:
         return _card(
@@ -644,7 +849,7 @@ def _section_research_notes():
 
     rows = ""
     for note in notes:
-        pri   = note["priority"]
+        pri        = note["priority"]
         badge_color = {
             "CRITICAL": "#721c24", "HIGH": "#155724",
             "MEDIUM": "#856404",   "LOW":  "#084298",
@@ -655,25 +860,35 @@ def _section_research_notes():
         }.get(pri, "#eee")
         rows += f"""
 <tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:8px 10px;white-space:nowrap;font-size:11px;color:#555;">{note['source']}</td>
-  <td style="padding:8px 10px;">
+  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">{note['source']}</td>
+  <td style="padding:7px 8px;">
     <span style="background:{badge_bg};color:{badge_color};font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;">{pri}</span>
+                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">{pri}</span>
     <span style="font-size:12px;color:{note['color']}">{note['text']}</span>
   </td>
+  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;">{note['conf']}</td>
+  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;">{note['delta_ret']}</td>
+  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;">{note['delta_n']}</td>
 </tr>"""
 
+    n_sources = len(set(n['source'].split(' ·')[0] for n in notes))
     table = f"""
 <div style="font-size:11px;color:#555;margin-bottom:8px;">
-  {len(notes)} توصية من {len(set(n['source'].split(' ·')[0] for n in notes))} مصادر بحثية
+  {len(notes)} توصية من {n_sources} مصادر بحثية &nbsp;|&nbsp;
+  مرتبة من الأعلى أولوية · <b>Baseline:</b> {total_signals} إشارة · avg r20d=+4.6%
 </div>
-<table style="width:100%;border-collapse:collapse;">
+<div style="overflow-x:auto;">
+<table style="width:100%;border-collapse:collapse;font-size:12px;">
   <thead><tr style="background:#1a3a5c;color:#fff;font-size:11px;">
-    <th style="padding:7px 10px;text-align:right;">المصدر</th>
-    <th style="padding:7px 10px;text-align:right;">الملاحظة / التوصية</th>
+    <th style="padding:7px 8px;text-align:right;">المصدر</th>
+    <th style="padding:7px 8px;text-align:right;">الملاحظة / التوصية</th>
+    <th style="padding:7px 8px;text-align:center;">نسبة التأكد</th>
+    <th style="padding:7px 8px;text-align:center;">Δ العائد</th>
+    <th style="padding:7px 8px;text-align:center;">Δ الصفقات</th>
   </tr></thead>
   <tbody>{rows}</tbody>
-</table>"""
+</table>
+</div>"""
 
     return _card("📋 ملخص التوصيات البحثية — كل الأقسام", "📋", table)
 

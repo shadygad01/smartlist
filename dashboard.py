@@ -441,6 +441,66 @@ def _section_weight_optimizer():
     return _card("Weight Optimizer — Quant Engine", "⚖️", content, "weight_optimizer_report.html")
 
 
+def _section_historical_backtest():
+    """Card for historical backtest — reads from historical_backtest_results.json."""
+    res = _load("historical_backtest_results.json")
+    if not res:
+        return _card("Historical Backtest", "🏛️",
+                     "<p style='color:#aaa;font-size:13px;'>لا توجد نتائج بعد</p>",
+                     "historical_backtest_report.html")
+
+    base  = res.get("baseline", {})
+    live  = res.get("live_baseline", {})
+    n     = base.get("n", 0)
+    n_live = live.get("n", 639)
+    mean  = base.get("mean", 0)
+    pf    = base.get("pf", 0)
+    mfe   = base.get("mfe", 0)
+    wr    = base.get("wr", 0)
+
+    # Consistency indicator: how close to live DB?
+    live_mean = live.get("mean", 0.046)
+    delta_vs_live = mean - live_mean
+    consist_color = "#155724" if abs(delta_vs_live) < 0.01 else "#856404"
+    consist_label = "✅ Consistent" if abs(delta_vs_live) < 0.01 else f"⚠️ Diverges {delta_vs_live*100:+.1f}%"
+
+    hc = "#155724" if mean > 0.04 else "#856404" if mean > 0 else "#721c24"
+    kpis = _kpi_row(
+        ("إشارات تاريخية", f"{n:,}", "#1a3c5e"),
+        ("Avg Return",      f"{mean*100:+.2f}%", hc),
+        ("MFE (20d)",       f"{mfe*100:.1f}%", "#155724"),
+        ("Win Rate",        f"{wr*100:.1f}%", hc),
+        ("Profit Factor",   f"{pf:.2f}", "#155724" if pf > 2 else "#856404"),
+        ("vs Live DB",      f"{n_live} signals", "#333"),
+    )
+
+    # Top flag finding
+    flags = res.get("flag_analysis", [])
+    top_flags = sorted(
+        [f for f in flags if f.get("yes") and f.get("no")],
+        key=lambda f: abs(f["yes"].get("mean", 0) - f["no"].get("mean", 0)),
+        reverse=True
+    )[:2]
+    flag_txt = ""
+    for fm in top_flags:
+        diff = fm["yes"].get("mean", 0) - fm["no"].get("mean", 0)
+        c = "#155724" if diff > 0 else "#721c24"
+        arrow = "▲" if diff > 0 else "▼"
+        flag_txt += (f"<div style='margin-top:6px;font-size:12px;padding:5px 10px;"
+                     f"background:#f7faff;border-radius:5px;'>"
+                     f"{arrow} <strong>{fm['flag'].replace('_',' ').title()}</strong>: "
+                     f"<span style='color:{c};font-weight:700;'>{diff*100:+.2f}%</span> "
+                     f"(n={fm['yes'].get('n',0)} YES vs {fm['no'].get('n',0)} NO)</div>")
+
+    consist_txt = (f"<div style='margin-top:8px;font-size:12px;background:#e8f4fd;"
+                   f"padding:7px 10px;border-radius:6px;color:{consist_color};'>"
+                   f"📊 {consist_label} — historical avg {mean*100:.2f}% vs live {live_mean*100:.2f}%</div>")
+
+    content = kpis + consist_txt + flag_txt
+    return _card("Historical Backtest — 5 Years Full Replay", "🏛️",
+                 content, "historical_backtest_report.html")
+
+
 def _section_adaptive_learning():
     """Card for adaptive learning engine — reads from adaptive_learning_results.json."""
     res = _load("adaptive_learning_results.json")
@@ -971,6 +1031,7 @@ def build_dashboard() -> str:
         '<a href="system_audit_report.html" style="color:#8fb8d8;text-decoration:none;">🕵️ Audit</a>',
         '<a href="behavior_report.html" style="color:#8fb8d8;text-decoration:none;">🔍 Behavior</a>',
         '<a href="adaptive_learning_report.html" style="color:#8fb8d8;text-decoration:none;">🧬 Adaptive</a>',
+        '<a href="historical_backtest_report.html" style="color:#8fb8d8;text-decoration:none;">🏛️ History</a>',
     ])
 
     body = f"""
@@ -980,6 +1041,7 @@ def build_dashboard() -> str:
 {_section_quant()}
 {_section_weight_optimizer()}
 {_section_logic_analyzer()}
+{_section_historical_backtest()}
 {_section_system_audit()}
 {_section_adaptive_learning()}
 {_section_research(rr)}

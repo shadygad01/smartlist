@@ -33,17 +33,15 @@ def _load(path):
 
 
 def _load_behavior_kpis():
-    """Read KPIs directly from egx_research.db."""
+    """Read KPIs directly from egx_research.db (uses v_all_signals for full 1051-signal coverage)."""
     if not Path(DB_PATH).exists():
         return {}
     try:
         conn = sqlite3.connect(DB_PATH)
         rows = conn.execute("""
-            SELECT b.r20d, b.mfe_20d, b.mae_20d, s.raw_score,
-                   s.r3_liquidity, s.r8_demand, s.is_ramadan
-            FROM signals s
-            JOIN bottom_quality b ON b.signal_id = s.id
-            WHERE b.r20d IS NOT NULL
+            SELECT r20d, mfe_20d, mae_20d
+            FROM v_all_signals
+            WHERE r20d IS NOT NULL
         """).fetchall()
         conn.close()
     except Exception:
@@ -54,7 +52,7 @@ def _load_behavior_kpis():
 
     r20ds  = [r[0] for r in rows]
     mfes   = [r[1] for r in rows if r[1] is not None]
-    maes   = [r[2] for r in rows if r[2] is not None]
+    maes   = [abs(r[2]) for r in rows if r[2] is not None]
     wins   = sum(1 for r in r20ds if r >= 0.07)
     cats   = Counter(
         "large" if r >= 0.20 else "medium" if r >= 0.08 else "small" if r >= 0.04 else "flat"
@@ -809,19 +807,28 @@ def _section_research_notes():
 
     # ── Edge Discovery ────────────────────────────────────────────────────────
     ed = _load("edge_discovery_results.json")
-    for r in (ed.get("top_rules", []) or [])[:4]:
+    # top_rules may be empty; fall back to top_fingerprints (sorted by mfe_mean)
+    top_rules = ed.get("top_rules", []) or []
+    if not top_rules:
+        fps = ed.get("top_fingerprints", []) or []
+        top_rules = sorted(fps, key=lambda x: float(x.get("mfe_mean", 0) or 0), reverse=True)
+    for r in top_rules[:4]:
         cond = r.get("rule_text", r.get("condition", ""))
-        mfe  = r.get("mfe_mean", 0)
-        wr   = r.get("win_rate", 0)
-        n_   = r.get("n", 0)
-        exp  = r.get("expectancy", 0)
+        mfe  = float(r.get("mfe_mean", 0) or 0)
+        wr   = float(r.get("win_rate",  0) or 0)
+        n_   = int(r.get("n",          0) or 0)
+        pval = r.get("p_value")
+        try:
+            pval = float(pval) if pval is not None else None
+        except (TypeError, ValueError):
+            pval = None
 
         notes.append({
             "source":    "🧠 Edge",
             "priority":  "HIGH" if mfe > 25 else "MEDIUM",
-            "text":      f"<b>{str(cond)[:80]}</b>",
+            "text":      f"<b>{str(cond)[:80]}</b> · WR={wr:.0%}",
             "color":     "#6f42c1",
-            "conf":      _conf_str(n=n_),
+            "conf":      _conf_str(p=pval, n=n_),
             "delta_ret": (f"<span style='color:#155724;font-weight:700'>MFE {mfe:+.1f}%</span>"
                           if mfe else "<span style='color:#aaa'>—</span>"),
             "delta_n":   (f"<span style='color:#1a3c5e;font-weight:700'>{n_} إشارة</span>"
@@ -831,7 +838,7 @@ def _section_research_notes():
     # ── 🔬 Research Report (weight suggestions + RF importance) ─────────────────
     rr = _load("research_results.json")
     ws = rr.get("weight_suggestions", {})
-    for feat, info in list(ws.items())[:4]:
+    for feat, info in list(ws.items())[:5]:
         if not isinstance(info, dict):
             continue
         direction = info.get("direction", "")
@@ -839,14 +846,19 @@ def _section_research_notes():
         reason    = info.get("reason", "")
         imp_m     = re.search(r'avg_importance=(\d+\.\d+)', reason)
         imp       = float(imp_m.group(1)) if imp_m else None
+        # Infer direction from change sign if not explicitly set
         if not direction:
-            continue
+            if w_change is not None:
+                direction = "رفع" if w_change > 0 else "خفض"
+            else:
+                continue
+        color_dir = "#155724" if w_change is not None and w_change > 0 else "#721c24"
         notes.append({
             "source":    "🔬 Research",
             "priority":  "MEDIUM",
-            "text":      (f"<b>{feat}</b>: وزن {w_change:+d} (حالي→مقترح)"
+            "text":      (f"<b>{feat}</b>: {direction} الوزن {w_change:+d} نقطة"
                           if w_change is not None else f"<b>{feat}</b>: {direction[:60]}"),
-            "color":     "#856404",
+            "color":     color_dir,
             "conf":      (f"<span style='color:#555'>imp={imp:.4f}</span>" if imp else "—"),
             "delta_ret": "<span style='color:#aaa'>—</span>",
             "delta_n":   "<span style='color:#aaa'>—</span>",
@@ -967,6 +979,103 @@ def _section_research_notes():
             "delta_ret": f"<span style='color:#155724'>+{ar_b:.1f}%</span>",
             "delta_n":   f"<span style='color:#333'>{n_b} إشارة</span>",
         })
+
+    # ── 🧬 Adaptive Learning — top improvements ───────────────────────────────
+    al = _load("adaptive_learning_results.json")
+    al_imps = sorted(al.get("all_improvements", []),
+                     key=lambda x: x.get("model_score", 0), reverse=True)
+    for r in al_imps[:4]:
+        imp_id   = r.get("id", "")
+        name     = r.get("name", "")
+        score    = r.get("model_score", 0)
+        delta    = r.get("delta_ret")
+        wf_ok    = r.get("wf_consistent", False)
+        retention = r.get("retention")
+        n_after  = int(total_signals * retention) if retention is not None else None
+        pri = "HIGH" if score >= 70 else "MEDIUM" if score >= 50 else "LOW"
+        wf_label = ("<span style='color:#155724;font-size:10px'>✓ WF</span>" if wf_ok
+                    else "<span style='color:#aaa;font-size:10px'>— WF</span>")
+        notes.append({
+            "source":    f"🧬 Adaptive · {imp_id}",
+            "priority":  pri,
+            "text":      f"<b>{name[:70]}</b>",
+            "color":     "#1a3c5e",
+            "conf":      f"<span style='color:#555'>score={score}</span> {wf_label}",
+            "delta_ret": _ret_str(delta),
+            "delta_n":   _n_str(n_after),
+        })
+
+    # ── 🏛️ Historical Backtest — flag analysis ────────────────────────────────
+    hb = _load("historical_backtest_results.json")
+    hb_base = hb.get("baseline", {})
+    hb_base_pf = hb_base.get("pf", 1.0)
+    for fa in hb.get("flag_analysis", [])[:4]:
+        flag  = fa.get("flag", "")
+        yes   = fa.get("yes", {})
+        no    = fa.get("no",  {})
+        y_pf  = yes.get("pf",  0)
+        n_pf  = no.get("pf",   0)
+        y_wr  = yes.get("wr",  0)
+        y_n   = yes.get("n",   0)
+        no_n  = no.get("n",    0)
+        y_mfe = yes.get("mfe", 0)
+        diff_mean = yes.get("mean", 0) - no.get("mean", 0)
+        is_positive = y_pf > n_pf * 1.05
+        notes.append({
+            "source":    "🏛️ Historical",
+            "priority":  "HIGH" if abs(y_pf - n_pf) > 0.3 else "MEDIUM",
+            "text":      (f"<b>{flag}</b>: PF_yes={y_pf:.2f} vs PF_no={n_pf:.2f} · "
+                          f"WR_yes={y_wr:.0%} · MFE_yes={y_mfe:.0%}"),
+            "color":     "#0a3622" if is_positive else "#721c24",
+            "conf":      _conf_str(n=y_n),
+            "delta_ret": _ret_str(diff_mean),
+            "delta_n":   (f"<span style='color:#555;font-size:11px'>{y_n}/{y_n+no_n}</span>"),
+        })
+
+    # ── ⚡ GX Learning — cross-validated high-confidence recommendations ────────
+    gxm = _load("gx_learning_memory.json")
+    gx_recs = gxm.get("recommendations", [])
+    # Show top recommendations by confidence, only Proposed or Active status
+    gx_top = sorted(
+        [r for r in gx_recs if r.get("status") in ("Proposed", "Active")
+         and r.get("confidence", 0) >= 0.6],
+        key=lambda x: x.get("confidence", 0), reverse=True
+    )[:3]
+    for r in gx_top:
+        rec_id   = r.get("id", "")
+        name     = r.get("name", "")
+        conf     = r.get("confidence", 0)
+        supports = len(r.get("supporting", []))
+        d_ret    = r.get("expected_delta_ret")
+        d_mfe    = r.get("expected_delta_mfe")
+        wf_ok    = r.get("wf_consistent", False)
+        notes.append({
+            "source":    f"⚡ GX · {rec_id}",
+            "priority":  "HIGH" if conf >= 0.75 else "MEDIUM",
+            "text":      f"<b>{name[:70]}</b>",
+            "color":     "#3d1a5c",
+            "conf":      (f"<span style='color:#{'155724' if conf >= 0.75 else '856404'}'>"
+                          f"conf={conf:.0%}</span> · "
+                          f"<span style='color:#555'>{supports} مصدر</span>"),
+            "delta_ret": _ret_str(d_ret),
+            "delta_n":   "<span style='color:#aaa'>—</span>",
+        })
+    # If no high-conf recs yet, show GX score summary
+    if not gx_top:
+        ph = gxm.get("performance_history", [])
+        if ph:
+            lp = ph[-1]
+            notes.append({
+                "source":    "⚡ GX Learning",
+                "priority":  "LOW",
+                "text":      (f"<b>GX Baseline</b>: PF={lp.get('profit_factor',0):.2f} · "
+                              f"WR={lp.get('win_rate',0):.0%} · "
+                              f"n={lp.get('n_signals',0)}"),
+                "color":     "#3d1a5c",
+                "conf":      f"<span style='color:#555'>Run #{gxm.get('total_runs',1)}</span>",
+                "delta_ret": "<span style='color:#aaa'>—</span>",
+                "delta_n":   "<span style='color:#aaa'>—</span>",
+            })
 
     if not notes:
         return _card(

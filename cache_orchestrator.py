@@ -152,6 +152,13 @@ MODULES = {
         "outputs": ["smc_rl_weights.json"],
         "min_interval_hours": 6,
     },
+    "walk_forward_backtester": {
+        "category": "C",
+        "cmd": ["python", "walk_forward_backtester.py"],
+        "inputs": ["egx_research.db", "walk_forward_state.json"],
+        "outputs": ["walk_forward_state.json"],
+        "min_interval_hours": 6,
+    },
 
     # ── Category B: Conditional ───────────────────────────────────────────────
     "heatmap": {
@@ -191,6 +198,7 @@ INTELLIGENCE_TIER2 = [
     "discount_zone_miner",
     "multi_period_analyzer",
     "smc_rl_optimizer",
+    "walk_forward_backtester",
 ]
 
 # Modules that belong to the research job (B)

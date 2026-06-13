@@ -1316,6 +1316,75 @@ def _section_multi_period():
     )
 
 
+def _section_walk_forward():
+    """Card showing walk-forward backtester summary from walk_forward_state.json."""
+    wf = _load("walk_forward_state.json")
+    if not wf or not wf.get("trades"):
+        return _card(
+            "Walk-Forward Backtester", "📈",
+            "<p style='color:#aaa;font-size:13px;'>لا توجد بيانات بعد — شغّل walk_forward_backtester.py</p>",
+            "walk_forward_report.html",
+        )
+
+    trades     = wf["trades"]
+    equity     = wf.get("equity", 100)
+    wlog       = wf.get("weight_log", [])
+
+    buy_done = [t for t in trades
+                if t["decision"] == "BUY"
+                and t.get("outcome_90d") is not None
+                and not t.get("warmup")]
+    if not buy_done:
+        return _card("Walk-Forward Backtester", "📈",
+                     "<p style='color:#aaa'>لا توجد نتائج</p>",
+                     "walk_forward_report.html")
+
+    returns  = [t["outcome_90d"] for t in buy_done]
+    n        = len(returns)
+    avg_ret  = sum(returns) / n
+    win_rate = sum(1 for r in returns if r > 3) / n * 100
+    eq_gain  = equity - 100
+
+    losses   = [r for r in returns if r <= 0]
+    wins_sum = sum(r for r in returns if r > 3)
+    loss_sum = abs(sum(losses)) if losses else 1
+    pf       = round(wins_sum / loss_sum, 2) if loss_sum else 99
+
+    # Weights delta (system vs learned)
+    w_now = wf.get("weights", {})
+    sys_w = {"r1_price": 30, "r2_ob": 10, "r3_liquidity": 20, "r4_htf": 10,
+             "r5_avwap": 8, "r6_macd": 4, "r7_div": 3, "r8_demand": 15}
+    top_delta = max(w_now.items(), key=lambda x: abs(x[1] - sys_w.get(x[0], 0)),
+                    default=("—", 0))
+    delta_val = top_delta[1] - sys_w.get(top_delta[0], 0)
+    delta_txt = (
+        f"<div style='margin-top:8px;font-size:12px;background:#e8f4fd;"
+        f"padding:7px 10px;border-radius:5px;color:#1a3c5e;'>"
+        f"📊 {len(wlog)} gradient updates · أكبر تغيير: "
+        f"<b>{top_delta[0]}</b> → {delta_val:+.1f} pts</div>"
+    ) if wlog else ""
+
+    eq_color  = "#155724" if eq_gain > 0 else "#721c24"
+    wr_color  = "#155724" if win_rate > 55 else "#856404"
+    ret_color = "#155724" if avg_ret > 5 else "#856404"
+
+    kpis = _kpi_row(
+        ("Equity (بدأ 100)", f"{equity:.1f}", eq_color),
+        ("إجمالي العائد",    f"{eq_gain:+.1f}%", eq_color),
+        ("Win Rate",         f"{win_rate:.0f}%", wr_color),
+        ("Avg Return 90d",   f"{avg_ret:+.1f}%", ret_color),
+        ("Profit Factor",    f"{pf:.2f}", "#1a3c5e"),
+        ("Trades",           str(n), "#333"),
+    )
+    return _card(
+        f"Walk-Forward Backtester — {n} صفقة حقيقية",
+        "📈",
+        kpis + delta_txt,
+        "walk_forward_report.html",
+        "التقرير الكامل",
+    )
+
+
 # ── Main Builder ──────────────────────────────────────────────────────────────
 
 def build_dashboard() -> str:
@@ -1343,9 +1412,11 @@ def build_dashboard() -> str:
         '<a href="gx_learning_report.html" style="color:#f0b840;text-decoration:none;font-weight:600;">⚡ GX Learning</a>',
         '<a href="multi_period_report.html" style="color:#8fb8d8;text-decoration:none;">📅 Multi-Period</a>',
         '<a href="smc_rl_report.html" style="color:#c8a8e8;text-decoration:none;font-weight:600;">🤖 RL Optimizer</a>',
+        '<a href="walk_forward_report.html" style="color:#98e8a0;text-decoration:none;font-weight:600;">📈 Walk-Forward</a>',
     ])
 
     body = f"""
+{_section_walk_forward()}
 {_section_smc_calibration()}
 {_section_research_notes()}
 {_section_backtest(bt)}

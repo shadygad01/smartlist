@@ -229,6 +229,7 @@ jobs:
             gx_learning_memory.json
             discount_zone_patterns.json
             smc_rl_weights.json
+            walk_forward_state.json
             reports/
           key: intelligence-cache-${{ runner.os }}-${{ github.run_id }}
           restore-keys: intelligence-cache-${{ runner.os }}-
@@ -248,6 +249,7 @@ jobs:
             gx_learning_memory.json
             discount_zone_patterns.json
             smc_rl_weights.json
+            walk_forward_state.json
             reports/
           key: intelligence-cache-${{ runner.os }}-${{ github.run_id }}
 
@@ -267,6 +269,7 @@ jobs:
               ("reports/discount_zone_report_*.html",    "web_deploy/discount_zone_report.html"),
               ("reports/multi_period_report_*.html",     "web_deploy/multi_period_report.html"),
               ("reports/smc_rl_report_*.html",           "web_deploy/smc_rl_report.html"),
+              ("reports/walk_forward_report_*.html",     "web_deploy/walk_forward_report.html"),
           ]
           for pattern, dest in mappings:
               files = sorted(glob.glob(pattern))
@@ -288,6 +291,7 @@ jobs:
           cp changed_symbols.json               web_deploy/ || true
           cp incremental_execution_report.json  web_deploy/ || true
           cp smc_rl_weights.json                web_deploy/ || true
+          cp walk_forward_state.json            web_deploy/ || true
 
       - name: Upload intelligence artifacts
         uses: actions/upload-artifact@v4

@@ -1151,6 +1151,240 @@ def _section_research_notes():
     return _card("📋 ملخص التوصيات البحثية — كل الأقسام", "📋", table)
 
 
+# ── SMC Calibration Template ──────────────────────────────────────────────────
+
+SMC_INDICATORS = [
+    ("r1_price",     "Price Position",    30),
+    ("r2_ob",        "OB Quality",        10),
+    ("r3_liquidity", "Liquidity Context", 20),
+    ("r4_htf",       "HTF Alignment",     10),
+    ("r5_avwap",     "AVWAP Support",      8),
+    ("r6_macd",      "MACD Signal",        4),
+    ("r7_div",       "Divergence",         3),
+    ("r8_demand",    "Demand Zone",       15),
+]
+
+SYSTEM_WEIGHTS = {
+    "r1_price": 30, "r2_ob": 10, "r3_liquidity": 20, "r4_htf": 10,
+    "r5_avwap": 8,  "r6_macd": 4, "r7_div": 3, "r8_demand": 15,
+}
+
+
+def _section_smc_calibration():
+    """One-card SMC calibration template showing current system calibration state."""
+    opt  = _load("optimization_results.json") or {}
+    rl   = _load("smc_rl_weights.json") or {}
+    rr   = _load("research_results.json") or {}
+
+    opt_weights = opt.get("optimal_weights", {})
+    rl_weights  = rl.get("current_weights", {})
+    rl_perf     = rl.get("last_perf", {})
+    wt_suggest  = (rr.get("weight_suggestions") or {})
+
+    def _w(d, key, default):
+        v = d.get(key, default)
+        return round(float(v), 1) if v is not None else default
+
+    rows = ""
+    for (col, name, max_score) in SMC_INDICATORS:
+        sys_w  = SYSTEM_WEIGHTS.get(col, max_score)
+        opt_w  = _w(opt_weights, col, sys_w)
+        rl_w   = _w(rl_weights,  col, sys_w)
+        sugg   = (wt_suggest.get(col) or {}).get("suggested", sys_w)
+
+        # Color: green if RL agrees with opt (both higher than system), yellow if mixed
+        trend = ""
+        if rl_w > sys_w and opt_w > sys_w:
+            trend = "<span style='color:#28a745'>▲</span>"
+        elif rl_w < sys_w and opt_w < sys_w:
+            trend = "<span style='color:#dc3545'>▼</span>"
+        else:
+            trend = "<span style='color:#ffc107'>~</span>"
+
+        opt_color  = "#28a745" if opt_w > sys_w else "#dc3545" if opt_w < sys_w else "#999"
+        rl_color   = "#28a745" if rl_w  > sys_w else "#dc3545" if rl_w  < sys_w else "#999"
+        rows += (
+            f"<tr><td style='font-weight:600'>{name}</td>"
+            f"<td style='text-align:center;color:#555'>{max_score}</td>"
+            f"<td style='text-align:center'>{sys_w}</td>"
+            f"<td style='text-align:center;color:{opt_color}'>{opt_w:.1f}</td>"
+            f"<td style='text-align:center;color:{rl_color}'>{rl_w:.1f}</td>"
+            f"<td style='text-align:center'>{trend}</td></tr>"
+        )
+
+    # Pattern + context rows
+    pat_rl = _w(rl_weights, "pattern_score", 10)
+    rows += (
+        f"<tr style='background:#f8f9fa'>"
+        f"<td style='font-weight:600;color:#555'>Pattern Score</td>"
+        f"<td style='text-align:center;color:#555'>20</td>"
+        f"<td style='text-align:center;color:#999'>—</td>"
+        f"<td style='text-align:center;color:#999'>—</td>"
+        f"<td style='text-align:center;color:#2a6496'>{pat_rl:.1f}</td>"
+        f"<td style='text-align:center'>~</td></tr>"
+    )
+
+    # RL performance summary
+    top_q  = rl_perf.get("top_q_avg_90d", "—")
+    disc   = rl_perf.get("discrimination", "—")
+    n_data = rl_perf.get("n", "—")
+    n_hist = len(rl.get("history", []))
+
+    rl_badge = ""
+    if isinstance(top_q, (int, float)):
+        c = "#155724" if top_q > 15 else "#856404" if top_q > 5 else "#721c24"
+        rl_badge = (
+            f"<div style='margin-top:10px;background:#f0f8ff;border-radius:6px;"
+            f"padding:8px 12px;font-size:12px;color:#1a3c5e;border:1px solid #d0e8f8'>"
+            f"🤖 RL Engine (run #{n_hist}): Top-Q 90d = "
+            f"<strong style='color:{c}'>{top_q}%</strong> &nbsp;|&nbsp; "
+            f"Discrimination = <strong>{disc}%</strong> &nbsp;|&nbsp; "
+            f"Trained on {n_data} signals</div>"
+        )
+
+    table = (
+        "<table style='width:100%;border-collapse:collapse;font-size:13px'>"
+        "<thead><tr style='background:#1a3c5e;color:#fff'>"
+        "<th style='padding:7px 10px;text-align:right'>Indicator</th>"
+        "<th style='padding:7px 6px;text-align:center'>Max</th>"
+        "<th style='padding:7px 6px;text-align:center'>System</th>"
+        "<th style='padding:7px 6px;text-align:center'>Optimizer</th>"
+        "<th style='padding:7px 6px;text-align:center'>RL Weight</th>"
+        "<th style='padding:7px 6px;text-align:center'>Trend</th>"
+        "</tr></thead>"
+        f"<tbody>{rows}</tbody></table>"
+        + rl_badge
+    )
+
+    return _card(
+        "SMC Calibration Template — نموذج معايرة النظام",
+        "🎯",
+        table,
+        "smc_rl_report.html",
+        "تقرير RL الكامل",
+    )
+
+
+def _section_multi_period():
+    """Card showing multi-period performance summary."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        rows = conn.execute("""
+            SELECT
+                COUNT(*) as n,
+                ROUND(AVG(r20d)*100, 1)    as avg_20d,
+                ROUND(AVG(r_90d)*100, 1)   as avg_90d,
+                ROUND(AVG(r_180d)*100, 1)  as avg_180d,
+                ROUND(AVG(r_252d)*100, 1)  as avg_252d,
+                ROUND(SUM(CASE WHEN r_90d  > 0.03 THEN 1.0 ELSE 0 END) /
+                      COUNT(r_90d)  * 100, 1) as wr_90d,
+                ROUND(SUM(CASE WHEN r_252d > 0.03 THEN 1.0 ELSE 0 END) /
+                      COUNT(r_252d) * 100, 1) as wr_252d
+            FROM hist_signals
+            WHERE r_90d IS NOT NULL AND r_252d IS NOT NULL
+        """).fetchone()
+        conn.close()
+        if not rows or not rows[0]:
+            raise ValueError("no data")
+        n, avg20, avg90, avg180, avg252, wr90, wr252 = rows
+    except Exception:
+        return _card(
+            "Multi-Period Analysis", "📅",
+            "<p style='color:#aaa;font-size:13px;'>لا توجد بيانات بعد</p>",
+            "multi_period_report.html",
+        )
+
+    def _c(v):
+        if v is None:
+            return "#999"
+        return "#155724" if v >= 15 else "#856404" if v >= 0 else "#721c24"
+
+    kpis = _kpi_row(
+        ("20d Return",  f"{avg20:+.1f}%" if avg20  else "—", _c(avg20)),
+        ("90d Return",  f"{avg90:+.1f}%" if avg90  else "—", _c(avg90)),
+        ("180d Return", f"{avg180:+.1f}%" if avg180 else "—", _c(avg180)),
+        ("252d Return", f"{avg252:+.1f}%" if avg252 else "—", _c(avg252)),
+        ("WR 90d",  f"{wr90}%"  if wr90  else "—", "#1a3c5e"),
+        ("WR 252d", f"{wr252}%" if wr252 else "—", "#1a3c5e"),
+    )
+    return _card(
+        f"Multi-Period Analysis — {n} إشارات",
+        "📅",
+        kpis,
+        "multi_period_report.html",
+        "التحليل الكامل",
+    )
+
+
+def _section_walk_forward():
+    """Card showing walk-forward backtester summary from walk_forward_state.json."""
+    wf = _load("walk_forward_state.json")
+    if not wf or not wf.get("trades"):
+        return _card(
+            "Walk-Forward Backtester", "📈",
+            "<p style='color:#aaa;font-size:13px;'>لا توجد بيانات بعد — شغّل walk_forward_backtester.py</p>",
+            "walk_forward_report.html",
+        )
+
+    trades     = wf["trades"]
+    equity     = wf.get("equity", 100)
+    wlog       = wf.get("weight_log", [])
+
+    buy_done = [t for t in trades
+                if t["decision"] == "BUY"
+                and t.get("outcome_90d") is not None
+                and not t.get("warmup")]
+    if not buy_done:
+        return _card("Walk-Forward Backtester", "📈",
+                     "<p style='color:#aaa'>لا توجد نتائج</p>",
+                     "walk_forward_report.html")
+
+    returns  = [t["outcome_90d"] for t in buy_done]
+    n        = len(returns)
+    avg_ret  = sum(returns) / n
+    win_rate = sum(1 for r in returns if r > 3) / n * 100
+    eq_gain  = equity - 100
+
+    losses   = [r for r in returns if r <= 0]
+    wins_sum = sum(r for r in returns if r > 3)
+    loss_sum = abs(sum(losses)) if losses else 1
+    pf       = round(wins_sum / loss_sum, 2) if loss_sum else 99
+
+    # Weights delta (system vs learned)
+    w_now = wf.get("weights", {})
+    sys_w = {"r1_price": 30, "r2_ob": 10, "r3_liquidity": 20, "r4_htf": 10,
+             "r5_avwap": 8, "r6_macd": 4, "r7_div": 3, "r8_demand": 15}
+    top_delta = max(w_now.items(), key=lambda x: abs(x[1] - sys_w.get(x[0], 0)),
+                    default=("—", 0))
+    delta_val = top_delta[1] - sys_w.get(top_delta[0], 0)
+    delta_txt = (
+        f"<div style='margin-top:8px;font-size:12px;background:#e8f4fd;"
+        f"padding:7px 10px;border-radius:5px;color:#1a3c5e;'>"
+        f"📊 {len(wlog)} gradient updates · أكبر تغيير: "
+        f"<b>{top_delta[0]}</b> → {delta_val:+.1f} pts</div>"
+    ) if wlog else ""
+
+    eq_color  = "#155724" if eq_gain > 0 else "#721c24"
+    wr_color  = "#155724" if win_rate > 55 else "#856404"
+    ret_color = "#155724" if avg_ret > 5 else "#856404"
+
+    kpis = _kpi_row(
+        ("Equity (بدأ 100)", f"{equity:.1f}", eq_color),
+        ("إجمالي العائد",    f"{eq_gain:+.1f}%", eq_color),
+        ("Win Rate",         f"{win_rate:.0f}%", wr_color),
+        ("Avg Return 90d",   f"{avg_ret:+.1f}%", ret_color),
+        ("Profit Factor",    f"{pf:.2f}", "#1a3c5e"),
+        ("Trades",           str(n), "#333"),
+    )
+    return _card(
+        f"Walk-Forward Backtester — {n} صفقة حقيقية",
+        "📈",
+        kpis + delta_txt,
+        "walk_forward_report.html",
+        "التقرير الكامل",
+    )
+
+
 # ── Main Builder ──────────────────────────────────────────────────────────────
 
 def build_dashboard() -> str:
@@ -1176,12 +1410,18 @@ def build_dashboard() -> str:
         '<a href="adaptive_learning_report.html" style="color:#8fb8d8;text-decoration:none;">🧬 Adaptive</a>',
         '<a href="historical_backtest_report.html" style="color:#8fb8d8;text-decoration:none;">🏛️ History</a>',
         '<a href="gx_learning_report.html" style="color:#f0b840;text-decoration:none;font-weight:600;">⚡ GX Learning</a>',
+        '<a href="multi_period_report.html" style="color:#8fb8d8;text-decoration:none;">📅 Multi-Period</a>',
+        '<a href="smc_rl_report.html" style="color:#c8a8e8;text-decoration:none;font-weight:600;">🤖 RL Optimizer</a>',
+        '<a href="walk_forward_report.html" style="color:#98e8a0;text-decoration:none;font-weight:600;">📈 Walk-Forward</a>',
     ])
 
     body = f"""
+{_section_walk_forward()}
+{_section_smc_calibration()}
 {_section_research_notes()}
 {_section_backtest(bt)}
 {_section_behavior(beh)}
+{_section_multi_period()}
 {_section_quant()}
 {_section_weight_optimizer()}
 {_section_logic_analyzer()}

@@ -182,6 +182,22 @@ jobs:
           cp optimization_results.json web_deploy/ || true
         continue-on-error: true
 
+      - name: Run System Audit
+        if: always()
+        run: |
+          python system_audit.py || true
+          python - <<'PYEOF'
+          import glob, shutil
+          files = sorted(glob.glob("system_audit_report_*.html"))
+          if files:
+              shutil.copy(files[-1], "web_deploy/system_audit_report.html")
+              print(f"Copied {files[-1]} -> web_deploy/system_audit_report.html")
+          else:
+              print("WARNING: no system_audit_report_*.html found")
+          PYEOF
+          cp system_audit_results.json web_deploy/ || true
+        continue-on-error: true
+
       - name: Generate Master Dashboard
         if: always()
         run: |

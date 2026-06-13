@@ -677,12 +677,194 @@ def main(db_path: str = DB_PATH, dry_run: bool = False):
         backfill_derived_features(db_path=db_path)
         backfill_gate_derived(db_path=db_path)
         backfill_smc_scores(db_path=db_path)
+        backfill_binary_flags(db_path=db_path)
+
+
+def backfill_binary_flags(db_path: str = DB_PATH):
+    """
+    يحسب البيانات الثنائية (sweep_detected, htf_hh/hl, sv_hit, hvn_hit, rsi_div, ...)
+    لكل الإشارات من OHLCV الفعلية — بدون أي شرط على r2_ob.
+
+    الفرق عن backfill_smc_scores():
+      - يعالج كل الإشارات بغض النظر عن r2_ob (يشمل الـ 430 تاريخية)
+      - يُحدِّث البيانات الثنائية فقط — لا يمس r1-r8 (الصحيحة من signal_history.json)
+      - يستخدم CSVs المحلية أولاً
+    """
+    from main import (
+        swings, sc_liquidity, sc_htf, sc_div, sc_price,
+        calc_stopping_volume, calc_volume_profile,
+        calc_macd, calc_avwap,
+        PRICE_GATE_NORMAL, PRICE_GATE_WHITELIST, WHITELIST,
+    )
+
+    conn = get_conn(db_path)
+    rows = conn.execute("""
+        SELECT id, symbol, signal_date, price
+        FROM signals
+        ORDER BY symbol, signal_date
+    """).fetchall()
+    conn.close()
+
+    print(f"[binary_flags] حساب binary flags لـ {len(rows)} إشارة من OHLCV فعلية...")
+
+    by_symbol: dict[str, list] = defaultdict(list)
+    for row in rows:
+        by_symbol[row[1]].append(row)
+
+    total_ok = total_skip = total_err = 0
+
+    for symbol, sigs in by_symbol.items():
+        earliest  = min(date.fromisoformat(s[2]) for s in sigs)
+        dl_start  = (earliest - timedelta(days=200)).isoformat()
+        dl_end    = (TODAY + timedelta(days=1)).isoformat()
+
+        df_raw = _load_local_ohlcv(symbol, start_date=dl_start)
+        if df_raw is None:
+            try:
+                df_raw = yf.Ticker(symbol).history(
+                    start=dl_start, end=dl_end, auto_adjust=True,
+                )
+                if not df_raw.empty:
+                    df_raw.index = pd.to_datetime(df_raw.index).tz_localize(None)
+            except Exception as exc:
+                print(f"  ERROR {symbol}: {exc}")
+                total_err += len(sigs)
+                continue
+
+        if df_raw is None or df_raw.empty:
+            print(f"  لا بيانات لـ {symbol}")
+            total_skip += len(sigs)
+            continue
+
+        conn = get_conn(db_path)
+        for sig_id, sym, sig_date_str, sig_price in sigs:
+            sig_ts = pd.Timestamp(sig_date_str)
+            df_sig = df_raw[df_raw.index <= sig_ts].tail(110)
+
+            if len(df_sig) < 20:
+                total_skip += 1
+                continue
+
+            try:
+                close = df_sig["Close"]
+                cur   = float(sig_price) if sig_price else float(close.iloc[-1])
+
+                hi, lo, eq, buy_hi, sell_lo = swings(df_sig)
+                av, alo                     = calc_avwap(df_sig)
+
+                if cur >= eq:
+                    sweep_detected = wick_rejection = equal_lows = 0
+                    htf_hh = htf_hl = rsi_div = macd_div = 0
+                    sv_hit = hvn_hit = 0
+                    sv_score = hvn_score = sv_depth = 0.0
+                    price_ok = 0
+                    discount_depth = 0.0
+                else:
+                    r3, l3 = sc_liquidity(df_sig, cur)
+                    r4, l4 = sc_htf(df_sig)
+                    macd_result = calc_macd(close)
+                    ml          = macd_result[0]
+                    from main import sc_div as _sc_div
+                    r7, l7      = _sc_div(close, ml)
+                    sv_result   = calc_stopping_volume(df_sig, eq, lo)
+                    hvn_result  = calc_volume_profile(df_sig, eq, lo, buy_hi)
+                    r1, l1      = sc_price(cur, lo, hi, eq, buy_hi, sell_lo)
+
+                    sweep_detected = 1 if "Sweep"      in l3                        else 0
+                    wick_rejection = 1 if "wick"        in l3.lower()               else 0
+                    equal_lows     = 1 if "Equal Lows" in l3                        else 0
+                    htf_hh         = 1 if ("HH+HL" in l4 or "HH:True" in l4)       else 0
+                    htf_hl         = 1 if ("HH+HL" in l4 or "HL:True" in l4)       else 0
+                    rsi_div        = 1 if "RSI div"    in l7                        else 0
+                    macd_div       = 1 if "MACD div"   in l7                        else 0
+                    sv_hit         = 1 if (sv_result  and sv_result[0])             else 0
+                    hvn_hit        = 1 if (hvn_result and hvn_result[0])            else 0
+                    sv_score       = round(float(sv_result[1]),  3) if sv_result  else 0.0
+                    hvn_score      = round(float(hvn_result[1]), 3) if hvn_result else 0.0
+                    sv_depth       = (
+                        round((eq - sv_result[3]) / max(eq - lo, 0.001), 4)
+                        if sv_result and sv_result[0] else 0.0
+                    )
+                    PRICE_GATE    = PRICE_GATE_WHITELIST if sym in WHITELIST else PRICE_GATE_NORMAL
+                    price_ok      = 1 if r1 >= PRICE_GATE else 0
+                    discount_depth = round(
+                        1.0 - (cur - lo) / max(eq - lo, 0.001), 4
+                    )
+
+                with conn:
+                    conn.execute("""
+                        UPDATE signals SET
+                            sweep_detected = ?,
+                            wick_rejection = ?,
+                            equal_lows     = ?,
+                            htf_hh         = ?,
+                            htf_hl         = ?,
+                            rsi_div        = ?,
+                            macd_div       = ?,
+                            sv_hit         = ?,
+                            sv_score       = ?,
+                            hvn_hit        = ?,
+                            hvn_score      = ?,
+                            sv_depth       = ?,
+                            price_ok       = ?,
+                            discount_depth = ?
+                        WHERE id = ?
+                    """, (sweep_detected, wick_rejection, equal_lows,
+                          htf_hh, htf_hl, rsi_div, macd_div,
+                          sv_hit, sv_score, hvn_hit, hvn_score,
+                          sv_depth, price_ok, discount_depth,
+                          sig_id))
+
+                total_ok += 1
+                if any([sweep_detected, htf_hh, htf_hl, hvn_hit, rsi_div, macd_div]):
+                    print(f"  ✓ {sig_id[:32]:32s} "
+                          f"sweep={sweep_detected} wick={wick_rejection} "
+                          f"htf_hh={htf_hh} htf_hl={htf_hl} "
+                          f"hvn={hvn_hit} rsi_div={rsi_div} macd_div={macd_div}")
+
+            except Exception as exc:
+                print(f"  ERR {sig_id}: {exc}")
+                total_err += 1
+
+        conn.close()
+        print(f"  {symbol}: {len(sigs)} إشارة ✓")
+
+    print(f"\n[binary_flags] تمّ — OK={total_ok}  تخطّي={total_skip}  خطأ={total_err}")
+
+    # ملخص بعد التحديث
+    conn = get_conn(db_path)
+    row = conn.execute("""
+        SELECT
+            SUM(sweep_detected) as sweeps,
+            SUM(htf_hh)         as hh,
+            SUM(htf_hl)         as hl,
+            SUM(hvn_hit)        as hvn,
+            SUM(sv_hit)         as sv,
+            SUM(rsi_div)        as rsi,
+            SUM(macd_div)       as macd,
+            COUNT(*)            as total
+        FROM signals
+    """).fetchone()
+    conn.close()
+    print(f"\nDB flags summary (n={row[7]}):")
+    print(f"  sweep={row[0]}  htf_hh={row[1]}  htf_hl={row[2]}")
+    print(f"  hvn={row[3]}  sv={row[4]}  rsi_div={row[5]}  macd_div={row[6]}")
 
 
 if __name__ == "__main__":
-    dry = "--dry-run" in sys.argv
-    db  = DB_PATH
-    for a in sys.argv[1:]:
-        if a.startswith("--db="):
-            db = a[5:]
-    main(db_path=db, dry_run=dry)
+    import sys as _sys
+    # دعم تشغيل الدالة مباشرة: python backfill_research_db.py --flags-only
+    if "--flags-only" in _sys.argv:
+        db = DB_PATH
+        for a in _sys.argv[1:]:
+            if a.startswith("--db="):
+                db = a[5:]
+        backfill_binary_flags(db_path=db)
+    else:
+        dry = "--dry-run" in _sys.argv
+        db  = DB_PATH
+        for a in _sys.argv[1:]:
+            if a.startswith("--db="):
+                db = a[5:]
+        main(db_path=db, dry_run=dry)
+

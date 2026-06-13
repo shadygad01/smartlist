@@ -870,7 +870,7 @@ def _section_research_notes():
         top_feats = sorted(rf_imp.items(), key=lambda x: x[1], reverse=True)[:4]
         for feat, imp_v in top_feats:
             notes.append({
-                "source":    "📐 Quant · RF",
+                "source":    "🔬 Research · Quant",
                 "priority":  "MEDIUM",
                 "text":      f"<b>{feat}</b>: أهم مؤثر على MFE (RF importance={imp_v:.4f})",
                 "color":     "#4a235a",
@@ -1005,11 +1005,11 @@ def _section_research_notes():
             "delta_n":   _n_str(n_after),
         })
 
-    # ── 🏛️ Historical Backtest — flag analysis ────────────────────────────────
+    # ── 🏛️ Historical Backtest — flag analysis + combo analysis ─────────────
     hb = _load("historical_backtest_results.json")
     hb_base = hb.get("baseline", {})
     hb_base_pf = hb_base.get("pf", 1.0)
-    for fa in hb.get("flag_analysis", [])[:4]:
+    for fa in hb.get("flag_analysis", [])[:3]:
         flag  = fa.get("flag", "")
         yes   = fa.get("yes", {})
         no    = fa.get("no",  {})
@@ -1030,6 +1030,24 @@ def _section_research_notes():
             "conf":      _conf_str(n=y_n),
             "delta_ret": _ret_str(diff_mean),
             "delta_n":   (f"<span style='color:#555;font-size:11px'>{y_n}/{y_n+no_n}</span>"),
+        })
+    # Top combos from historical (2-way flag combinations)
+    for cb in hb.get("combo_analysis", [])[:3]:
+        combo  = cb.get("combo", "")
+        cb_n   = cb.get("n", 0)
+        cb_pf  = cb.get("pf", 0)
+        cb_wr  = cb.get("wr", 0)
+        cb_mfe = cb.get("mfe", 0)
+        cb_diff = cb.get("diff", 0)
+        notes.append({
+            "source":    "🏛️ Historical · Combo",
+            "priority":  "HIGH" if cb_diff > 0.02 else "MEDIUM",
+            "text":      (f"<b>{combo}</b>: PF={cb_pf:.2f} · WR={cb_wr:.0%} · "
+                          f"MFE={cb_mfe:.0%} · Δ={cb_diff*100:+.1f}%"),
+            "color":     "#0a3622" if cb_diff > 0 else "#721c24",
+            "conf":      _conf_str(n=cb_n),
+            "delta_ret": _ret_str(cb_diff),
+            "delta_n":   (f"<span style='color:#555;font-size:11px'>{cb_n} إشارة</span>"),
         })
 
     # ── ⚡ GX Learning — cross-validated high-confidence recommendations ────────

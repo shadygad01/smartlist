@@ -1030,6 +1030,75 @@ def build_html(gx: dict, stats: dict, perf: dict, perf_trends: dict,
       <strong style="color:#d6a740;">No changes to main.py should be made without explicit user approval.</strong></p>
     </div>"""
 
+    # ── Learning Accumulation Roadmap (always visible) ───────
+    phase = "Phase 1 — Baseline" if n_runs < 3 else \
+            "Phase 2 — Trend Forming" if n_runs < 7 else \
+            "Phase 3 — Validation Active" if n_runs < 15 else \
+            "Phase 4 — Mature Learning"
+    phase_pct = min(100, int((n_runs / 15) * 100))
+
+    roadmap_steps = [
+        (1,  3,  "Run 1-3",   "Baseline établi · Premières recommandations collectées"),
+        (3,  7,  "Run 3-7",   "Trends PF/WR visibles · Cross-validation entre modules"),
+        (7,  15, "Run 7-15",  "Validation des recommendations · Rejet des faux positifs"),
+        (15, 30, "Run 15-30", "Mature learning · Predictions fiables"),
+    ]
+    roadmap_html = ""
+    for start, end, label, desc in roadmap_steps:
+        done   = n_runs >= end
+        active = start <= n_runs < end
+        col    = "#6aa84f" if done else "#5b8dee" if active else "#333"
+        bg     = "#0d1a0d" if done else "#0d1428" if active else "#0d1420"
+        border = "#6aa84f" if done else "#5b8dee" if active else "#2a3540"
+        icon   = "✓" if done else "●" if active else "○"
+        roadmap_html += f"""
+        <div style="display:flex;gap:12px;margin-bottom:8px;padding:10px 14px;
+                    background:{bg};border-radius:6px;border-left:3px solid {border};">
+          <span style="color:{col};font-size:16px;min-width:18px;">{icon}</span>
+          <div>
+            <span style="color:{col};font-size:12px;font-weight:600;">{label}</span>
+            <span style="color:#8899aa;font-size:12px;margin-right:8px;"> — {desc}</span>
+          </div>
+        </div>"""
+
+    # Cross-reference top recs with historical combos
+    hb_combos = []
+    try:
+        import json as _json
+        with open("historical_backtest_results.json") as _f:
+            _hb = _json.load(_f)
+        hb_combos = _hb.get("combo_analysis", [])[:5]
+    except Exception:
+        pass
+
+    combo_support = ""
+    if hb_combos:
+        combo_support = "<div style='margin-top:12px;'><div style='color:#5b8dee;font-size:11px;letter-spacing:1px;margin-bottom:6px;'>TOP HISTORICAL COMBOS (2-WAY)</div>"
+        for cb in hb_combos[:5]:
+            diff = cb.get("diff", 0)
+            col  = "#6aa84f" if diff > 0.02 else "#d6a740" if diff > 0 else "#cc4444"
+            combo_support += (
+                f"<div style='color:{col};font-size:12px;padding:4px 0;'>"
+                f"<b>{cb.get('combo','')}</b> → PF={cb.get('pf',0):.2f} · "
+                f"WR={cb.get('wr',0):.0%} · MFE={cb.get('mfe',0):.0%} · "
+                f"Δ={diff*100:+.1f}% · n={cb.get('n',0)}</div>"
+            )
+        combo_support += "</div>"
+
+    roadmap_card_body = f"""
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <span style="color:#5b8dee;font-size:13px;font-weight:600;">{phase}</span>
+        <span style="color:#888;font-size:12px;">Run #{n_runs} / 30</span>
+        <div style="flex:1;background:#1a2535;border-radius:10px;height:6px;overflow:hidden;">
+          <div style="background:#5b8dee;width:{phase_pct}%;height:100%;border-radius:10px;"></div>
+        </div>
+        <span style="color:#5b8dee;font-size:12px;">{phase_pct}%</span>
+      </div>
+      {roadmap_html}
+    </div>
+    {combo_support}"""
+
     # ── Assemble ──────────────────────────────────────────────
     html = f"""<!DOCTYPE html>
 <html lang="ar" dir="ltr">
@@ -1059,6 +1128,7 @@ def build_html(gx: dict, stats: dict, perf: dict, perf_trends: dict,
     {_card("⑦ Overfitting Risk Assessment", ov_header + ov_rows, "#d6a740")}
     {_card("⑧ Self-Critique / Adversarial Review", critique_body, "#cc8844")}
     {_card("⑨ Executive Summary", exec_summary, "#5b8dee")}
+    {_card("⑩ Learning Accumulation Roadmap", roadmap_card_body, "#5b8dee")}
 
     <div style="text-align:center;color:#444;font-size:11px;margin-top:20px;padding:10px;">
       GX Learning Intelligence Layer · EGX30 Scanner · {TODAY}

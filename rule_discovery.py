@@ -705,7 +705,15 @@ def run_rule_discovery(db_path: str = DB_PATH, dry_run: bool = False) -> dict:
     print(f"  Significant DNA features: {sig_feats}")
 
     # ── Top fingerprints ──────────────────────────────────────────────────────
-    top_fp = significant[:TOP_FINGERPRINTS]
+    import math as _math
+    def _fp_score(r):
+        exp  = float(r.get("expectancy", 0) or 0)
+        n    = max(1, int(r.get("n", 1) or 1))
+        p    = float(r.get("p_value", 1.0) or 1.0)
+        sig_bonus = max(0.0, 1.0 - p * 10)   # bonus up to 1.0 for p < 0.10
+        return exp * _math.log1p(n) * (1.0 + sig_bonus)
+
+    top_fp = sorted(significant, key=_fp_score, reverse=True)[:TOP_FINGERPRINTS]
 
     # ── Source breakdown ──────────────────────────────────────────────────────
     source_counts: dict[str, int] = defaultdict(int)

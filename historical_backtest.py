@@ -343,6 +343,38 @@ def _flag_metrics(rows: list, flag: str) -> dict:
     return {"flag": flag, "yes": _metrics(yes), "no": _metrics(no)}
 
 
+def _combo_analysis(rows: list, flags: list) -> list:
+    """2-way flag combo analysis: finds combinations that outperform baseline."""
+    base_r20d = [r["r20d"] for r in rows if r.get("r20d") is not None]
+    if not base_r20d:
+        return []
+    baseline = float(np.mean(base_r20d))
+    combos = []
+    for i, f1 in enumerate(flags):
+        for f2 in flags[i+1:]:
+            yes_rows = [r for r in rows
+                        if r.get(f1) == 1 and r.get(f2) == 1
+                        and r.get("r20d") is not None]
+            no_rows  = [r for r in rows
+                        if not (r.get(f1) == 1 and r.get(f2) == 1)
+                        and r.get("r20d") is not None]
+            if len(yes_rows) < 8:
+                continue
+            yes_m = _metrics(yes_rows)
+            diff  = yes_m.get("mean", 0) - baseline
+            combos.append({
+                "combo":   f"{f1}=1 & {f2}=1",
+                "n":       yes_m.get("n", 0),
+                "mean":    yes_m.get("mean", 0),
+                "pf":      yes_m.get("pf",  0),
+                "wr":      yes_m.get("wr",  0),
+                "mfe":     yes_m.get("mfe", 0),
+                "diff":    round(diff, 4),
+            })
+    combos.sort(key=lambda x: x["mean"], reverse=True)
+    return [c for c in combos if c["n"] >= 10][:15]
+
+
 # ── Load from DB ──────────────────────────────────────────────────────────
 
 def _load_hist_signals(db_path: str) -> list:
@@ -580,7 +612,8 @@ def main():
 
     flags = ["sweep_detected", "wick_rejection", "equal_lows",
              "htf_hh", "htf_hl", "rsi_div", "macd_div", "sv_hit", "hvn_hit"]
-    flag_analysis = [_flag_metrics(all_rows, f) for f in flags]
+    flag_analysis  = [_flag_metrics(all_rows, f) for f in flags]
+    combo_analysis = _combo_analysis(all_rows, flags)
 
     print(f"\n  Binary Flag Analysis ({base.get('n',0):,} historical signals):")
     print(f"  {'Flag':<20} {'n(YES)':>7} {'ret(YES)':>9} {'n(NO)':>7} {'ret(NO)':>9} {'Δ':>8}")
@@ -603,7 +636,8 @@ def main():
         "elapsed_s":      round(elapsed, 1),
         "baseline":       base,
         "live_baseline":  live_base,
-        "flag_analysis":  flag_analysis,
+        "flag_analysis":   flag_analysis,
+        "combo_analysis":  combo_analysis,
         "symbol_perf":    {k: v for k, v in sorted(sym_perf.items(),
                            key=lambda x: x[1].get("mean", 0), reverse=True)},
     }

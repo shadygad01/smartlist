@@ -625,7 +625,6 @@ def save_edge_report(results: dict, out_dir: str = ".") -> str:
     out_path  = Path("reports") / filename
     out_path.parent.mkdir(parents=True, exist_ok=True)
     html = generate_edge_report(results)
-    os.makedirs("reports", exist_ok=True)
     out_path.write_text(html, encoding="utf-8")
     print(f"[Edge Report] Saved → {out_path}  ({len(html)//1024} KB)")
     return str(out_path)

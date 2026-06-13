@@ -1175,10 +1175,12 @@ def _section_smc_calibration():
     opt  = _load("optimization_results.json") or {}
     rl   = _load("smc_rl_weights.json") or {}
     rr   = _load("research_results.json") or {}
+    wf   = _load("walk_forward_state.json") or {}
 
     opt_weights = opt.get("optimal_weights", {})
     rl_weights  = rl.get("current_weights", {})
     rl_perf     = rl.get("last_perf", {})
+    wf_weights  = wf.get("weights", {})
     wt_suggest  = (rr.get("weight_suggestions") or {})
 
     def _w(d, key, default):
@@ -1190,29 +1192,32 @@ def _section_smc_calibration():
         sys_w  = SYSTEM_WEIGHTS.get(col, max_score)
         opt_w  = _w(opt_weights, col, sys_w)
         rl_w   = _w(rl_weights,  col, sys_w)
-        sugg   = (wt_suggest.get(col) or {}).get("suggested", sys_w)
+        wf_w   = _w(wf_weights,  col, sys_w)
 
-        # Color: green if RL agrees with opt (both higher than system), yellow if mixed
-        trend = ""
-        if rl_w > sys_w and opt_w > sys_w:
+        # Consensus: count how many algos agree on direction vs system
+        above = sum(1 for w in [opt_w, rl_w, wf_w] if w > sys_w)
+        below = sum(1 for w in [opt_w, rl_w, wf_w] if w < sys_w)
+        if above >= 2:
             trend = "<span style='color:#28a745'>▲</span>"
-        elif rl_w < sys_w and opt_w < sys_w:
+        elif below >= 2:
             trend = "<span style='color:#dc3545'>▼</span>"
         else:
             trend = "<span style='color:#ffc107'>~</span>"
 
-        opt_color  = "#28a745" if opt_w > sys_w else "#dc3545" if opt_w < sys_w else "#999"
-        rl_color   = "#28a745" if rl_w  > sys_w else "#dc3545" if rl_w  < sys_w else "#999"
+        opt_color = "#28a745" if opt_w > sys_w else "#dc3545" if opt_w < sys_w else "#999"
+        rl_color  = "#28a745" if rl_w  > sys_w else "#dc3545" if rl_w  < sys_w else "#999"
+        wf_color  = "#28a745" if wf_w  > sys_w else "#dc3545" if wf_w  < sys_w else "#999"
         rows += (
             f"<tr><td style='font-weight:600'>{name}</td>"
             f"<td style='text-align:center;color:#555'>{max_score}</td>"
             f"<td style='text-align:center'>{sys_w}</td>"
             f"<td style='text-align:center;color:{opt_color}'>{opt_w:.1f}</td>"
             f"<td style='text-align:center;color:{rl_color}'>{rl_w:.1f}</td>"
+            f"<td style='text-align:center;color:{wf_color}'>{wf_w:.1f}</td>"
             f"<td style='text-align:center'>{trend}</td></tr>"
         )
 
-    # Pattern + context rows
+    # Pattern + context rows (RL only has pattern_score)
     pat_rl = _w(rl_weights, "pattern_score", 10)
     rows += (
         f"<tr style='background:#f8f9fa'>"
@@ -1221,14 +1226,20 @@ def _section_smc_calibration():
         f"<td style='text-align:center;color:#999'>—</td>"
         f"<td style='text-align:center;color:#999'>—</td>"
         f"<td style='text-align:center;color:#2a6496'>{pat_rl:.1f}</td>"
+        f"<td style='text-align:center;color:#999'>—</td>"
         f"<td style='text-align:center'>~</td></tr>"
     )
 
-    # RL performance summary
+    # Performance badges
     top_q  = rl_perf.get("top_q_avg_90d", "—")
     disc   = rl_perf.get("discrimination", "—")
     n_data = rl_perf.get("n", "—")
     n_hist = len(rl.get("history", []))
+    wf_eq  = wf.get("equity", "—")
+    wf_trades = wf.get("trades", [])
+    wf_buys = [t for t in wf_trades if t.get("decision") == "BUY"] if wf_trades else []
+    wf_wins = sum(1 for t in wf_buys if (t.get("r_90d") or 0) > 0)
+    wf_wr   = round(100 * wf_wins / len(wf_buys), 1) if wf_buys else "—"
 
     rl_badge = ""
     if isinstance(top_q, (int, float)):
@@ -1236,10 +1247,22 @@ def _section_smc_calibration():
         rl_badge = (
             f"<div style='margin-top:10px;background:#f0f8ff;border-radius:6px;"
             f"padding:8px 12px;font-size:12px;color:#1a3c5e;border:1px solid #d0e8f8'>"
-            f"🤖 RL Engine (run #{n_hist}): Top-Q 90d = "
-            f"<strong style='color:{c}'>{top_q}%</strong> &nbsp;|&nbsp; "
-            f"Discrimination = <strong>{disc}%</strong> &nbsp;|&nbsp; "
-            f"Trained on {n_data} signals</div>"
+            f"🤖 RL (run #{n_hist}): Top-Q 90d = <strong style='color:{c}'>{top_q}%</strong>"
+            f" | Discrimination = <strong>{disc}%</strong>"
+            f" | Trained on {n_data} signals"
+            f"</div>"
+        )
+
+    wf_badge = ""
+    if isinstance(wf_eq, (int, float)):
+        eq_c = "#155724" if wf_eq > 200 else "#856404" if wf_eq > 100 else "#721c24"
+        wf_badge = (
+            f"<div style='margin-top:6px;background:#f0fff4;border-radius:6px;"
+            f"padding:8px 12px;font-size:12px;color:#1a5c3a;border:1px solid #c3e6cb'>"
+            f"📈 Walk-Fwd: {len(wf_buys)} BUY trades"
+            f" | Win rate = <strong style='color:{eq_c}'>{wf_wr}%</strong>"
+            f" | Equity 100 → <strong style='color:{eq_c}'>{wf_eq:.0f}</strong>"
+            f"</div>"
         )
 
     table = (
@@ -1249,11 +1272,12 @@ def _section_smc_calibration():
         "<th style='padding:7px 6px;text-align:center'>Max</th>"
         "<th style='padding:7px 6px;text-align:center'>System</th>"
         "<th style='padding:7px 6px;text-align:center'>Optimizer</th>"
-        "<th style='padding:7px 6px;text-align:center'>RL Weight</th>"
-        "<th style='padding:7px 6px;text-align:center'>Trend</th>"
+        "<th style='padding:7px 6px;text-align:center'>RL</th>"
+        "<th style='padding:7px 6px;text-align:center'>Walk-Fwd</th>"
+        "<th style='padding:7px 6px;text-align:center'>Consensus</th>"
         "</tr></thead>"
         f"<tbody>{rows}</tbody></table>"
-        + rl_badge
+        + rl_badge + wf_badge
     )
 
     return _card(

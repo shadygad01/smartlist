@@ -215,6 +215,7 @@ jobs:
             cache_metadata/
             gx_learning_memory.json
             discount_zone_patterns.json
+            smc_rl_weights.json
           key: intelligence-cache-${{ runner.os }}
           restore-keys: intelligence-cache-
 
@@ -232,6 +233,7 @@ jobs:
             cache_metadata/
             gx_learning_memory.json
             discount_zone_patterns.json
+            smc_rl_weights.json
           key: intelligence-cache-${{ runner.os }}
 
       - name: Collect intelligence artifacts
@@ -240,14 +242,16 @@ jobs:
           python - <<'PYEOF'
           import glob, shutil
           mappings = [
-              ("reports/edge_discovery_report_*.html",  "web_deploy/edge_report.html"),
-              ("reports/logic_analysis_report_*.html",  "web_deploy/logic_analysis_report.html"),
-              ("reports/weight_optimizer_report_*.html","web_deploy/weight_optimizer_report.html"),
-              ("reports/system_audit_report_*.html",    "web_deploy/system_audit_report.html"),
+              ("reports/edge_discovery_report_*.html",   "web_deploy/edge_report.html"),
+              ("reports/logic_analysis_report_*.html",   "web_deploy/logic_analysis_report.html"),
+              ("reports/weight_optimizer_report_*.html", "web_deploy/weight_optimizer_report.html"),
+              ("reports/system_audit_report_*.html",     "web_deploy/system_audit_report.html"),
               ("reports/adaptive_learning_report_*.html","web_deploy/adaptive_learning_report.html"),
-              ("reports/gx_learning_report_*.html",     "web_deploy/gx_learning_report.html"),
-              ("reports/decision_engine_report_*.html", "web_deploy/decision_engine_report.html"),
-              ("reports/discount_zone_report_*.html",   "web_deploy/discount_zone_report.html"),
+              ("reports/gx_learning_report_*.html",      "web_deploy/gx_learning_report.html"),
+              ("reports/decision_engine_report_*.html",  "web_deploy/decision_engine_report.html"),
+              ("reports/discount_zone_report_*.html",    "web_deploy/discount_zone_report.html"),
+              ("reports/multi_period_report_*.html",     "web_deploy/multi_period_report.html"),
+              ("reports/smc_rl_report_*.html",           "web_deploy/smc_rl_report.html"),
           ]
           for pattern, dest in mappings:
               files = sorted(glob.glob(pattern))
@@ -268,6 +272,7 @@ jobs:
           cp discount_zone_patterns.json        web_deploy/ || true
           cp changed_symbols.json               web_deploy/ || true
           cp incremental_execution_report.json  web_deploy/ || true
+          cp smc_rl_weights.json                web_deploy/ || true
 
       - name: Upload intelligence artifacts
         uses: actions/upload-artifact@v4

@@ -138,6 +138,20 @@ MODULES = {
         "outputs": ["discount_zone_patterns.json"],
         "min_interval_hours": 4,
     },
+    "multi_period_analyzer": {
+        "category": "C",
+        "cmd": ["python", "multi_period_analyzer.py"],
+        "inputs": ["egx_research.db"],
+        "outputs": [],
+        "min_interval_hours": 6,
+    },
+    "smc_rl_optimizer": {
+        "category": "C",
+        "cmd": ["python", "smc_rl_optimizer.py"],
+        "inputs": ["egx_research.db", "smc_rl_weights.json"],
+        "outputs": ["smc_rl_weights.json"],
+        "min_interval_hours": 6,
+    },
 
     # ── Category B: Conditional ───────────────────────────────────────────────
     "heatmap": {
@@ -175,6 +189,8 @@ INTELLIGENCE_TIER2 = [
     "gx_learning_layer",
     "decision_engine",
     "discount_zone_miner",
+    "multi_period_analyzer",
+    "smc_rl_optimizer",
 ]
 
 # Modules that belong to the research job (B)

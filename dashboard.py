@@ -441,6 +441,63 @@ def _section_weight_optimizer():
     return _card("Weight Optimizer — Quant Engine", "⚖️", content, "weight_optimizer_report.html")
 
 
+def _section_adaptive_learning():
+    """Card for adaptive learning engine — reads from adaptive_learning_results.json."""
+    res = _load("adaptive_learning_results.json")
+    if not res:
+        return _card("Adaptive Learning Engine", "🧬",
+                     "<p style='color:#aaa;font-size:13px;'>لا توجد نتائج بعد</p>",
+                     "adaptive_learning_report.html")
+
+    health   = res.get("health_score", 0)
+    n_sig    = res.get("n_signals", 0)
+    baseline = res.get("baseline", {})
+    base_ret = baseline.get("mean", 0)
+    base_pf  = baseline.get("pf", 0)
+    top3     = res.get("top3", [])
+    drivers  = res.get("loss_drivers", [])
+    mismatches = res.get("cross_check_mismatches", [])
+
+    health_color = "#155724" if health >= 70 else "#856404" if health >= 45 else "#721c24"
+    kpis = _kpi_row(
+        ("Health Score", f"{health}/100", health_color),
+        ("إشارات", str(n_sig), "#333"),
+        ("Baseline Return", f"{base_ret*100:.1f}%", "#1a3c5e"),
+        ("Profit Factor", f"{base_pf:.2f}", "#155724"),
+        ("Top Improvements", str(len(top3)), "#0d6efd"),
+        ("Cross Mismatches", str(len(mismatches)), "#856404" if mismatches else "#155724"),
+    )
+
+    # Top improvement highlight
+    imp_txt = ""
+    if top3:
+        t = top3[0]
+        imp_txt = (
+            f"<div style='margin-top:8px;font-size:12px;background:#d4edda;"
+            f"padding:7px 10px;border-radius:6px;color:#155724;'>"
+            f"🥇 <strong>{t['name']}</strong> — "
+            f"<span style='font-weight:700'>+{t['delta_ret']*100:.2f}%</span> return, "
+            f"PF={t['pf']:.2f}, WF={'✓' if t['wf_consistent'] else '✗'}, "
+            f"retention={t['retention']*100:.0f}%</div>"
+        )
+
+    # Top loss driver
+    driver_txt = ""
+    top_drv = sorted(drivers, key=lambda d: d.get("severity", 0), reverse=True)
+    if top_drv:
+        d = top_drv[0]
+        driver_txt = (
+            f"<div style='margin-top:8px;font-size:12px;background:#fff3cd;"
+            f"padding:7px 10px;border-radius:6px;color:#856404;'>"
+            f"⚠️ Loss driver: <strong>{d['driver']}</strong> — "
+            f"severity={d['severity']}/100, freq={d['freq_pct']:.1f}%</div>"
+        )
+
+    content = kpis + imp_txt + driver_txt
+    return _card("Adaptive Learning Engine — Self-Improving Analysis", "🧬",
+                 content, "adaptive_learning_report.html")
+
+
 def _section_system_audit():
     """Card for system audit report — reads from system_audit_results.json."""
     res = _load("system_audit_results.json")
@@ -913,6 +970,7 @@ def build_dashboard() -> str:
         '<a href="edge_report.html" style="color:#8fb8d8;text-decoration:none;">🧠 Edge</a>',
         '<a href="system_audit_report.html" style="color:#8fb8d8;text-decoration:none;">🕵️ Audit</a>',
         '<a href="behavior_report.html" style="color:#8fb8d8;text-decoration:none;">🔍 Behavior</a>',
+        '<a href="adaptive_learning_report.html" style="color:#8fb8d8;text-decoration:none;">🧬 Adaptive</a>',
     ])
 
     body = f"""
@@ -923,6 +981,7 @@ def build_dashboard() -> str:
 {_section_weight_optimizer()}
 {_section_logic_analyzer()}
 {_section_system_audit()}
+{_section_adaptive_learning()}
 {_section_research(rr)}
 {_section_edge(ed)}
 """

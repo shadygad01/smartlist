@@ -5,7 +5,10 @@ EGX Scanner — Comprehensive Backtest Analysis
 Conservative fund manager perspective: target max CAGR with MDD <= 10-15%
 
 Data: v_all_signals DB view (1,051 confirmed buy signals, 2021-2026)
-Uses r20d as realized return, mfe_20d as peak gain — real measured outcomes.
+Exit model: Fibonacci ascending targets (same as live system).
+  Targets from entry: +12%, +23.6%, +38.2%, +50%, +61.8%, +100%, +150%, +200%
+  Exit = highest Fibonacci level hit within 60 trading days.
+  Fallback = r20d if no target reached.
 """
 
 import json
@@ -20,13 +23,45 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH  = os.path.join(BASE_DIR, "egx_research.db")
 
+# Fibonacci targets (same as main.py add_position)
+FIB_TARGETS = [0.12, 0.236, 0.382, 0.50, 0.618, 1.00, 1.50, 2.00]
 
-def _mfe_to_outcome(mfe: float) -> str:
-    """Map mfe_20d to outcome category (same buckets as Behavior Report)."""
-    if   mfe >= 0.20: return "large"
-    elif mfe >= 0.08: return "medium"
-    elif mfe >= 0.04: return "small"
-    else:             return "flat"
+
+def _fib_exit(mfe_20: float, mfe_40: float, mfe_60: float, r20: float) -> float:
+    """
+    Simulate exit at highest Fibonacci level hit within 60 trading days.
+    Checks mfe_20d → mfe_40d → mfe_60d in order, exits at highest level hit.
+    Falls back to r20d if no Fibonacci target (+12% minimum) was reached.
+    """
+    # Best MFE across available windows (prefer longer if data exists)
+    mfe_windows = []
+    if mfe_20 is not None: mfe_windows.append(float(mfe_20))
+    if mfe_40 is not None: mfe_windows.append(float(mfe_40))
+    if mfe_60 is not None: mfe_windows.append(float(mfe_60))
+
+    best_mfe = max(mfe_windows) if mfe_windows else 0.0
+
+    # Find highest Fibonacci level hit
+    for fib in reversed(FIB_TARGETS):   # iterate high → low
+        if best_mfe >= fib:
+            return fib
+
+    # No target hit — use actual 20-day return (could be negative)
+    return float(r20) if r20 is not None else 0.0
+
+
+def _fib_to_outcome(gain: float) -> str:
+    """
+    Outcome category aligned to Fibonacci structure:
+      flat   : gain < 12%   (no target hit)
+      small  : 12–23.6%     (first target only)
+      medium : 23.6–61.8%   (second or third target)
+      large  : ≥ 61.8%      (fourth+ target)
+    """
+    if   gain >= 0.618: return "large"
+    elif gain >= 0.236: return "medium"
+    elif gain >= 0.12:  return "small"
+    else:               return "flat"
 
 
 def _load_signals_from_db() -> list[dict]:
@@ -43,8 +78,8 @@ def _load_signals_from_db() -> list[dict]:
     else:
         rows = conn.execute("""
             SELECT s.symbol, s.signal_date, s.raw_score, s.r1_price,
-                   b.r20d, b.mfe_20d, b.mae_20d, b.classification,
-                   b.bq_score, b.r5d, b.r10d
+                   b.r20d, b.mfe_20d, b.mae_20d, b.mfe_40d, b.mfe_60d,
+                   b.classification, b.bq_score, b.r5d, b.r10d
             FROM signals s
             JOIN bottom_quality b ON b.signal_id = s.id
             WHERE b.r20d IS NOT NULL
@@ -54,10 +89,16 @@ def _load_signals_from_db() -> list[dict]:
 
     signals = []
     for r in rows:
-        row = dict(r)
-        mfe = float(row.get("mfe_20d") or 0)
-        r20 = float(row.get("r20d") or 0)
+        row   = dict(r)
+        mfe20 = row.get("mfe_20d")
+        mfe40 = row.get("mfe_40d")
+        mfe60 = row.get("mfe_60d")
+        r20   = row.get("r20d")
         is_ram = bool(row.get("is_ramadan", 0))
+
+        fib_gain = _fib_exit(mfe20, mfe40, mfe60, r20)
+        outcome  = _fib_to_outcome(fib_gain)
+
         outcome_date = None
         try:
             sig_d = date.fromisoformat(row["signal_date"])
@@ -66,29 +107,31 @@ def _load_signals_from_db() -> list[dict]:
             pass
 
         signals.append({
-            "symbol":       row["symbol"],
-            "signal_date":  row["signal_date"],
-            "outcome_date": outcome_date,
-            "signal":       row.get("source", "live").capitalize(),
-            "smc_score":    float(row.get("raw_score") or 0),
+            "symbol":        row["symbol"],
+            "signal_date":   row["signal_date"],
+            "outcome_date":  outcome_date,
+            "signal":        row.get("source", "live").capitalize(),
+            "smc_score":     float(row.get("raw_score") or 0),
             "pattern_score": 0,
-            "price":        float(row.get("close_price") or 0),
-            "outcome":      _mfe_to_outcome(mfe),
-            "outcome_gain": r20,
-            "peak_gain":    mfe,
-            "source":       row.get("source", "live"),
+            "price":         float(row.get("close_price") or 0),
+            "outcome":       outcome,
+            "outcome_gain":  fib_gain,
+            "peak_gain":     float(mfe20 or 0),
+            "source":        row.get("source", "live"),
             "context": {
                 "is_ramadan": is_ram,
                 "cbe_window": False,
-                "season": "normal",
+                "season":     "normal",
             },
-            # extra DB fields for richer analysis
-            "_r20d":          r20,
-            "_mfe_20d":       mfe,
-            "_mae_20d":       float(row.get("mae_20d") or 0),
-            "_bq_score":      float(row.get("bq_score") or 0),
-            "_r1_price":      float(row.get("r1_price") or 0),
+            "_r20d":           float(r20 or 0),
+            "_mfe_20d":        float(mfe20 or 0),
+            "_mfe_40d":        float(mfe40 or 0),
+            "_mfe_60d":        float(mfe60 or 0),
+            "_mae_20d":        float(row.get("mae_20d") or 0),
+            "_bq_score":       float(row.get("bq_score") or 0),
+            "_r1_price":       float(row.get("r1_price") or 0),
             "_classification": row.get("classification", ""),
+            "_fib_exit_pct":   round(fib_gain * 100, 1),
         })
     return signals
 
@@ -101,19 +144,20 @@ print(f"Total signals: {len(ALL_SIGNALS)}, Resolved: {len(RESOLVED)}")
 
 # ── Outcome mappings ──────────────────────────────────────────────────────────
 # Use r20d (actual 20-day return) as the realized gain — no category medians.
+# Fibonacci-aligned category medians (used only if outcome_gain is missing)
 OUTCOME_GAIN_MAP = {
-    "flat":   0.015,
-    "small":  0.066,
-    "medium": 0.139,
-    "large":  0.293,
+    "flat":   0.00,    # below +12%, use 0 as conservative estimate
+    "small":  0.12,    # hit first target exactly
+    "medium": 0.30,    # midpoint 23.6–61.8%
+    "large":  0.80,    # hit 61.8%+ level
 }
 
 def get_gain(sig):
-    """Return realized r20d. Falls back to category median if missing."""
+    """Return Fibonacci-simulated exit gain. Falls back to category median if missing."""
     g = sig.get("outcome_gain")
     if g is not None:
         return float(g)
-    return OUTCOME_GAIN_MAP.get(sig.get("outcome", "flat"), 0.015)
+    return OUTCOME_GAIN_MAP.get(sig.get("outcome", "flat"), 0.0)
 
 def is_win(sig, threshold=0.10):
     """Conservative win definition: gain >= threshold (default 10%)."""

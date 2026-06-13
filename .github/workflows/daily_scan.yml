@@ -247,6 +247,7 @@ jobs:
         run: |
           python dashboard.py || true
           cp dashboard.html web_deploy/index.html || true
+          cp scan_status.json web_deploy/ || true
         continue-on-error: true
 
       - name: Save research results

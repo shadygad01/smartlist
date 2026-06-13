@@ -1018,7 +1018,9 @@ def build_dashboard() -> str:
     ed  = _load(EDGE_JSON)
     beh = _load_behavior_kpis()
 
-    now = datetime.now().strftime("%A, %d %B %Y — %H:%M:%S Cairo")
+    now     = datetime.now()
+    now_str = now.strftime("%A, %d %B %Y — %H:%M:%S Cairo")
+    now_iso = now.strftime("%Y-%m-%dT%H:%M:%S")   # embedded as JS constant
 
     nav_links = " &nbsp;|&nbsp; ".join([
         '<a href="heatmap.html" style="color:#8fb8d8;text-decoration:none;">🗺️ Heatmap</a>',
@@ -1032,6 +1034,7 @@ def build_dashboard() -> str:
         '<a href="behavior_report.html" style="color:#8fb8d8;text-decoration:none;">🔍 Behavior</a>',
         '<a href="adaptive_learning_report.html" style="color:#8fb8d8;text-decoration:none;">🧬 Adaptive</a>',
         '<a href="historical_backtest_report.html" style="color:#8fb8d8;text-decoration:none;">🏛️ History</a>',
+        '<a href="gx_learning_report.html" style="color:#f0b840;text-decoration:none;font-weight:600;">⚡ GX Learning</a>',
     ])
 
     body = f"""
@@ -1078,10 +1081,14 @@ def build_dashboard() -> str:
 <body>
 <div class="header">
   <h1>EGX Scanner — Dashboard</h1>
-  <div class="sub">آخر تحديث: {now}</div>
+  <div class="sub">
+    آخر تحديث: {now_str}
+    &nbsp;·&nbsp;
+    <span id="age-label" style="opacity:.85;">جاري الحساب...</span>
+  </div>
   <div class="nav">{nav_links}</div>
   <div id="countdown-box">
-    <div class="label">⏱ التحديث القادم</div>
+    <div class="label" id="cd-label">⏱ التحديث القادم</div>
     <div class="timer" id="cdtimer">--:--:--</div>
     <div class="status" id="cdstatus">جاري الحساب...</div>
   </div>
@@ -1092,127 +1099,155 @@ def build_dashboard() -> str:
 <div class="footer">EGX30 Self-Learning Scanner &nbsp;·&nbsp; البيانات تُحدَّث مع كل scan يومي</div>
 
 <script>
-// ── EGX Scan Schedule (Cairo time = UTC+3 in summer / UTC+2 in winter) ───────
-// Market scans: every 5 min, Sun-Thu 10:00-14:30 Cairo
-// Daily report: Sun-Thu 07:00 Cairo
-// We approximate Cairo = UTC+2 (conservative, works year-round)
-const CAIRO_OFFSET = 2; // hours ahead of UTC
+// ════════════════════════════════════════════════════════════
+// EGX Smart Status System
+// – Shows "Updated X minutes ago" in real time
+// – Polls scan_status.json every 30 s; auto-reloads on new data
+// – Countdown to next scheduled scan
+// ════════════════════════════════════════════════════════════
 
+const CAIRO_OFFSET        = 2;           // UTC+2 (conservative year-round)
+const WORKFLOW_DURATION_S = 12 * 60;     // typical workflow: ~12 min
+const POLL_INTERVAL_MS    = 30_000;      // check for updates every 30 s
+const DATA_GENERATED_AT   = new Date("{now_iso}");   // embedded at build time
+
+let knownTimestamp = DATA_GENERATED_AT.toISOString();
+let reloadScheduled = false;
+
+// ── Helpers ──────────────────────────────────────────────────
 function cairoNow() {{
-  const now = new Date();
-  return new Date(now.getTime() + CAIRO_OFFSET * 3600000);
+  return new Date(Date.now() + CAIRO_OFFSET * 3600_000);
+}}
+function fmt(sec) {{
+  const h = String(Math.floor(sec / 3600)).padStart(2,'0');
+  const m = String(Math.floor((sec % 3600) / 60)).padStart(2,'0');
+  const s = String(sec % 60).padStart(2,'0');
+  return `${{h}}:${{m}}:${{s}}`;
+}}
+function agoLabel(ms) {{
+  const s = Math.floor(ms / 1000);
+  if (s < 60)  return `منذ ${{s}} ثانية`;
+  if (s < 3600) return `منذ ${{Math.floor(s/60)}} دقيقة`;
+  return `منذ ${{Math.floor(s/3600)}} ساعة`;
 }}
 
+// ── Scheduled next-scan calculator ──────────────────────────
 function nextScanTime() {{
   const now = cairoNow();
-  const dow = now.getUTCDay(); // 0=Sun,1=Mon,...,6=Sat
-  const h   = now.getUTCHours();
-  const m   = now.getUTCMinutes();
-  const totalMin = h * 60 + m;
+  const dow  = now.getUTCDay();
+  const hm   = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const isWD = dow >= 0 && dow <= 4;
 
-  const isWeekday = dow >= 0 && dow <= 4; // Sun-Thu
-
-  // Helper: next occurrence of (target weekday + hour + min) in UTC+CAIRO_OFFSET
-  function nextOccurrence(targetH, targetM, anyWeekday) {{
-    const candidate = new Date(now);
-    candidate.setUTCHours(targetH - CAIRO_OFFSET, targetM, 0, 0);
-    if (candidate <= now || (!anyWeekday && !isWeekday)) {{
-      candidate.setUTCDate(candidate.getUTCDate() + 1);
-    }}
-    // Advance past weekend if needed
-    while (candidate.getUTCDay() > 4) {{
-      candidate.setUTCDate(candidate.getUTCDate() + 1);
-    }}
-    return candidate;
+  function advance(t) {{
+    while (t.getUTCDay() > 4) t.setUTCDate(t.getUTCDate() + 1);
+    return t;
+  }}
+  function next(h, m) {{
+    const t = new Date(now);
+    t.setUTCHours(h - CAIRO_OFFSET, m, 0, 0);
+    if (t <= now) t.setUTCDate(t.getUTCDate() + 1);
+    return advance(t);
   }}
 
-  if (isWeekday) {{
-    // During market scan window (10:00-14:30 Cairo)
-    if (totalMin >= 600 && totalMin < 870) {{
-      // Next 5-min mark
-      const nextMin = Math.ceil((totalMin + 1) / 5) * 5;
+  if (isWD) {{
+    if (hm >= 600 && hm < 870) {{             // 10:00–14:30 → every 5 min
+      const nm = Math.ceil((hm + 1) / 5) * 5;
       const t = new Date(now);
-      t.setUTCHours(Math.floor(nextMin / 60) - CAIRO_OFFSET, nextMin % 60, 0, 0);
-      if (t > now) return {{ time: t, label: "Scan السوق (كل 5 دقائق)" }};
+      t.setUTCHours(Math.floor(nm/60) - CAIRO_OFFSET, nm%60, 0, 0);
+      if (t > now) return {{time:t, label:"Scan السوق كل 5 دقائق"}};
     }}
-    // After 14:30, next is daily report at 07:00 tomorrow
-    if (totalMin >= 870) {{
-      return {{ time: nextOccurrence(7, 0, false), label: "التقرير اليومي 07:00" }};
-    }}
-    // Before 10:00 today
-    if (totalMin < 420) {{
-      // Is it before 07:00 daily?
-      const daily = new Date(now);
-      daily.setUTCHours(7 - CAIRO_OFFSET, 0, 0, 0);
-      if (daily > now) return {{ time: daily, label: "التقرير اليومي 07:00" }};
-    }}
-    // Between 07:00 and 10:00 → next is market open at 10:00
-    const market = new Date(now);
-    market.setUTCHours(10 - CAIRO_OFFSET, 0, 0, 0);
-    if (market > now) return {{ time: market, label: "بداية scan السوق 10:00" }};
+    if (hm < 420) {{ const t = next(7,0);  if (t>now) return {{time:t, label:"التقرير اليومي 07:00"}}; }}
+    if (hm < 600) {{ const t = next(10,0); if (t>now) return {{time:t, label:"بداية Scan السوق 10:00"}}; }}
+    return {{time: next(7,0), label:"التقرير اليومي 07:00"}};
   }}
-
-  // Weekend or fallback → next Sunday 07:00
-  return {{ time: nextOccurrence(7, 0, false), label: "التقرير اليومي" }};
+  return {{time: next(7,0), label:"التقرير اليومي الأحد"}};
 }}
 
-function fmt(sec) {{
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  return String(h).padStart(2,'0') + ':' +
-         String(m).padStart(2,'0') + ':' +
-         String(s).padStart(2,'0');
+// ── Poll scan_status.json for real data changes ──────────────
+async function pollForUpdates() {{
+  try {{
+    const url = `scan_status.json?_=${{Date.now()}}`;
+    const r   = await fetch(url, {{cache:'no-store'}});
+    if (!r.ok) return;
+    const data = await r.json();
+    const ts   = data.generated_at || data.updated_at || '';
+    if (ts && ts !== knownTimestamp && !reloadScheduled) {{
+      reloadScheduled = true;
+      const box = document.getElementById('countdown-box');
+      box.style.background = 'rgba(0,200,100,0.25)';
+      document.getElementById('cd-label').textContent  = '✅ بيانات جديدة متاحة!';
+      document.getElementById('cdtimer').textContent   = '🔄';
+      document.getElementById('cdstatus').textContent  = 'إعادة تحميل الصفحة...';
+      setTimeout(() => location.reload(true), 3000);
+    }}
+  }} catch(e) {{/* network error — ignore */}}
 }}
 
-// Workflow takes ~10 min to run + 2 min Pages deploy
-const WORKFLOW_DURATION_SEC = 12 * 60;
-
-let scheduledTime = null;
-let phase = 'countdown'; // 'countdown' | 'generating' | 'reloading'
-
+// ── Main tick (runs every second) ────────────────────────────
 function tick() {{
-  const now_ = new Date();
-  const next = nextScanTime();
+  const now = new Date();
 
-  if (phase === 'countdown') {{
-    if (!scheduledTime) scheduledTime = next.time;
-    const diffMs  = scheduledTime - now_;
-    const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+  // "Updated X ago" in header
+  const ageSec = Math.floor((now - DATA_GENERATED_AT) / 1000);
+  if (ageSec >= 0) {{
+    document.getElementById('age-label').textContent =
+      `${{agoLabel(now - DATA_GENERATED_AT)}}`;
+  }}
 
-    document.getElementById('cdtimer').textContent = fmt(diffSec);
-    document.getElementById('cdstatus').textContent = next.label;
+  // Countdown box
+  if (reloadScheduled) return;
 
-    if (diffSec <= 0) {{
-      phase = 'generating';
-      scheduledTime = now_; // mark start of generating phase
-    }}
-  }} else if (phase === 'generating') {{
-    const elapsedSec = Math.floor((now_ - scheduledTime) / 1000);
-    const remainSec  = Math.max(0, WORKFLOW_DURATION_SEC - elapsedSec);
-    const progress   = Math.min(100, Math.floor(elapsedSec / WORKFLOW_DURATION_SEC * 100));
+  const {{time: nextTime, label: nextLabel}} = nextScanTime();
+  const diffSec = Math.max(0, Math.floor((nextTime - now) / 1000));
 
-    document.getElementById('cdtimer').textContent = fmt(remainSec);
-    document.getElementById('cdstatus').textContent =
-      `⚙️ جاري توليد التقرير... ${{progress}}%`;
+  // If we're within the expected workflow window after a scheduled scan start
+  const secSinceData = Math.floor((now - DATA_GENERATED_AT) / 1000);
+  const inProgress   = secSinceData > 0 && secSinceData < WORKFLOW_DURATION_S &&
+                       diffSec > WORKFLOW_DURATION_S;
 
-    // Pulse the box orange during generation
-    document.getElementById('countdown-box').style.background = 'rgba(255,165,0,0.25)';
-
-    if (remainSec <= 0) {{
-      phase = 'reloading';
-      document.getElementById('cdtimer').textContent = '🔄';
-      document.getElementById('cdstatus').textContent = 'جاري تحميل التحديث...';
-      setTimeout(() => location.reload(true), 5000);
-    }}
+  if (inProgress) {{
+    // Workflow may be running — show progress estimate
+    const progress = Math.min(99, Math.floor(secSinceData / WORKFLOW_DURATION_S * 100));
+    const remain   = Math.max(0, WORKFLOW_DURATION_S - secSinceData);
+    document.getElementById('cd-label').textContent  = '⚙️ جاري الـ Scan...';
+    document.getElementById('cdtimer').textContent   = fmt(remain);
+    document.getElementById('cdstatus').textContent  = `التقرير القادم: ${{progress}}% تقريباً`;
+    document.getElementById('countdown-box').style.background = 'rgba(255,165,0,0.20)';
+  }} else {{
+    document.getElementById('cd-label').textContent  = '⏱ التحديث القادم';
+    document.getElementById('cdtimer').textContent   = fmt(diffSec);
+    document.getElementById('cdstatus').textContent  = nextLabel;
+    document.getElementById('countdown-box').style.background = 'rgba(255,255,255,0.12)';
   }}
 }}
 
+// ── Boot ─────────────────────────────────────────────────────
 tick();
 setInterval(tick, 1000);
+setInterval(pollForUpdates, POLL_INTERVAL_MS);
+pollForUpdates();   // immediate first check
 </script>
 </body>
 </html>"""
+
+
+def _write_status_json():
+    """Write scan_status.json — polled by dashboard JS for live updates."""
+    n = 0
+    try:
+        import sqlite3
+        conn = sqlite3.connect(DB_PATH)
+        n = conn.execute("SELECT COUNT(*) FROM v_all_signals").fetchone()[0]
+        conn.close()
+    except Exception:
+        pass
+    status = {
+        "generated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "n_signals":    n,
+        "date":         date.today().isoformat(),
+    }
+    with open("scan_status.json", "w") as f:
+        json.dump(status, f)
 
 
 def main():
@@ -1220,6 +1255,7 @@ def main():
     html = build_dashboard()
     with open(DASHBOARD_FILE, "w", encoding="utf-8") as f:
         f.write(html)
+    _write_status_json()
     print(f"[Dashboard] Saved → {DASHBOARD_FILE}")
 
 

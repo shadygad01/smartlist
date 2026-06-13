@@ -4,58 +4,112 @@ EGX Scanner — Comprehensive Backtest Analysis
 ==============================================
 Conservative fund manager perspective: target max CAGR with MDD <= 10-15%
 
-Data: signal_log.json (2774 signals, 2024-09-01 to 2026-05-18)
-Outcome categories:
-  flat   : peak_gain < 4%   (effectively neutral/minor loss)
-  small  : peak_gain 4-10%  (partial win)
-  medium : peak_gain 10-20% (solid win)
-  large  : peak_gain > 20%  (home run)
-
-Since smc_score and pattern_score are 0 for all backfill entries,
-we use peak_gain as the primary performance metric and
-outcome_gain as the realized return metric.
-r1 is proxied from the ratio of price_in_discount_zone (not stored, use
-outcome categories as natural buckets).
+Data: v_all_signals DB view (1,051 confirmed buy signals, 2021-2026)
+Uses r20d as realized return, mfe_20d as peak gain — real measured outcomes.
 """
 
 import json
 import math
+import sqlite3
 import statistics
 from collections import defaultdict
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import os
 
-# ── Load data ──────────────────────────────────────────────────────────────────
+# ── Load data from DB (v_all_signals = 639 live + 412 historical) ─────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH  = os.path.join(BASE_DIR, "egx_research.db")
 
-with open(os.path.join(BASE_DIR, "signal_log.json"), "r", encoding="utf-8") as f:
-    raw = json.load(f)
 
-ALL_SIGNALS = raw["signals"]
+def _mfe_to_outcome(mfe: float) -> str:
+    """Map mfe_20d to outcome category (same buckets as Behavior Report)."""
+    if   mfe >= 0.20: return "large"
+    elif mfe >= 0.08: return "medium"
+    elif mfe >= 0.04: return "small"
+    else:             return "flat"
+
+
+def _load_signals_from_db() -> list[dict]:
+    """Load all mature signals from v_all_signals, convert to backtest format."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    view_ok = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='view' AND name='v_all_signals'"
+    ).fetchone()
+    if view_ok:
+        rows = conn.execute(
+            "SELECT * FROM v_all_signals WHERE r20d IS NOT NULL ORDER BY signal_date"
+        ).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT s.symbol, s.signal_date, s.raw_score, s.r1_price,
+                   b.r20d, b.mfe_20d, b.mae_20d, b.classification,
+                   b.bq_score, b.r5d, b.r10d
+            FROM signals s
+            JOIN bottom_quality b ON b.signal_id = s.id
+            WHERE b.r20d IS NOT NULL
+            ORDER BY s.signal_date
+        """).fetchall()
+    conn.close()
+
+    signals = []
+    for r in rows:
+        row = dict(r)
+        mfe = float(row.get("mfe_20d") or 0)
+        r20 = float(row.get("r20d") or 0)
+        is_ram = bool(row.get("is_ramadan", 0))
+        outcome_date = None
+        try:
+            sig_d = date.fromisoformat(row["signal_date"])
+            outcome_date = (sig_d + timedelta(days=28)).isoformat()
+        except Exception:
+            pass
+
+        signals.append({
+            "symbol":       row["symbol"],
+            "signal_date":  row["signal_date"],
+            "outcome_date": outcome_date,
+            "signal":       row.get("source", "live").capitalize(),
+            "smc_score":    float(row.get("raw_score") or 0),
+            "pattern_score": 0,
+            "price":        float(row.get("close_price") or 0),
+            "outcome":      _mfe_to_outcome(mfe),
+            "outcome_gain": r20,
+            "peak_gain":    mfe,
+            "source":       row.get("source", "live"),
+            "context": {
+                "is_ramadan": is_ram,
+                "cbe_window": False,
+                "season": "normal",
+            },
+            # extra DB fields for richer analysis
+            "_r20d":          r20,
+            "_mfe_20d":       mfe,
+            "_mae_20d":       float(row.get("mae_20d") or 0),
+            "_bq_score":      float(row.get("bq_score") or 0),
+            "_r1_price":      float(row.get("r1_price") or 0),
+            "_classification": row.get("classification", ""),
+        })
+    return signals
+
+
+ALL_SIGNALS = _load_signals_from_db()
 
 # ── Filter only resolved (non-pending) signals ─────────────────────────────────
 RESOLVED = [s for s in ALL_SIGNALS if s.get("outcome") not in ("pending", None)]
 print(f"Total signals: {len(ALL_SIGNALS)}, Resolved: {len(RESOLVED)}")
 
 # ── Outcome mappings ──────────────────────────────────────────────────────────
-# For portfolio simulation, map outcome categories to realized gain estimates:
-#   flat   → use outcome_gain (typically 0-4%)
-#   small  → use outcome_gain (4-10%)
-#   medium → use outcome_gain (10-20%)
-#   large  → use outcome_gain (>20%)
-# Also define "win" = medium or large (gain >= 10%) for conservative fund view
-# "partial_win" = small (4-10%)
-# "loss" = flat with negative outcome_gain
-
+# Use r20d (actual 20-day return) as the realized gain — no category medians.
 OUTCOME_GAIN_MAP = {
-    "flat": 0.015,    # median ~1.2% - essentially flat
-    "small": 0.066,   # median ~6.6%
-    "medium": 0.139,  # median ~13.9%
-    "large": 0.293,   # median ~29.3%
+    "flat":   0.015,
+    "small":  0.066,
+    "medium": 0.139,
+    "large":  0.293,
 }
 
 def get_gain(sig):
-    """Return realized outcome_gain, falling back to category median."""
+    """Return realized r20d. Falls back to category median if missing."""
     g = sig.get("outcome_gain")
     if g is not None:
         return float(g)
@@ -626,8 +680,8 @@ report = {
         "meets_drawdown_target": abs(mdd) <= 0.15,
         "overall_win_rate_pct": overall_stats["win_rate_pct"],
         "overall_expectancy_pct": overall_stats["expectancy_pct"],
-        "best_context": "ramadan" if context_analysis["ramadan"]["mean_gain_pct"] > context_analysis["non_ramadan"]["mean_gain_pct"] else "non_ramadan",
-        "avoid_cbe_window": context_analysis["cbe_window"]["mean_gain_pct"] < context_analysis["non_cbe"]["mean_gain_pct"],
+        "best_context": "ramadan" if context_analysis["ramadan"].get("mean_gain_pct", 0) > context_analysis["non_ramadan"].get("mean_gain_pct", 0) else "non_ramadan",
+        "avoid_cbe_window": context_analysis["cbe_window"].get("mean_gain_pct", 0) < context_analysis["non_cbe"].get("mean_gain_pct", 0),
     },
 }
 
@@ -1071,7 +1125,7 @@ def build_html_report(report):
       <div style="color:#e6edf3; font-size:14px;">
         <ol>
           <li><strong>Apply score ≥ 55 filter:</strong> Focus only on medium/large outcome quality setups ({len(conservative_signals):,} signals, {round(len(conservative_signals)/len(RESOLVED)*100)}% of total)</li>
-          <li><strong>Avoid CBE window:</strong> {"Reduces expectancy by " + str(round(report['context_analysis']['non_cbe']['expectancy_pct'] - report['context_analysis']['cbe_window']['expectancy_pct'], 2)) + "% — wait for post-CBE clarity" if report['key_findings']['avoid_cbe_window'] else "CBE window is not a significant negative factor"}</li>
+          <li><strong>Avoid CBE window:</strong> {"Reduces expectancy by " + str(round((report['context_analysis']['non_cbe'].get('expectancy_pct',0)) - (report['context_analysis']['cbe_window'].get('expectancy_pct',0)), 2)) + "% — wait for post-CBE clarity" if report['key_findings']['avoid_cbe_window'] else "CBE window is not a significant negative factor"}</li>
           <li><strong>Ramadan overlay:</strong> {"System shows better results during Ramadan (+15% multiplier is validated)" if report['key_findings']['best_context']=='ramadan' else "No strong Ramadan edge detected in this dataset"}</li>
           <li><strong>Top tier stocks (expectancy > median):</strong> {', '.join([s['symbol'].replace('.CA','') for s in stocks[:5] if s.get('expectancy_pct',0) > 0])}</li>
           <li><strong>Position sizing:</strong> Fixed 2% risk cap is adequate; Kelly adds minimal benefit over fixed sizing</li>
@@ -1290,8 +1344,8 @@ print(f"  Max DD:    {filter_comparison['conservative_filter']['mdd_pct']:.2f}%"
 print(f"\nContext:")
 print(f"  Ramadan win rate:     {context_analysis['ramadan']['win_rate_pct']}%")
 print(f"  Non-Ramadan win rate: {context_analysis['non_ramadan']['win_rate_pct']}%")
-print(f"  CBE window win rate:  {context_analysis['cbe_window']['win_rate_pct']}%")
-print(f"  Non-CBE win rate:     {context_analysis['non_cbe']['win_rate_pct']}%")
+print(f"  CBE window win rate:  {context_analysis['cbe_window'].get('win_rate_pct', 'N/A')}%")
+print(f"  Non-CBE win rate:     {context_analysis['non_cbe'].get('win_rate_pct', 'N/A')}%")
 print(f"\nTop 5 stocks by expectancy:")
 for s in sorted(per_stock.values(), key=lambda x: -x['expectancy_pct'])[:5]:
     print(f"  {s['symbol']}: exp={s['expectancy_pct']}%, wr={s['win_rate_pct']}%, n={s['n_signals']}")

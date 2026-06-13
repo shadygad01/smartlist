@@ -240,14 +240,14 @@ jobs:
           python - <<'PYEOF'
           import glob, shutil
           mappings = [
-              ("edge_discovery_report_*.html",         "web_deploy/edge_report.html"),
-              ("logic_analysis_report_*.html",         "web_deploy/logic_analysis_report.html"),
-              ("weight_optimizer_report_*.html",       "web_deploy/weight_optimizer_report.html"),
-              ("system_audit_report_*.html",           "web_deploy/system_audit_report.html"),
-              ("adaptive_learning_report_*.html",      "web_deploy/adaptive_learning_report.html"),
-              ("reports/gx_learning_report_*.html",    "web_deploy/gx_learning_report.html"),
-              ("reports/decision_engine_report_*.html","web_deploy/decision_engine_report.html"),
-              ("reports/discount_zone_report_*.html",  "web_deploy/discount_zone_report.html"),
+              ("reports/edge_discovery_report_*.html",  "web_deploy/edge_report.html"),
+              ("reports/logic_analysis_report_*.html",  "web_deploy/logic_analysis_report.html"),
+              ("reports/weight_optimizer_report_*.html","web_deploy/weight_optimizer_report.html"),
+              ("reports/system_audit_report_*.html",    "web_deploy/system_audit_report.html"),
+              ("reports/adaptive_learning_report_*.html","web_deploy/adaptive_learning_report.html"),
+              ("reports/gx_learning_report_*.html",     "web_deploy/gx_learning_report.html"),
+              ("reports/decision_engine_report_*.html", "web_deploy/decision_engine_report.html"),
+              ("reports/discount_zone_report_*.html",   "web_deploy/discount_zone_report.html"),
           ]
           for pattern, dest in mappings:
               files = sorted(glob.glob(pattern))
@@ -257,8 +257,8 @@ jobs:
               else:
                   print(f"WARNING: no {pattern} found")
           PYEOF
-          cp behavior_report.html     web_deploy/behavior_report.html  || true
-          cp backtest_report.html     web_deploy/backtest_report.html   || true
+          cp reports/behavior_report.html  web_deploy/behavior_report.html  || true
+          cp reports/backtest_report.html  web_deploy/backtest_report.html  || true
           cp logic_analysis_results.json        web_deploy/ || true
           cp optimization_results.json          web_deploy/ || true
           cp system_audit_results.json          web_deploy/ || true

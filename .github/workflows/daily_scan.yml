@@ -227,6 +227,7 @@ jobs:
           path: |
             cache_metadata/
             gx_learning_memory.json
+            gx_research_memory.json
             discount_zone_patterns.json
             smc_rl_weights.json
             walk_forward_state.json
@@ -247,6 +248,7 @@ jobs:
           path: |
             cache_metadata/
             gx_learning_memory.json
+            gx_research_memory.json
             discount_zone_patterns.json
             smc_rl_weights.json
             walk_forward_state.json
@@ -269,7 +271,8 @@ jobs:
               ("reports/discount_zone_report_*.html",    "web_deploy/discount_zone_report.html"),
               ("reports/multi_period_report_*.html",     "web_deploy/multi_period_report.html"),
               ("reports/smc_rl_report_*.html",           "web_deploy/smc_rl_report.html"),
-              ("reports/walk_forward_report_*.html",     "web_deploy/walk_forward_report.html"),
+              ("reports/walk_forward_report_*.html",      "web_deploy/walk_forward_report.html"),
+              ("reports/research_memory_report_*.html",  "web_deploy/research_memory_report.html"),
           ]
           for pattern, dest in mappings:
               files = sorted(glob.glob(pattern))
@@ -292,6 +295,7 @@ jobs:
           cp incremental_execution_report.json  web_deploy/ || true
           cp smc_rl_weights.json                web_deploy/ || true
           cp walk_forward_state.json            web_deploy/ || true
+          cp gx_research_memory.json            web_deploy/ || true
 
       - name: Upload intelligence artifacts
         uses: actions/upload-artifact@v4

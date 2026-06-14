@@ -1437,6 +1437,7 @@ def build_dashboard() -> str:
         '<a href="multi_period_report.html" style="color:#8fb8d8;text-decoration:none;">📅 Multi-Period</a>',
         '<a href="smc_rl_report.html" style="color:#c8a8e8;text-decoration:none;font-weight:600;">🤖 RL Optimizer</a>',
         '<a href="walk_forward_report.html" style="color:#98e8a0;text-decoration:none;font-weight:600;">📈 Walk-Forward</a>',
+        '<a href="research_memory_report.html" style="color:#f08080;text-decoration:none;font-weight:600;">🔬 Research Memory</a>',
     ])
 
     body = f"""

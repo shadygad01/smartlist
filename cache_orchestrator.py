@@ -159,6 +159,24 @@ MODULES = {
         "outputs": ["walk_forward_state.json"],
         "min_interval_hours": 6,
     },
+    "gx_research_memory": {
+        "category": "C",
+        "cmd": ["python", "gx_research_memory.py"],
+        "inputs": [
+            "optimization_results.json", "logic_analysis_results.json",
+            "system_audit_results.json", "adaptive_learning_results.json",
+            "gx_learning_memory.json", "walk_forward_state.json",
+            "smc_rl_weights.json", "historical_backtest_results.json",
+            "research_results.json",
+        ],
+        "outputs": ["gx_research_memory.json"],
+        "min_interval_hours": 6,
+        "depends_on": [
+            "logic_analyzer", "weight_optimizer", "system_audit",
+            "adaptive_learning", "smc_rl_optimizer", "walk_forward_backtester",
+            "gx_learning_layer",
+        ],
+    },
 
     # ── Category B: Conditional ───────────────────────────────────────────────
     "heatmap": {
@@ -199,6 +217,7 @@ INTELLIGENCE_TIER2 = [
     "multi_period_analyzer",
     "smc_rl_optimizer",
     "walk_forward_backtester",
+    "gx_research_memory",
 ]
 
 # Modules that belong to the research job (B)

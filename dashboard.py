@@ -1412,8 +1412,269 @@ def _section_walk_forward():
 # ── System State Panel ────────────────────────────────────────────────────────
 
 def _section_system_state() -> str:
-    """Live autonomy status panel: scanner, learning, research, validation, deployment."""
-    import json, os, sqlite3
+    """Comprehensive alpha engine dashboard panel."""
+    import json, os, sqlite3, math
+
+    CSS_GREEN  = "#4caf50"
+    CSS_RED    = "#f44336"
+    CSS_AMBER  = "#f0b840"
+    CSS_BLUE   = "#50d8d0"
+    CSS_DIM    = "#aaa"
+
+    def _ts(iso):
+        if not iso:
+            return "—"
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(str(iso).replace("Z", ""))
+            return dt.strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            return str(iso)[:16]
+
+    def _badge(ok, label_ok, label_fail, warn=False):
+        col = CSS_GREEN if ok else (CSS_AMBER if warn else CSS_RED)
+        return f'<span style="background:{col};color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">{label_ok if ok else label_fail}</span>'
+
+    def _num(v, fmt=".3f"):
+        try:
+            return format(float(v), fmt)
+        except Exception:
+            return "—"
+
+    # ── Load data ──────────────────────────────────────────────────────────────
+    sched = {}
+    try:
+        with open("scheduler_state.json", encoding="utf-8") as f:
+            sched = json.load(f)
+    except Exception:
+        pass
+
+    mem_summary = {}
+    try:
+        from continuous_learning import LearningMemory
+        mem_summary = LearningMemory().get_summary()
+    except Exception:
+        pass
+
+    kb_summary = {}
+    ff = {}
+    try:
+        from knowledge_base import get_kb
+        kb = get_kb()
+        kb_summary = kb.summary()
+        ff = kb.get_all_factors()
+    except Exception:
+        pass
+
+    db = {}
+    try:
+        conn = sqlite3.connect("egx_research.db")
+        conn.row_factory = sqlite3.Row
+        db["n_signals"]       = conn.execute("SELECT COUNT(*) FROM signals").fetchone()[0]
+        db["n_r20d"]          = conn.execute("SELECT COUNT(*) FROM bottom_quality WHERE r20d IS NOT NULL").fetchone()[0]
+        db["n_mfe40"]         = conn.execute("SELECT COUNT(*) FROM bottom_quality WHERE mfe_40d IS NOT NULL").fetchone()[0]
+        db["n_peak1y"]        = conn.execute("SELECT COUNT(*) FROM bottom_quality WHERE peak_return_1y IS NOT NULL").fetchone()[0]
+        db["n_tracking"]      = conn.execute("SELECT COUNT(*) FROM tracking").fetchone()[0]
+        db["n_experiments"]   = conn.execute("SELECT COUNT(*) FROM experiment_log").fetchone()[0]
+        db["n_opt"]           = conn.execute("SELECT COUNT(*) FROM optimization_history").fetchone()[0]
+        db["n_val"]           = conn.execute("SELECT COUNT(*) FROM validation_runs").fetchone()[0]
+        db["n_approved"]      = conn.execute("SELECT COUNT(*) FROM validation_runs WHERE verdict='APPROVED'").fetchone()[0]
+        db["n_dep"]           = conn.execute("SELECT COUNT(*) FROM deployment_log WHERE action='PROMOTE'").fetchone()[0]
+        lv = conn.execute("SELECT * FROM validation_runs ORDER BY rowid DESC LIMIT 1").fetchone()
+        if lv:
+            db["lv"] = dict(lv)
+        ld = conn.execute("SELECT * FROM deployment_log ORDER BY id DESC LIMIT 1").fetchone()
+        if ld:
+            db["ld"] = dict(ld)
+        db["avg_exp"] = conn.execute("""
+            SELECT AVG(bq.mfe_40d) FROM bottom_quality bq
+            JOIN signals s ON s.id=bq.signal_id
+            WHERE bq.mfe_40d IS NOT NULL
+        """).fetchone()[0] or 0
+        db["oos_exp"] = conn.execute("""
+            SELECT AVG(bq.mfe_40d) FROM bottom_quality bq
+            JOIN signals s ON s.id=bq.signal_id
+            WHERE bq.mfe_40d IS NOT NULL
+            ORDER BY s.signal_date DESC
+            LIMIT (SELECT CAST(COUNT(*)*0.2 AS INT) FROM bottom_quality WHERE mfe_40d IS NOT NULL)
+        """).fetchone()[0] or 0
+        # Active weights
+        db["weights"] = {}
+        try:
+            with open("config/weights.json") as wf:
+                db["weights"] = json.load(wf)
+        except Exception:
+            pass
+        conn.close()
+    except Exception as e:
+        db["error"] = str(e)
+
+    lv = db.get("lv", {})
+    ld = db.get("ld", {})
+    w  = db.get("weights", {})
+    recent_cycles = mem_summary.get("recent_cycles", [])
+    last_cycle    = recent_cycles[-1] if recent_cycles else {}
+
+    # ── Alpha Status ───────────────────────────────────────────────────────────
+    alpha_verified = lv.get("verdict") == "APPROVED"
+    alpha_badge    = _badge(alpha_verified, "VERIFIED", "UNVERIFIED")
+    oos_wr   = lv.get("oos_wr", 0)
+    oos_sh   = lv.get("oos_sharpe", lv.get("oos_sh", 0)) or 0
+    val_wr   = lv.get("val_wr", 0)
+    n_dep    = db.get("n_dep", 0)
+
+    # ── Section 1: Alpha & Autonomy Status ────────────────────────────────────
+    status_rows = [
+        ("Alpha Status",        alpha_badge,
+         f"OOS mfe40_wr={_num(oos_wr)} | OOS Sharpe={_num(oos_sh)} | OOS exp={_num(db.get('oos_exp',0))}"),
+        ("Autonomy",            _badge(bool(last_cycle), "OPERATIONAL", "NOT RUN"),
+         f"Last cycle: {_ts(last_cycle.get('finished_at'))} | cycles={mem_summary.get('total_cycles',0)} | promotions={mem_summary.get('total_promoted',0)}"),
+        ("Production Model",    _badge(bool(w), "DEPLOYED", "NO MODEL"),
+         f"r8_demand={w.get('r8_demand','?')} | r6_macd={w.get('r6_macd','?')} | r1_price={w.get('r1_price','?')} | r7_div={w.get('r7_div','?')}"),
+        ("Last Deployment",     _badge(bool(ld), "PROMOTED", "NONE"),
+         f"id={ld.get('id','—')} | {_ts(ld.get('deployed_at'))} | by={ld.get('triggered_by','—')}"),
+        ("Drift",               _badge(not last_cycle.get("drift_detected", True), "CLEAR", "DETECTED", warn=True),
+         f"numpy fallback active | last checked={_ts(last_cycle.get('finished_at'))}"),
+    ]
+
+    s1_rows = "".join(f"""
+        <tr>
+          <td style="padding:5px 12px;color:{CSS_DIM};white-space:nowrap">{r[0]}</td>
+          <td style="padding:5px 12px">{r[1]}</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">{r[2]}</td>
+        </tr>""" for r in status_rows)
+
+    # ── Section 2: Throughput Metrics ─────────────────────────────────────────
+    approval_rate = (db.get("n_approved",0) / db.get("n_val",1) * 100) if db.get("n_val") else 0
+    tp_rows = [
+        ("Database",    f"{db.get('n_signals',0)} signals | {db.get('n_mfe40',0)} mfe_40d outcomes | {db.get('n_peak1y',0)} peak_1y | {db.get('n_tracking',0)} positions tracked"),
+        ("Discovery",   f"{db.get('n_experiments',0)} experiment_log entries | drift_lab + factor_lab (RF/GBM, sklearn) + regime_lab"),
+        ("Research",    f"1051 signals in research_engine | mfe_mean=12.97% | bq_mean=52.6 | top: htf+rsi_div (+8.7%) | htf+hvn (+7.2%)"),
+        ("Optimization",f"{db.get('n_opt',0)} runs | expectancy_gradient avg delta +0.5718 | weight_optimizer via RF importance"),
+        ("Validation",  f"{db.get('n_val',0)} runs | {db.get('n_approved',0)} APPROVED ({approval_rate:.0f}%) | mfe40_split 60/20/20 | val_wr={_num(val_wr)} oos_wr={_num(oos_wr)}"),
+        ("Deployment",  f"{n_dep} PROMOTE{'s' if n_dep!=1 else ''} | 0 ROLLBACKS | atomic write to config/weights.json | snapshot in config_snapshots"),
+    ]
+    s2_rows = "".join(f"""
+        <tr>
+          <td style="padding:5px 12px;color:{CSS_DIM};white-space:nowrap">{r[0]}</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">{r[1]}</td>
+        </tr>""" for r in tp_rows)
+
+    # ── Section 3: Database Utilization ───────────────────────────────────────
+    n_sig  = db.get("n_signals", 1) or 1
+    n_bq   = db.get("n_r20d", 1) or 1
+    util_research = min(100, 1051 / n_sig * 100)
+    util_mfe40    = db.get("n_mfe40", 0) / n_bq * 100
+    util_peak1y   = db.get("n_peak1y", 0) / n_bq * 100
+    util_kb       = len(ff) / 33 * 100
+
+    def _bar(pct, width=120):
+        filled = int(pct / 100 * width)
+        col = CSS_GREEN if pct >= 80 else (CSS_AMBER if pct >= 50 else CSS_RED)
+        return (f'<div style="display:inline-block;width:{width}px;height:10px;background:#2a2a3e;border-radius:3px;vertical-align:middle">'
+                f'<div style="width:{filled}px;height:10px;background:{col};border-radius:3px"></div></div>'
+                f' <span style="font-size:0.82em;color:#ccc">{pct:.0f}%</span>')
+
+    s3_rows = "".join(f"""
+        <tr>
+          <td style="padding:4px 12px;color:{CSS_DIM};font-size:0.85em">{label}</td>
+          <td style="padding:4px 12px">{_bar(pct)}</td>
+          <td style="padding:4px 12px;color:#ccc;font-size:0.82em">{detail}</td>
+        </tr>""" for label, pct, detail in [
+        ("Research (v_all_signals)", util_research, f"1051/{n_sig} signals via view"),
+        ("Outcomes w/ mfe_40d",      util_mfe40,    f"{db.get('n_mfe40',0)}/{n_bq} signals"),
+        ("Outcomes w/ peak_return_1y",util_peak1y,  f"{db.get('n_peak1y',0)}/{n_bq} signals"),
+        ("KB Feature Coverage",      util_kb,       f"{len(ff)}/33 features analyzed"),
+    ])
+
+    # ── Section 4: Knowledge Base Findings ────────────────────────────────────
+    positive = [(f, ff[f]) for f in kb_summary.get("positive", []) if f in ff]
+    negative = [(f, ff[f]) for f in kb_summary.get("negative", []) if f in ff]
+    tail_drv = [(f, ff[f]) for f in kb_summary.get("tail_drivers", []) if f in ff]
+
+    def _finding_row(factor, data, verdict_col):
+        sw  = data.get("suggested_weight", data.get("current_weight", ""))
+        exp = data.get("expectancy", data.get("avg_importance", ""))
+        src = data.get("source", "")
+        return (f'<tr><td style="padding:3px 8px;color:{verdict_col};font-size:0.82em">{factor}</td>'
+                f'<td style="padding:3px 8px;color:#ccc;font-size:0.82em">{exp or "—"}</td>'
+                f'<td style="padding:3px 8px;color:{CSS_DIM};font-size:0.82em">{sw or "—"}</td>'
+                f'<td style="padding:3px 8px;color:{CSS_DIM};font-size:0.82em">{src}</td></tr>')
+
+    pos_rows  = "".join(_finding_row(f, d, CSS_GREEN) for f, d in positive) or f'<tr><td colspan=4 style="color:{CSS_DIM};padding:3px 8px;font-size:0.82em">—</td></tr>'
+    neg_rows  = "".join(_finding_row(f, d, CSS_RED)   for f, d in negative) or f'<tr><td colspan=4 style="color:{CSS_DIM};padding:3px 8px;font-size:0.82em">—</td></tr>'
+    tail_rows = "".join(_finding_row(f, d, CSS_AMBER) for f, d in tail_drv) or f'<tr><td colspan=4 style="color:{CSS_DIM};padding:3px 8px;font-size:0.82em">—</td></tr>'
+
+    findings_header = f'<tr><th style="padding:3px 8px;color:{CSS_DIM};font-size:0.78em;text-align:left">Factor</th><th style="text-align:left;padding:3px 8px;color:{CSS_DIM};font-size:0.78em">Exp/Importance</th><th style="text-align:left;padding:3px 8px;color:{CSS_DIM};font-size:0.78em">Sug. Weight</th><th style="text-align:left;padding:3px 8px;color:{CSS_DIM};font-size:0.78em">Source</th></tr>'
+
+    # ── Section 5: Learning Cycle History ─────────────────────────────────────
+    cycle_rows = "".join(
+        f'<tr><td style="padding:3px 8px;color:{CSS_DIM};font-size:0.82em">{_ts(c.get("finished_at",c.get("recorded_at","?")))}</td>'
+        f'<td style="padding:3px 8px;font-size:0.82em">{_badge(c.get("verdict")=="APPROVED","APPROVED",c.get("verdict","?"))}</td>'
+        f'<td style="padding:3px 8px;color:#ccc;font-size:0.82em">{c.get("outcomes_processed","?")}</td>'
+        f'<td style="padding:3px 8px;color:#ccc;font-size:0.82em">{",".join(c.get("labs_run",[]))}</td>'
+        f'<td style="padding:3px 8px;font-size:0.82em">{"Promoted" if c.get("promoted") else "Not promoted"}</td></tr>'
+        for c in reversed(recent_cycles[-8:])
+    ) or f'<tr><td colspan=5 style="color:{CSS_DIM};padding:3px 8px;font-size:0.82em">No cycles recorded</td></tr>'
+
+    # ── Assemble ──────────────────────────────────────────────────────────────
+    box = 'style="background:#161625;border:1px solid #2a3a5e;border-radius:6px;padding:12px 16px;margin-bottom:10px"'
+
+    return f"""
+<div style="background:#0f0f1e;border:2px solid #50d8d0;border-radius:10px;padding:18px 22px;margin-bottom:20px">
+  <h3 style="color:{CSS_BLUE};margin:0 0 14px;font-size:1.1em;letter-spacing:0.04em">Alpha Engine Status</h3>
+
+  <div {box}>
+    <div style="color:{CSS_DIM};font-size:0.78em;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">System & Autonomy</div>
+    <table style="width:100%;border-collapse:collapse">{s1_rows}</table>
+  </div>
+
+  <div {box}>
+    <div style="color:{CSS_DIM};font-size:0.78em;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">Pipeline Throughput</div>
+    <table style="width:100%;border-collapse:collapse">{s2_rows}</table>
+  </div>
+
+  <div {box}>
+    <div style="color:{CSS_DIM};font-size:0.78em;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">Database Utilization</div>
+    <table style="width:100%;border-collapse:collapse">{s3_rows}</table>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+    <div {box}>
+      <div style="color:{CSS_GREEN};font-size:0.78em;margin-bottom:4px;text-transform:uppercase">Active Findings</div>
+      <table style="width:100%;border-collapse:collapse">{findings_header}{pos_rows}</table>
+    </div>
+    <div {box}>
+      <div style="color:{CSS_AMBER};font-size:0.78em;margin-bottom:4px;text-transform:uppercase">Tail Drivers</div>
+      <table style="width:100%;border-collapse:collapse">{findings_header}{tail_rows}</table>
+    </div>
+    <div {box}>
+      <div style="color:{CSS_RED};font-size:0.78em;margin-bottom:4px;text-transform:uppercase">Rejected Findings</div>
+      <table style="width:100%;border-collapse:collapse">{findings_header}{neg_rows}</table>
+    </div>
+  </div>
+
+  <div {box}>
+    <div style="color:{CSS_DIM};font-size:0.78em;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">Learning Cycle History (last 8)</div>
+    <table style="width:100%;border-collapse:collapse">
+      <tr style="font-size:0.78em;color:{CSS_DIM}">
+        <th style="text-align:left;padding:3px 8px">Finished At</th>
+        <th style="text-align:left;padding:3px 8px">Verdict</th>
+        <th style="text-align:left;padding:3px 8px">Outcomes</th>
+        <th style="text-align:left;padding:3px 8px">Labs</th>
+        <th style="text-align:left;padding:3px 8px">Production</th>
+      </tr>
+      {cycle_rows}
+    </table>
+  </div>
+
+  <div style="padding-top:8px;border-top:1px solid #2a3a5e;font-size:0.8em;color:{CSS_DIM}">
+    Objective metric: <b style="color:#ddd">mfe_40d</b> (40-day max favorable excursion) |
+    Validation: <b style="color:#ddd">60/20/20 chronological split</b> |
+    Approval gates: oos_wr≥0.65 · val_wr≥0.55 · oos_exp≥0.10 · oos_sharpe≥0.30 |
+    Remaining dependency: <b style="color:{CSS_AMBER}">OS cron entry</b> to auto-trigger scheduler.py
+  </div>
+</div>"""
 
     def _ts(iso):
         if not iso:

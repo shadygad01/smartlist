@@ -162,7 +162,25 @@ def _run_drift_lab(db_path: str) -> bool:
             return bool(result.get("drift_detected", False))
         except Exception:
             pass
-    return False
+    # Numpy fallback: compare win rate of last 60 vs prior 60 signals
+    try:
+        conn = sqlite3.connect(db_path)
+        rows = conn.execute(
+            """SELECT bq.r20d FROM bottom_quality bq
+               JOIN signals s ON s.id = bq.signal_id
+               WHERE bq.r20d IS NOT NULL
+               ORDER BY s.signal_date DESC LIMIT 120"""
+        ).fetchall()
+        conn.close()
+        vals = [r[0] for r in rows]
+        if len(vals) < 60:
+            return False
+        recent, prior = vals[:60], vals[60:]
+        wr_recent = sum(1 for v in recent if v > 0.07) / 60
+        wr_prior  = sum(1 for v in prior  if v > 0.07) / len(prior)
+        return abs(wr_recent - wr_prior) > 0.10
+    except Exception:
+        return False
 
 
 def _run_labs(db_path: str) -> dict:
@@ -182,10 +200,21 @@ def _run_labs(db_path: str) -> dict:
 
 
 def _run_optimization(db_path: str, config_dir: str) -> Optional[dict]:
-    """Run optimization engine; return proposed artifacts or None."""
+    """Run optimization engine; return proposed artifacts dict or None."""
     if _optimizer and hasattr(_optimizer, "run"):
         try:
-            return _optimizer.run(db_path=db_path, config_dir=config_dir)
+            opt_run = _optimizer.run(
+                method="expectancy_gradient",
+                db_path=db_path,
+                config_path=config_dir,
+            )
+            # Return artifacts dict with weights for validation/promotion
+            return {
+                "weights": opt_run.params_after,
+                "optimization_run_id": opt_run.id,
+                "metric_before": opt_run.metric_before,
+                "metric_after": opt_run.metric_after,
+            }
         except Exception:
             pass
     return None
@@ -193,9 +222,10 @@ def _run_optimization(db_path: str, config_dir: str) -> Optional[dict]:
 
 def _run_validation(proposed_artifacts: dict, db_path: str) -> Optional[object]:
     """Run validation engine on proposed artifacts; return ValidationResult or None."""
-    if _validation and hasattr(_validation, "run"):
+    if _validation and hasattr(_validation, "run_train_val_oos"):
         try:
-            return _validation.run(artifacts=proposed_artifacts, db_path=db_path)
+            config = proposed_artifacts.get("thresholds", {})
+            return _validation.run_train_val_oos(db_path=db_path, config=config)
         except Exception:
             pass
     return None
@@ -242,17 +272,12 @@ def run_learning_cycle(
             cycle_result["verdict"] = "SKIPPED_INSUFFICIENT_OUTCOMES"
             return cycle_result
 
-        # Step 2: drift detection
+        # Step 2: drift detection (informational — does not gate research)
         drift = _run_drift_lab(db_path)
-        if _drift_lab:
-            cycle_result["labs_run"].append("drift_lab")
+        cycle_result["labs_run"].append("drift_lab")
         cycle_result["drift_detected"] = drift
 
-        if not drift:
-            cycle_result["verdict"] = "NO_DRIFT"
-            return cycle_result
-
-        # Step 3: factor + regime labs
+        # Step 3: factor + regime labs (always run when outcomes >= threshold)
         lab_improvements = _run_labs(db_path)
         cycle_result["labs_run"].extend(lab_improvements.keys())
 
@@ -301,6 +326,11 @@ def run_learning_cycle(
         # Step 7: always record cycle (regardless of outcome)
         cycle_result["finished_at"] = datetime.now().isoformat()
         memory.record_cycle(cycle_result)
+        try:
+            from knowledge_base import get_kb
+            get_kb().log_cycle(cycle_result)
+        except Exception:
+            pass
 
     return cycle_result
 

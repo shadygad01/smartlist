@@ -564,8 +564,8 @@ class TestScDemandZone:
         import unittest.mock as mock
         import main as m
 
-        with mock.patch.object(m, "calc_stopping_volume", return_value=(True, 0.8, "SV desc", 95.0)), \
-             mock.patch.object(m, "calc_volume_profile",  return_value=(False, 0.0, 0.0, "No HVN")):
+        with mock.patch("signal_engine.calc_stopping_volume", return_value=(True, 0.8, "SV desc", 95.0)), \
+             mock.patch("signal_engine.calc_volume_profile",  return_value=(False, 0.0, 0.0, "No HVN")):
             pts, desc = sc_demand_zone(make_ohlcv(60), self.EQ, self.LO, self.BUY_HI)
 
         assert pts == round(W_DZ * 0.60)
@@ -575,8 +575,8 @@ class TestScDemandZone:
         import unittest.mock as mock
         import main as m
 
-        with mock.patch.object(m, "calc_stopping_volume", return_value=(False, 0.0, "No SV", 0.0)), \
-             mock.patch.object(m, "calc_volume_profile",  return_value=(True, 0.9, 92.0, "HVN desc")):
+        with mock.patch("signal_engine.calc_stopping_volume", return_value=(False, 0.0, "No SV", 0.0)), \
+             mock.patch("signal_engine.calc_volume_profile",  return_value=(True, 0.9, 92.0, "HVN desc")):
             pts, desc = sc_demand_zone(make_ohlcv(60), self.EQ, self.LO, self.BUY_HI)
 
         assert pts == round(W_DZ * 0.40)
@@ -586,8 +586,8 @@ class TestScDemandZone:
         import unittest.mock as mock
         import main as m
 
-        with mock.patch.object(m, "calc_stopping_volume", return_value=(True, 0.9, "SV desc", 95.0)), \
-             mock.patch.object(m, "calc_volume_profile",  return_value=(True, 0.95, 92.0, "HVN desc")):
+        with mock.patch("signal_engine.calc_stopping_volume", return_value=(True, 0.9, "SV desc", 95.0)), \
+             mock.patch("signal_engine.calc_volume_profile",  return_value=(True, 0.95, 92.0, "HVN desc")):
             pts, desc = sc_demand_zone(make_ohlcv(60), self.EQ, self.LO, self.BUY_HI)
 
         assert pts == W_DZ

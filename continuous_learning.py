@@ -70,19 +70,24 @@ class LearningMemory:
         self._data = self._load()
 
     def _load(self) -> dict:
-        if os.path.exists(self.path):
-            try:
-                with open(self.path) as f:
-                    return json.load(f)
-            except Exception:
-                pass
-        return {
+        default = {
             "schema_version": 1,
             "created_at": datetime.now().isoformat(),
             "total_cycles": 0,
             "last_cycle_at": None,
             "cycles": [],
         }
+        if os.path.exists(self.path):
+            try:
+                with open(self.path) as f:
+                    data = json.load(f)
+                # ensure required keys exist (migrate old format)
+                for k, v in default.items():
+                    data.setdefault(k, v)
+                return data
+            except Exception:
+                pass
+        return default
 
     def _save(self) -> None:
         tmp = self.path + ".tmp"

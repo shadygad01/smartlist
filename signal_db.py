@@ -57,6 +57,8 @@ def _migrate_schema(conn: sqlite3.Connection):
     """يضيف الأعمدة الجديدة للجداول القائمة بدون فقدان البيانات."""
     existing = {r[1] for r in conn.execute("PRAGMA table_info(signals)").fetchall()}
     new_cols = {
+        "ranking_expectancy": "REAL",
+        "ranking_confidence":  "REAL",
         "sv_hit":        "INTEGER DEFAULT 0",
         "sv_score":      "REAL",
         "sv_price":      "REAL",
@@ -308,6 +310,65 @@ def init_db(db_path: str = DB_PATH):
             report_type     TEXT,
             sent_at         TEXT,
             signals_covered INTEGER
+        );
+
+        CREATE TABLE IF NOT EXISTS config_snapshots (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            snapshot_at     TEXT NOT NULL,
+            weights_json    TEXT NOT NULL,
+            thresholds_json TEXT NOT NULL,
+            gates_json      TEXT NOT NULL,
+            promoted_by     TEXT,
+            note            TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS experiment_log (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            lab         TEXT NOT NULL,
+            run_at      TEXT NOT NULL,
+            n_signals   INTEGER,
+            result_json TEXT,
+            report_path TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS optimization_history (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            method          TEXT NOT NULL,
+            run_at          TEXT NOT NULL,
+            params_before   TEXT,
+            params_after    TEXT,
+            metric_name     TEXT,
+            metric_before   REAL,
+            metric_after    REAL,
+            n_signals       INTEGER,
+            approved        INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS validation_runs (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_at           TEXT NOT NULL,
+            split_type       TEXT,
+            train_wr         REAL,
+            val_wr           REAL,
+            oos_wr           REAL,
+            train_sharpe     REAL,
+            val_sharpe       REAL,
+            oos_sharpe       REAL,
+            overfit_flag     INTEGER DEFAULT 0,
+            robustness_score REAL,
+            verdict          TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS deployment_log (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            deployed_at         TEXT NOT NULL,
+            config_snapshot_id  INTEGER,
+            validation_run_id   INTEGER,
+            action              TEXT,
+            triggered_by        TEXT,
+            note                TEXT,
+            FOREIGN KEY(config_snapshot_id) REFERENCES config_snapshots(id),
+            FOREIGN KEY(validation_run_id)  REFERENCES validation_runs(id)
         );
 
         """)

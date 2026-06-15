@@ -41,19 +41,28 @@ except ImportError:
     _optimizer = None
 
 try:
-    import drift_lab as _drift_lab
+    from labs import drift_lab as _drift_lab
 except ImportError:
-    _drift_lab = None
+    try:
+        import drift_lab as _drift_lab
+    except ImportError:
+        _drift_lab = None
 
 try:
-    import factor_lab as _factor_lab
+    from labs import factor_lab as _factor_lab
 except ImportError:
-    _factor_lab = None
+    try:
+        import factor_lab as _factor_lab
+    except ImportError:
+        _factor_lab = None
 
 try:
-    import regime_lab as _regime_lab
+    from labs import regime_lab as _regime_lab
 except ImportError:
-    _regime_lab = None
+    try:
+        import regime_lab as _regime_lab
+    except ImportError:
+        _regime_lab = None
 
 MEMORY_FILE = "gx_learning_memory.json"
 MIN_OUTCOMES_PER_CYCLE = 10
@@ -277,13 +286,17 @@ def run_learning_cycle(
         cycle_result["labs_run"].append("drift_lab")
         cycle_result["drift_detected"] = drift
 
-        # Step 3: factor + regime labs (always run when outcomes >= threshold)
+        # Step 3: factor + regime labs (always run; soft errors don't gate optimization)
         lab_improvements = _run_labs(db_path)
         cycle_result["labs_run"].extend(lab_improvements.keys())
-
+        cycle_result["lab_results"] = {
+            k: {"error": v.get("error"), "n_signals": v.get("n_signals")}
+            for k, v in lab_improvements.items()
+        }
+        # Only skip optimization if ALL labs hard-failed (empty dict)
         if not lab_improvements:
-            cycle_result["verdict"] = "NO_IMPROVEMENTS_FOUND"
-            return cycle_result
+            cycle_result["verdict"] = "LABS_UNAVAILABLE"
+            # Still fall through to optimization — research state alone is sufficient
 
         # Step 4: optimization
         proposed = _run_optimization(db_path, config_dir)

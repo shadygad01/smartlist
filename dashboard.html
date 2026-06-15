@@ -29,7 +29,7 @@
 <div class="header">
   <h1>EGX Scanner — Dashboard</h1>
   <div class="sub">
-    آخر تحديث: Monday, 15 June 2026 — 18:11:06 Cairo
+    آخر تحديث: Monday, 15 June 2026 — 18:14:52 Cairo
     &nbsp;·&nbsp;
     <span id="age-label" style="opacity:.85;">جاري الحساب...</span>
   </div>
@@ -57,7 +57,7 @@
         <tr>
           <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Autonomy</td>
           <td style="padding:5px 12px"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">OPERATIONAL</span></td>
-          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">Last cycle: 2026-06-15 18:06 | cycles=10 | promotions=1</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">Last cycle: 2026-06-15 18:14 | cycles=11 | promotions=2</td>
         </tr>
         <tr>
           <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Production Model</td>
@@ -67,12 +67,12 @@
         <tr>
           <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Last Deployment</td>
           <td style="padding:5px 12px"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">PROMOTED</span></td>
-          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">id=4 | 2026-06-15 18:00 | by=rollback</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">id=5 | 2026-06-15 18:14 | by=continuous_learning</td>
         </tr>
         <tr>
           <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Drift</td>
           <td style="padding:5px 12px"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">CLEAR</span></td>
-          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">numpy fallback active | last checked=2026-06-15 18:06</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">numpy fallback active | last checked=2026-06-15 18:14</td>
         </tr></table>
   </div>
 
@@ -85,7 +85,7 @@
         </tr>
         <tr>
           <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Discovery</td>
-          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">40 experiment_log entries | drift_lab + factor_lab (RF/GBM, sklearn) + regime_lab</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">42 experiment_log entries | drift_lab + factor_lab (RF/GBM, sklearn) + regime_lab</td>
         </tr>
         <tr>
           <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Research</td>
@@ -93,15 +93,15 @@
         </tr>
         <tr>
           <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Optimization</td>
-          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">17 runs | expectancy_gradient avg delta +0.5718 | weight_optimizer via RF importance</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">18 runs | expectancy_gradient avg delta +0.5718 | weight_optimizer via RF importance</td>
         </tr>
         <tr>
           <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Validation</td>
-          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">20 runs | 9 APPROVED (45%) | mfe40_split 60/20/20 | val_wr=0.714 oos_wr=0.812</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">21 runs | 10 APPROVED (48%) | mfe40_split 60/20/20 | val_wr=0.714 oos_wr=0.812</td>
         </tr>
         <tr>
           <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Deployment</td>
-          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">3 PROMOTEs | 0 ROLLBACKS | atomic write to config/weights.json | snapshot in config_snapshots</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">4 PROMOTEs | 0 ROLLBACKS | atomic write to config/weights.json | snapshot in config_snapshots</td>
         </tr></table>
   </div>
 
@@ -155,7 +155,7 @@
         <th style="text-align:left;padding:3px 8px">Labs</th>
         <th style="text-align:left;padding:3px 8px">Production</th>
       </tr>
-      <tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 18:06</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">APPROVED</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">18</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">drift_lab,factor,regime</td><td style="padding:3px 8px;font-size:0.82em">Not promoted</td></tr><tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 17:58</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#f44336;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">SKIPPED_INSUFFICIENT_OUTCOMES</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">0</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em"></td><td style="padding:3px 8px;font-size:0.82em">Not promoted</td></tr><tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 17:58</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">APPROVED</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">18</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">drift_lab,factor,regime</td><td style="padding:3px 8px;font-size:0.82em">Not promoted</td></tr><tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 17:08</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">APPROVED</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">639</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">drift_lab,factor,regime</td><td style="padding:3px 8px;font-size:0.82em">Promoted</td></tr><tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 16:55</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#f44336;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">REJECTED</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">639</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">drift_lab,factor,regime</td><td style="padding:3px 8px;font-size:0.82em">Not promoted</td></tr>
+      <tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 18:14</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">APPROVED</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">18</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">drift_lab,factor,regime</td><td style="padding:3px 8px;font-size:0.82em">Promoted</td></tr><tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 18:06</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">APPROVED</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">18</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">drift_lab,factor,regime</td><td style="padding:3px 8px;font-size:0.82em">Not promoted</td></tr><tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 17:58</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#f44336;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">SKIPPED_INSUFFICIENT_OUTCOMES</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">0</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em"></td><td style="padding:3px 8px;font-size:0.82em">Not promoted</td></tr><tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 17:58</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">APPROVED</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">18</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">drift_lab,factor,regime</td><td style="padding:3px 8px;font-size:0.82em">Not promoted</td></tr><tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 17:08</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">APPROVED</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">639</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">drift_lab,factor,regime</td><td style="padding:3px 8px;font-size:0.82em">Promoted</td></tr>
     </table>
   </div>
 
@@ -652,7 +652,7 @@
 const CAIRO_OFFSET        = 2;           // UTC+2 (conservative year-round)
 const WORKFLOW_DURATION_S = 12 * 60;     // typical workflow: ~12 min
 const POLL_INTERVAL_MS    = 30_000;      // check for updates every 30 s
-const DATA_GENERATED_AT   = new Date("2026-06-15T18:11:06");   // embedded at build time
+const DATA_GENERATED_AT   = new Date("2026-06-15T18:14:52");   // embedded at build time
 
 let knownTimestamp = DATA_GENERATED_AT.toISOString();
 let reloadScheduled = false;

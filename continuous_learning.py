@@ -193,40 +193,99 @@ def _run_drift_lab(db_path: str) -> bool:
 
 
 def _run_labs(db_path: str) -> dict:
-    """Run factor_lab and regime_lab; return combined improvement dict."""
+    """Run factor_lab and regime_lab; persist findings to KB; return combined dict."""
     improvements = {}
+
+    # Check KB for factors to skip (already confirmed/recently tested)
+    skip = set()
+    try:
+        from knowledge_base import get_kb
+        kb = get_kb()
+        skip = set(kb.skip_factors())
+        if skip:
+            print(f"  [KB] Skipping previously settled factors: {skip}")
+    except Exception:
+        kb = None
+
     if _factor_lab and hasattr(_factor_lab, "run"):
         try:
-            improvements["factor"] = _factor_lab.run(db_path=db_path)
-        except Exception:
-            pass
+            result = _factor_lab.run(db_path=db_path)
+            improvements["factor"] = result
+            # Persist weight suggestions as factor findings
+            if kb and result.get("weight_suggestions") and not result.get("error"):
+                ws = result["weight_suggestions"]
+                if isinstance(ws, dict):
+                    items = ws.items()
+                elif hasattr(ws, "__iter__"):
+                    items = [(k, v) for k, v in ws] if ws else []
+                else:
+                    items = []
+                for factor, data in items:
+                    if factor in skip:
+                        continue
+                    if isinstance(data, dict):
+                        change = data.get("change", 0)
+                        verdict = "POSITIVE" if change > 0 else ("NEGATIVE" if change < 0 else "NEUTRAL")
+                        kb.record_factor(factor, {
+                            "sample_n": result.get("n_signals", 0),
+                            "verdict": verdict,
+                            "avg_importance": data.get("reason", ""),
+                            "suggested_weight": data.get("suggested"),
+                            "current_weight": data.get("current"),
+                        }, source="factor_lab")
+        except Exception as e:
+            improvements["factor"] = {"error": str(e), "n_signals": 0}
+
     if _regime_lab and hasattr(_regime_lab, "run"):
         try:
-            improvements["regime"] = _regime_lab.run(db_path=db_path)
-        except Exception:
-            pass
+            result = _regime_lab.run(db_path=db_path)
+            improvements["regime"] = result
+            # Persist regime findings
+            if kb and result.get("n_signals", 0) > 0 and not result.get("error"):
+                kb.record_regime("latest", {
+                    "n_signals": result.get("n_signals"),
+                    "behavior": result.get("behavior", {}),
+                }, source="regime_lab")
+        except Exception as e:
+            improvements["regime"] = {"error": str(e), "n_signals": 0}
+
     return improvements
 
 
-def _run_optimization(db_path: str, config_dir: str) -> Optional[dict]:
-    """Run optimization engine; return proposed artifacts dict or None."""
-    if _optimizer and hasattr(_optimizer, "run"):
+def _run_optimization(db_path: str, config_dir: str,
+                      lab_improvements: Optional[dict] = None) -> Optional[dict]:
+    """Run optimization engine; blend KB weight suggestions; return proposed artifacts."""
+    if not _optimizer or not hasattr(_optimizer, "run"):
+        return None
+    try:
+        opt_run = _optimizer.run(
+            method="expectancy_gradient",
+            db_path=db_path,
+            config_path=config_dir,
+        )
+        weights = dict(opt_run.params_after)
+
+        # Blend KB-confirmed factor suggestions into proposed weights
         try:
-            opt_run = _optimizer.run(
-                method="expectancy_gradient",
-                db_path=db_path,
-                config_path=config_dir,
-            )
-            # Return artifacts dict with weights for validation/promotion
-            return {
-                "weights": opt_run.params_after,
-                "optimization_run_id": opt_run.id,
-                "metric_before": opt_run.metric_before,
-                "metric_after": opt_run.metric_after,
-            }
+            from knowledge_base import get_kb
+            kb = get_kb()
+            ff = kb.get_all_factors()
+            for factor, finding in ff.items():
+                sw = finding.get("suggested_weight")
+                if sw is not None and factor in weights:
+                    # Blend: 70% optimizer + 30% KB suggestion
+                    weights[factor] = round(weights[factor] * 0.70 + float(sw) * 0.30, 2)
         except Exception:
             pass
-    return None
+
+        return {
+            "weights": weights,
+            "optimization_run_id": opt_run.id,
+            "metric_before": opt_run.metric_before,
+            "metric_after": opt_run.metric_after,
+        }
+    except Exception:
+        return None
 
 
 def _run_validation(proposed_artifacts: dict, db_path: str) -> Optional[object]:
@@ -299,7 +358,7 @@ def run_learning_cycle(
             # Still fall through to optimization — research state alone is sufficient
 
         # Step 4: optimization
-        proposed = _run_optimization(db_path, config_dir)
+        proposed = _run_optimization(db_path, config_dir, lab_improvements)
         if proposed:
             cycle_result["optimized"] = True
         else:

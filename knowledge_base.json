@@ -46,10 +46,10 @@
     },
     "r2_ob": {
       "factor": "r2_ob",
-      "tier": 3,
-      "win_rate": 0.36,
-      "expectancy": 0.021,
-      "avg_return": 0.052,
+      "tier": null,
+      "win_rate": null,
+      "expectancy": null,
+      "avg_return": null,
       "median_return": null,
       "mfe_20d_mean": null,
       "mfe_40d_mean": null,
@@ -59,11 +59,11 @@
       "fib_100pct": null,
       "tail_contribution": null,
       "top10pct_contribution": null,
-      "multi_bagger_pct": 0.08,
-      "sample_n": null,
-      "verdict": "NEUTRAL",
-      "recorded_at": "2026-06-15T16:25:29.497843",
-      "source": "factor_lab_2026_06"
+      "multi_bagger_pct": null,
+      "sample_n": 1051,
+      "verdict": "NEGATIVE",
+      "recorded_at": "2026-06-15T16:49:01.761190",
+      "source": "factor_lab"
     },
     "wick_rejection": {
       "factor": "wick_rejection",
@@ -106,9 +106,129 @@
       "verdict": "NEGATIVE",
       "recorded_at": "2026-06-15T16:25:29.498234",
       "source": "factor_lab_2026_06"
+    },
+    "r1_price": {
+      "factor": "r1_price",
+      "tier": null,
+      "win_rate": null,
+      "expectancy": null,
+      "avg_return": null,
+      "median_return": null,
+      "mfe_20d_mean": null,
+      "mfe_40d_mean": null,
+      "fib_15pct": null,
+      "fib_30pct": null,
+      "fib_50pct": null,
+      "fib_100pct": null,
+      "tail_contribution": null,
+      "top10pct_contribution": null,
+      "multi_bagger_pct": null,
+      "sample_n": 1051,
+      "verdict": "NEGATIVE",
+      "recorded_at": "2026-06-15T16:49:01.760680",
+      "source": "factor_lab"
+    },
+    "r3_liquidity": {
+      "factor": "r3_liquidity",
+      "tier": null,
+      "win_rate": null,
+      "expectancy": null,
+      "avg_return": null,
+      "median_return": null,
+      "mfe_20d_mean": null,
+      "mfe_40d_mean": null,
+      "fib_15pct": null,
+      "fib_30pct": null,
+      "fib_50pct": null,
+      "fib_100pct": null,
+      "tail_contribution": null,
+      "top10pct_contribution": null,
+      "multi_bagger_pct": null,
+      "sample_n": 1051,
+      "verdict": "NEGATIVE",
+      "recorded_at": "2026-06-15T16:49:01.761470",
+      "source": "factor_lab"
+    },
+    "r5_avwap": {
+      "factor": "r5_avwap",
+      "tier": null,
+      "win_rate": null,
+      "expectancy": null,
+      "avg_return": null,
+      "median_return": null,
+      "mfe_20d_mean": null,
+      "mfe_40d_mean": null,
+      "fib_15pct": null,
+      "fib_30pct": null,
+      "fib_50pct": null,
+      "fib_100pct": null,
+      "tail_contribution": null,
+      "top10pct_contribution": null,
+      "multi_bagger_pct": null,
+      "sample_n": 1051,
+      "verdict": "POSITIVE",
+      "recorded_at": "2026-06-15T16:49:01.761736",
+      "source": "factor_lab"
+    },
+    "r6_macd": {
+      "factor": "r6_macd",
+      "tier": null,
+      "win_rate": null,
+      "expectancy": null,
+      "avg_return": null,
+      "median_return": null,
+      "mfe_20d_mean": null,
+      "mfe_40d_mean": null,
+      "fib_15pct": null,
+      "fib_30pct": null,
+      "fib_50pct": null,
+      "fib_100pct": null,
+      "tail_contribution": null,
+      "top10pct_contribution": null,
+      "multi_bagger_pct": null,
+      "sample_n": 1051,
+      "verdict": "POSITIVE",
+      "recorded_at": "2026-06-15T16:49:01.762036",
+      "source": "factor_lab"
+    },
+    "r8_demand": {
+      "factor": "r8_demand",
+      "tier": null,
+      "win_rate": null,
+      "expectancy": null,
+      "avg_return": null,
+      "median_return": null,
+      "mfe_20d_mean": null,
+      "mfe_40d_mean": null,
+      "fib_15pct": null,
+      "fib_30pct": null,
+      "fib_50pct": null,
+      "fib_100pct": null,
+      "tail_contribution": null,
+      "top10pct_contribution": null,
+      "multi_bagger_pct": null,
+      "sample_n": 1051,
+      "verdict": "NEGATIVE",
+      "recorded_at": "2026-06-15T16:49:01.762328",
+      "source": "factor_lab"
     }
   },
-  "regime_findings": {},
+  "regime_findings": {
+    "latest": {
+      "n_signals": 1051,
+      "behavior": {
+        "n_resolved": 1051,
+        "n_pending": 0,
+        "win_rate": 38.2,
+        "avg_ret": 4.6,
+        "avg_mfe": 12.97,
+        "pf": 2.66,
+        "report_file": "reports/behavior_report.html"
+      },
+      "recorded_at": "2026-06-15T16:53:28.705794",
+      "source": "regime_lab"
+    }
+  },
   "parameter_findings": {},
   "cycle_log": [
     {
@@ -154,6 +274,76 @@
       "finished_at": "2026-06-15T16:30:38.742858",
       "recorded_at": "2026-06-15T16:30:38.742870",
       "logged_at": "2026-06-15T16:30:38.744568"
+    },
+    {
+      "started_at": "2026-06-15T16:45:40.668426",
+      "outcomes_processed": 639,
+      "labs_run": [
+        "drift_lab",
+        "factor",
+        "regime"
+      ],
+      "drift_detected": false,
+      "optimized": true,
+      "promoted": false,
+      "verdict": "REJECTED",
+      "dry_run": true,
+      "error": null,
+      "lab_results": {
+        "factor": {
+          "error": null,
+          "n_signals": 1051
+        },
+        "regime": {
+          "error": null,
+          "n_signals": 1051
+        }
+      },
+      "finished_at": "2026-06-15T16:49:02.153307",
+      "recorded_at": "2026-06-15T16:49:02.153324",
+      "logged_at": "2026-06-15T16:49:02.154957"
+    },
+    {
+      "started_at": "2026-06-15T16:50:00.314645",
+      "outcomes_processed": 0,
+      "labs_run": [],
+      "drift_detected": false,
+      "optimized": false,
+      "promoted": false,
+      "verdict": "SKIPPED_INSUFFICIENT_OUTCOMES",
+      "dry_run": true,
+      "error": null,
+      "finished_at": "2026-06-15T16:50:00.314719",
+      "recorded_at": "2026-06-15T16:50:00.314722",
+      "logged_at": "2026-06-15T16:50:00.316910"
+    },
+    {
+      "started_at": "2026-06-15T16:50:14.776038",
+      "outcomes_processed": 639,
+      "labs_run": [
+        "drift_lab",
+        "factor",
+        "regime"
+      ],
+      "drift_detected": false,
+      "optimized": true,
+      "promoted": false,
+      "verdict": "REJECTED",
+      "dry_run": true,
+      "error": null,
+      "lab_results": {
+        "factor": {
+          "error": null,
+          "n_signals": 1051
+        },
+        "regime": {
+          "error": null,
+          "n_signals": 1051
+        }
+      },
+      "finished_at": "2026-06-15T16:53:28.888835",
+      "recorded_at": "2026-06-15T16:53:28.888849",
+      "logged_at": "2026-06-15T16:53:28.890070"
     }
   ]
 }

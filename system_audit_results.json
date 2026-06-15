@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-13",
+  "generated_at": "2026-06-15",
   "n_signals": 1051,
   "n_rejected": 4177,
   "baseline_r20d": 0.046,
@@ -210,7 +210,53 @@
       "verdict": "NEUTRAL — no statistically significant edge"
     }
   ],
-  "top_discoveries": [],
+  "top_discoveries": [
+    {
+      "combo": "hvn_hit=1 & price_ok=0",
+      "n": 19,
+      "mean": 0.1422,
+      "mfe": 0.2199,
+      "diff": 0.0962,
+      "p_value": 0.048,
+      "wr": 0.579
+    },
+    {
+      "combo": "htf_hh=1 & rsi_div=1",
+      "n": 28,
+      "mean": 0.0869,
+      "mfe": 0.1605,
+      "diff": 0.0409,
+      "p_value": 0.087,
+      "wr": 0.571
+    },
+    {
+      "combo": "macd_div=1 & hvn_hit=1",
+      "n": 73,
+      "mean": 0.0751,
+      "mfe": 0.1462,
+      "diff": 0.0292,
+      "p_value": 0.052,
+      "wr": 0.589
+    },
+    {
+      "combo": "htf_hh=1 & macd_div=1",
+      "n": 41,
+      "mean": 0.0742,
+      "mfe": 0.1507,
+      "diff": 0.0282,
+      "p_value": 0.101,
+      "wr": 0.585
+    },
+    {
+      "combo": "htf_hh=1 & hvn_hit=1",
+      "n": 89,
+      "mean": 0.0724,
+      "mfe": 0.1562,
+      "diff": 0.0264,
+      "p_value": 0.061,
+      "wr": 0.528
+    }
+  ],
   "overfitting_audit": [
     {
       "finding": "sweep=1 outperforms",

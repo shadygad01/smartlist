@@ -109,6 +109,53 @@ class KnowledgeBase:
         return [f for f, v in self._data["factor_findings"].items()
                 if v.get("verdict") == "TAIL_DRIVER"]
 
+    # ── Retest prevention ─────────────────────────────────────────────────────
+
+    def should_retest(self, factor: str, min_new_samples: int = 50) -> tuple[bool, str]:
+        """
+        Returns (should_retest, reason).
+        Prevents re-running tests on previously settled hypotheses unless:
+        - min_new_samples new outcomes have been recorded since last test
+        - OR the factor was last tested > 30 days ago
+        - OR the factor has never been tested
+        """
+        entry = self._data["factor_findings"].get(factor)
+        if not entry:
+            return True, "never_tested"
+
+        verdict = entry.get("verdict")
+        if verdict in ("POSITIVE", "TAIL_DRIVER"):
+            return False, f"already_confirmed:{verdict}"
+
+        # For NEGATIVE/NEUTRAL factors, check age and sample delta
+        try:
+            from datetime import datetime, timedelta
+            last_at = datetime.fromisoformat(entry.get("recorded_at", "2000-01-01"))
+            days_old = (datetime.now() - last_at).days
+            if days_old > 30:
+                return True, f"stale:{days_old}d"
+        except Exception:
+            pass
+
+        prior_n = entry.get("sample_n") or 0
+        try:
+            conn = __import__("sqlite3").connect("egx_research.db")
+            cur_n = conn.execute(
+                "SELECT COUNT(*) FROM bottom_quality WHERE r20d IS NOT NULL"
+            ).fetchone()[0]
+            conn.close()
+            if cur_n - prior_n >= min_new_samples:
+                return True, f"new_samples:{cur_n - prior_n}"
+        except Exception:
+            pass
+
+        return False, f"too_recent:{verdict}"
+
+    def skip_factors(self) -> list[str]:
+        """Return list of factors that should be skipped in current research cycle."""
+        return [f for f in self._data["factor_findings"]
+                if not self.should_retest(f)[0]]
+
     def summary(self) -> dict:
         ff = self._data["factor_findings"]
         return {

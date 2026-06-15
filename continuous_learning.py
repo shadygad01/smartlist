@@ -132,16 +132,29 @@ class LearningMemory:
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _count_new_outcomes(db_path: str, since: Optional[str]) -> int:
-    """Count bottom_quality rows with r20d filled after `since` timestamp."""
+    """
+    Count bottom_quality rows with r20d filled.
+    When `since` is provided, counts signals whose signal_date falls after
+    (since minus 40 days) — capturing outcomes that matured since the last cycle.
+    Uses signal_date from joined signals table since bottom_quality has no updated_at.
+    """
     try:
         conn = sqlite3.connect(db_path)
         try:
             if since:
+                # Approximate: signals dated >= (last_cycle - 40d) whose 20d outcome is now filled
+                from datetime import datetime, timedelta
+                try:
+                    last_dt = datetime.fromisoformat(since)
+                    cutoff = (last_dt - timedelta(days=40)).strftime("%Y-%m-%d")
+                except Exception:
+                    cutoff = "2000-01-01"
                 row = conn.execute(
-                    """SELECT COUNT(*) FROM bottom_quality
-                       WHERE r20d IS NOT NULL
-                         AND updated_at > ?""",
-                    (since,),
+                    """SELECT COUNT(*) FROM bottom_quality bq
+                       JOIN signals s ON s.id = bq.signal_id
+                       WHERE bq.r20d IS NOT NULL
+                         AND s.signal_date >= ?""",
+                    (cutoff,),
                 ).fetchone()
             else:
                 row = conn.execute(
@@ -149,7 +162,6 @@ def _count_new_outcomes(db_path: str, since: Optional[str]) -> int:
                 ).fetchone()
             return row[0] if row else 0
         except Exception:
-            # Fallback: count all completed signals
             try:
                 row = conn.execute(
                     "SELECT COUNT(*) FROM bottom_quality WHERE r20d IS NOT NULL"

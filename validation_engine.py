@@ -326,6 +326,79 @@ def run_robustness_checks(result: ValidationResult) -> dict:
     return checks
 
 
+def multi_horizon_analysis(db_path: str = DB_PATH) -> dict:
+    """
+    Compute expectancy, win rate, and Sharpe across all available time horizons.
+    Used to determine optimal holding periods and factor-specific horizons.
+    Returns dict keyed by column name.
+    """
+    conn = sqlite3.connect(db_path)
+    bq_cols = [r[1] for r in conn.execute("PRAGMA table_info(bottom_quality)").fetchall()]
+
+    horizons = [c for c in [
+        "r20d", "r40d", "r60d",
+        "mfe_20d", "mfe_40d", "mfe_60d", "mfe_90d", "mfe_120d", "mfe_180d", "mfe_252d",
+        "peak_return_1y",
+    ] if c in bq_cols]
+
+    results = {}
+    win_thresh = 0.07
+
+    for col_name in horizons:
+        try:
+            rows = conn.execute(
+                f"""SELECT bq.{col_name}, s.signal_date
+                    FROM bottom_quality bq
+                    JOIN signals s ON s.id = bq.signal_id
+                    WHERE bq.{col_name} IS NOT NULL
+                    ORDER BY s.signal_date ASC"""
+            ).fetchall()
+            if not rows:
+                continue
+            vals = [r[0] for r in rows]
+            n = len(vals)
+            wins   = [v for v in vals if v >= win_thresh]
+            losses = [v for v in vals if v < win_thresh]
+            wr = len(wins) / n
+            avg_win  = sum(wins)  / len(wins)  if wins  else 0.0
+            avg_loss = sum(losses) / len(losses) if losses else 0.0
+            exp = wr * avg_win + (1 - wr) * avg_loss
+            mean_r = sum(vals) / n
+            var_r  = sum((v - mean_r) ** 2 for v in vals) / (n - 1) if n > 1 else 0
+            std_r  = math.sqrt(var_r) if var_r > 0 else 1e-9
+            # OOS (last 20%)
+            oos_start = int(n * 0.80)
+            oos = vals[oos_start:]
+            oos_wr = sum(1 for v in oos if v >= win_thresh) / len(oos) if oos else 0
+            oos_exp_v = [v for v in oos]
+            oos_wins  = [v for v in oos if v >= win_thresh]
+            oos_loss  = [v for v in oos if v < win_thresh]
+            oos_wr2   = len(oos_wins)/len(oos) if oos else 0
+            oos_exp2  = (oos_wr2 * (sum(oos_wins)/len(oos_wins) if oos_wins else 0)
+                         + (1-oos_wr2) * (sum(oos_loss)/len(oos_loss) if oos_loss else 0))
+
+            results[col_name] = {
+                "n": n,
+                "win_rate": round(wr, 4),
+                "expectancy": round(exp, 4),
+                "avg_return": round(mean_r, 4),
+                "avg_win": round(avg_win, 4),
+                "avg_loss": round(avg_loss, 4),
+                "oos_n": len(oos),
+                "oos_win_rate": round(oos_wr2, 4),
+                "oos_expectancy": round(oos_exp2, 4),
+                "fib_15pct": round(sum(1 for v in vals if v >= 0.15) / n, 4),
+                "fib_30pct": round(sum(1 for v in vals if v >= 0.30) / n, 4),
+                "fib_50pct": round(sum(1 for v in vals if v >= 0.50) / n, 4),
+                "fib_100pct": round(sum(1 for v in vals if v >= 1.00) / n, 4),
+            }
+        except Exception as e:
+            results[col_name] = {"error": str(e)}
+
+    conn.close()
+    return results
+
+
 # ── Entry point ─────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

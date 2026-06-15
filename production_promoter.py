@@ -158,6 +158,14 @@ def promote(
             note=note,
         )
         conn.commit()
+
+        # Hot-reload signal_engine weights so current process uses new config immediately
+        try:
+            from signal_engine import reload_weights
+            reload_weights(config_path=config_dir)
+        except Exception:
+            pass
+
         return log_id
 
     finally:

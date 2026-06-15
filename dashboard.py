@@ -1813,40 +1813,41 @@ def build_dashboard() -> str:
     now_str = now.strftime("%A, %d %B %Y — %H:%M:%S Cairo")
     now_iso = now.strftime("%Y-%m-%dT%H:%M:%S")   # embedded as JS constant
 
-    nav_links = " &nbsp;|&nbsp; ".join([
-        '<a href="heatmap.html" style="color:#8fb8d8;text-decoration:none;">🗺️ Heatmap</a>',
-        '<a href="backtest_report.html" style="color:#8fb8d8;text-decoration:none;">📊 Backtest</a>',
-        '<a href="research_report.html" style="color:#8fb8d8;text-decoration:none;">🔬 Research</a>',
-        '<a href="quant_research_report.html" style="color:#8fb8d8;text-decoration:none;">📐 Quant</a>',
-        '<a href="weight_optimizer_report.html" style="color:#8fb8d8;text-decoration:none;">⚖️ Optimizer</a>',
-        '<a href="logic_analysis_report.html" style="color:#8fb8d8;text-decoration:none;">🔬 Logic</a>',
-        '<a href="edge_report.html" style="color:#8fb8d8;text-decoration:none;">🧠 Edge</a>',
-        '<a href="system_audit_report.html" style="color:#8fb8d8;text-decoration:none;">🕵️ Audit</a>',
-        '<a href="behavior_report.html" style="color:#8fb8d8;text-decoration:none;">🔍 Behavior</a>',
-        '<a href="adaptive_learning_report.html" style="color:#8fb8d8;text-decoration:none;">🧬 Adaptive</a>',
-        '<a href="historical_backtest_report.html" style="color:#8fb8d8;text-decoration:none;">🏛️ History</a>',
-        '<a href="gx_learning_report.html" style="color:#f0b840;text-decoration:none;font-weight:600;">⚡ GX Learning</a>',
-        '<a href="multi_period_report.html" style="color:#8fb8d8;text-decoration:none;">📅 Multi-Period</a>',
-        '<a href="smc_rl_report.html" style="color:#c8a8e8;text-decoration:none;font-weight:600;">🤖 RL Optimizer</a>',
-        '<a href="walk_forward_report.html" style="color:#98e8a0;text-decoration:none;font-weight:600;">📈 Walk-Forward</a>',
-        '<a href="research_memory_report.html" style="color:#f08080;text-decoration:none;font-weight:600;">🔬 Research Memory</a>',
-        '<a href="research_center.html" style="color:#50d8d0;text-decoration:none;font-weight:600;">🧪 Research Center</a>',
-    ])
+    # Dynamic nav — only include links to files that actually exist
+    import os, glob as _glob
+    _reports_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports")
+    def _report_link(path, label, color="#8fb8d8", bold=False):
+        # Accept wildcard for dated reports (e.g., system_audit_report_*.html)
+        if "*" in path:
+            matches = _glob.glob(os.path.join(_reports_dir, path))
+            if not matches:
+                return None
+            path = "reports/" + os.path.basename(sorted(matches)[-1])
+        else:
+            full = path if os.path.isabs(path) else os.path.join(_reports_dir, path)
+            if not os.path.exists(full):
+                return None
+            path = "reports/" + os.path.basename(path)
+        fw = "font-weight:600;" if bold else ""
+        return f'<a href="{path}" style="color:{color};text-decoration:none;{fw}">{label}</a>'
+
+    _nav_candidates = [
+        ("behavior_report.html",               "Behavior",     "#8fb8d8", False),
+        ("system_audit_report_*.html",          "Audit",        "#8fb8d8", False),
+        ("multi_period_report_*.html",          "Multi-Period", "#8fb8d8", False),
+    ]
+    nav_parts = [lnk for c in _nav_candidates
+                 if (lnk := _report_link(c[0], c[1], c[2], c[3])) is not None]
+    nav_links = " &nbsp;|&nbsp; ".join(nav_parts) if nav_parts else ""
 
     body = f"""
 {_section_system_state()}
-{_section_walk_forward()}
-{_section_smc_calibration()}
-{_section_research_notes()}
-{_section_backtest(bt)}
 {_section_behavior(beh)}
 {_section_multi_period()}
-{_section_quant()}
-{_section_weight_optimizer()}
-{_section_logic_analyzer()}
-{_section_historical_backtest()}
 {_section_system_audit()}
-{_section_adaptive_learning()}
+{_section_walk_forward()}
+{_section_smc_calibration()}
+{_section_backtest(bt)}
 {_section_research(rr)}
 {_section_edge(ed)}
 """

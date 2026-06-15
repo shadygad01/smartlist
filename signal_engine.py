@@ -106,6 +106,31 @@ W_DIV   = _default_cfg.w_div
 W_DZ    = _default_cfg.w_dz
 
 
+def reload_weights(config_path: str = "config/") -> dict:
+    """
+    Hot-reload weights from config/weights.json into module-level globals.
+    Call after production_promoter.promote() to pick up deployed weights
+    without restarting the process.
+    Returns dict of new weight values.
+    """
+    global _default_cfg, W_PRICE, W_OB, W_LIQ, W_HTF, W_AVWAP, W_MACD, W_DIV, W_DZ
+    _weights_path = os.path.join(config_path, "weights.json")
+    _gates_path = os.path.join(config_path, "gates_config.json")
+    _default_cfg = GateConfig(gates_path=_gates_path, weights_path=_weights_path)
+    W_PRICE = _default_cfg.w_price
+    W_OB    = _default_cfg.w_ob
+    W_LIQ   = _default_cfg.w_liq
+    W_HTF   = _default_cfg.w_htf
+    W_AVWAP = _default_cfg.w_avwap
+    W_MACD  = _default_cfg.w_macd
+    W_DIV   = _default_cfg.w_div
+    W_DZ    = _default_cfg.w_dz
+    return {
+        "w_price": W_PRICE, "w_ob": W_OB, "w_liq": W_LIQ, "w_htf": W_HTF,
+        "w_avwap": W_AVWAP, "w_macd": W_MACD, "w_div": W_DIV, "w_dz": W_DZ,
+    }
+
+
 # =========================================
 # HELPERS
 # =========================================

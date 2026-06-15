@@ -29,11 +29,11 @@
 <div class="header">
   <h1>EGX Scanner — Dashboard</h1>
   <div class="sub">
-    آخر تحديث: Saturday, 13 June 2026 — 21:33:31 Cairo
+    آخر تحديث: Monday, 15 June 2026 — 18:14:52 Cairo
     &nbsp;·&nbsp;
     <span id="age-label" style="opacity:.85;">جاري الحساب...</span>
   </div>
-  <div class="nav"><a href="heatmap.html" style="color:#8fb8d8;text-decoration:none;">🗺️ Heatmap</a> &nbsp;|&nbsp; <a href="backtest_report.html" style="color:#8fb8d8;text-decoration:none;">📊 Backtest</a> &nbsp;|&nbsp; <a href="research_report.html" style="color:#8fb8d8;text-decoration:none;">🔬 Research</a> &nbsp;|&nbsp; <a href="quant_research_report.html" style="color:#8fb8d8;text-decoration:none;">📐 Quant</a> &nbsp;|&nbsp; <a href="weight_optimizer_report.html" style="color:#8fb8d8;text-decoration:none;">⚖️ Optimizer</a> &nbsp;|&nbsp; <a href="logic_analysis_report.html" style="color:#8fb8d8;text-decoration:none;">🔬 Logic</a> &nbsp;|&nbsp; <a href="edge_report.html" style="color:#8fb8d8;text-decoration:none;">🧠 Edge</a> &nbsp;|&nbsp; <a href="system_audit_report.html" style="color:#8fb8d8;text-decoration:none;">🕵️ Audit</a> &nbsp;|&nbsp; <a href="behavior_report.html" style="color:#8fb8d8;text-decoration:none;">🔍 Behavior</a> &nbsp;|&nbsp; <a href="adaptive_learning_report.html" style="color:#8fb8d8;text-decoration:none;">🧬 Adaptive</a> &nbsp;|&nbsp; <a href="historical_backtest_report.html" style="color:#8fb8d8;text-decoration:none;">🏛️ History</a> &nbsp;|&nbsp; <a href="gx_learning_report.html" style="color:#f0b840;text-decoration:none;font-weight:600;">⚡ GX Learning</a> &nbsp;|&nbsp; <a href="multi_period_report.html" style="color:#8fb8d8;text-decoration:none;">📅 Multi-Period</a> &nbsp;|&nbsp; <a href="smc_rl_report.html" style="color:#c8a8e8;text-decoration:none;font-weight:600;">🤖 RL Optimizer</a> &nbsp;|&nbsp; <a href="walk_forward_report.html" style="color:#98e8a0;text-decoration:none;font-weight:600;">📈 Walk-Forward</a></div>
+  <div class="nav"><a href="reports/behavior_report.html" style="color:#8fb8d8;text-decoration:none;">Behavior</a> &nbsp;|&nbsp; <a href="reports/system_audit_report_2026-06-15.html" style="color:#8fb8d8;text-decoration:none;">Audit</a> &nbsp;|&nbsp; <a href="reports/multi_period_report_2026-06-15.html" style="color:#8fb8d8;text-decoration:none;">Multi-Period</a></div>
   <div id="countdown-box">
     <div class="label" id="cd-label">⏱ التحديث القادم</div>
     <div class="timer" id="cdtimer">--:--:--</div>
@@ -43,664 +43,128 @@
 <div class="container">
 
 
-<div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
-            padding:22px 24px;margin-bottom:20px;">
-  <div style="font-size:22px;margin-bottom:6px;">📈
-    <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">Walk-Forward Backtester — 194 صفقة حقيقية</span>
-  </div>
-  <div style="display:flex;flex-wrap:wrap;gap:4px;">
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Equity (بدأ 100)</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">2427.5</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">إجمالي العائد</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">+2327.5%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Win Rate</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">69%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Avg Return 90d</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">+16.9%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Profit Factor</div>
-    <div style="font-size:20px;font-weight:700;color:#1a3c5e;">5.63</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Trades</div>
-    <div style="font-size:20px;font-weight:700;color:#333;">194</div>
-  </div></div><div style='margin-top:8px;font-size:12px;background:#e8f4fd;padding:7px 10px;border-radius:5px;color:#1a3c5e;'>📊 194 gradient updates · أكبر تغيير: <b>r5_avwap</b> → -1.7 pts</div>
-  <a href="walk_forward_report.html" style="display:inline-block;margin-top:14px;padding:7px 18px;background:#1a3c5e;color:#fff;border-radius:5px;font-size:12px;text-decoration:none;">التقرير الكامل ←</a>
-</div>
+<div style="background:#0f0f1e;border:2px solid #50d8d0;border-radius:10px;padding:18px 22px;margin-bottom:20px">
+  <h3 style="color:#50d8d0;margin:0 0 14px;font-size:1.1em;letter-spacing:0.04em">Alpha Engine Status</h3>
 
-<div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
-            padding:22px 24px;margin-bottom:20px;">
-  <div style="font-size:22px;margin-bottom:6px;">🎯
-    <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">SMC Calibration Template — نموذج معايرة النظام</span>
+  <div style="background:#161625;border:1px solid #2a3a5e;border-radius:6px;padding:12px 16px;margin-bottom:10px">
+    <div style="color:#aaa;font-size:0.78em;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">System & Autonomy</div>
+    <table style="width:100%;border-collapse:collapse">
+        <tr>
+          <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Alpha Status</td>
+          <td style="padding:5px 12px"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">VERIFIED</span></td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">OOS mfe40_wr=0.812 | OOS Sharpe=3.224 | OOS exp=0.191</td>
+        </tr>
+        <tr>
+          <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Autonomy</td>
+          <td style="padding:5px 12px"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">OPERATIONAL</span></td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">Last cycle: 2026-06-15 18:14 | cycles=11 | promotions=2</td>
+        </tr>
+        <tr>
+          <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Production Model</td>
+          <td style="padding:5px 12px"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">DEPLOYED</span></td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">r8_demand=29.3573 | r6_macd=14.8669 | r1_price=7.6871 | r7_div=10.577</td>
+        </tr>
+        <tr>
+          <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Last Deployment</td>
+          <td style="padding:5px 12px"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">PROMOTED</span></td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">id=5 | 2026-06-15 18:14 | by=continuous_learning</td>
+        </tr>
+        <tr>
+          <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Drift</td>
+          <td style="padding:5px 12px"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">CLEAR</span></td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">numpy fallback active | last checked=2026-06-15 18:14</td>
+        </tr></table>
   </div>
-  <table style='width:100%;border-collapse:collapse;font-size:13px'><thead><tr style='background:#1a3c5e;color:#fff'><th style='padding:7px 10px;text-align:right'>Indicator</th><th style='padding:7px 6px;text-align:center'>Max</th><th style='padding:7px 6px;text-align:center'>System</th><th style='padding:7px 6px;text-align:center'>Optimizer</th><th style='padding:7px 6px;text-align:center'>RL</th><th style='padding:7px 6px;text-align:center'>Walk-Fwd</th><th style='padding:7px 6px;text-align:center'>Consensus</th></tr></thead><tbody><tr><td style='font-weight:600'>Price Position</td><td style='text-align:center;color:#555'>30</td><td style='text-align:center'>30</td><td style='text-align:center;color:#dc3545'>12.0</td><td style='text-align:center;color:#28a745'>30.6</td><td style='text-align:center;color:#28a745'>31.4</td><td style='text-align:center'><span style='color:#28a745'>▲</span></td></tr><tr><td style='font-weight:600'>OB Quality</td><td style='text-align:center;color:#555'>10</td><td style='text-align:center'>10</td><td style='text-align:center;color:#dc3545'>5.0</td><td style='text-align:center;color:#dc3545'>9.6</td><td style='text-align:center;color:#28a745'>10.7</td><td style='text-align:center'><span style='color:#dc3545'>▼</span></td></tr><tr><td style='font-weight:600'>Liquidity Context</td><td style='text-align:center;color:#555'>20</td><td style='text-align:center'>20</td><td style='text-align:center;color:#28a745'>28.2</td><td style='text-align:center;color:#dc3545'>15.0</td><td style='text-align:center;color:#dc3545'>19.9</td><td style='text-align:center'><span style='color:#dc3545'>▼</span></td></tr><tr><td style='font-weight:600'>HTF Alignment</td><td style='text-align:center;color:#555'>10</td><td style='text-align:center'>10</td><td style='text-align:center;color:#dc3545'>1.5</td><td style='text-align:center;color:#dc3545'>9.6</td><td style='text-align:center;color:#28a745'>10.2</td><td style='text-align:center'><span style='color:#dc3545'>▼</span></td></tr><tr><td style='font-weight:600'>AVWAP Support</td><td style='text-align:center;color:#555'>8</td><td style='text-align:center'>8</td><td style='text-align:center;color:#dc3545'>4.3</td><td style='text-align:center;color:#dc3545'>4.1</td><td style='text-align:center;color:#dc3545'>6.3</td><td style='text-align:center'><span style='color:#dc3545'>▼</span></td></tr><tr><td style='font-weight:600'>MACD Signal</td><td style='text-align:center;color:#555'>4</td><td style='text-align:center'>4</td><td style='text-align:center;color:#dc3545'>1.2</td><td style='text-align:center;color:#dc3545'>1.1</td><td style='text-align:center;color:#dc3545'>2.9</td><td style='text-align:center'><span style='color:#dc3545'>▼</span></td></tr><tr><td style='font-weight:600'>Divergence</td><td style='text-align:center;color:#555'>3</td><td style='text-align:center'>3</td><td style='text-align:center;color:#28a745'>26.4</td><td style='text-align:center;color:#28a745'>3.1</td><td style='text-align:center;color:#dc3545'>2.7</td><td style='text-align:center'><span style='color:#28a745'>▲</span></td></tr><tr><td style='font-weight:600'>Demand Zone</td><td style='text-align:center;color:#555'>15</td><td style='text-align:center'>15</td><td style='text-align:center;color:#28a745'>21.4</td><td style='text-align:center;color:#28a745'>15.1</td><td style='text-align:center;color:#28a745'>15.9</td><td style='text-align:center'><span style='color:#28a745'>▲</span></td></tr><tr style='background:#f8f9fa'><td style='font-weight:600;color:#555'>Pattern Score</td><td style='text-align:center;color:#555'>20</td><td style='text-align:center;color:#999'>—</td><td style='text-align:center;color:#999'>—</td><td style='text-align:center;color:#2a6496'>11.7</td><td style='text-align:center;color:#999'>—</td><td style='text-align:center'>~</td></tr></tbody></table><div style='margin-top:10px;background:#f0f8ff;border-radius:6px;padding:8px 12px;font-size:12px;color:#1a3c5e;border:1px solid #d0e8f8'>🤖 RL (run #2): Top-Q 90d = <strong style='color:#155724'>17.26%</strong> | Discrimination = <strong>-4.23%</strong> | Trained on 395 signals</div><div style='margin-top:6px;background:#f0fff4;border-radius:6px;padding:8px 12px;font-size:12px;color:#1a5c3a;border:1px solid #c3e6cb'>📈 Walk-Fwd: 198 BUY trades | Win rate = <strong style='color:#155724'>0.0%</strong> | Equity 100 → <strong style='color:#155724'>2427</strong></div>
-  <a href="smc_rl_report.html" style="display:inline-block;margin-top:14px;padding:7px 18px;background:#1a3c5e;color:#fff;border-radius:5px;font-size:12px;text-decoration:none;">تقرير RL الكامل ←</a>
-</div>
 
-<div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
-            padding:22px 24px;margin-bottom:20px;">
-  <div style="font-size:22px;margin-bottom:6px;">📋
-    <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">📋 ملخص التوصيات البحثية — كل الأقسام</span>
+  <div style="background:#161625;border:1px solid #2a3a5e;border-radius:6px;padding:12px 16px;margin-bottom:10px">
+    <div style="color:#aaa;font-size:0.78em;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">Pipeline Throughput</div>
+    <table style="width:100%;border-collapse:collapse">
+        <tr>
+          <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Database</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">651 signals | 560 mfe_40d outcomes | 639 peak_1y | 226 positions tracked</td>
+        </tr>
+        <tr>
+          <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Discovery</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">42 experiment_log entries | drift_lab + factor_lab (RF/GBM, sklearn) + regime_lab</td>
+        </tr>
+        <tr>
+          <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Research</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">1051 signals in research_engine | mfe_mean=12.97% | bq_mean=52.6 | top: htf+rsi_div (+8.7%) | htf+hvn (+7.2%)</td>
+        </tr>
+        <tr>
+          <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Optimization</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">18 runs | expectancy_gradient avg delta +0.5718 | weight_optimizer via RF importance</td>
+        </tr>
+        <tr>
+          <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Validation</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">21 runs | 10 APPROVED (48%) | mfe40_split 60/20/20 | val_wr=0.714 oos_wr=0.812</td>
+        </tr>
+        <tr>
+          <td style="padding:5px 12px;color:#aaa;white-space:nowrap">Deployment</td>
+          <td style="padding:5px 12px;color:#ccc;font-size:0.85em">4 PROMOTEs | 0 ROLLBACKS | atomic write to config/weights.json | snapshot in config_snapshots</td>
+        </tr></table>
   </div>
-  
-<div style="font-size:11px;color:#555;margin-bottom:8px;">
-  45 توصية من 10 مصادر بحثية &nbsp;|&nbsp;
-  مرتبة من الأعلى أولوية · <b>Baseline:</b> 1051 إشارة · avg r20d=+4.6%
-</div>
-<div style="overflow-x:auto;">
-<table style="width:100%;border-collapse:collapse;font-size:12px;">
-  <thead><tr style="background:#1a3a5c;color:#fff;font-size:11px;">
-    <th style="padding:7px 8px;text-align:right;">المصدر</th>
-    <th style="padding:7px 8px;text-align:right;">الملاحظة / التوصية</th>
-    <th style="padding:7px 8px;text-align:center;">نسبة التأكد</th>
-    <th style="padding:7px 8px;text-align:center;">Δ العائد</th>
-    <th style="padding:7px 8px;text-align:center;">Δ الصفقات</th>
-  </tr></thead>
-  <tbody>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Logic · sc_price</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#0a3622"><b>buy_zone_scoring</b>: Linear: 30→18 in Buy Zone → <b>Add bonus for r1=1-10 (near-EQ): multiply by 1.3</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=893</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+1.5%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555;font-size:11px'>893↑ / 158↓</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Logic · sc_price</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#0a3622"><b>buy_zone_pct</b>: 0.15 (15% from lo = Buy Zone → <b>Consider 0.10 (10% from lo) — tighter Buy Zone focuses </b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=893</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.6%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555;font-size:11px'>893↑ / 158↓</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Logic · sc_ob</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#0a3622"><b>W_OB</b>: 10 → <b>0</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=175</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+1.4%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555;font-size:11px'>175↑ / 876↓</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Logic · sc_liquidity</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#0a3622"><b>wick_score</b>: 0.6 → <b>0.15</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=631</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.7%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555;font-size:11px'>631↑ / 420↓</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Logic · sc_liquidity</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#0a3622"><b>equal_lows_score</b>: 0.4 → <b>0.25</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=631</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.7%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555;font-size:11px'>631↑ / 420↓</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Logic · sc_htf</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#0a3622"><b>hhhl_full</b>: 1.0 → <b>0.0</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=720</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.7%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555;font-size:11px'>720↑ / 331↓</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">⚖️ Optimizer · Total Score</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#084298"><b>Minimum score gate: raw_score >= 60</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#856404'>70%</span> · <span style='color:#555'>n=290</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+1.1%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼575</span><span style='color:#888;font-size:10px;'> (-55%)</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🕵️ Audit · Filter</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#721c24"><b>Equal Lows</b>: Slight drag — borderline</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24'>p=0.246</span> · <span style='color:#555'>n=44</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#721c24;font-weight:700'>-1.8%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼1007</span><span style='color:#888;font-size:10px'> لو اشترطناه</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🕵️ Audit · Filter</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#721c24"><b>Order Block Present</b>: Slight drag — borderline</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24'>p=0.164</span> · <span style='color:#555'>n=175</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#721c24;font-weight:700'>-1.4%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼876</span><span style='color:#888;font-size:10px'> لو اشترطناه</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🕵️ Audit · Filter</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#721c24"><b>Stopping Volume</b>: Slight drag — borderline</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24'>p=0.444</span> · <span style='color:#555'>n=19</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#721c24;font-weight:700'>-1.3%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼1032</span><span style='color:#888;font-size:10px'> لو اشترطناه</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🕵️ Audit · Filter</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#155724"><b>Sweep Detected</b>: Slight edge — borderline (not significant)</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24'>p=0.117</span> · <span style='color:#555'>n=477</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+1.2%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼574</span><span style='color:#888;font-size:10px'> لو اشترطناه</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🕵️ Audit · Filter</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#155724"><b>HTF Higher High</b>: Slight edge — borderline (not significant)</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24'>p=0.282</span> · <span style='color:#555'>n=216</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+1.1%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼835</span><span style='color:#888;font-size:10px'> لو اشترطناه</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🧠 Edge</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#6f42c1"><b>snap_reclaim_spd ≤ -0.1216  AND  feat_dist_52w_low > 0.3673  AND  snap_atr ≤ 0.8</b> · WR=100%</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#155724'>p=0.000</span> · <span style='color:#555'>n=15</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>MFE +43.8%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#1a3c5e;font-weight:700'>15 إشارة</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🧠 Edge</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#6f42c1"><b>snap_reclaim_spd ≤ -0.1216  AND  feat_dist_52w_low > 0.3673  AND  snap_atr ≤ 0.8</b> · WR=100%</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#155724'>p=0.000</span> · <span style='color:#555'>n=34</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>MFE +34.1%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#1a3c5e;font-weight:700'>34 إشارة</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🧠 Edge</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#6f42c1"><b>snap_sweep_size ≤ 0.2619  AND  snap_reclaim_spd ≤ -0.1888</b> · WR=89%</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#155724'>p=0.000</span> · <span style='color:#555'>n=18</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>MFE +33.3%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#1a3c5e;font-weight:700'>18 إشارة</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🧠 Edge</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#6f42c1"><b>snap_reclaim_spd > -0.1216  AND  snap_pivot_str > 5.495  AND  snap_atr ≤ 0.5831 </b> · WR=81%</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#155724'>p=0.001</span> · <span style='color:#555'>n=16</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>MFE +30.2%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#1a3c5e;font-weight:700'>16 إشارة</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">📊 Backtest · Score</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#0a3622"><b>أفضل score threshold = 65</b>: WR=100% · Exp=39.2% · PF=999.0</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=213</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+39.2%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼838</span><span style='color:#888;font-size:10px;'> (-80%)</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">📊 Backtest · r1</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#0a3622"><b>أفضل r1 threshold = 20</b>: WR=100% · Exp=26.4%</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=728</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+26.4%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼323</span><span style='color:#888;font-size:10px;'> (-31%)</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔍 Behavior</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#721c24"><b>52% من الإشارات flat</b> (عائد <4%) — النظام يُولِّد كثيراً من الإشارات الضعيفة</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=1051</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#aaa'>WR=38%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>546 flat</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🧬 Adaptive · IMP-5</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#1a3c5e"><b>HVN + HTF_HH Super-Bonus Tier</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>score=100</span> <span style='color:#155724;font-size:10px'>✓ WF</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+2.6%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼962</span><span style='color:#888;font-size:10px;'> (-92%)</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🧬 Adaptive · IMP-2</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#1a3c5e"><b>Mandatory Sweep Gate (sweep_detected=1)</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>score=79</span> <span style='color:#155724;font-size:10px'>✓ WF</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.7%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼574</span><span style='color:#888;font-size:10px;'> (-55%)</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🏛️ Historical</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#0a3622"><b>sweep_detected</b>: PF_yes=2.90 vs PF_no=2.49 · WR_yes=37% · MFE_yes=13%</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=203</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.8%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555;font-size:11px'>203/412</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🏛️ Historical</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#0a3622"><b>wick_rejection</b>: PF_yes=2.96 vs PF_no=2.65 · WR_yes=42% · MFE_yes=12%</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=50</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.2%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555;font-size:11px'>50/412</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">⚡ GX · adp_IMP-5</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#3d1a5c"><b>HVN + HTF_HH Super-Bonus Tier</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#155724'>conf=100%</span> · <span style='color:#555'>4 مصدر</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+2.6%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">⚡ GX · opt_02</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#3d1a5c"><b>Minimum threshold: r3_liquidity >= 20 (current: no gate)</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#155724'>conf=88%</span> · <span style='color:#555'>1 مصدر</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.9%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">⚡ GX · adp_IMP-2</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#d4edda;color:#155724;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">HIGH</span>
-    <span style="font-size:12px;color:#3d1a5c"><b>Mandatory Sweep Gate (sweep_detected=1)</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#155724'>conf=79%</span> · <span style='color:#555'>1 مصدر</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.7%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Logic · sc_ob</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#0a3622"><b>OB_penalty</b>: No penalty → <b>Reduce raw_score by 5 when OB detected (treated as over</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=175</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#721c24;font-weight:700'>-1.4%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555;font-size:11px'>175↑ / 876↓</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Logic · sc_htf</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#0a3622"><b>hhhl_partial_hl</b>: 0.5 → <b>1.0</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=720</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.7%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555;font-size:11px'>720↑ / 331↓</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">⚖️ Optimizer · Liquidity</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#084298"><b>Minimum threshold: r3_liquidity >= 20 (current: no gate)</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#155724'>88%</span> · <span style='color:#555'>n=275</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.9%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼599</span><span style='color:#888;font-size:10px;'> (-57%)</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">⚖️ Optimizer · All r1-r8</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#084298"><b>Rebalance r1-r8 weights based on RF importance + optimization</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24'>55%</span> · <span style='color:#555'>n=320</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.6%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼525</span><span style='color:#888;font-size:10px;'> (-50%)</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">⚖️ Optimizer · Demand Zone</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#084298"><b>Minimum threshold: r8_demand >= 6 (current: no gate)</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#856404'>69%</span> · <span style='color:#555'>n=304</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.5%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼551</span><span style='color:#888;font-size:10px;'> (-52%)</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">⚖️ Optimizer · HTF Structure + Demand Zone</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#084298"><b>Premium filter: require both r4_htf>0 AND r8_demand>0</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#856404'>70%</span> · <span style='color:#555'>n=260</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.5%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼624</span><span style='color:#888;font-size:10px;'> (-59%)</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Research</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#155724"><b>r1_price</b>: رفع الوزن +5 نقطة</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>imp=0.0134</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Research</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#721c24"><b>r2_ob</b>: خفض الوزن -3 نقطة</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>imp=0.0012</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Research</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#721c24"><b>r3_liquidity</b>: خفض الوزن -6 نقطة</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>imp=0.0029</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Research</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#721c24"><b>r4_htf</b>: خفض الوزن -3 نقطة</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;">—</td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Research</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#155724"><b>r5_avwap</b>: رفع الوزن +2 نقطة</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>imp=0.0088</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Research · Quant</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#4a235a"><b>feat_dist_52w_low</b>: أهم مؤثر على MFE (RF importance=0.0745)</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=401</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Research · Quant</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#4a235a"><b>feat_dist_last_bos</b>: أهم مؤثر على MFE (RF importance=0.0546)</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=401</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Research · Quant</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#4a235a"><b>snap_wick_ratio</b>: أهم مؤثر على MFE (RF importance=0.0376)</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=401</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔬 Research · Quant</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#4a235a"><b>snap_atr</b>: أهم مؤثر على MFE (RF importance=0.0363)</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=401</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#aaa'>—</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🧬 Adaptive · IMP-6</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#1a3c5e"><b>Combined Fix (OB remove + HTF inversion + Demand inversion)</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>score=67</span> <span style='color:#155724;font-size:10px'>✓ WF</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.1%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼285</span><span style='color:#888;font-size:10px;'> (-27%)</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🏛️ Historical</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#fff3cd;color:#856404;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">MEDIUM</span>
-    <span style="font-size:12px;color:#0a3622"><b>equal_lows</b>: PF_yes=2.87 vs PF_no=2.67 · WR_yes=50% · MFE_yes=13%</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=22</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#721c24;font-weight:700'>-0.1%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555;font-size:11px'>22/412</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🔍 Behavior</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#cfe2ff;color:#084298;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">LOW</span>
-    <span style="font-size:12px;color:#555">Baseline: WR=38% · avg r20d=+4.6% · MFE=13.0% · MAE=-7.4%</span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>n=1051</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724'>+4.6%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#333'>1051 إشارة</span></td>
-</tr>
-<tr style="border-bottom:1px solid #f0f0f0;vertical-align:top;">
-  <td style="padding:7px 8px;white-space:nowrap;font-size:11px;color:#555;min-width:110px">🧬 Adaptive · IMP-1</td>
-  <td style="padding:7px 8px;">
-    <span style="background:#cfe2ff;color:#084298;font-size:10px;
-                 font-weight:700;padding:2px 6px;border-radius:4px;margin-left:5px;">LOW</span>
-    <span style="font-size:12px;color:#1a3c5e"><b>Remove Order Block (W_OB → 0)</b></span>
-  </td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#555'>score=49</span> <span style='color:#aaa;font-size:10px'>— WF</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:80px;font-size:12px;"><span style='color:#155724;font-weight:700'>+0.2%</span></td>
-  <td style="padding:7px 8px;text-align:center;min-width:90px;font-size:12px;"><span style='color:#721c24;font-weight:700'>▼176</span><span style='color:#888;font-size:10px;'> (-17%)</span></td>
-</tr></tbody>
-</table>
-</div>
-  
-</div>
 
-<div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
-            padding:22px 24px;margin-bottom:20px;">
-  <div style="font-size:22px;margin-bottom:6px;">📊
-    <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">Backtest / Equity Curve</span>
+  <div style="background:#161625;border:1px solid #2a3a5e;border-radius:6px;padding:12px 16px;margin-bottom:10px">
+    <div style="color:#aaa;font-size:0.78em;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">Database Utilization</div>
+    <table style="width:100%;border-collapse:collapse">
+        <tr>
+          <td style="padding:4px 12px;color:#aaa;font-size:0.85em">Research (v_all_signals)</td>
+          <td style="padding:4px 12px"><div style="display:inline-block;width:120px;height:10px;background:#2a2a3e;border-radius:3px;vertical-align:middle"><div style="width:120px;height:10px;background:#4caf50;border-radius:3px"></div></div> <span style="font-size:0.82em;color:#ccc">100%</span></td>
+          <td style="padding:4px 12px;color:#ccc;font-size:0.82em">1051/651 signals via view</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 12px;color:#aaa;font-size:0.85em">Outcomes w/ mfe_40d</td>
+          <td style="padding:4px 12px"><div style="display:inline-block;width:120px;height:10px;background:#2a2a3e;border-radius:3px;vertical-align:middle"><div style="width:105px;height:10px;background:#4caf50;border-radius:3px"></div></div> <span style="font-size:0.82em;color:#ccc">88%</span></td>
+          <td style="padding:4px 12px;color:#ccc;font-size:0.82em">560/639 signals</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 12px;color:#aaa;font-size:0.85em">Outcomes w/ peak_return_1y</td>
+          <td style="padding:4px 12px"><div style="display:inline-block;width:120px;height:10px;background:#2a2a3e;border-radius:3px;vertical-align:middle"><div style="width:120px;height:10px;background:#4caf50;border-radius:3px"></div></div> <span style="font-size:0.82em;color:#ccc">100%</span></td>
+          <td style="padding:4px 12px;color:#ccc;font-size:0.82em">639/639 signals</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 12px;color:#aaa;font-size:0.85em">KB Feature Coverage</td>
+          <td style="padding:4px 12px"><div style="display:inline-block;width:120px;height:10px;background:#2a2a3e;border-radius:3px;vertical-align:middle"><div style="width:72px;height:10px;background:#f0b840;border-radius:3px"></div></div> <span style="font-size:0.82em;color:#ccc">61%</span></td>
+          <td style="padding:4px 12px;color:#ccc;font-size:0.82em">20/33 features analyzed</td>
+        </tr></table>
   </div>
-  
-<div style="display:flex;flex-wrap:wrap;gap:4px;">
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">CAGR</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">100.1%</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+    <div style="background:#161625;border:1px solid #2a3a5e;border-radius:6px;padding:12px 16px;margin-bottom:10px">
+      <div style="color:#4caf50;font-size:0.78em;margin-bottom:4px;text-transform:uppercase">Active Findings</div>
+      <table style="width:100%;border-collapse:collapse"><tr><th style="padding:3px 8px;color:#aaa;font-size:0.78em;text-align:left">Factor</th><th style="text-align:left;padding:3px 8px;color:#aaa;font-size:0.78em">Exp/Importance</th><th style="text-align:left;padding:3px 8px;color:#aaa;font-size:0.78em">Sug. Weight</th><th style="text-align:left;padding:3px 8px;color:#aaa;font-size:0.78em">Source</th></tr><tr><td style="padding:3px 8px;color:#4caf50;font-size:0.82em">r4_htf</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">0.055</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">factor_lab_2026_06</td></tr><tr><td style="padding:3px 8px;color:#4caf50;font-size:0.82em">r7_div</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">0.048</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">factor_lab_2026_06</td></tr><tr><td style="padding:3px 8px;color:#4caf50;font-size:0.82em">r5_avwap</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">factor_lab</td></tr><tr><td style="padding:3px 8px;color:#4caf50;font-size:0.82em">r6_macd</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">factor_lab</td></tr><tr><td style="padding:3px 8px;color:#4caf50;font-size:0.82em">system_mfe40_gate</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">0.1913</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">alpha_mandate_validation</td></tr><tr><td style="padding:3px 8px;color:#4caf50;font-size:0.82em">sweep_detected</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">system_audit</td></tr><tr><td style="padding:3px 8px;color:#4caf50;font-size:0.82em">htf_higher_high</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">system_audit</td></tr></table>
+    </div>
+    <div style="background:#161625;border:1px solid #2a3a5e;border-radius:6px;padding:12px 16px;margin-bottom:10px">
+      <div style="color:#f0b840;font-size:0.78em;margin-bottom:4px;text-transform:uppercase">Tail Drivers</div>
+      <table style="width:100%;border-collapse:collapse"><tr><th style="padding:3px 8px;color:#aaa;font-size:0.78em;text-align:left">Factor</th><th style="text-align:left;padding:3px 8px;color:#aaa;font-size:0.78em">Exp/Importance</th><th style="text-align:left;padding:3px 8px;color:#aaa;font-size:0.78em">Sug. Weight</th><th style="text-align:left;padding:3px 8px;color:#aaa;font-size:0.78em">Source</th></tr><tr><td style="padding:3px 8px;color:#f0b840;font-size:0.82em">r7_div</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">0.048</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">factor_lab_2026_06</td></tr></table>
+    </div>
+    <div style="background:#161625;border:1px solid #2a3a5e;border-radius:6px;padding:12px 16px;margin-bottom:10px">
+      <div style="color:#f44336;font-size:0.78em;margin-bottom:4px;text-transform:uppercase">Rejected Findings</div>
+      <table style="width:100%;border-collapse:collapse"><tr><th style="padding:3px 8px;color:#aaa;font-size:0.78em;text-align:left">Factor</th><th style="text-align:left;padding:3px 8px;color:#aaa;font-size:0.78em">Exp/Importance</th><th style="text-align:left;padding:3px 8px;color:#aaa;font-size:0.78em">Sug. Weight</th><th style="text-align:left;padding:3px 8px;color:#aaa;font-size:0.78em">Source</th></tr><tr><td style="padding:3px 8px;color:#f44336;font-size:0.82em">r2_ob</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">factor_lab</td></tr><tr><td style="padding:3px 8px;color:#f44336;font-size:0.82em">wick_rejection</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">system_audit</td></tr><tr><td style="padding:3px 8px;color:#f44336;font-size:0.82em">equal_lows</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">system_audit</td></tr><tr><td style="padding:3px 8px;color:#f44336;font-size:0.82em">r1_price</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">factor_lab</td></tr><tr><td style="padding:3px 8px;color:#f44336;font-size:0.82em">r3_liquidity</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">factor_lab</td></tr><tr><td style="padding:3px 8px;color:#f44336;font-size:0.82em">r8_demand</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">factor_lab</td></tr><tr><td style="padding:3px 8px;color:#f44336;font-size:0.82em">order_block_present</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">system_audit</td></tr><tr><td style="padding:3px 8px;color:#f44336;font-size:0.82em">stopping_volume</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">system_audit</td></tr><tr><td style="padding:3px 8px;color:#f44336;font-size:0.82em">rsi_divergence</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">—</td><td style="padding:3px 8px;color:#aaa;font-size:0.82em">system_audit</td></tr></table>
+    </div>
   </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Max Drawdown</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">-3.5%</div>
+
+  <div style="background:#161625;border:1px solid #2a3a5e;border-radius:6px;padding:12px 16px;margin-bottom:10px">
+    <div style="color:#aaa;font-size:0.78em;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">Learning Cycle History (last 8)</div>
+    <table style="width:100%;border-collapse:collapse">
+      <tr style="font-size:0.78em;color:#aaa">
+        <th style="text-align:left;padding:3px 8px">Finished At</th>
+        <th style="text-align:left;padding:3px 8px">Verdict</th>
+        <th style="text-align:left;padding:3px 8px">Outcomes</th>
+        <th style="text-align:left;padding:3px 8px">Labs</th>
+        <th style="text-align:left;padding:3px 8px">Production</th>
+      </tr>
+      <tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 18:14</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">APPROVED</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">18</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">drift_lab,factor,regime</td><td style="padding:3px 8px;font-size:0.82em">Promoted</td></tr><tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 18:06</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">APPROVED</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">18</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">drift_lab,factor,regime</td><td style="padding:3px 8px;font-size:0.82em">Not promoted</td></tr><tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 17:58</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#f44336;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">SKIPPED_INSUFFICIENT_OUTCOMES</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">0</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em"></td><td style="padding:3px 8px;font-size:0.82em">Not promoted</td></tr><tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 17:58</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">APPROVED</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">18</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">drift_lab,factor,regime</td><td style="padding:3px 8px;font-size:0.82em">Not promoted</td></tr><tr><td style="padding:3px 8px;color:#aaa;font-size:0.82em">2026-06-15 17:08</td><td style="padding:3px 8px;font-size:0.82em"><span style="background:#4caf50;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">APPROVED</span></td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">639</td><td style="padding:3px 8px;color:#ccc;font-size:0.82em">drift_lab,factor,regime</td><td style="padding:3px 8px;font-size:0.82em">Promoted</td></tr>
+    </table>
   </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Calmar</div>
-    <div style="font-size:20px;font-weight:700;color:#1a3c5e;">28.4</div>
+
+  <div style="padding-top:8px;border-top:1px solid #2a3a5e;font-size:0.8em;color:#aaa">
+    Objective metric: <b style="color:#ddd">mfe_40d</b> (40-day max favorable excursion) |
+    Validation: <b style="color:#ddd">60/20/20 chronological split</b> |
+    Approval gates: oos_wr≥0.65 · val_wr≥0.55 · oos_exp≥0.10 · oos_sharpe≥0.30 |
+    Remaining dependency: <b style="color:#f0b840">OS cron entry</b> to auto-trigger scheduler.py
   </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Win Rate</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">69.4%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Expectancy</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">+16.7%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Profit Factor</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">9.8</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Signals</div>
-    <div style="font-size:20px;font-weight:700;color:#333;">1051</div>
-  </div></div>
-<div style="margin-top:10px;font-size:11px;color:#888;">📅 2021-05-05 → 2026-05-20</div>
-<div style="margin-top:12px;">
-<div style="margin:5px 0;">
-  <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
-    <span>Flat (<4%)</span><span style="font-weight:600;">323 (31%)</span>
-  </div>
-  <div style="background:#eee;border-radius:4px;height:8px;">
-    <div style="background:#e74c3c;width:31%;border-radius:4px;height:8px;"></div>
-  </div>
-</div>
-<div style="margin:5px 0;">
-  <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
-    <span>Small (4–8%)</span><span style="font-weight:600;">307 (29%)</span>
-  </div>
-  <div style="background:#eee;border-radius:4px;height:8px;">
-    <div style="background:#f39c12;width:29%;border-radius:4px;height:8px;"></div>
-  </div>
-</div>
-<div style="margin:5px 0;">
-  <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
-    <span>Medium (8–20%)</span><span style="font-weight:600;">355 (34%)</span>
-  </div>
-  <div style="background:#eee;border-radius:4px;height:8px;">
-    <div style="background:#27ae60;width:34%;border-radius:4px;height:8px;"></div>
-  </div>
-</div>
-<div style="margin:5px 0;">
-  <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
-    <span>Large (>20%)</span><span style="font-weight:600;">66 (6%)</span>
-  </div>
-  <div style="background:#eee;border-radius:4px;height:8px;">
-    <div style="background:#2980b9;width:6%;border-radius:4px;height:8px;"></div>
-  </div>
-</div></div>
-  <a href="backtest_report.html" style="display:inline-block;margin-top:14px;padding:7px 18px;background:#1a3c5e;color:#fff;border-radius:5px;font-size:12px;text-decoration:none;">التقرير الكامل ←</a>
 </div>
 
 <div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
@@ -821,218 +285,6 @@
 
 <div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
             padding:22px 24px;margin-bottom:20px;">
-  <div style="font-size:22px;margin-bottom:6px;">📐
-    <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">Quant Research — 7 Phases</span>
-  </div>
-  <div style="display:flex;flex-wrap:wrap;gap:4px;">
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">CAGR</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">76%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Profit Factor</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">2.64</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Avg MFE</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">+13.1%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Calmar</div>
-    <div style="font-size:20px;font-weight:700;color:#1a3c5e;">10.58</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Max DD</div>
-    <div style="font-size:20px;font-weight:700;color:#721c24;">54.9%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Win Rate</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">60%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">إشارات</div>
-    <div style="font-size:20px;font-weight:700;color:#333;">639</div>
-  </div></div><div style='margin-top:12px;'>
-<div style="margin:5px 0;">
-  <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
-    <span>MFE < 5% (ضعيف)</span><span style="font-weight:600;">164 (26%)</span>
-  </div>
-  <div style="background:#eee;border-radius:4px;height:8px;">
-    <div style="background:#e74c3c;width:26%;border-radius:4px;height:8px;"></div>
-  </div>
-</div>
-<div style="margin:5px 0;">
-  <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
-    <span>MFE 5–10%</span><span style="font-weight:600;">153 (24%)</span>
-  </div>
-  <div style="background:#eee;border-radius:4px;height:8px;">
-    <div style="background:#f39c12;width:24%;border-radius:4px;height:8px;"></div>
-  </div>
-</div>
-<div style="margin:5px 0;">
-  <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
-    <span>MFE 10–20%</span><span style="font-weight:600;">192 (30%)</span>
-  </div>
-  <div style="background:#eee;border-radius:4px;height:8px;">
-    <div style="background:#27ae60;width:30%;border-radius:4px;height:8px;"></div>
-  </div>
-</div>
-<div style="margin:5px 0;">
-  <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
-    <span>MFE > 20% (كبير)</span><span style="font-weight:600;">130 (20%)</span>
-  </div>
-  <div style="background:#eee;border-radius:4px;height:8px;">
-    <div style="background:#2980b9;width:20%;border-radius:4px;height:8px;"></div>
-  </div>
-</div></div>
-  <a href="quant_research_report.html" style="display:inline-block;margin-top:14px;padding:7px 18px;background:#1a3c5e;color:#fff;border-radius:5px;font-size:12px;text-decoration:none;">التقرير الكامل ←</a>
-</div>
-
-<div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
-            padding:22px 24px;margin-bottom:20px;">
-  <div style="font-size:22px;margin-bottom:6px;">⚖️
-    <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">Weight Optimizer — Quant Engine</span>
-  </div>
-  <div style="display:flex;flex-wrap:wrap;gap:4px;">
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">إشارات</div>
-    <div style="font-size:20px;font-weight:700;color:#333;">639</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Avg Return</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">+4.6%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Avg MFE</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">13.1%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Profit Factor</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">2.64</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">OOS Improve</div>
-    <div style="font-size:20px;font-weight:700;color:#721c24;">-0.00%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">توصيات</div>
-    <div style="font-size:20px;font-weight:700;color:#1a3c5e;">10</div>
-  </div></div><div style='margin-top:10px;font-size:12px;background:#e8f4fd;padding:8px 10px;border-radius:6px;color:#1a5276;'>🎯 أفضل توصية: <strong>Total Score</strong> — <strong>Minimum score gate: raw_score >= 60</strong><br>ΔExp Ret: <strong>+1.1%</strong> · Retention: 45%</div><div style='margin-top:8px;font-size:11px;background:#fff3cd;padding:6px 10px;border-radius:6px;color:#856404;'>⚠️ مؤشرات ذات تأثير سلبي: Order Block</div>
-  <a href="weight_optimizer_report.html" style="display:inline-block;margin-top:14px;padding:7px 18px;background:#1a3c5e;color:#fff;border-radius:5px;font-size:12px;text-decoration:none;">التقرير الكامل ←</a>
-</div>
-
-<div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
-            padding:22px 24px;margin-bottom:20px;">
-  <div style="font-size:22px;margin-bottom:6px;">🔬
-    <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">Logic Analyzer — sc_* Functions</span>
-  </div>
-  <div style="display:flex;flex-wrap:wrap;gap:4px;">
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">إشارات</div>
-    <div style="font-size:20px;font-weight:700;color:#333;">1051</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Avg r20d</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">+4.6%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Avg MFE</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">13.0%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">PF</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">2.66</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">توصيات</div>
-    <div style="font-size:20px;font-weight:700;color:#1a3c5e;">15</div>
-  </div></div><div style='margin-top:8px;background:#fff3cd;padding:8px 10px;border-radius:6px;color:#856404;font-size:11px;'><strong>⚠️ Critical Findings:</strong><ul style='padding-left:14px;margin-top:4px'><li style='font-size:11px;color:#c04000;margin:2px 0'>sc_ob: Order Block presence REDUCES expected return (r2=0 beats r2>0)</li><li style='font-size:11px;color:#c04000;margin:2px 0'>sc_htf: HH+HL together shows NEGATIVE return (-0.8%) — HL-only is best (+11.6%)</li><li style='font-size:11px;color:#c04000;margin:2px 0'>sc_demand: r8=15 (max score) has LOWEST return — SV+HVN joint is worst</li></ul></div>
-  <a href="logic_analysis_report.html" style="display:inline-block;margin-top:14px;padding:7px 18px;background:#1a3c5e;color:#fff;border-radius:5px;font-size:12px;text-decoration:none;">التقرير الكامل ←</a>
-</div>
-
-<div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
-            padding:22px 24px;margin-bottom:20px;">
-  <div style="font-size:22px;margin-bottom:6px;">🏛️
-    <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">Historical Backtest — 5 Years Full Replay</span>
-  </div>
-  <div style="display:flex;flex-wrap:wrap;gap:4px;">
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">إشارات تاريخية</div>
-    <div style="font-size:20px;font-weight:700;color:#1a3c5e;">412</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Avg Return</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">+4.57%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">MFE (20d)</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">12.8%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Win Rate</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">37.6%</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Profit Factor</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">2.68</div>
-  </div>
-  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
-              background:#f7faff;border-radius:7px;margin:4px;">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">vs Live DB</div>
-    <div style="font-size:20px;font-weight:700;color:#333;">639 signals</div>
-  </div></div><div style='margin-top:8px;font-size:12px;background:#e8f4fd;padding:7px 10px;border-radius:6px;color:#155724;'>📊 ✅ Consistent — historical avg 4.57% vs live 4.61%</div><div style='margin-top:6px;font-size:12px;padding:5px 10px;background:#f7faff;border-radius:5px;'>▲ <strong>Macd Div</strong>: <span style='color:#155724;font-weight:700;'>+1.77%</span> (n=74 YES vs 338 NO)</div><div style='margin-top:6px;font-size:12px;padding:5px 10px;background:#f7faff;border-radius:5px;'>▲ <strong>Hvn Hit</strong>: <span style='color:#155724;font-weight:700;'>+1.17%</span> (n=290 YES vs 122 NO)</div>
-  <a href="historical_backtest_report.html" style="display:inline-block;margin-top:14px;padding:7px 18px;background:#1a3c5e;color:#fff;border-radius:5px;font-size:12px;text-decoration:none;">التقرير الكامل ←</a>
-</div>
-
-<div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
-            padding:22px 24px;margin-bottom:20px;">
   <div style="font-size:22px;margin-bottom:6px;">🕵️
     <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">System Audit — Assumption & Blind Spot Analysis</span>
   </div>
@@ -1072,53 +324,148 @@
     <div style="font-size:10px;color:#888;text-transform:uppercase;
                 letter-spacing:.8px;margin-bottom:4px;">Profit Factor</div>
     <div style="font-size:20px;font-weight:700;color:#155724;">2.66</div>
-  </div></div><div style='margin-top:8px;font-size:12px;background:#fff3cd;padding:7px 10px;border-radius:6px;color:#856404;'>⚠️ Biggest filter damage: <strong>Equal Lows</strong> — <span style='color:#721c24;font-weight:700'>-1.8%</span> (Slight drag — borderline)</div><div style='margin-top:8px;font-size:11px;background:#e8f4fd;padding:7px 10px;border-radius:6px;color:#0a3622;'>🎯 Highest impact: Fix HTF scoring inversion: HH+HL currently scores highest but returns -0.8%. HL-only returns +11.6%....</div>
+  </div></div><div style='margin-top:8px;font-size:12px;background:#fff3cd;padding:7px 10px;border-radius:6px;color:#856404;'>⚠️ Biggest filter damage: <strong>Equal Lows</strong> — <span style='color:#721c24;font-weight:700'>-1.8%</span> (Slight drag — borderline)</div><div style='margin-top:8px;font-size:12px;background:#d4edda;padding:7px 10px;border-radius:6px;color:#155724;'>🔍 Top discovery: <strong>hvn_hit=1 & price_ok=0</strong> → <strong>+14.2%</strong> avg return (n=19, MFE=22.0%)</div><div style='margin-top:8px;font-size:11px;background:#e8f4fd;padding:7px 10px;border-radius:6px;color:#0a3622;'>🎯 Highest impact: Fix HTF scoring inversion: HH+HL currently scores highest but returns -0.8%. HL-only returns +11.6%....</div>
   <a href="system_audit_report.html" style="display:inline-block;margin-top:14px;padding:7px 18px;background:#1a3c5e;color:#fff;border-radius:5px;font-size:12px;text-decoration:none;">التقرير الكامل ←</a>
 </div>
 
 <div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
             padding:22px 24px;margin-bottom:20px;">
-  <div style="font-size:22px;margin-bottom:6px;">🧬
-    <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">Adaptive Learning Engine — Self-Improving Analysis</span>
+  <div style="font-size:22px;margin-bottom:6px;">📈
+    <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">Walk-Forward Backtester — 194 صفقة حقيقية</span>
   </div>
   <div style="display:flex;flex-wrap:wrap;gap:4px;">
   <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
               background:#f7faff;border-radius:7px;margin:4px;">
     <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Health Score</div>
-    <div style="font-size:20px;font-weight:700;color:#856404;">51/100</div>
+                letter-spacing:.8px;margin-bottom:4px;">Equity (بدأ 100)</div>
+    <div style="font-size:20px;font-weight:700;color:#155724;">2427.5</div>
   </div>
   <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
               background:#f7faff;border-radius:7px;margin:4px;">
     <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">إشارات</div>
-    <div style="font-size:20px;font-weight:700;color:#333;">1051</div>
+                letter-spacing:.8px;margin-bottom:4px;">إجمالي العائد</div>
+    <div style="font-size:20px;font-weight:700;color:#155724;">+2327.5%</div>
   </div>
   <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
               background:#f7faff;border-radius:7px;margin:4px;">
     <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Baseline Return</div>
-    <div style="font-size:20px;font-weight:700;color:#1a3c5e;">4.6%</div>
+                letter-spacing:.8px;margin-bottom:4px;">Win Rate</div>
+    <div style="font-size:20px;font-weight:700;color:#155724;">69%</div>
+  </div>
+  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
+              background:#f7faff;border-radius:7px;margin:4px;">
+    <div style="font-size:10px;color:#888;text-transform:uppercase;
+                letter-spacing:.8px;margin-bottom:4px;">Avg Return 90d</div>
+    <div style="font-size:20px;font-weight:700;color:#155724;">+16.9%</div>
   </div>
   <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
               background:#f7faff;border-radius:7px;margin:4px;">
     <div style="font-size:10px;color:#888;text-transform:uppercase;
                 letter-spacing:.8px;margin-bottom:4px;">Profit Factor</div>
-    <div style="font-size:20px;font-weight:700;color:#155724;">2.49</div>
+    <div style="font-size:20px;font-weight:700;color:#1a3c5e;">5.63</div>
   </div>
   <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
               background:#f7faff;border-radius:7px;margin:4px;">
     <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Top Improvements</div>
-    <div style="font-size:20px;font-weight:700;color:#0d6efd;">2</div>
+                letter-spacing:.8px;margin-bottom:4px;">Trades</div>
+    <div style="font-size:20px;font-weight:700;color:#333;">194</div>
+  </div></div><div style='margin-top:8px;font-size:12px;background:#e8f4fd;padding:7px 10px;border-radius:5px;color:#1a3c5e;'>📊 194 gradient updates · أكبر تغيير: <b>r5_avwap</b> → -1.7 pts</div>
+  <a href="walk_forward_report.html" style="display:inline-block;margin-top:14px;padding:7px 18px;background:#1a3c5e;color:#fff;border-radius:5px;font-size:12px;text-decoration:none;">التقرير الكامل ←</a>
+</div>
+
+<div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
+            padding:22px 24px;margin-bottom:20px;">
+  <div style="font-size:22px;margin-bottom:6px;">🎯
+    <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">SMC Calibration Template — نموذج معايرة النظام</span>
+  </div>
+  <table style='width:100%;border-collapse:collapse;font-size:13px'><thead><tr style='background:#1a3c5e;color:#fff'><th style='padding:7px 10px;text-align:right'>Indicator</th><th style='padding:7px 6px;text-align:center'>Max</th><th style='padding:7px 6px;text-align:center'>System</th><th style='padding:7px 6px;text-align:center'>Optimizer</th><th style='padding:7px 6px;text-align:center'>RL</th><th style='padding:7px 6px;text-align:center'>Walk-Fwd</th><th style='padding:7px 6px;text-align:center'>Consensus</th></tr></thead><tbody><tr><td style='font-weight:600'>Price Position</td><td style='text-align:center;color:#555'>30</td><td style='text-align:center'>30</td><td style='text-align:center;color:#dc3545'>12.0</td><td style='text-align:center;color:#28a745'>30.6</td><td style='text-align:center;color:#28a745'>31.4</td><td style='text-align:center'><span style='color:#28a745'>▲</span></td></tr><tr><td style='font-weight:600'>OB Quality</td><td style='text-align:center;color:#555'>10</td><td style='text-align:center'>10</td><td style='text-align:center;color:#dc3545'>5.0</td><td style='text-align:center;color:#dc3545'>9.6</td><td style='text-align:center;color:#28a745'>10.7</td><td style='text-align:center'><span style='color:#dc3545'>▼</span></td></tr><tr><td style='font-weight:600'>Liquidity Context</td><td style='text-align:center;color:#555'>20</td><td style='text-align:center'>20</td><td style='text-align:center;color:#28a745'>28.2</td><td style='text-align:center;color:#dc3545'>15.0</td><td style='text-align:center;color:#dc3545'>19.9</td><td style='text-align:center'><span style='color:#dc3545'>▼</span></td></tr><tr><td style='font-weight:600'>HTF Alignment</td><td style='text-align:center;color:#555'>10</td><td style='text-align:center'>10</td><td style='text-align:center;color:#dc3545'>1.5</td><td style='text-align:center;color:#dc3545'>9.6</td><td style='text-align:center;color:#28a745'>10.2</td><td style='text-align:center'><span style='color:#dc3545'>▼</span></td></tr><tr><td style='font-weight:600'>AVWAP Support</td><td style='text-align:center;color:#555'>8</td><td style='text-align:center'>8</td><td style='text-align:center;color:#dc3545'>4.3</td><td style='text-align:center;color:#dc3545'>4.1</td><td style='text-align:center;color:#dc3545'>6.3</td><td style='text-align:center'><span style='color:#dc3545'>▼</span></td></tr><tr><td style='font-weight:600'>MACD Signal</td><td style='text-align:center;color:#555'>4</td><td style='text-align:center'>4</td><td style='text-align:center;color:#dc3545'>1.2</td><td style='text-align:center;color:#dc3545'>1.1</td><td style='text-align:center;color:#dc3545'>2.9</td><td style='text-align:center'><span style='color:#dc3545'>▼</span></td></tr><tr><td style='font-weight:600'>Divergence</td><td style='text-align:center;color:#555'>3</td><td style='text-align:center'>3</td><td style='text-align:center;color:#28a745'>26.4</td><td style='text-align:center;color:#28a745'>3.1</td><td style='text-align:center;color:#dc3545'>2.7</td><td style='text-align:center'><span style='color:#28a745'>▲</span></td></tr><tr><td style='font-weight:600'>Demand Zone</td><td style='text-align:center;color:#555'>15</td><td style='text-align:center'>15</td><td style='text-align:center;color:#28a745'>21.4</td><td style='text-align:center;color:#28a745'>15.1</td><td style='text-align:center;color:#28a745'>15.9</td><td style='text-align:center'><span style='color:#28a745'>▲</span></td></tr><tr style='background:#f8f9fa'><td style='font-weight:600;color:#555'>Pattern Score</td><td style='text-align:center;color:#555'>20</td><td style='text-align:center;color:#999'>—</td><td style='text-align:center;color:#999'>—</td><td style='text-align:center;color:#2a6496'>11.7</td><td style='text-align:center;color:#999'>—</td><td style='text-align:center'>~</td></tr></tbody></table><div style='margin-top:10px;background:#f0f8ff;border-radius:6px;padding:8px 12px;font-size:12px;color:#1a3c5e;border:1px solid #d0e8f8'>🤖 RL (run #2): Top-Q 90d = <strong style='color:#155724'>17.26%</strong> | Discrimination = <strong>-4.23%</strong> | Trained on 395 signals</div><div style='margin-top:6px;background:#f0fff4;border-radius:6px;padding:8px 12px;font-size:12px;color:#1a5c3a;border:1px solid #c3e6cb'>📈 Walk-Fwd: 198 BUY trades | Win rate = <strong style='color:#155724'>0.0%</strong> | Equity 100 → <strong style='color:#155724'>2427</strong></div>
+  <a href="smc_rl_report.html" style="display:inline-block;margin-top:14px;padding:7px 18px;background:#1a3c5e;color:#fff;border-radius:5px;font-size:12px;text-decoration:none;">تقرير RL الكامل ←</a>
+</div>
+
+<div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
+            padding:22px 24px;margin-bottom:20px;">
+  <div style="font-size:22px;margin-bottom:6px;">📊
+    <span style="font-size:15px;font-weight:700;color:#1a3c5e;vertical-align:middle;">Backtest / Equity Curve</span>
+  </div>
+  
+<div style="display:flex;flex-wrap:wrap;gap:4px;">
+  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
+              background:#f7faff;border-radius:7px;margin:4px;">
+    <div style="font-size:10px;color:#888;text-transform:uppercase;
+                letter-spacing:.8px;margin-bottom:4px;">CAGR</div>
+    <div style="font-size:20px;font-weight:700;color:#155724;">100.1%</div>
   </div>
   <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
               background:#f7faff;border-radius:7px;margin:4px;">
     <div style="font-size:10px;color:#888;text-transform:uppercase;
-                letter-spacing:.8px;margin-bottom:4px;">Cross Mismatches</div>
-    <div style="font-size:20px;font-weight:700;color:#856404;">2</div>
-  </div></div><div style='margin-top:8px;font-size:12px;background:#d4edda;padding:7px 10px;border-radius:6px;color:#155724;'>🥇 <strong>Mandatory Sweep Gate (sweep_detected=1)</strong> — <span style='font-weight:700'>+0.68%</span> return, PF=2.98, WF=✓, retention=45%</div><div style='margin-top:8px;font-size:12px;background:#fff3cd;padding:7px 10px;border-radius:6px;color:#856404;'>⚠️ Loss driver: <strong>HTF Scoring Inversion (HH+HL rewarded over HL-only)</strong> — severity=80/100, freq=14.1%</div>
-  <a href="adaptive_learning_report.html" style="display:inline-block;margin-top:14px;padding:7px 18px;background:#1a3c5e;color:#fff;border-radius:5px;font-size:12px;text-decoration:none;">التقرير الكامل ←</a>
+                letter-spacing:.8px;margin-bottom:4px;">Max Drawdown</div>
+    <div style="font-size:20px;font-weight:700;color:#155724;">-3.5%</div>
+  </div>
+  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
+              background:#f7faff;border-radius:7px;margin:4px;">
+    <div style="font-size:10px;color:#888;text-transform:uppercase;
+                letter-spacing:.8px;margin-bottom:4px;">Calmar</div>
+    <div style="font-size:20px;font-weight:700;color:#1a3c5e;">28.4</div>
+  </div>
+  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
+              background:#f7faff;border-radius:7px;margin:4px;">
+    <div style="font-size:10px;color:#888;text-transform:uppercase;
+                letter-spacing:.8px;margin-bottom:4px;">Win Rate</div>
+    <div style="font-size:20px;font-weight:700;color:#155724;">69.4%</div>
+  </div>
+  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
+              background:#f7faff;border-radius:7px;margin:4px;">
+    <div style="font-size:10px;color:#888;text-transform:uppercase;
+                letter-spacing:.8px;margin-bottom:4px;">Expectancy</div>
+    <div style="font-size:20px;font-weight:700;color:#155724;">+16.7%</div>
+  </div>
+  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
+              background:#f7faff;border-radius:7px;margin:4px;">
+    <div style="font-size:10px;color:#888;text-transform:uppercase;
+                letter-spacing:.8px;margin-bottom:4px;">Profit Factor</div>
+    <div style="font-size:20px;font-weight:700;color:#155724;">9.8</div>
+  </div>
+  <div style="flex:1;min-width:110px;text-align:center;padding:10px 6px;
+              background:#f7faff;border-radius:7px;margin:4px;">
+    <div style="font-size:10px;color:#888;text-transform:uppercase;
+                letter-spacing:.8px;margin-bottom:4px;">Signals</div>
+    <div style="font-size:20px;font-weight:700;color:#333;">1051</div>
+  </div></div>
+<div style="margin-top:10px;font-size:11px;color:#888;">📅 2021-05-05 → 2026-05-20</div>
+<div style="margin-top:12px;">
+<div style="margin:5px 0;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
+    <span>Flat (<4%)</span><span style="font-weight:600;">323 (31%)</span>
+  </div>
+  <div style="background:#eee;border-radius:4px;height:8px;">
+    <div style="background:#e74c3c;width:31%;border-radius:4px;height:8px;"></div>
+  </div>
+</div>
+<div style="margin:5px 0;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
+    <span>Small (4–8%)</span><span style="font-weight:600;">307 (29%)</span>
+  </div>
+  <div style="background:#eee;border-radius:4px;height:8px;">
+    <div style="background:#f39c12;width:29%;border-radius:4px;height:8px;"></div>
+  </div>
+</div>
+<div style="margin:5px 0;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
+    <span>Medium (8–20%)</span><span style="font-weight:600;">355 (34%)</span>
+  </div>
+  <div style="background:#eee;border-radius:4px;height:8px;">
+    <div style="background:#27ae60;width:34%;border-radius:4px;height:8px;"></div>
+  </div>
+</div>
+<div style="margin:5px 0;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px;">
+    <span>Large (>20%)</span><span style="font-weight:600;">66 (6%)</span>
+  </div>
+  <div style="background:#eee;border-radius:4px;height:8px;">
+    <div style="background:#2980b9;width:6%;border-radius:4px;height:8px;"></div>
+  </div>
+</div></div>
+  <a href="backtest_report.html" style="display:inline-block;margin-top:14px;padding:7px 18px;background:#1a3c5e;color:#fff;border-radius:5px;font-size:12px;text-decoration:none;">التقرير الكامل ←</a>
 </div>
 
 <div style="background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);
@@ -1305,7 +652,7 @@
 const CAIRO_OFFSET        = 2;           // UTC+2 (conservative year-round)
 const WORKFLOW_DURATION_S = 12 * 60;     // typical workflow: ~12 min
 const POLL_INTERVAL_MS    = 30_000;      // check for updates every 30 s
-const DATA_GENERATED_AT   = new Date("2026-06-13T21:33:31");   // embedded at build time
+const DATA_GENERATED_AT   = new Date("2026-06-15T18:14:52");   // embedded at build time
 
 let knownTimestamp = DATA_GENERATED_AT.toISOString();
 let reloadScheduled = false;

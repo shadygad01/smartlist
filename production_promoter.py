@@ -47,10 +47,14 @@ def get_current_config(config_dir: str = CONFIG_DIR) -> dict:
 
 
 def _save_snapshot(conn: sqlite3.Connection, config_snapshot: dict, note: str = None) -> int:
+    weights_j    = json.dumps(config_snapshot.get("weights", config_snapshot))
+    thresholds_j = json.dumps(config_snapshot.get("thresholds", {}))
+    gates_j      = json.dumps(config_snapshot.get("gates", {}))
     cur = conn.execute(
-        """INSERT INTO config_snapshots (snapshot_at, config_json, note)
-           VALUES (?, ?, ?)""",
-        (datetime.now().isoformat(), json.dumps(config_snapshot), note),
+        """INSERT INTO config_snapshots
+               (snapshot_at, weights_json, thresholds_json, gates_json, note)
+           VALUES (?, ?, ?, ?, ?)""",
+        (datetime.now().isoformat(), weights_j, thresholds_j, gates_j, note),
     )
     return cur.lastrowid
 
@@ -65,7 +69,7 @@ def _write_deployment_log(
 ) -> int:
     cur = conn.execute(
         """INSERT INTO deployment_log
-           (deployed_at, action, snapshot_id, validation_run_id, triggered_by, note)
+           (deployed_at, action, config_snapshot_id, validation_run_id, triggered_by, note)
            VALUES (?, ?, ?, ?, ?, ?)""",
         (
             datetime.now().isoformat(),
@@ -154,6 +158,14 @@ def promote(
             note=note,
         )
         conn.commit()
+
+        # Hot-reload signal_engine weights so current process uses new config immediately
+        try:
+            from signal_engine import reload_weights
+            reload_weights(config_path=config_dir)
+        except Exception:
+            pass
+
         return log_id
 
     finally:
@@ -187,18 +199,16 @@ def rollback(
         if row is None:
             raise ValueError("No snapshot found to rollback to.")
 
-        snap_id  = row["id"]
-        cfg_data = json.loads(row["config_json"])
-
-        key_to_file = {
-            "weights":    "weights.json",
-            "thresholds": "thresholds.json",
-            "gates":      "gates_config.json",
-        }
-        for key, fname in key_to_file.items():
-            if key in cfg_data:
-                path = _config_path(fname, config_dir)
-                _atomic_write(path, cfg_data[key])
+        snap_id = row["id"]
+        for fname, col in [("weights.json", "weights_json"),
+                           ("thresholds.json", "thresholds_json"),
+                           ("gates_config.json", "gates_json")]:
+            try:
+                data = json.loads(row[col] or "{}")
+                if data:
+                    _atomic_write(_config_path(fname, config_dir), data)
+            except Exception:
+                pass
 
         log_id = _write_deployment_log(
             conn,

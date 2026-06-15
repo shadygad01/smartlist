@@ -41,19 +41,28 @@ except ImportError:
     _optimizer = None
 
 try:
-    import drift_lab as _drift_lab
+    from labs import drift_lab as _drift_lab
 except ImportError:
-    _drift_lab = None
+    try:
+        import drift_lab as _drift_lab
+    except ImportError:
+        _drift_lab = None
 
 try:
-    import factor_lab as _factor_lab
+    from labs import factor_lab as _factor_lab
 except ImportError:
-    _factor_lab = None
+    try:
+        import factor_lab as _factor_lab
+    except ImportError:
+        _factor_lab = None
 
 try:
-    import regime_lab as _regime_lab
+    from labs import regime_lab as _regime_lab
 except ImportError:
-    _regime_lab = None
+    try:
+        import regime_lab as _regime_lab
+    except ImportError:
+        _regime_lab = None
 
 MEMORY_FILE = "gx_learning_memory.json"
 MIN_OUTCOMES_PER_CYCLE = 10
@@ -123,16 +132,29 @@ class LearningMemory:
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _count_new_outcomes(db_path: str, since: Optional[str]) -> int:
-    """Count bottom_quality rows with r20d filled after `since` timestamp."""
+    """
+    Count bottom_quality rows with r20d filled.
+    When `since` is provided, counts signals whose signal_date falls after
+    (since minus 40 days) — capturing outcomes that matured since the last cycle.
+    Uses signal_date from joined signals table since bottom_quality has no updated_at.
+    """
     try:
         conn = sqlite3.connect(db_path)
         try:
             if since:
+                # Approximate: signals dated >= (last_cycle - 40d) whose 20d outcome is now filled
+                from datetime import datetime, timedelta
+                try:
+                    last_dt = datetime.fromisoformat(since)
+                    cutoff = (last_dt - timedelta(days=40)).strftime("%Y-%m-%d")
+                except Exception:
+                    cutoff = "2000-01-01"
                 row = conn.execute(
-                    """SELECT COUNT(*) FROM bottom_quality
-                       WHERE r20d IS NOT NULL
-                         AND updated_at > ?""",
-                    (since,),
+                    """SELECT COUNT(*) FROM bottom_quality bq
+                       JOIN signals s ON s.id = bq.signal_id
+                       WHERE bq.r20d IS NOT NULL
+                         AND s.signal_date >= ?""",
+                    (cutoff,),
                 ).fetchone()
             else:
                 row = conn.execute(
@@ -140,7 +162,6 @@ def _count_new_outcomes(db_path: str, since: Optional[str]) -> int:
                 ).fetchone()
             return row[0] if row else 0
         except Exception:
-            # Fallback: count all completed signals
             try:
                 row = conn.execute(
                     "SELECT COUNT(*) FROM bottom_quality WHERE r20d IS NOT NULL"
@@ -162,40 +183,129 @@ def _run_drift_lab(db_path: str) -> bool:
             return bool(result.get("drift_detected", False))
         except Exception:
             pass
-    return False
+    # Numpy fallback: compare win rate of last 60 vs prior 60 signals
+    try:
+        conn = sqlite3.connect(db_path)
+        rows = conn.execute(
+            """SELECT bq.r20d FROM bottom_quality bq
+               JOIN signals s ON s.id = bq.signal_id
+               WHERE bq.r20d IS NOT NULL
+               ORDER BY s.signal_date DESC LIMIT 120"""
+        ).fetchall()
+        conn.close()
+        vals = [r[0] for r in rows]
+        if len(vals) < 60:
+            return False
+        recent, prior = vals[:60], vals[60:]
+        wr_recent = sum(1 for v in recent if v > 0.07) / 60
+        wr_prior  = sum(1 for v in prior  if v > 0.07) / len(prior)
+        return abs(wr_recent - wr_prior) > 0.10
+    except Exception:
+        return False
 
 
 def _run_labs(db_path: str) -> dict:
-    """Run factor_lab and regime_lab; return combined improvement dict."""
+    """Run factor_lab and regime_lab; persist findings to KB; return combined dict."""
     improvements = {}
+
+    # Check KB for factors to skip (already confirmed/recently tested)
+    skip = set()
+    try:
+        from knowledge_base import get_kb
+        kb = get_kb()
+        skip = set(kb.skip_factors())
+        if skip:
+            print(f"  [KB] Skipping previously settled factors: {skip}")
+    except Exception:
+        kb = None
+
     if _factor_lab and hasattr(_factor_lab, "run"):
         try:
-            improvements["factor"] = _factor_lab.run(db_path=db_path)
-        except Exception:
-            pass
+            result = _factor_lab.run(db_path=db_path)
+            improvements["factor"] = result
+            # Persist weight suggestions as factor findings
+            if kb and result.get("weight_suggestions") and not result.get("error"):
+                ws = result["weight_suggestions"]
+                if isinstance(ws, dict):
+                    items = ws.items()
+                elif hasattr(ws, "__iter__"):
+                    items = [(k, v) for k, v in ws] if ws else []
+                else:
+                    items = []
+                for factor, data in items:
+                    if factor in skip:
+                        continue
+                    if isinstance(data, dict):
+                        change = data.get("change", 0)
+                        verdict = "POSITIVE" if change > 0 else ("NEGATIVE" if change < 0 else "NEUTRAL")
+                        kb.record_factor(factor, {
+                            "sample_n": result.get("n_signals", 0),
+                            "verdict": verdict,
+                            "avg_importance": data.get("reason", ""),
+                            "suggested_weight": data.get("suggested"),
+                            "current_weight": data.get("current"),
+                        }, source="factor_lab")
+        except Exception as e:
+            improvements["factor"] = {"error": str(e), "n_signals": 0}
+
     if _regime_lab and hasattr(_regime_lab, "run"):
         try:
-            improvements["regime"] = _regime_lab.run(db_path=db_path)
-        except Exception:
-            pass
+            result = _regime_lab.run(db_path=db_path)
+            improvements["regime"] = result
+            # Persist regime findings
+            if kb and result.get("n_signals", 0) > 0 and not result.get("error"):
+                kb.record_regime("latest", {
+                    "n_signals": result.get("n_signals"),
+                    "behavior": result.get("behavior", {}),
+                }, source="regime_lab")
+        except Exception as e:
+            improvements["regime"] = {"error": str(e), "n_signals": 0}
+
     return improvements
 
 
-def _run_optimization(db_path: str, config_dir: str) -> Optional[dict]:
-    """Run optimization engine; return proposed artifacts or None."""
-    if _optimizer and hasattr(_optimizer, "run"):
+def _run_optimization(db_path: str, config_dir: str,
+                      lab_improvements: Optional[dict] = None) -> Optional[dict]:
+    """Run optimization engine; blend KB weight suggestions; return proposed artifacts."""
+    if not _optimizer or not hasattr(_optimizer, "run"):
+        return None
+    try:
+        opt_run = _optimizer.run(
+            method="expectancy_gradient",
+            db_path=db_path,
+            config_path=config_dir,
+        )
+        weights = dict(opt_run.params_after)
+
+        # Blend KB-confirmed factor suggestions into proposed weights
         try:
-            return _optimizer.run(db_path=db_path, config_dir=config_dir)
+            from knowledge_base import get_kb
+            kb = get_kb()
+            ff = kb.get_all_factors()
+            for factor, finding in ff.items():
+                sw = finding.get("suggested_weight")
+                if sw is not None and factor in weights:
+                    # Blend: 70% optimizer + 30% KB suggestion
+                    weights[factor] = round(weights[factor] * 0.70 + float(sw) * 0.30, 2)
         except Exception:
             pass
-    return None
+
+        return {
+            "weights": weights,
+            "optimization_run_id": opt_run.id,
+            "metric_before": opt_run.metric_before,
+            "metric_after": opt_run.metric_after,
+        }
+    except Exception:
+        return None
 
 
 def _run_validation(proposed_artifacts: dict, db_path: str) -> Optional[object]:
     """Run validation engine on proposed artifacts; return ValidationResult or None."""
-    if _validation and hasattr(_validation, "run"):
+    if _validation and hasattr(_validation, "run_train_val_oos"):
         try:
-            return _validation.run(artifacts=proposed_artifacts, db_path=db_path)
+            config = proposed_artifacts.get("thresholds", {})
+            return _validation.run_train_val_oos(db_path=db_path, config=config)
         except Exception:
             pass
     return None
@@ -242,26 +352,25 @@ def run_learning_cycle(
             cycle_result["verdict"] = "SKIPPED_INSUFFICIENT_OUTCOMES"
             return cycle_result
 
-        # Step 2: drift detection
+        # Step 2: drift detection (informational — does not gate research)
         drift = _run_drift_lab(db_path)
-        if _drift_lab:
-            cycle_result["labs_run"].append("drift_lab")
+        cycle_result["labs_run"].append("drift_lab")
         cycle_result["drift_detected"] = drift
 
-        if not drift:
-            cycle_result["verdict"] = "NO_DRIFT"
-            return cycle_result
-
-        # Step 3: factor + regime labs
+        # Step 3: factor + regime labs (always run; soft errors don't gate optimization)
         lab_improvements = _run_labs(db_path)
         cycle_result["labs_run"].extend(lab_improvements.keys())
-
+        cycle_result["lab_results"] = {
+            k: {"error": v.get("error"), "n_signals": v.get("n_signals")}
+            for k, v in lab_improvements.items()
+        }
+        # Only skip optimization if ALL labs hard-failed (empty dict)
         if not lab_improvements:
-            cycle_result["verdict"] = "NO_IMPROVEMENTS_FOUND"
-            return cycle_result
+            cycle_result["verdict"] = "LABS_UNAVAILABLE"
+            # Still fall through to optimization — research state alone is sufficient
 
         # Step 4: optimization
-        proposed = _run_optimization(db_path, config_dir)
+        proposed = _run_optimization(db_path, config_dir, lab_improvements)
         if proposed:
             cycle_result["optimized"] = True
         else:
@@ -301,6 +410,11 @@ def run_learning_cycle(
         # Step 7: always record cycle (regardless of outcome)
         cycle_result["finished_at"] = datetime.now().isoformat()
         memory.record_cycle(cycle_result)
+        try:
+            from knowledge_base import get_kb
+            get_kb().log_cycle(cycle_result)
+        except Exception:
+            pass
 
     return cycle_result
 

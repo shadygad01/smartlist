@@ -1453,7 +1453,7 @@ def _section_system_state() -> str:
     try:
         from continuous_learning import LearningMemory
         mem_summary = LearningMemory().get_summary()
-    except Exception:
+    except BaseException:
         pass
 
     kb_summary = {}
@@ -1676,130 +1676,6 @@ def _section_system_state() -> str:
   </div>
 </div>"""
 
-    def _ts(iso):
-        if not iso:
-            return "—"
-        try:
-            from datetime import datetime
-            dt = datetime.fromisoformat(iso.replace("Z", ""))
-            return dt.strftime("%Y-%m-%d %H:%M")
-        except Exception:
-            return str(iso)[:16]
-
-    def _badge(ok, label_ok, label_fail):
-        col = "#4caf50" if ok else "#f44336"
-        label = label_ok if ok else label_fail
-        return f'<span style="background:{col};color:#fff;padding:2px 8px;border-radius:4px;font-size:0.82em">{label}</span>'
-
-    # Scheduler state
-    sched = {}
-    try:
-        with open("scheduler_state.json", encoding="utf-8") as f:
-            sched = json.load(f)
-    except Exception:
-        pass
-
-    # Learning memory
-    mem_summary = {}
-    try:
-        from continuous_learning import LearningMemory
-        mem_summary = LearningMemory().get_summary()
-    except Exception:
-        pass
-
-    # Knowledge base
-    kb_summary = {}
-    try:
-        from knowledge_base import get_kb
-        kb_summary = get_kb().summary()
-    except Exception:
-        pass
-
-    # DB stats
-    db_stats = {}
-    try:
-        conn = sqlite3.connect("egx_research.db")
-        db_stats["n_signals"]     = conn.execute("SELECT COUNT(*) FROM signals").fetchone()[0]
-        db_stats["n_outcomes"]    = conn.execute("SELECT COUNT(*) FROM bottom_quality WHERE r20d IS NOT NULL").fetchone()[0]
-        db_stats["n_validations"] = conn.execute("SELECT COUNT(*) FROM validation_runs").fetchone()[0]
-        db_stats["n_deployments"] = conn.execute("SELECT COUNT(*) FROM deployment_log").fetchone()[0]
-        last_val = conn.execute("SELECT verdict, run_at FROM validation_runs ORDER BY id DESC LIMIT 1").fetchone()
-        last_dep = conn.execute("SELECT triggered_by, deployed_at, verdict FROM deployment_log ORDER BY id DESC LIMIT 1").fetchone()
-        conn.close()
-        db_stats["last_val"]  = last_val
-        db_stats["last_dep"]  = last_dep
-    except Exception as e:
-        db_stats["error"] = str(e)
-
-    # Recent cycles
-    recent_cycles = mem_summary.get("recent_cycles", [])
-    last_cycle    = recent_cycles[-1] if recent_cycles else {}
-    last_verdict  = last_cycle.get("verdict", "—")
-    last_cycle_at = _ts(last_cycle.get("finished_at"))
-    drift_status  = last_cycle.get("drift_detected", None)
-
-    val_verdict = "—"
-    val_at      = "—"
-    if db_stats.get("last_val"):
-        val_verdict = db_stats["last_val"][0] or "—"
-        val_at      = _ts(db_stats["last_val"][1])
-
-    dep_at = "—"
-    if db_stats.get("last_dep"):
-        dep_at = _ts(db_stats["last_dep"][2]) if db_stats["last_dep"] else "—"
-        dep_at = _ts(sched.get("last_learning_cycle_at")) if sched else dep_at
-
-    rows = [
-        ("Scanner",          _ts(sched.get("last_scan_at")),
-         _badge(bool(sched.get("last_scan_at")), "Active", "Never Run")),
-        ("Learning Cycle",   last_cycle_at,
-         _badge(bool(last_cycle), "Active", "Never Run")),
-        ("Last Research",    _ts(last_cycle.get("started_at")),
-         _badge(bool(last_cycle.get("labs_run")), "Ran", "Skipped")),
-        ("Last Optimization",_ts(last_cycle.get("started_at")),
-         _badge(last_cycle.get("optimized", False), "Optimized", "Not Optimized")),
-        ("Last Validation",  val_at,
-         _badge(val_verdict == "APPROVED", "APPROVED", val_verdict)),
-        ("Last Deployment",  _ts(sched.get("last_learning_cycle_at")),
-         _badge(last_cycle.get("promoted", False), "Promoted", "Not Promoted")),
-        ("Drift Status",     "Detected" if drift_status else ("Clear" if drift_status is False else "Unknown"),
-         _badge(drift_status is False, "Clear", "DRIFT DETECTED" if drift_status else "Unknown")),
-        ("Knowledge Base",   f"{kb_summary.get('total_factors_analyzed', 0)} factors analyzed",
-         _badge(kb_summary.get("total_factors_analyzed", 0) > 0, "Seeded", "Empty")),
-    ]
-
-    rows_html = "".join(
-        f"""<tr>
-          <td style="padding:6px 12px;color:#aaa">{r[0]}</td>
-          <td style="padding:6px 12px;color:#ddd;font-family:monospace">{r[1]}</td>
-          <td style="padding:6px 12px">{r[2]}</td>
-        </tr>"""
-        for r in rows
-    )
-
-    kb_pos    = ", ".join(kb_summary.get("positive", [])) or "—"
-    kb_tail   = ", ".join(kb_summary.get("tail_drivers", [])) or "—"
-    kb_neg    = ", ".join(kb_summary.get("negative", [])) or "—"
-    total_cyc = mem_summary.get("total_cycles", 0)
-    promoted  = mem_summary.get("total_promoted", 0)
-    n_sig     = db_stats.get("n_signals", "—")
-    n_out     = db_stats.get("n_outcomes", "—")
-
-    return f"""
-<div style="background:#1a1a2e;border:1px solid #2a3a5e;border-radius:8px;padding:16px 20px;margin-bottom:18px">
-  <h3 style="color:#50d8d0;margin:0 0 12px;font-size:1.05em">Autonomous System State</h3>
-  <table style="width:100%;border-collapse:collapse">{rows_html}</table>
-  <div style="margin-top:12px;padding-top:10px;border-top:1px solid #2a3a5e;display:flex;gap:24px;flex-wrap:wrap;font-size:0.82em;color:#aaa">
-    <span>Signals: <b style="color:#ddd">{n_sig}</b></span>
-    <span>Outcomes: <b style="color:#ddd">{n_out}</b></span>
-    <span>Learning Cycles: <b style="color:#ddd">{total_cyc}</b></span>
-    <span>Auto-Promotions: <b style="color:#ddd">{promoted}</b></span>
-    <span>KB Positive: <b style="color:#4caf50">{kb_pos}</b></span>
-    <span>KB Tail Drivers: <b style="color:#f0b840">{kb_tail}</b></span>
-    <span>KB Negative: <b style="color:#f44336">{kb_neg}</b></span>
-  </div>
-</div>"""
-
 
 # ── Main Builder ──────────────────────────────────────────────────────────────
 
@@ -1844,12 +1720,18 @@ def build_dashboard() -> str:
 {_section_system_state()}
 {_section_behavior(beh)}
 {_section_multi_period()}
+{_section_historical_backtest()}
 {_section_system_audit()}
 {_section_walk_forward()}
 {_section_smc_calibration()}
 {_section_backtest(bt)}
 {_section_research(rr)}
+{_section_quant()}
 {_section_edge(ed)}
+{_section_logic_analyzer()}
+{_section_weight_optimizer()}
+{_section_adaptive_learning()}
+{_section_research_notes()}
 """
 
     return f"""<!DOCTYPE html>

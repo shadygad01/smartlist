@@ -1528,7 +1528,7 @@ def _section_system_state() -> str:
         ("Alpha Status",        alpha_badge,
          f"OOS mfe40_wr={_num(oos_wr)} | OOS Sharpe={_num(oos_sh)} | OOS exp={_num(db.get('oos_exp',0))}"),
         ("Autonomy",            _badge(bool(last_cycle), "OPERATIONAL", "NOT RUN"),
-         f"Last cycle: {_ts(last_cycle.get('finished_at'))} | cycles={mem_summary.get('total_cycles',0)} | promotions={mem_summary.get('total_promoted',0)}"),
+         f"Last cycle: {_ts(last_cycle.get('finished_at'))} | cycles={mem_summary.get('total_cycles',0)} | promotions={mem_summary.get('total_promoted',0)} | best_oos_wr={_num(mem_summary.get('best_approved_oos_wr',0))}"),
         ("Production Model",    _badge(bool(w), "DEPLOYED", "NO MODEL"),
          f"r8_demand={w.get('r8_demand','?')} | r6_macd={w.get('r6_macd','?')} | r1_price={w.get('r1_price','?')} | r7_div={w.get('r7_div','?')}"),
         ("Last Deployment",     _badge(bool(ld), "PROMOTED", "NONE"),

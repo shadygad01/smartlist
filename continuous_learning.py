@@ -42,31 +42,33 @@ except ImportError:
 
 try:
     from labs import drift_lab as _drift_lab
-except ImportError:
+except (ImportError, BaseException):
     try:
         import drift_lab as _drift_lab
-    except ImportError:
+    except (ImportError, BaseException):
         _drift_lab = None
 
 try:
     from labs import factor_lab as _factor_lab
-except ImportError:
+except (ImportError, BaseException):
     try:
         import factor_lab as _factor_lab
-    except ImportError:
+    except (ImportError, BaseException):
         _factor_lab = None
 
 try:
     from labs import regime_lab as _regime_lab
-except ImportError:
+except (ImportError, BaseException):
     try:
         import regime_lab as _regime_lab
-    except ImportError:
+    except (ImportError, BaseException):
         _regime_lab = None
 
 MEMORY_FILE = "gx_learning_memory.json"
 MIN_OUTCOMES_PER_CYCLE = 10
 MIN_HOURS_BETWEEN_CYCLES = 24
+MAX_PROMOTIONS_PER_DAY = 3          # circuit breaker
+AUTO_ROLLBACK_DEGRADATION = 0.10    # rollback if OOS WR drops > 10pp
 
 
 # ── LearningMemory ─────────────────────────────────────────────────────────────
@@ -85,12 +87,12 @@ class LearningMemory:
             "total_cycles": 0,
             "last_cycle_at": None,
             "cycles": [],
+            "best_approved_oos_wr": 0.0,
         }
         if os.path.exists(self.path):
             try:
                 with open(self.path) as f:
                     data = json.load(f)
-                # ensure required keys exist (migrate old format)
                 for k, v in default.items():
                     data.setdefault(k, v)
                 return data
@@ -121,8 +123,26 @@ class LearningMemory:
             "total_cycles": self._data.get("total_cycles", 0),
             "last_cycle_at": self._data.get("last_cycle_at"),
             "total_promoted": promoted,
+            "best_approved_oos_wr": self._data.get("best_approved_oos_wr", 0.0),
             "recent_cycles": self.get_recent(5),
         }
+
+    def get_best_oos_wr(self) -> float:
+        return float(self._data.get("best_approved_oos_wr", 0.0))
+
+    def update_best_oos_wr(self, oos_wr: float) -> None:
+        if oos_wr > self.get_best_oos_wr():
+            self._data["best_approved_oos_wr"] = round(oos_wr, 6)
+            self._save()
+
+    def get_recent_promotions_count(self, hours: float = 24.0) -> int:
+        """Count promotions recorded within the last N hours."""
+        from datetime import timedelta
+        cutoff = (datetime.now() - timedelta(hours=hours)).isoformat()
+        return sum(
+            1 for c in self._data.get("cycles", [])
+            if c.get("promoted") and (c.get("recorded_at") or "0") >= cutoff
+        )
 
     @property
     def last_cycle_at(self) -> Optional[str]:
@@ -344,6 +364,15 @@ def run_learning_cycle(
     }
 
     try:
+        # Circuit breaker: stop if too many promotions happened in last 24h
+        recent_promo_count = memory.get_recent_promotions_count(hours=24)
+        if recent_promo_count >= MAX_PROMOTIONS_PER_DAY:
+            cycle_result["verdict"] = "CIRCUIT_BREAKER"
+            cycle_result["circuit_breaker_reason"] = (
+                f"{recent_promo_count} promotions in last 24h (max={MAX_PROMOTIONS_PER_DAY})"
+            )
+            return cycle_result
+
         # Step 1: count new outcomes
         n_outcomes = _count_new_outcomes(db_path, memory.last_cycle_at)
         cycle_result["outcomes_processed"] = n_outcomes
@@ -364,10 +393,8 @@ def run_learning_cycle(
             k: {"error": v.get("error"), "n_signals": v.get("n_signals")}
             for k, v in lab_improvements.items()
         }
-        # Only skip optimization if ALL labs hard-failed (empty dict)
         if not lab_improvements:
             cycle_result["verdict"] = "LABS_UNAVAILABLE"
-            # Still fall through to optimization — research state alone is sufficient
 
         # Step 4: optimization
         proposed = _run_optimization(db_path, config_dir, lab_improvements)
@@ -383,7 +410,33 @@ def run_learning_cycle(
         cycle_result["verdict"] = verdict
         val_run_id = getattr(val_result, "id", None) if val_result else None
 
-        # Step 6: promote if approved
+        # Capture metrics for cycle record and auto-rollback logic
+        current_oos_wr = getattr(val_result, "oos_wr", 0.0) or 0.0
+        cycle_result["val_oos_wr"] = current_oos_wr
+        cycle_result["val_oos_sharpe"] = getattr(val_result, "oos_sharpe", 0.0) or 0.0
+        cycle_result["val_n_oos"] = getattr(val_result, "n_oos", 0) or 0
+
+        # Auto-rollback: if metrics degraded > threshold vs best known baseline
+        best_oos_wr = memory.get_best_oos_wr()
+        if (
+            verdict == "REJECTED"
+            and not dry_run
+            and _promoter
+            and best_oos_wr > 0
+            and (best_oos_wr - current_oos_wr) > AUTO_ROLLBACK_DEGRADATION
+        ):
+            try:
+                rb_id = _promoter.rollback(db_path=db_path, config_dir=config_dir)
+                cycle_result["auto_rolled_back"] = True
+                cycle_result["rollback_log_id"] = rb_id
+                cycle_result["rollback_reason"] = (
+                    f"OOS WR degraded {best_oos_wr:.4f}→{current_oos_wr:.4f} "
+                    f"(threshold={AUTO_ROLLBACK_DEGRADATION})"
+                )
+            except Exception as e:
+                cycle_result["rollback_error"] = str(e)
+
+        # Step 6: promote if approved and circuit breaker allows
         if verdict == "APPROVED" and not dry_run and _promoter:
             try:
                 log_id = _promoter.promote(
@@ -396,11 +449,14 @@ def run_learning_cycle(
                 )
                 cycle_result["promoted"] = True
                 cycle_result["deployment_log_id"] = log_id
+                memory.update_best_oos_wr(current_oos_wr)
             except Exception as e:
                 cycle_result["promotion_error"] = str(e)
-        elif dry_run and verdict == "APPROVED":
-            cycle_result["promoted"] = False
-            cycle_result["dry_run_would_promote"] = True
+        elif verdict == "APPROVED":
+            # Update best baseline even in dry_run (metrics are real)
+            memory.update_best_oos_wr(current_oos_wr)
+            if dry_run:
+                cycle_result["dry_run_would_promote"] = True
 
     except Exception as e:
         cycle_result["error"] = str(e)

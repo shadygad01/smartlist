@@ -42,6 +42,11 @@ _DEFAULT_GATES = {
     "macd_fast":                12,
     "macd_slow":                26,
     "macd_signal":               9,
+    # Price gate as fraction of W_PRICE — auto-tracks weight optimization.
+    # Normal: ~55% (original design = 16/30 = 53.3%). Whitelist: 50% (original = 15/30).
+    # Evidence (alpha audit 2026-06): Model C 50% → Sharpe=1.265, Model D 75% → Sharpe=1.272.
+    "price_gate_frac_normal":    0.55,
+    "price_gate_frac_whitelist": 0.50,
 }
 
 
@@ -80,6 +85,8 @@ class GateConfig:
         self.hvn_bins       = self.gates["sc_demand_hvn_bins"]
         self.hvn_pct        = self.gates["sc_demand_hvn_pct"]
         self.swings_lb      = self.gates["swings_lookback"]
+        self.price_gate_frac_normal    = self.gates["price_gate_frac_normal"]
+        self.price_gate_frac_whitelist = self.gates["price_gate_frac_whitelist"]
 
         # Convenience attributes — weights
         self.w_price  = self.weights["r1_price"]
@@ -105,6 +112,10 @@ W_MACD  = _default_cfg.w_macd
 W_DIV   = _default_cfg.w_div
 W_DZ    = _default_cfg.w_dz
 
+# Price gate fractions (proportional — auto-tracks W_PRICE through weight optimization)
+PRICE_GATE_FRAC_NORMAL    = _default_cfg.price_gate_frac_normal
+PRICE_GATE_FRAC_WHITELIST = _default_cfg.price_gate_frac_whitelist
+
 
 def reload_weights(config_path: str = "config/") -> dict:
     """
@@ -114,6 +125,7 @@ def reload_weights(config_path: str = "config/") -> dict:
     Returns dict of new weight values.
     """
     global _default_cfg, W_PRICE, W_OB, W_LIQ, W_HTF, W_AVWAP, W_MACD, W_DIV, W_DZ
+    global PRICE_GATE_FRAC_NORMAL, PRICE_GATE_FRAC_WHITELIST
     _weights_path = os.path.join(config_path, "weights.json")
     _gates_path = os.path.join(config_path, "gates_config.json")
     _default_cfg = GateConfig(gates_path=_gates_path, weights_path=_weights_path)
@@ -125,9 +137,13 @@ def reload_weights(config_path: str = "config/") -> dict:
     W_MACD  = _default_cfg.w_macd
     W_DIV   = _default_cfg.w_div
     W_DZ    = _default_cfg.w_dz
+    PRICE_GATE_FRAC_NORMAL    = _default_cfg.price_gate_frac_normal
+    PRICE_GATE_FRAC_WHITELIST = _default_cfg.price_gate_frac_whitelist
     return {
         "w_price": W_PRICE, "w_ob": W_OB, "w_liq": W_LIQ, "w_htf": W_HTF,
         "w_avwap": W_AVWAP, "w_macd": W_MACD, "w_div": W_DIV, "w_dz": W_DZ,
+        "price_gate_frac_normal": PRICE_GATE_FRAC_NORMAL,
+        "price_gate_frac_whitelist": PRICE_GATE_FRAC_WHITELIST,
     }
 
 

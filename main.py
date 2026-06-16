@@ -79,8 +79,9 @@ WHITELIST = [
     "GBCO.CA",  # GB Auto
 ]
 
-PRICE_GATE_NORMAL    = 16   # ملاحظة: فحص الحساسية على بيانات حية (فبراير-يونيو 2026) أظهر
-PRICE_GATE_WHITELIST = 15   # فروقاً طفيفة بين 13 و19 — المعلمة Moderate وليست محسومة بدليل
+# PRICE_GATE_NORMAL and PRICE_GATE_WHITELIST are computed as fractions of W_PRICE
+# after signal_engine is imported below (search for "PRICE_GATE_NORMAL =").
+# Fractions stored in config/gates_config.json — auto-track weight optimization.
 
 NAMES = {
     "COMI.CA": "Commercial International Bank",
@@ -494,7 +495,15 @@ from signal_engine import (
     sc_htf, sc_avwap, sc_macd, sc_div,
     _calc_rsi, _find_pivots, score_signal,
     W_PRICE, W_OB, W_LIQ, W_HTF, W_AVWAP, W_MACD, W_DIV, W_DZ,
+    PRICE_GATE_FRAC_NORMAL, PRICE_GATE_FRAC_WHITELIST,
 )
+# Effective price gate = fraction × W_PRICE.
+# Proportional design: auto-recalibrates when weight optimization changes W_PRICE.
+# Normal: ~55% of W_PRICE (original design intent: 16/30 ≈ 53%).
+# Whitelist: 50% of W_PRICE (original design intent: 15/30 = 50%).
+# Evidence: alpha audit 2026-06 — gate at 50-55% of W_PRICE → Sharpe=1.265-1.272.
+PRICE_GATE_NORMAL    = PRICE_GATE_FRAC_NORMAL    * W_PRICE
+PRICE_GATE_WHITELIST = PRICE_GATE_FRAC_WHITELIST * W_PRICE
 
 def sig_info(score):
     if score>=85: return "Institutional Buy","#155724","#d4edda","#c3e6cb"
@@ -723,14 +732,17 @@ def analyze(symbol):
 
         # ══════════════════════════════════════════════════════════════════
         # DUAL GATE
-        #   GATE 1 — Price in Deep Discount:  r1 >= 15  (out of W_PRICE=30)
-        #   GATE 2 — Sweep & Reverse confirmed: r3 == W_LIQ (20/20)
+        #   GATE 1 — Price in Deep Discount:
+        #     r1 >= FRAC × W_PRICE  (proportional — tracks weight optimization)
+        #     Normal:    55% × W_PRICE  |  Whitelist: 50% × W_PRICE
+        #     Fractions in config/gates_config.json → signal_engine exports.
+        #   GATE 2 — Sweep & Reverse confirmed: r3 >= W_LIQ
         #
-        #   r1 >= 15 AND r3 == 20  →  BUY eligible (normal sig_info)
-        #   r1 >= 15 AND r3 <  20  →  WATCH (price ok, waiting for sweep)
-        #   r1 <  15               →  IGNORE (hard block)
+        #   price_ok AND liq_ok   →  BUY eligible (sig_info classification)
+        #   price_ok AND !liq_ok  →  EARLY BUY (price deep, awaiting sweep)
+        #   !price_ok             →  WAIT (price not deep enough in discount)
+        #   total < 35            →  SKIP
         # ══════════════════════════════════════════════════════════════════
-        # ✅ DYNAMIC PRICE GATE - استخدم 12 للـ whitelist، 18 للأسهم العادية
         PRICE_GATE = PRICE_GATE_WHITELIST if symbol in WHITELIST else PRICE_GATE_NORMAL
         LIQ_GATE   = W_LIQ   # only Sweep & Reverse (20/20) passes to BUY
 

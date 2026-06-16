@@ -563,32 +563,49 @@ def build_html(all_rows, base_live, flag_analysis, sym_perf, elapsed, n_new):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--append",  action="store_true", help="Skip already-scanned dates")
-    parser.add_argument("--symbol",  default=None,        help="Scan single symbol only")
-    parser.add_argument("--no-html", action="store_true", help="Skip HTML report")
+    parser.add_argument("--append",   action="store_true", help="Skip already-scanned dates")
+    parser.add_argument("--symbol",   default=None,        help="Scan single symbol only")
+    parser.add_argument("--no-html",  action="store_true", help="Skip HTML report")
+    parser.add_argument("--start",    default=None,        help="Earliest signal date (YYYY-MM-DD, inclusive)")
+    parser.add_argument("--end",      default=None,        help="Latest signal date (YYYY-MM-DD, inclusive)")
+    parser.add_argument("--dry-run",  action="store_true", help="Count signals without writing to DB")
     args = parser.parse_args()
 
-    rebuild = not args.append
+    rebuild = not args.append and not args.dry_run
     symbols = [args.symbol] if args.symbol else ALL_SYMBOLS
+    date_min = args.start  # e.g. "2021-06-01" or None
+    date_max = args.end    # e.g. "2026-02-07" or None
 
     t0 = time.time()
     print(f"\n[hist_backtest] EGX Historical Backtest Engine")
-    print(f"  Mode:    {'rebuild' if rebuild else 'append'}")
+    print(f"  Mode:    {'dry-run' if args.dry_run else 'rebuild' if rebuild else 'append'}")
     print(f"  Stocks:  {len(symbols)}")
+    print(f"  Range:   {date_min or 'all'} → {date_max or 'all'}")
     print(f"  Gate:    raw_score≥{SCORE_GATE}, price_ok, discount_zone")
     print(f"  Dedup:   {GAP_DAYS} trading days\n")
 
-    _init_db(DB_PATH, rebuild=rebuild)
+    if not args.dry_run:
+        _init_db(DB_PATH, rebuild=rebuild)
 
     total_new = 0
     for sym in symbols:
         skip = _already_scanned(DB_PATH, sym) if args.append else set()
         rows = _scan_symbol(sym, skip_dates=skip, verbose=True)
-        _insert_signals(DB_PATH, rows)
+        # Apply date range filter
+        if date_min:
+            rows = [r for r in rows if r["signal_date"] >= date_min]
+        if date_max:
+            rows = [r for r in rows if r["signal_date"] <= date_max]
+        if not args.dry_run:
+            _insert_signals(DB_PATH, rows)
         total_new += len(rows)
 
     elapsed = time.time() - t0
-    print(f"\n[hist_backtest] Scan done in {elapsed:.1f}s — {total_new} new signals added")
+    print(f"\n[hist_backtest] Scan done in {elapsed:.1f}s — {total_new} signals {'counted (dry-run)' if args.dry_run else 'added'}")
+
+    if args.dry_run:
+        print(f"\n[hist_backtest] Dry-run complete — no data written.\n")
+        return
 
     all_rows = _load_hist_signals(DB_PATH)
     base     = _metrics(all_rows)

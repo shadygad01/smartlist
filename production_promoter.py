@@ -8,10 +8,35 @@ import os
 import shutil
 import sqlite3
 import tempfile
+import urllib.request
+import urllib.parse
 from datetime import datetime
 from typing import Optional
 
 CONFIG_DIR = "config"
+
+
+def _send_telegram(message: str) -> None:
+    """Fire-and-forget Telegram alert. Silent on failure."""
+    token   = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+    try:
+        data = urllib.parse.urlencode({
+            "chat_id": chat_id,
+            "text": message,
+            "parse_mode": "HTML",
+        }).encode()
+        req = urllib.request.Request(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            data=data,
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=8) as _:
+            pass
+    except Exception:
+        pass
 
 
 def _config_path(filename: str, config_dir: str = CONFIG_DIR) -> str:
@@ -166,6 +191,19 @@ def promote(
         except Exception:
             pass
 
+        # Telegram alert
+        weights_summary = ""
+        if "weights" in artifacts:
+            w = artifacts["weights"]
+            weights_summary = "  ".join(f"{k}={v:.2f}" for k, v in list(w.items())[:4])
+        _send_telegram(
+            f"🚀 <b>PROMOTE</b> — deployment_log #{log_id}\n"
+            f"triggered_by: {triggered_by}\n"
+            f"val_run: {validation_run_id}\n"
+            f"weights: {weights_summary}\n"
+            f"note: {note or '—'}"
+        )
+
         return log_id
 
     finally:
@@ -219,6 +257,14 @@ def rollback(
             note=f"Rolled back to snapshot {snap_id}",
         )
         conn.commit()
+
+        # Telegram alert
+        _send_telegram(
+            f"⚠️ <b>ROLLBACK</b> — deployment_log #{log_id}\n"
+            f"restored snapshot: #{snap_id}\n"
+            f"snapshot_at: {row['snapshot_at']}"
+        )
+
         return log_id
 
     finally:

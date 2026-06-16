@@ -57,24 +57,40 @@ class ValidationResult:
 
 def save_result(result: ValidationResult, db_path: str = DB_PATH) -> int:
     conn = sqlite3.connect(db_path)
-    cur = conn.execute(
-        """INSERT INTO validation_runs
-           (run_at, split_type, train_wr, val_wr, oos_wr,
-            train_sharpe, val_sharpe, oos_sharpe,
-            overfit_flag, robustness_score, verdict)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-        (
-            datetime.now().isoformat(), result.split_type,
-            result.train_wr, result.val_wr, result.oos_wr,
-            result.train_sharpe, result.val_sharpe, result.oos_sharpe,
-            int(result.overfit_flag), result.robustness_score, result.verdict,
-        ),
-    )
-    conn.commit()
-    row_id = cur.lastrowid
-    conn.close()
-    result.id = row_id
-    return row_id
+    try:
+        # Deduplicate: skip insert if last saved run has identical metrics
+        last = conn.execute(
+            """SELECT id, train_wr, val_wr, oos_wr, oos_sharpe
+               FROM validation_runs ORDER BY id DESC LIMIT 1"""
+        ).fetchone()
+        if last and (
+            last[1] == result.train_wr
+            and last[2] == result.val_wr
+            and last[3] == result.oos_wr
+            and last[4] == result.oos_sharpe
+        ):
+            result.id = last[0]
+            return last[0]
+
+        cur = conn.execute(
+            """INSERT INTO validation_runs
+               (run_at, split_type, train_wr, val_wr, oos_wr,
+                train_sharpe, val_sharpe, oos_sharpe,
+                overfit_flag, robustness_score, verdict)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                datetime.now().isoformat(), result.split_type,
+                result.train_wr, result.val_wr, result.oos_wr,
+                result.train_sharpe, result.val_sharpe, result.oos_sharpe,
+                int(result.overfit_flag), result.robustness_score, result.verdict,
+            ),
+        )
+        conn.commit()
+        row_id = cur.lastrowid
+        result.id = row_id
+        return row_id
+    finally:
+        conn.close()
 
 
 def get_latest(db_path: str = DB_PATH) -> Optional[ValidationResult]:

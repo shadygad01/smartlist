@@ -168,6 +168,15 @@ def run_once(dry_run: bool = False, skip_scan: bool = False) -> dict:
         state["consecutive_errors"] = 0
         state["last_error"] = None
 
+        # Reconcile total_promotions from authoritative LearningMemory
+        try:
+            from continuous_learning import LearningMemory
+            mem_summary = LearningMemory().get_summary()
+            state["total_promotions"] = mem_summary.get("total_promoted", state.get("total_promotions", 0))
+        except Exception:
+            if result and result.get("promoted"):
+                state["total_promotions"] = state.get("total_promotions", 0) + 1
+
     except Exception as exc:
         msg = str(exc)
         _log(f"FATAL ERROR in run_once: {msg}")
@@ -199,9 +208,26 @@ def run_loop(interval_hours: float = 24.0, dry_run: bool = False) -> None:
 
 
 def status_report() -> dict:
-    """Return current scheduler state and system health snapshot."""
+    """Return current scheduler state and system health snapshot.
+
+    LearningMemory is the authoritative source for cycle counts and promotion
+    history. scheduler_state.json tracks scan timestamps only.
+    """
     state = _load_state()
     report = dict(state)
+
+    # Authoritative cycle state from LearningMemory
+    try:
+        from continuous_learning import LearningMemory
+        mem = LearningMemory()
+        mem_summary = mem.get_summary()
+        report["learning_memory"] = mem_summary
+        # Reconcile scheduler_state total_promotions with actual count
+        if mem_summary.get("total_promoted", 0) != state.get("total_promotions", 0):
+            state["total_promotions"] = mem_summary["total_promoted"]
+            _save_state(state)
+    except Exception:
+        pass
 
     try:
         conn = sqlite3.connect(DB_PATH)
@@ -213,22 +239,19 @@ def status_report() -> dict:
         last_verdict = conn.execute(
             "SELECT verdict FROM validation_runs ORDER BY id DESC LIMIT 1"
         ).fetchone()
+        n_promotions = conn.execute(
+            "SELECT COUNT(*) FROM deployment_log WHERE action='PROMOTE'"
+        ).fetchone()[0]
         conn.close()
         report["db"] = {
             "n_signals": n_signals,
             "n_outcomes": n_outcomes,
             "n_validations": n_validations,
             "last_verdict": last_verdict[0] if last_verdict else None,
+            "n_promotions": n_promotions,
         }
     except Exception as exc:
         report["db"] = {"error": str(exc)}
-
-    try:
-        from continuous_learning import LearningMemory
-        mem = LearningMemory()
-        report["learning_memory"] = mem.get_summary()
-    except Exception:
-        pass
 
     try:
         from knowledge_base import get_kb

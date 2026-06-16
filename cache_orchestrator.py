@@ -342,6 +342,9 @@ def should_run(module_name: str, forced_modules: set[str] | None = None) -> tupl
 
 # ── Execution ─────────────────────────────────────────────────────────────────
 
+MODULE_TIMEOUT_SECONDS = 480  # 8 min per module — prevents one hung module from blocking the job
+
+
 def run_module(module_name: str) -> dict:
     """Run one module, time it, write metadata, return result dict."""
     defn = MODULES[module_name]
@@ -353,8 +356,12 @@ def run_module(module_name: str) -> dict:
             cwd=ROOT,
             capture_output=False,
             text=True,
+            timeout=MODULE_TIMEOUT_SECONDS,
         )
         ok = result.returncode == 0
+    except subprocess.TimeoutExpired:
+        print(f"[CACHE] TIMEOUT {module_name} (>{MODULE_TIMEOUT_SECONDS}s)", flush=True)
+        ok = False
     except Exception as exc:
         print(f"[CACHE] ERROR {module_name}: {exc}", flush=True)
         ok = False

@@ -87,6 +87,9 @@ jobs:
             }}
         run: python main.py
 
+      - name: Refresh historical CSV data
+        run: python backfill_egx30.py --download-only || true
+
       - name: Prepare research database
         run: |
           python backfill_research_db.py || true
@@ -105,6 +108,7 @@ jobs:
                   signal_history.json signal_log.json learned_weights.json \
                   egx_research.db research_results.json \
                   changed_symbols.json || true
+          git add historical_data/historical_data/*.csv || true
           git diff --staged --quiet || git commit -m "Auto-update positions and research DB [skip ci]"
           git push || true
 

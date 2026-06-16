@@ -15,6 +15,19 @@ Signal Database — SQLite
 import sqlite3
 import os
 from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
+
+_CAIRO = ZoneInfo("Africa/Cairo")
+
+
+def _cairo_now():
+    """Return current Cairo-timezone datetime."""
+    return datetime.now(_CAIRO)
+
+
+def _cairo_today():
+    """Return today's date in Cairo timezone (avoids off-by-one at midnight UTC)."""
+    return _cairo_now().date()
 
 DB_PATH = "egx_research.db"
 
@@ -452,7 +465,7 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
     يُرجع عدد الإشارات الجديدة.
     """
     init_db(db_path)
-    today  = str(date.today())
+    today  = str(_cairo_today())
     mr, et = _market_context(results)
 
     conn  = get_conn(db_path)
@@ -617,7 +630,7 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
                 "snap_reclaim_spd": r.get("snap_reclaim_spd"),
                 "snap_dist_lo":     r.get("snap_dist_lo"),
                 "snap_prem_disc":   r.get("snap_prem_disc"),
-                "now":           datetime.now().isoformat(),
+                "now":           _cairo_now().isoformat(),
             })
             added += 1
 
@@ -734,7 +747,7 @@ def upsert_bottom_quality(signal_id: str, bq: dict, db_path: str = DB_PATH):
             "dtp":  bq.get("days_to_peak"),
             "dtt":  bq.get("days_to_trough"),
             "cls":  bq.get("classification"),
-            "now":  datetime.now().isoformat(),
+            "now":  _cairo_now().isoformat(),
         })
     conn.close()
 
@@ -744,7 +757,7 @@ def log_report_sent(report_type: str, n_signals: int, db_path: str = DB_PATH):
     with conn:
         conn.execute(
             "INSERT INTO report_log (report_type, sent_at, signals_covered) VALUES (?,?,?)",
-            (report_type, datetime.now().isoformat(), n_signals),
+            (report_type, _cairo_now().isoformat(), n_signals),
         )
     conn.close()
 
@@ -754,7 +767,7 @@ def log_report_sent(report_type: str, n_signals: int, db_path: str = DB_PATH):
 def get_active_signals(max_days: int = 60, db_path: str = DB_PATH) -> list:
     """إشارات تحتاج متابعة يومية (أقل من max_days يوماً)."""
     init_db(db_path)
-    cutoff = (date.today() - timedelta(days=max_days)).isoformat()
+    cutoff = (_cairo_today() - timedelta(days=max_days)).isoformat()
     conn = get_conn(db_path)
     rows = conn.execute(
         "SELECT * FROM signals WHERE signal_date >= ? ORDER BY signal_date",
@@ -767,7 +780,7 @@ def get_active_signals(max_days: int = 60, db_path: str = DB_PATH) -> list:
 def get_signals_needing_bq(min_days: int = 28, db_path: str = DB_PATH) -> list:
     """إشارات مرّ عليها min_days يوماً ولم يُحسَب لها BQ Score بعد."""
     init_db(db_path)
-    cutoff = (date.today() - timedelta(days=min_days)).isoformat()
+    cutoff = (_cairo_today() - timedelta(days=min_days)).isoformat()
     conn   = get_conn(db_path)
     rows   = conn.execute("""
         SELECT s.*
@@ -806,8 +819,8 @@ def get_signals_for_bq_update(db_path: str = DB_PATH) -> list:
     تُستدعى من run_bq_scoring() بعد الحسابات الأولية.
     """
     init_db(db_path)
-    cutoff_40d = (date.today() - timedelta(days=56)).isoformat()
-    cutoff_60d = (date.today() - timedelta(days=84)).isoformat()
+    cutoff_40d = (_cairo_today() - timedelta(days=56)).isoformat()
+    cutoff_60d = (_cairo_today() - timedelta(days=84)).isoformat()
     conn = get_conn(db_path)
     rows = conn.execute("""
         SELECT s.*

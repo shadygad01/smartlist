@@ -19,6 +19,14 @@ import os
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+CAIRO = ZoneInfo("Africa/Cairo")
+
+
+def _now_cairo():
+    """Return current datetime in Africa/Cairo timezone."""
+    return datetime.now(CAIRO)
 
 DASHBOARD_FILE = "dashboard.html"
 DB_PATH        = "egx_research.db"
@@ -210,7 +218,7 @@ def _section_alpha_status() -> str:
         _row2("Rollback",          _badge(True, "WIRED", "NOT WIRED"),
               f"auto-trigger on OOS WR drop >10pp | {n_rollback} rollbacks | last={_ts(last_rb)}"),
         _row2("Dashboard",         _badge(True, "LIVE", "STALE"),
-              f"built {_ts(datetime.now().isoformat())} | 11 sections | all data from live state"),
+              f"built {_ts(_now_cairo().isoformat())} | 11 sections | all data from live state"),
     ])
 
     weights_row = " | ".join(
@@ -329,8 +337,8 @@ def _section_todays_learning() -> str:
         "SELECT lab, run_at, n_signals FROM experiment_log ORDER BY id DESC LIMIT 5"
     )
 
-    today_str    = datetime.now().strftime("%Y-%m-%d")
-    yesterday_str = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    today_str    = _now_cairo().strftime("%Y-%m-%d")
+    yesterday_str = (_now_cairo() - timedelta(days=1)).strftime("%Y-%m-%d")
 
     today_cycles = [c for c in reversed(cycles) if str(c.get("recorded_at", "")).startswith(today_str)]
     all_recent   = list(reversed(cycles))[:8]
@@ -364,7 +372,7 @@ def _section_todays_learning() -> str:
         "SELECT COUNT(*) FROM experiment_log WHERE run_at >= ?", (today_str,)
     )
     # Signals waiting for maturation (no mfe_40d yet)
-    cutoff_40d = (datetime.now() - timedelta(days=40)).strftime("%Y-%m-%d")
+    cutoff_40d = (_now_cairo() - timedelta(days=40)).strftime("%Y-%m-%d")
     n_maturing = _db_scalar(
         "SELECT COUNT(*) FROM signals s LEFT JOIN bottom_quality bq ON s.id=bq.signal_id "
         "WHERE s.signal_date >= ? AND s.signal_date <= ? AND bq.mfe_40d IS NULL",
@@ -468,7 +476,7 @@ def _section_todays_learning() -> str:
         FROM bottom_quality bq JOIN signals s ON s.id = bq.signal_id
         WHERE bq.mfe_40d IS NOT NULL AND bq.computed_at >= ?
         ORDER BY bq.computed_at DESC LIMIT 5
-    """, ((datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d"),))
+    """, ((_now_cairo() - timedelta(days=3)).strftime("%Y-%m-%d"),))
 
     mat_rows = "".join(
         f'<tr>'
@@ -548,8 +556,8 @@ def _section_current_research() -> str:
     last_verdict   = _db_query("SELECT verdict, oos_wr, run_at FROM validation_runs ORDER BY id DESC LIMIT 1")
     lv             = last_verdict[0] if last_verdict else {}
 
-    cutoff_40d  = (datetime.now() - timedelta(days=40)).strftime("%Y-%m-%d")
-    today_str   = datetime.now().strftime("%Y-%m-%d")
+    cutoff_40d  = (_now_cairo() - timedelta(days=40)).strftime("%Y-%m-%d")
+    today_str   = _now_cairo().strftime("%Y-%m-%d")
     n_maturing  = _db_scalar(
         "SELECT COUNT(*) FROM signals s LEFT JOIN bottom_quality bq ON s.id=bq.signal_id "
         "WHERE s.signal_date >= ? AND s.signal_date <= ? AND bq.mfe_40d IS NULL",
@@ -1036,8 +1044,8 @@ def _section_alpha_performance() -> str:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _section_changes_since_yesterday() -> str:
-    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    today     = datetime.now().strftime("%Y-%m-%d")
+    yesterday = (_now_cairo() - timedelta(days=1)).strftime("%Y-%m-%d")
+    today     = _now_cairo().strftime("%Y-%m-%d")
 
     kb_data   = _load("knowledge_base.json")
     ff        = _ff_list(kb_data)
@@ -1272,8 +1280,11 @@ def _section_system_health() -> str:
         if not iso:
             return "—"
         try:
-            dt    = datetime.fromisoformat(str(iso).replace("Z", ""))
-            delta = datetime.now() - dt
+            dt = datetime.fromisoformat(str(iso).replace("Z", ""))
+            # Make naive dt Cairo-aware for correct subtraction
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=CAIRO)
+            delta = _now_cairo() - dt
             h     = int(delta.total_seconds() / 3600)
             if h < 1:  return f"{int(delta.total_seconds()/60)}m ago"
             if h < 24: return f"{h}h ago"
@@ -1286,7 +1297,7 @@ def _section_system_health() -> str:
         ("Last Learning Cycle",    _ts(cyc_at),     _age(cyc_at)),
         ("Last Promotion",         _ts(promo_at),   _age(promo_at)),
         ("Last Rollback",          _ts(rb_at),      _age(rb_at)),
-        ("Dashboard Built",        _ts(datetime.now().isoformat()), "just now"),
+        ("Dashboard Built",        _ts(_now_cairo().isoformat()), "just now"),
         ("Scheduler State",
          f"runs={sched.get('total_runs',0)} | errors={sched.get('consecutive_errors',0)}", ""),
     ]
@@ -1478,7 +1489,7 @@ def _section_classification_fib() -> str:
 
 
 def build_dashboard() -> str:
-    now     = datetime.now()
+    now     = _now_cairo()
     now_str = now.strftime("%Y-%m-%d %H:%M:%S")
 
     body = (
@@ -1568,7 +1579,7 @@ def _write_status_json():
         n_sig = _db_scalar("SELECT COUNT(*) FROM signals")
         lv    = _db_query("SELECT verdict, oos_wr FROM validation_runs ORDER BY id DESC LIMIT 1")
         status = {
-            "generated_at": datetime.now().isoformat(),
+            "generated_at": _now_cairo().isoformat(),
             "n_signals":    n_sig,
             "alpha_status": lv[0].get("verdict") if lv else "UNKNOWN",
             "oos_wr":       lv[0].get("oos_wr") if lv else 0,

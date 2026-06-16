@@ -36,6 +36,7 @@ MIN_GAIN  = 0.07   # target gain for signal outcome evaluation
 STOP_LOSS = 0.06   # stop loss for signal outcome evaluation
 
 LOG_FILE = "signal_log.json"
+LOCAL_CSV_DIR = "historical_data/historical_data"
 
 STOCKS = [
     "COMI.CA", "TMGH.CA", "ETEL.CA", "EGAL.CA",
@@ -53,7 +54,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 # ── تحميل البيانات ────────────────────────────────────────────────────────────
 
 def _download(symbol, period="2y"):
-    """يحمّل بيانات OHLCV من Yahoo Finance مع fallback."""
+    """يحمّل بيانات OHLCV من Yahoo Finance مع fallback للملفات المحلية."""
     yf_sym = symbol if symbol.endswith(".CA") else f"{symbol}.CA"
     df = pd.DataFrame()
 
@@ -86,6 +87,31 @@ def _download(symbol, period="2y"):
                     df.index = df.index.tz_localize(None)
         except Exception:
             pass
+
+    # Fallback: local CSV (ensures no symbol is skipped due to network failures)
+    if df.empty:
+        csv_path = os.path.join(LOCAL_CSV_DIR, f"{symbol}.csv")
+        if os.path.exists(csv_path):
+            try:
+                local = pd.read_csv(csv_path, parse_dates=["Date"], index_col="Date")
+                local.index = pd.to_datetime(local.index)
+                # Normalize column names to standard OHLCV
+                col_map = {}
+                for c in local.columns:
+                    cl = c.lower()
+                    if cl == "open":    col_map[c] = "Open"
+                    elif cl == "high":  col_map[c] = "High"
+                    elif cl == "low":   col_map[c] = "Low"
+                    elif cl == "close": col_map[c] = "Close"
+                    elif cl == "volume": col_map[c] = "Volume"
+                local = local.rename(columns=col_map)
+                needed = [c for c in ["Open","High","Low","Close","Volume"] if c in local.columns]
+                if "Close" in needed and len(local) > 60:
+                    df = local[needed].copy()
+                    df.index = df.index.tz_localize(None) if df.index.tz else df.index
+                    print(f"  [{symbol}] using local CSV ({len(df)} rows)")
+            except Exception:
+                pass
 
     return df
 

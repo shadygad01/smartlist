@@ -138,13 +138,46 @@ def get_latest(db_path: str = DB_PATH) -> Optional[ValidationResult]:
 # ── Core logic ─────────────────────────────────────────────────────────────────
 
 def _load_signals_with_outcomes(db_path: str, metric_col: str = "mfe_40d"):
-    """Load signals with the specified outcome column, sorted chronologically."""
+    """Load signals with the specified outcome column, sorted chronologically.
+    Uses v_all_signals (live + hist_signals) when available for full coverage.
+    """
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
-    # Check which columns exist
-    bq_cols = [r[1] for r in conn.execute("PRAGMA table_info(bottom_quality)").fetchall()]
 
-    # Build select: always include r20d as legacy; add requested metric_col
+    # Prefer v_all_signals (1,051 rows: 639 live + 412 hist) over live-only join (639 rows)
+    view_ok = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='view' AND name='v_all_signals'"
+    ).fetchone()
+
+    if view_ok:
+        try:
+            # Verify the metric column exists in v_all_signals
+            probe = conn.execute(
+                f"SELECT {metric_col} FROM v_all_signals LIMIT 1"
+            ).fetchone()
+            metric_filter = f"{metric_col} IS NOT NULL"
+            extra = f", {metric_col}" if metric_col != "r20d" else ""
+            rows = conn.execute(
+                f"""SELECT signal_date, adj_score, symbol,
+                           r20d, mfe_20d, mae_20d, bq_score
+                           {extra}
+                    FROM v_all_signals
+                    WHERE {metric_filter}
+                    ORDER BY signal_date ASC"""
+            ).fetchall()
+            conn.close()
+            result = []
+            for r in rows:
+                d = dict(r)
+                if metric_col not in d:
+                    d[metric_col] = d.get("r20d")
+                result.append(d)
+            return result
+        except Exception:
+            pass  # fall through to live-only query
+
+    # Fallback: live signals JOIN bottom_quality only
+    bq_cols = [r[1] for r in conn.execute("PRAGMA table_info(bottom_quality)").fetchall()]
     extra = f", bq.{metric_col}" if metric_col in bq_cols and metric_col != "r20d" else ""
     r20d_filter = "bq.r20d IS NOT NULL" if "r20d" in bq_cols else "1=1"
     metric_filter = f"bq.{metric_col} IS NOT NULL" if metric_col in bq_cols else r20d_filter

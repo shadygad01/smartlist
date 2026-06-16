@@ -210,7 +210,7 @@ def _section_alpha_status() -> str:
         _row2("Rollback",          _badge(True, "WIRED", "NOT WIRED"),
               f"auto-trigger on OOS WR drop >10pp | {n_rollback} rollbacks | last={_ts(last_rb)}"),
         _row2("Dashboard",         _badge(True, "LIVE", "STALE"),
-              f"built {_ts(datetime.now().isoformat())} | 10 sections | all data from live state"),
+              f"built {_ts(datetime.now().isoformat())} | 11 sections | all data from live state"),
     ])
 
     weights_row = " | ".join(
@@ -1297,6 +1297,171 @@ def _section_system_health() -> str:
 # MASTER BUILDER
 # ══════════════════════════════════════════════════════════════════════════════
 
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 11 — SIGNAL CLASSIFICATION & FIBONACCI ENGINE  [NEW]
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _section_classification_fib() -> str:
+    # ── Live signal class distribution (signals table) ───────────────────────
+    class_order = ["Institutional Buy", "Very Strong Buy", "Strong Buy", "Buy", "Wait", "Skip"]
+    class_color = {
+        "Institutional Buy": G,
+        "Very Strong Buy":   G,
+        "Strong Buy":        G,
+        "Buy":               B,
+        "Wait":              A,
+        "Skip":              R,
+    }
+    dist_rows = _db_query(
+        "SELECT signal_type as cls, COUNT(*) as n, "
+        "AVG(adj_score) as avg_score, AVG(raw_score) as avg_raw "
+        "FROM signals GROUP BY signal_type ORDER BY AVG(adj_score) DESC"
+    )
+    dist_html = ""
+    if dist_rows:
+        total_sigs = sum(r["n"] for r in dist_rows)
+        for r in dist_rows:
+            cls   = r["cls"] or "?"
+            n     = r["n"]
+            pct   = n / total_sigs * 100 if total_sigs else 0
+            col   = class_color.get(cls, FG)
+            bar_w = max(2, int(pct))
+            dist_html += (
+                f'<tr>'
+                f'<td style="padding:5px 12px;color:{col};font-weight:600;font-size:0.85em;width:160px">{cls}</td>'
+                f'<td style="padding:5px 12px;font-weight:700;color:{FG}">{n:,}</td>'
+                f'<td style="padding:5px 12px">'
+                f'<div style="display:flex;align-items:center;gap:6px">'
+                f'<div style="background:{BG0};width:120px;height:6px;border-radius:3px;overflow:hidden">'
+                f'<div style="background:{col};width:{bar_w}%;height:100%"></div></div>'
+                f'<span style="color:{DIM};font-size:0.78em">{pct:.1f}%</span>'
+                f'</div></td>'
+                f'<td style="padding:5px 12px;color:{DIM};font-size:0.78em">avg score {_num(r.get("avg_score") or 0, ".0f")}</td>'
+                f'</tr>'
+            )
+    else:
+        dist_html = f'<tr><td colspan=4 style="color:{DIM};padding:8px">No signals recorded yet</td></tr>'
+
+    dist_box = _box(
+        "Live Signal Class Distribution (all-time, signals table)",
+        f'<table style="width:100%;border-collapse:collapse">{dist_html}</table>'
+    )
+
+    # ── Fibonacci achievement rates (fib_outcomes table) ─────────────────────
+    fib_rows = _db_query("""
+        SELECT signal_class,
+               COUNT(*) as n,
+               SUM(fib_236)*100.0/COUNT(*) as r236,
+               SUM(fib_382)*100.0/COUNT(*) as r382,
+               SUM(fib_500)*100.0/COUNT(*) as r500,
+               SUM(fib_618)*100.0/COUNT(*) as r618,
+               SUM(fib_786)*100.0/COUNT(*) as r786,
+               SUM(fib_100)*100.0/COUNT(*) as r100,
+               AVG(peak_return_1y) as avg_peak1y
+        FROM fib_outcomes
+        GROUP BY signal_class
+        ORDER BY MIN(adj_score) DESC
+    """)
+
+    fib_html = ""
+    if fib_rows:
+        for row in fib_rows:
+            cls = row["signal_class"] or "?"
+            col = class_color.get(cls, FG)
+            n   = row["n"]
+            pk  = row.get("avg_peak1y")
+            pk_str = f"{pk*100:.1f}% avg peak 1y" if pk else ""
+            cells = ""
+            for label, key in [("23.6%","r236"),("38.2%","r382"),("50%","r500"),
+                                ("61.8%","r618"),("78.6%","r786"),("100%","r100")]:
+                rate = row.get(key) or 0
+                bg   = G if rate >= 50 else (A if rate >= 25 else R)
+                cells += (f'<td style="padding:4px 8px;text-align:center">'
+                          f'<div style="background:{bg};color:#fff;border-radius:4px;'
+                          f'padding:2px 6px;font-size:0.8em;font-weight:700">{rate:.0f}%</div>'
+                          f'<div style="color:{DIM};font-size:0.7em">{label}</div></td>')
+            fib_html += (
+                f'<tr><td style="padding:4px 10px;color:{col};font-weight:600;font-size:0.83em;width:150px">'
+                f'{cls}</td>'
+                f'<td style="padding:4px 10px;color:{DIM};font-size:0.78em;width:60px">n={n}</td>'
+                f'{cells}'
+                f'<td style="padding:4px 10px;color:{DIM};font-size:0.78em">{pk_str}</td>'
+                f'</tr>'
+            )
+    else:
+        fib_html = f'<tr><td colspan=9 style="color:{DIM};padding:8px">Run fib_outcome_tracker.py to populate</td></tr>'
+
+    fib_header = (
+        f'<tr style="border-bottom:1px solid {BOR}">'
+        f'<th style="padding:4px 10px;color:{DIM};font-size:0.75em;text-align:left">Class</th>'
+        f'<th style="padding:4px 10px;color:{DIM};font-size:0.75em">n</th>'
+        + "".join(f'<th style="padding:4px 8px;color:{DIM};font-size:0.75em;text-align:center">{l}</th>'
+                  for l in ["23.6%","38.2%","50%","61.8%","78.6%","100%"])
+        + f'<th style="padding:4px 10px;color:{DIM};font-size:0.75em">Alpha</th>'
+        f'</tr>'
+    )
+    fib_box = _box(
+        "Fibonacci Achievement Rates by Class (40d short / 252d / peak_1y windows)",
+        f'<table style="width:100%;border-collapse:collapse">{fib_header}{fib_html}</table>',
+        color=B
+    )
+
+    # ── Active Fibonacci positions (open_positions.json) ─────────────────────
+    try:
+        import json as _json
+        with open("open_positions.json", encoding="utf-8") as _f:
+            _pos_data = _json.load(_f)
+    except Exception:
+        _pos_data = {}
+
+    open_pos = {k: v for k, v in _pos_data.items() if v.get("status") == "open"}
+    pos_html  = ""
+    for sym, pos in sorted(open_pos.items()):
+        ep  = pos.get("entry_price", 0)
+        lv  = pos.get("current_level", 0)
+        tgts = pos.get("fib_targets", [])
+        n_tgt = len(tgts)
+        pct_prog = lv / n_tgt * 100 if n_tgt else 0
+        tgt = pos.get("target", 0)
+        upside = (tgt - ep) / ep * 100 if ep else 0
+        col = G if lv > 0 else FG
+        pos_html += (
+            f'<tr>'
+            f'<td style="padding:4px 10px;font-weight:600;font-size:0.85em;color:{FG}">{sym}</td>'
+            f'<td style="padding:4px 10px;color:{DIM};font-size:0.8em">{ep:.2f}</td>'
+            f'<td style="padding:4px 10px;color:{col};font-weight:700">{lv}/{n_tgt}</td>'
+            f'<td style="padding:4px 10px;color:{B};font-size:0.8em">'
+            f'{tgt:.2f} (+{upside:.1f}%)</td>'
+            f'<td style="padding:4px 10px">'
+            f'<div style="background:{BG0};width:80px;height:5px;border-radius:3px;overflow:hidden">'
+            f'<div style="background:{G};width:{pct_prog:.0f}%;height:100%"></div></div>'
+            f'</td>'
+            f'</tr>'
+        )
+
+    if not pos_html:
+        pos_html = f'<tr><td colspan=5 style="color:{DIM};padding:8px;font-size:0.83em">No open positions</td></tr>'
+
+    pos_header = (
+        f'<tr style="border-bottom:1px solid {BOR}">'
+        + "".join(f'<th style="padding:4px 10px;color:{DIM};font-size:0.75em;text-align:left">{h}</th>'
+                  for h in ["Symbol","Entry","Fib Level","Next Target","Progress"])
+        + f'</tr>'
+    )
+    pos_box = _box(
+        f"Active Fibonacci Positions ({len(open_pos)} open)",
+        f'<table style="width:100%;border-collapse:collapse">{pos_header}{pos_html}</table>'
+    )
+
+    return f"""
+<div style="background:{BG1};border:1px solid {BOR};border-radius:10px;padding:20px 24px;margin-bottom:18px">
+  {_section_header("SIGNAL CLASSIFICATION & FIBONACCI ENGINE", "🎯")}
+  {dist_box}
+  {fib_box}
+  {pos_box}
+</div>"""
+
+
 def build_dashboard() -> str:
     now     = datetime.now()
     now_str = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -1309,6 +1474,7 @@ def build_dashboard() -> str:
         f'<div id="snapshot">{_section_production_snapshot()}</div>'
         f'<div id="knowledge">{_section_knowledge_findings()}</div>'
         f'<div id="performance">{_section_alpha_performance()}</div>'
+        f'<div id="classification">{_section_classification_fib()}</div>'
         f'<div id="changes">{_section_changes_since_yesterday()}</div>'
         f'<div id="deployments">{_section_deployment_history()}</div>'
         f'<div id="health">{_section_system_health()}</div>'
@@ -1344,7 +1510,7 @@ def build_dashboard() -> str:
 <div class="header">
   <div>
     <h1>⚡ EGX Executive Operations Center</h1>
-    <div class="meta">EGX Autonomous Bottom Discovery Platform — Live State · 10 Sections</div>
+    <div class="meta">EGX Autonomous Bottom Discovery Platform — Live State · 11 Sections</div>
   </div>
   <div class="meta" style="text-align:right">
     <div style="color:{FG}">{now_str}</div>
@@ -1361,6 +1527,7 @@ def build_dashboard() -> str:
   <a href="#snapshot">🎯 Alpha Snapshot</a>
   <a href="#knowledge">📚 Knowledge</a>
   <a href="#performance">📊 Performance</a>
+  <a href="#classification">🎯 Classification</a>
   <a href="#changes">📅 Changes</a>
   <a href="#deployments">🚀 Deployments</a>
   <a href="#health">🔧 Health</a>
@@ -1370,7 +1537,7 @@ def build_dashboard() -> str:
 <div class="container">
 {body}
 <div class="footer">
-  EGX Autonomous Bottom Discovery Platform · Built {now_str} ·
+  EGX Autonomous Bottom Discovery Platform · Built {now_str} · 11 sections
   <a href="heatmap.html" style="color:{B};text-decoration:none">📈 Signal Heatmap</a>
 </div>
 </div>

@@ -780,7 +780,6 @@ def analyze(symbol):
         #   Skip      : الجودة الخام < 35           → لا يُشترى أبداً
         #   Wait      : السعر غير عميق (r1 < البوابة) أو الـ score المعدّل
         #               تحت بوابة الدخول (35/40)     → لا شراء بعد
-        #   Early Buy : كل البوابات عدّت، التأكيد غائب → يُشترى فوراً
         #   Buy…      : كل البوابات + Sweep & Reverse → يُشترى فوراً
         # التسجيل في _register_new_positions يقرأ هذا التصنيف فقط —
         # فلا يمكن أن يُشترى سهم معروض Skip/Wait أو يُعرض Buy دون شراء.
@@ -1255,13 +1254,17 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 </table>
 {open_positions_block}""")
 
-    SUMMARY_SIGNALS = {"buy", "strong buy", "very strong buy", "institutional buy", "early buy", "watch", "wait"}
+    SUMMARY_SIGNALS = {"buy", "strong buy", "very strong buy", "institutional buy", "watch", "wait"}
     wr=""
     for idx, s in enumerate(sorted_stocks):
         r=results[s]
         if not r["ok"]: continue
         if r.get("signal","").lower() not in SUMMARY_SIGNALS: continue
-        _,tc,tbg,tbr=sig_info(r["score"])
+        _sig_l = r.get("signal","").lower()
+        if _sig_l in ("wait","skip"):
+            tc,tbg,tbr = "#721c24","#f8d7da","#f5c6cb"
+        else:
+            _,tc,tbg,tbr = sig_info(r["score"])
         in_portfolio = s in positions and positions[s].get("status") == "open"
         portfolio_badge = ' <span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:bold;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;">🔵 In Portfolio</span>' if in_portfolio else ""
         raw_s = r.get("raw_score", r["score"])
@@ -1309,7 +1312,11 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     <span style="color:#721c24;font-size:13px;">Error: {_html.escape(r.get("error","unknown"))}</span>
   </td></tr></table>"""); continue
 
-        _,tc,tbg,tbr=sig_info(r["score"])
+        _sig_l2 = r.get("signal","").lower()
+        if _sig_l2 in ("wait","skip"):
+            tc,tbg,tbr = "#721c24","#f8d7da","#f5c6cb"
+        else:
+            _,tc,tbg,tbr = sig_info(r["score"])
         ind_rows=""
         for i,(nm,sc,mx,lb) in enumerate(r["rows"]):
             row_bg = "#fff" if i % 2 == 0 else "#f9fafb"

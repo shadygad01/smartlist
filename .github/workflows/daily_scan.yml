@@ -2,29 +2,69 @@ name: EGX Daily Scanner
 
 on:
   schedule:
-    # Daily report الساعة 8:30 صبح Cairo (6:30 UTC) — أيام عمل البورصة
-    - cron: '30 6 * * 0-4'
-    # كل 5 دقائق من 08:00 لـ 11:55 UTC (= 10:00–13:55 Cairo)
+    # ─────────────────────────────────────────────────────────────────────────
+    # Daily report الساعة 7:00 صبح Cairo
+    # Summer (EEST = UTC+3): 04:00 UTC
+    - cron: '0 4 * * 0-4'
+    # Winter (EET  = UTC+2): 05:00 UTC
+    - cron: '0 5 * * 0-4'
+
+    # كل 5 دقائق من 10:00 لـ 13:55 Cairo
+    # Summer (UTC+3): 07:00-10:55 UTC
+    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 7-10 * * 0-4'
+    # Winter (UTC+2): 08:00-11:55 UTC
     - cron: '0,5,10,15,20,25,30,35,40,45,50,55 8-11 * * 0-4'
-    # كل 5 دقائق من 12:00 لـ 12:30 UTC (= 14:00–14:30 Cairo)
+
+    # 14:00-14:30 Cairo
+    # Summer (UTC+3): 11:00-11:30 UTC
+    - cron: '0,5,10,15,20,25,30 11 * * 0-4'
+    # Winter (UTC+2): 12:00-12:30 UTC
     - cron: '0,5,10,15,20,25,30 12 * * 0-4'
 
   workflow_dispatch:
+    inputs:
+      force_daily:
+        description: 'Force daily scan (test automatic path — no Manual label)'
+        required: false
+        default: 'false'
+        type: boolean
+      full_rebuild:
+        description: 'Force full rebuild — ignore all caches'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+# منع تراكم الـ runs — لو run جديد جاي، يلغي القديم
+concurrency:
+  group: egx-scanner
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
-  scan:
+
+  # ── A ── Core scanner + database preparation ──────────────────────────────
+  scan_core:
     runs-on: ubuntu-latest
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install APScheduler --upgrade
+        run: pip install -r requirements.txt
 
       - name: Run EGX Scanner
         env:
@@ -32,5 +72,300 @@ jobs:
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' && 'True' || 'False' }}
+          FORCE_DAILY: >-
+            ${{
+              (github.event.schedule == '0 4 * * 0-4' ||
+               github.event.inputs.force_daily == 'true')
+              && 'True' || 'False'
+            }}
+          PYTHONUNBUFFERED: "1"
+          MANUAL_RUN: >-
+            ${{
+              (github.event_name == 'workflow_dispatch' &&
+               github.event.inputs.force_daily != 'true')
+              && 'True' || 'False'
+            }}
         run: python main.py
+
+      - name: Prepare research database
+        run: |
+          python backfill_research_db.py || true
+          python backfill_signal_log_smc.py || true
+          python historical_backtest.py --append || true
+          python backfill_hist_features.py || true
+          python extend_metrics.py || true
+          python -c "from backfill_research_db import ensure_combined_view; ensure_combined_view()" || true
+          python cache_orchestrator.py --symbols || true
+
+      - name: Save state to git
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add open_positions.json positions_history.json scan_results.json \
+                  signal_history.json signal_log.json learned_weights.json \
+                  egx_research.db research_results.json \
+                  changed_symbols.json || true
+          git diff --staged --quiet || git commit -m "Auto-update positions and research DB [skip ci]"
+          git push || true
+
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: egx-research-db
+          path: |
+            egx_research.db
+            historical_backtest_results.json
+            reports/historical_backtest_report_*.html
+          retention-days: 1
+
+  # ── B ── Research reports (parallel with C) ───────────────────────────────
+  research_reports:
+    needs: scan_core
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download database
+        uses: actions/download-artifact@v4
+        with:
+          name: egx-research-db
+
+      - name: Restore research cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            cache_metadata/
+            cached_reports/
+          key: research-cache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: research-cache-${{ runner.os }}-
+
+      - name: Generate reports (incremental)
+        env:
+          WEB_OUT: ./web_deploy
+          REPORT_EMAIL_FROM: ${{ secrets.EMAIL_USER }}
+          REPORT_EMAIL_TO: ${{ secrets.REPORT_EMAIL_TO }}
+          REPORT_EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          FULL_REBUILD: ${{ github.event.inputs.full_rebuild == 'true' && 'true' || 'false' }}
+        run: |
+          mkdir -p web_deploy
+          python cache_orchestrator.py --mode research
+          python - <<'PYEOF'
+          import glob, shutil
+          for pattern, dest in [
+              ("reports/historical_backtest_report_*.html", "web_deploy/historical_backtest_report.html"),
+              ("reports/research_report_*.html",            "web_deploy/research_report.html"),
+              ("reports/quant_research_report_*.html",      "web_deploy/quant_research_report.html"),
+          ]:
+              files = sorted(glob.glob(pattern))
+              if files:
+                  shutil.copy(files[-1], dest)
+                  print(f"Copied {files[-1]} -> {dest}")
+              else:
+                  print(f"WARNING: no {pattern} found")
+          PYEOF
+          cp historical_backtest_results.json web_deploy/ || true
+          cp manifest.json sw.js icon.svg web_deploy/ || true
+          # Copy fresh HTML into persistent cache dir so skipped runs still have them
+          mkdir -p cached_reports
+          for f in web_deploy/historical_backtest_report.html web_deploy/research_report.html web_deploy/quant_research_report.html web_deploy/heatmap.html; do
+            [ -f "$f" ] && cp "$f" cached_reports/ || true
+          done
+          # Restore from cache if any HTML was missing this run
+          for f in historical_backtest_report research_report quant_research_report heatmap; do
+            [ ! -f "web_deploy/${f}.html" ] && [ -f "cached_reports/${f}.html" ] && cp "cached_reports/${f}.html" "web_deploy/${f}.html" && echo "Restored ${f}.html from cache" || true
+          done
+
+      - name: Save research cache
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: |
+            cache_metadata/
+            cached_reports/
+          key: research-cache-${{ runner.os }}-${{ github.run_id }}
+
+      - name: Upload research artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-web
+          path: web_deploy/
+          retention-days: 1
+
+  # ── C ── Intelligence engines (parallel with B) ───────────────────────────
+  intelligence_jobs:
+    needs: scan_core
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download database
+        uses: actions/download-artifact@v4
+        with:
+          name: egx-research-db
+
+      - name: Restore learning cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            cache_metadata/
+            gx_learning_memory.json
+            gx_research_memory.json
+            discount_zone_patterns.json
+            smc_rl_weights.json
+            walk_forward_state.json
+            reports/
+          key: intelligence-cache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: intelligence-cache-${{ runner.os }}-
+
+      - name: Run intelligence engines (incremental)
+        env:
+          FULL_REBUILD: ${{ github.event.inputs.full_rebuild == 'true' && 'true' || 'false' }}
+        run: python cache_orchestrator.py --mode intelligence
+        continue-on-error: true
+
+      - name: Save learning cache
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: |
+            cache_metadata/
+            gx_learning_memory.json
+            gx_research_memory.json
+            discount_zone_patterns.json
+            smc_rl_weights.json
+            walk_forward_state.json
+            reports/
+          key: intelligence-cache-${{ runner.os }}-${{ github.run_id }}
+
+      - name: Collect intelligence artifacts
+        run: |
+          mkdir -p web_deploy
+          python - <<'PYEOF'
+          import glob, shutil
+          mappings = [
+              ("reports/edge_discovery_report_*.html",   "web_deploy/edge_report.html"),
+              ("reports/logic_analysis_report_*.html",   "web_deploy/logic_analysis_report.html"),
+              ("reports/weight_optimizer_report_*.html", "web_deploy/weight_optimizer_report.html"),
+              ("reports/system_audit_report_*.html",     "web_deploy/system_audit_report.html"),
+              ("reports/adaptive_learning_report_*.html","web_deploy/adaptive_learning_report.html"),
+              ("reports/gx_learning_report_*.html",      "web_deploy/gx_learning_report.html"),
+              ("reports/decision_engine_report_*.html",  "web_deploy/decision_engine_report.html"),
+              ("reports/discount_zone_report_*.html",    "web_deploy/discount_zone_report.html"),
+              ("reports/multi_period_report_*.html",     "web_deploy/multi_period_report.html"),
+              ("reports/smc_rl_report_*.html",           "web_deploy/smc_rl_report.html"),
+              ("reports/walk_forward_report_*.html",      "web_deploy/walk_forward_report.html"),
+              ("reports/research_memory_report_*.html",  "web_deploy/research_memory_report.html"),
+          ]
+          for pattern, dest in mappings:
+              files = sorted(glob.glob(pattern))
+              if files:
+                  shutil.copy(files[-1], dest)
+                  print(f"Copied {files[-1]} -> {dest}")
+              else:
+                  print(f"WARNING: no {pattern} found")
+          PYEOF
+          cp reports/behavior_report.html  web_deploy/behavior_report.html  || true
+          cp reports/backtest_report.html  web_deploy/backtest_report.html  || true
+          cp logic_analysis_results.json        web_deploy/ || true
+          cp optimization_results.json          web_deploy/ || true
+          cp system_audit_results.json          web_deploy/ || true
+          cp adaptive_learning_results.json     web_deploy/ || true
+          cp gx_learning_memory.json            web_deploy/ || true
+          cp decision_engine_results.json       web_deploy/ || true
+          cp discount_zone_patterns.json        web_deploy/ || true
+          cp changed_symbols.json               web_deploy/ || true
+          cp incremental_execution_report.json  web_deploy/ || true
+          cp smc_rl_weights.json                web_deploy/ || true
+          cp walk_forward_state.json            web_deploy/ || true
+          cp gx_research_memory.json            web_deploy/ || true
+
+      - name: Upload intelligence artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: intelligence-web
+          path: web_deploy/
+          retention-days: 1
+
+  # ── D ── Dashboard (after B + C) ─────────────────────────────────────────
+  dashboard_build:
+    needs: [research_reports, intelligence_jobs]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download research artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: research-web
+          path: web_deploy/
+        continue-on-error: true
+
+      - name: Download intelligence artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: intelligence-web
+          path: web_deploy/
+        continue-on-error: true
+
+      - name: Generate Master Dashboard
+        run: |
+          python dashboard.py || true
+          cp dashboard.html web_deploy/index.html || true
+
+      - name: Upload final web deploy
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-web-deploy
+          path: web_deploy/
+          retention-days: 1
+
+  # ── E ── Deploy ───────────────────────────────────────────────────────────
+  deploy:
+    needs: dashboard_build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download final web deploy
+        uses: actions/download-artifact@v4
+        with:
+          name: final-web-deploy
+          path: web_deploy/
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./web_deploy
+          force_orphan: true
+          commit_message: "Deploy dashboard [skip ci]"

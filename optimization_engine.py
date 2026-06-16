@@ -315,10 +315,10 @@ def _run_expectancy_gradient(db_path: str, config_path: str) -> tuple:
         if opt and "optimal_weights" in opt:
             best_params = {k: round(v, 4) for k, v in opt["optimal_weights"].items()}
             m = opt.get("metrics_optimized", {})
-            # Recompute expectancy from optimized metrics if available
-            opt_wr  = m.get("win_rate", wr)
-            opt_avg = m.get("avg_return", avg_win)
-            best_exp = opt_wr * opt_avg + (1 - opt_wr) * avg_loss
+            # Use optimizer's expected_return directly — same metric formula as base_exp.
+            # Previous code used opt_wr * avg_win (peak_1y) vs base_exp from r20d —
+            # that metric mismatch produced fake +0.55 improvement every cycle.
+            best_exp = float(m.get("expected_return", base_exp))
     except Exception:
         pass
 

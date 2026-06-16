@@ -336,31 +336,32 @@ def _section_todays_learning() -> str:
     all_recent   = list(reversed(cycles))[:8]
     shown_cycles = today_cycles if today_cycles else all_recent
 
-    # ── Summary card: TODAY THE SYSTEM LEARNED ───────────────────────────────
-    # Counts since yesterday
+    # ── Summary card: ACTIVITY TODAY / MOST RECENT CYCLE ──────────────────────
+    # Use today_str (not yesterday_str) so counts only reflect genuine today activity.
+    # If nothing ran today, all counts will be 0 and the box must say so explicitly.
     n_new_outcomes  = _db_scalar(
-        "SELECT COUNT(*) FROM bottom_quality WHERE computed_at >= ?", (yesterday_str,)
+        "SELECT COUNT(*) FROM bottom_quality WHERE computed_at >= ?", (today_str,)
     )
     n_new_signals   = _db_scalar(
-        "SELECT COUNT(*) FROM signals WHERE created_at >= ?", (yesterday_str,)
+        "SELECT COUNT(*) FROM signals WHERE created_at >= ?", (today_str,)
     )
     n_new_findings  = sum(
         1 for f in factor_findings
-        if isinstance(f, dict) and str(f.get("recorded_at", "")) >= yesterday_str
+        if isinstance(f, dict) and str(f.get("recorded_at", "")) >= today_str
     )
     n_new_promos    = _db_scalar(
         "SELECT COUNT(*) FROM deployment_log WHERE action='PROMOTE' AND deployed_at >= ?",
-        (yesterday_str,)
+        (today_str,)
     )
     n_new_rollbacks = _db_scalar(
         "SELECT COUNT(*) FROM deployment_log WHERE action='ROLLBACK' AND deployed_at >= ?",
-        (yesterday_str,)
+        (today_str,)
     )
     n_new_val       = _db_scalar(
-        "SELECT COUNT(*) FROM validation_runs WHERE run_at >= ?", (yesterday_str,)
+        "SELECT COUNT(*) FROM validation_runs WHERE run_at >= ?", (today_str,)
     )
     n_new_exp       = _db_scalar(
-        "SELECT COUNT(*) FROM experiment_log WHERE run_at >= ?", (yesterday_str,)
+        "SELECT COUNT(*) FROM experiment_log WHERE run_at >= ?", (today_str,)
     )
     # Signals waiting for maturation (no mfe_40d yet)
     cutoff_40d = (datetime.now() - timedelta(days=40)).strftime("%Y-%m-%d")
@@ -370,10 +371,12 @@ def _section_todays_learning() -> str:
         (cutoff_40d, today_str)
     )
 
-    # Recent learning cycle info
+    # Recent learning cycle info — most recent cycle from any date
     last_cycle = shown_cycles[0] if shown_cycles else {}
-    outcomes_today = last_cycle.get("outcomes_processed", 0) or 0
-    promoted_today = any(c.get("promoted") for c in shown_cycles)
+    promoted_today = any(c.get("promoted") for c in today_cycles)
+
+    nothing_today = (n_new_outcomes == 0 and n_new_findings == 0 and n_new_val == 0
+                     and n_new_exp == 0 and n_new_promos == 0)
 
     def _delta_item(icon, label, val, col=FG, show_zero=True):
         if not show_zero and val == 0:
@@ -386,21 +389,33 @@ def _section_todays_learning() -> str:
                 f'<span style="font-size:1.0em;font-weight:700;color:{col}">{sign}{val}</span>'
                 f'</div>')
 
-    summary_items = (
-        _delta_item("📈", "Outcomes matured (mfe_40d computed)", n_new_outcomes, G if n_new_outcomes else FG, True)
-        + _delta_item("🧬", "New factors classified in knowledge base", n_new_findings, G if n_new_findings else FG, True)
-        + _delta_item("🔬", "Validation runs completed", n_new_val, B if n_new_val else FG, True)
-        + _delta_item("🧪", "Experiments executed (labs)", n_new_exp, B if n_new_exp else FG, True)
-        + _delta_item("⬆", "Promotions to production", n_new_promos, G if n_new_promos else A, True)
-        + _delta_item("⬇", "Rollbacks triggered", n_new_rollbacks, R if n_new_rollbacks else FG, True)
-        + _delta_item("🆕", "New signals stored", n_new_signals, G if n_new_signals else FG, True)
-        + _delta_item("⏳", "Signals waiting for maturation", n_maturing, A, True)
-    )
+    if nothing_today:
+        no_learning_notice = (
+            f'<div style="padding:12px 0;color:{A};font-size:0.9em;font-weight:600">'
+            f'No new learnings today ({today_str}).</div>'
+            f'<div style="color:{DIM};font-size:0.82em">Last cycle: '
+            f'{_ts(last_cycle.get("finished_at", last_cycle.get("recorded_at")))} — '
+            f'verdict={last_cycle.get("verdict","?")} '
+            f'{"promoted=True" if last_cycle.get("promoted") else ""}'
+            f'</div>'
+        )
+        summary_items = no_learning_notice
+    else:
+        summary_items = (
+            _delta_item("📈", "Outcomes matured (mfe_40d computed)", n_new_outcomes, G if n_new_outcomes else FG, True)
+            + _delta_item("🧬", "New factors classified in knowledge base", n_new_findings, G if n_new_findings else FG, True)
+            + _delta_item("🔬", "Validation runs completed", n_new_val, B if n_new_val else FG, True)
+            + _delta_item("🧪", "Experiments executed (labs)", n_new_exp, B if n_new_exp else FG, True)
+            + _delta_item("⬆", "Promotions to production", n_new_promos, G if n_new_promos else A, True)
+            + _delta_item("⬇", "Rollbacks triggered", n_new_rollbacks, R if n_new_rollbacks else FG, True)
+            + _delta_item("🆕", "New signals stored", n_new_signals, G if n_new_signals else FG, True)
+            + _delta_item("⏳", "Signals waiting for maturation", n_maturing, A, True)
+        )
 
     summary_html = _box(
-        "TODAY THE SYSTEM LEARNED",
+        f"TODAY THE SYSTEM LEARNED ({today_str})",
         f'<div style="font-size:0.85em">{summary_items}</div>',
-        color=B
+        color=B if not nothing_today else A
     )
 
     # ── Learning cycles ───────────────────────────────────────────────────────

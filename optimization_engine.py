@@ -191,7 +191,7 @@ def _run_weight_gradient(db_path: str, config_path: str) -> tuple:
         if opt and "optimal_weights" in opt:
             params_after = {k: round(v, 4) for k, v in opt["optimal_weights"].items()}
             m_opt = opt.get("metrics_optimized", {})
-            metric_val = float(m_opt.get("win_rate", 0.0))
+            metric_val = float(m_opt.get("expected_return", 0.0))
             n = int(m_opt.get("n", len(df)))
         else:
             params_after = params_before
@@ -214,7 +214,7 @@ def _run_walk_forward(db_path: str, config_path: str) -> tuple:
         wf.save_state(state)
         an = wf.compute_analytics(state)
         params_after = {k: round(v, 4) for k, v in state.get("weights", params_before).items()}
-        metric_val = float(an.get("win_rate", 0.0)) / 100.0 if an else 0.0
+        metric_val = float(an.get("expectancy", an.get("expected_return", 0.0))) if an else 0.0
         n = int(an.get("n", 0)) if an else 0
         return params_before, params_after, metric_val, n
     except Exception as exc:
@@ -240,7 +240,7 @@ def _run_rl_gradient(db_path: str, config_path: str) -> tuple:
         new_weights, _ = rl.run_gradient_descent(data, weights_data["current_weights"])
         params_after = {k: round(v, 4) for k, v in new_weights.items()}
         perf = rl.compute_performance_stats(data, new_weights)
-        metric_val = float(perf.get("top_q_win_rate", 0.0)) / 100.0
+        metric_val = float(perf.get("expectancy", perf.get("expected_return", 0.0)))
         n = int(perf.get("n", len(data)))
         return params_before, params_after, metric_val, n
     except Exception as exc:

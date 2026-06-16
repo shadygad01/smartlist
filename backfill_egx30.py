@@ -48,10 +48,11 @@ def download_and_backfill():
         except Exception as e:
             print(f"❌ {symbol}: {e}")
 
-    # حفظ البيانات
-    os.makedirs("historical_data", exist_ok=True)
+    # حفظ البيانات — must match the path used by extend_metrics.py and backfill_research_db.py
+    os.makedirs("historical_data/historical_data", exist_ok=True)
     for symbol, df in all_data.items():
-        df.to_csv(f"historical_data/{symbol}.csv")
+        df.index.name = "Date"
+        df.to_csv(f"historical_data/historical_data/{symbol}.csv")
     
     print(f"\n✅ تم تحميل {len(all_data)} سهم بنجاح")
     return all_data
@@ -70,20 +71,23 @@ def run_system_backfill():
     os.system("python edge_report.py")
 
 if __name__ == "__main__":
+    import sys
+    download_only = "--download-only" in sys.argv
+
     print("="*60)
     print("          EGX30 Full Backfill + Forward Simulation")
     print("="*60)
-    
+
     data = download_and_backfill()
-    
-    print("\n⚡ بدء توليد إشارات Early Buy / Buy (Forward Style)...")
-    # السكريبتات الأصلية هي الأدق، فنستخدمها
-    run_system_backfill()
-    
-    print("\n🎉 اكتمل العملية!")
-    print("   - البيانات التاريخية محفوظة")
-    print("   - الإشارات مسجلة في signal_log + research DB")
-    print("   - التقارير الجديدة جاهزة (research_report + edge_report)")
-    
-    print("\nشغل دلوقتي:")
-    print("python research_report.py")
+
+    if not download_only:
+        print("\n⚡ بدء توليد إشارات Early Buy / Buy (Forward Style)...")
+        run_system_backfill()
+
+        print("\n🎉 اكتمل العملية!")
+        print("   - البيانات التاريخية محفوظة")
+        print("   - الإشارات مسجلة في signal_log + research DB")
+        print("   - التقارير الجديدة جاهزة (research_report + edge_report)")
+
+        print("\nشغل دلوقتي:")
+        print("python research_report.py")

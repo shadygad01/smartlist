@@ -79,8 +79,9 @@ WHITELIST = [
     "GBCO.CA",  # GB Auto
 ]
 
-PRICE_GATE_NORMAL    = 16   # ملاحظة: فحص الحساسية على بيانات حية (فبراير-يونيو 2026) أظهر
-PRICE_GATE_WHITELIST = 15   # فروقاً طفيفة بين 13 و19 — المعلمة Moderate وليست محسومة بدليل
+# PRICE_GATE_NORMAL and PRICE_GATE_WHITELIST are computed as fractions of W_PRICE
+# after signal_engine is imported below (search for "PRICE_GATE_NORMAL =").
+# Fractions stored in config/gates_config.json — auto-track weight optimization.
 
 NAMES = {
     "COMI.CA": "Commercial International Bank",
@@ -494,7 +495,15 @@ from signal_engine import (
     sc_htf, sc_avwap, sc_macd, sc_div,
     _calc_rsi, _find_pivots, score_signal,
     W_PRICE, W_OB, W_LIQ, W_HTF, W_AVWAP, W_MACD, W_DIV, W_DZ,
+    PRICE_GATE_FRAC_NORMAL, PRICE_GATE_FRAC_WHITELIST,
 )
+# Effective price gate = fraction × W_PRICE.
+# Proportional design: auto-recalibrates when weight optimization changes W_PRICE.
+# Normal: ~55% of W_PRICE (original design intent: 16/30 ≈ 53%).
+# Whitelist: 50% of W_PRICE (original design intent: 15/30 = 50%).
+# Evidence: alpha audit 2026-06 — gate at 50-55% of W_PRICE → Sharpe=1.265-1.272.
+PRICE_GATE_NORMAL    = PRICE_GATE_FRAC_NORMAL    * W_PRICE
+PRICE_GATE_WHITELIST = PRICE_GATE_FRAC_WHITELIST * W_PRICE
 
 def sig_info(score):
     if score>=85: return "Institutional Buy","#155724","#d4edda","#c3e6cb"
@@ -723,14 +732,17 @@ def analyze(symbol):
 
         # ══════════════════════════════════════════════════════════════════
         # DUAL GATE
-        #   GATE 1 — Price in Deep Discount:  r1 >= 15  (out of W_PRICE=30)
-        #   GATE 2 — Sweep & Reverse confirmed: r3 == W_LIQ (20/20)
+        #   GATE 1 — Price in Deep Discount:
+        #     r1 >= FRAC × W_PRICE  (proportional — tracks weight optimization)
+        #     Normal:    55% × W_PRICE  |  Whitelist: 50% × W_PRICE
+        #     Fractions in config/gates_config.json → signal_engine exports.
+        #   GATE 2 — Sweep & Reverse: r3 >= W_LIQ  [METADATA — not classification]
         #
-        #   r1 >= 15 AND r3 == 20  →  BUY eligible (normal sig_info)
-        #   r1 >= 15 AND r3 <  20  →  WATCH (price ok, waiting for sweep)
-        #   r1 <  15               →  IGNORE (hard block)
+        #   price_ok   →  BUY eligible; sig_info(adj_score) → Buy/Strong/VSB/IB
+        #   !price_ok  →  WAIT (price not in Deep Discount)
+        #   total < 35 →  SKIP
+        #   liq_ok     →  metadata tag shown in alert; never overrides class
         # ══════════════════════════════════════════════════════════════════
-        # ✅ DYNAMIC PRICE GATE - استخدم 12 للـ whitelist، 18 للأسهم العادية
         PRICE_GATE = PRICE_GATE_WHITELIST if symbol in WHITELIST else PRICE_GATE_NORMAL
         LIQ_GATE   = W_LIQ   # only Sweep & Reverse (20/20) passes to BUY
 
@@ -785,18 +797,16 @@ def analyze(symbol):
             sig = "Wait"
             tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
             l3  = l3 + f" ⏳ Adjusted score {score} below entry gate ({_entry_score_gate}) — quality pending"
-        elif not liq_ok:
-            # سياسة الدخول المبكر: السعر عميق والجودة كافية → شراء فوري
-            # دون انتظار Sweep & Reverse (قرار صاحب النظام)
-            sig = "Early Buy"
-            tc  = "#084298"; tbg = "#cfe2ff"; tbr = "#b6d4fe"
-            l3  = l3 + " 🟦 Early entry — دخول مبكر دون انتظار Sweep & Reverse (سياسة معتمدة)"
         else:
+            # liq_confirmed = metadata (Sweep & Reverse confirmed); never overrides class
+            if not liq_ok:
+                l3 = l3 + " 🟦 Sweep & Reverse pending — early entry"
             sig,tc,tbg,tbr = sig_info(score)
+        liq_confirmed = liq_ok
 
         entry_zones = None
         _score_gate = 35 if symbol in WHITELIST else 40
-        # liq_ok لم يعد شرطاً — الدخول المبكر يحتاج مناطق الدخول والتعزيز (Zone 3) أيضاً
+        # entry_zones computed for all buy-eligible signals (price_ok + score gate)
         if price_ok and r8 > 0 and total >= _score_gate:
             entry_zones = calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo,
                                            _sv=sv_result, _hvn=hvn_result)
@@ -893,6 +903,7 @@ def analyze(symbol):
             "stock_mult":     round(stock_mult, 3),
             "price_gate":     PRICE_GATE,
             "price_ok":       bool(price_ok),
+            "liq_confirmed":  bool(liq_confirmed),
             "sv_depth":       _sv_depth,
             **_snap,
         }
@@ -1136,9 +1147,9 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
         for s in STOCKS:               # save_history writes CSV — keep it sequential
             save_history(s, results[s])
 
-    # ── Sort stocks: BUY family → Wait/Early Buy → Skip, each group by score desc
+    # ── Sort stocks: BUY family → Wait → Skip, each group by score desc
     BUY_FAMILY   = {"buy", "strong buy", "very strong buy", "institutional buy"}
-    WAIT_FAMILY  = {"wait", "early buy", "watch"}
+    WAIT_FAMILY  = {"wait", "watch"}
 
     def _sort_key(s):
         sig = results[s].get("signal", "").lower()
@@ -1782,18 +1793,17 @@ def send_telegram_alerts(results):
         lines.append("━━━━━━━━━━━━━━━━━━━━━\n")
 
     SIGNAL_EMOJI = {
-        "INSTITUTIONAL BUY": "🟢",
+        "INSTITUTIONAL BUY": "🟣",
         "VERY STRONG BUY":   "🟢",
         "STRONG BUY":        "🟢",
         "BUY":               "🟩",
-        "EARLY BUY":         "🟦",
         "WATCH":             "🟡",
         "WAIT":              "🟡",
         "NEUTRAL":           "⚪",
         "SELL":              "🔴",
         "STRONG SELL":       "🔴",
     }
-    BUY_FAMILY_UPPER = {"BUY", "STRONG BUY", "VERY STRONG BUY", "INSTITUTIONAL BUY", "EARLY BUY"}
+    BUY_FAMILY_UPPER = {"BUY", "STRONG BUY", "VERY STRONG BUY", "INSTITUTIONAL BUY"}
 
     for s, r in alerts:
         signal_upper = r.get("signal", "").upper()
@@ -1991,22 +2001,17 @@ def _collect_current_prices(results):
         and results[s]["price"] > 0
     }
 
-_BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy", "Early Buy"}
+_BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy"}
 
 def _register_new_positions(results):
     """
-    سياسة الدخول المبكر (قرار صاحب النظام 2026-06-11):
-    الدخول أول ما يصبح السهم رخيصاً — عبور بوابتي Score + r1 فقط،
-    بدون انتظار تأكيد Sweep & Reverse (إشارة Buy).
-
-    الأساس: تحليل متعدد الآفاق على السجل الحي (فبراير→يونيو 2026):
-      أفق 15 يوم: دخول مبكر +5.27% مقابل +3.80% بانتظار التأكيد
-      أفق 50 يوم: دخول مبكر +17.4% مقابل +13.9%
-      وفي الشهر الهابط الوحيد (فبراير) لم يُظهر التأكيد أي قيمة حمائية.
-    بوابة السيولة تبقى مستخدمة في تصنيف الإشارة المعروضة فقط.
+    Registers new positions for all buy-eligible signals.
+    Eligibility: total >= 35 AND r1 >= PRICE_GATE AND adj_score >= entry_gate.
+    liq_ok (Sweep & Reverse) is metadata only — does not block position entry.
+    Signal class (Buy/Strong Buy/Very Strong Buy/Institutional Buy) reflects adj_score tier.
     """
-    # مصدر الحقيقة الوحيد هو تصنيف الإشارة — السلم في analyze() يضمن أن
-    # Early Buy/Buy تعني أن كل البوابات (جودة خام + عمق سعر + score معدّل) عدّت
+    # Single source of truth: signal field — classify() ensures all buy classes
+    # passed both the price gate and the adj_score entry gate.
     qualifying = {
         s for s in STOCKS
         if results[s].get("ok") and results[s].get("signal") in _BUY_SIGNALS
@@ -2291,8 +2296,8 @@ def detect_signal_changes(current_results, previous_results):
         current_price = current.get("price", "N/A")
         current_target = current.get("target", "N/A")
 
-        # إذا تغيرت الإشارة من Skip/Wait إلى أي إشارة شراء (تشمل الدخول المبكر)
-        BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy", "Early Buy"}
+        # Signal upgraded from Skip/Wait into a buy class
+        BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy"}
         if previous_sig in ("Skip", "Wait") and current_sig in BUY_SIGNALS:
             changed_stocks.append({
                 "stock": stock,

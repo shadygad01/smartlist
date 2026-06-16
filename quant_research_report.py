@@ -72,8 +72,13 @@ TODAY           = date.today().isoformat()
 ANNUALIZE_DAYS  = 252
 HOLD_DAYS       = 20     # افتراض فترة الاحتفاظ 20 يوم تداول
 
-PRICE_GATE_NORMAL    = 16
-PRICE_GATE_WHITELIST = 15
+try:
+    from signal_engine import PRICE_GATE_FRAC_NORMAL, PRICE_GATE_FRAC_WHITELIST, W_PRICE as _W_PRICE
+    PRICE_GATE_NORMAL    = PRICE_GATE_FRAC_NORMAL    * _W_PRICE
+    PRICE_GATE_WHITELIST = PRICE_GATE_FRAC_WHITELIST * _W_PRICE
+except Exception:
+    PRICE_GATE_NORMAL    = 4.23   # fallback: 0.55 × 7.69
+    PRICE_GATE_WHITELIST = 3.845  # fallback: 0.50 × 7.69
 ENTRY_SCORE_GATE     = 40
 TOTAL_EGX_STOCKS     = 27   # إجمالي أسهم الكون
 

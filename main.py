@@ -1148,7 +1148,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 
     # ── Sort stocks: BUY family → Wait → Skip, each group by score desc
     BUY_FAMILY   = {"buy", "strong buy", "very strong buy", "institutional buy"}
-    WAIT_FAMILY  = {"wait", "watch"}
+    WAIT_FAMILY  = {"wait"}
 
     def _sort_key(s):
         sig = results[s].get("signal", "").lower()
@@ -1254,7 +1254,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 </table>
 {open_positions_block}""")
 
-    SUMMARY_SIGNALS = {"buy", "strong buy", "very strong buy", "institutional buy", "watch", "wait"}
+    SUMMARY_SIGNALS = {"buy", "strong buy", "very strong buy", "institutional buy", "wait"}
     wr=""
     for idx, s in enumerate(sorted_stocks):
         r=results[s]
@@ -1709,7 +1709,7 @@ def send_telegram_alerts(results):
         msg = (
             f"📊 *EGX Daily Scan — {now_cairo().strftime('%d %b %Y')}*\n"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
-            f"No setups reached the Watch threshold (≥35) today."
+            f"No setups reached the Wait threshold (≥35) today."
         )
         open_pos = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
         open_pos.sort(key=lambda x: (
@@ -1804,7 +1804,6 @@ def send_telegram_alerts(results):
         "VERY STRONG BUY":   "🟢",
         "STRONG BUY":        "🟢",
         "BUY":               "🟩",
-        "WATCH":             "🟡",
         "WAIT":              "🟡",
         "NEUTRAL":           "⚪",
         "SELL":              "🔴",
@@ -1874,7 +1873,7 @@ def send_telegram_alerts(results):
             lines.append(
                 f"{'─'*25}\n"
                 f"{emoji} *{NAMES.get(s, s)}*  `{s}`{portfolio_tag}\n"
-                f"   Signal     👀 Watch\n"
+                f"   Signal     {emoji} {r.get('signal', 'Wait')}\n"
                 f"   SMC Score  *{r['score']}/100*{adj_tag}\n"
                 f"{ctx_str}"
                 f"   Price      *{r['price']} EGP*\n"
@@ -1927,13 +1926,15 @@ def send_alert_for_high_score(stock, score, result):
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     
     if token and chat_id:
-        signal = result.get("signal", "WATCH").upper()
+        signal = result.get("signal", "WAIT").upper()
         emoji_map = {
-            "STRONG BUY": "🟢",
-            "BUY": "🟩",
-            "WATCH": "🟡",
+            "INSTITUTIONAL BUY": "🟣",
+            "VERY STRONG BUY":   "🟢",
+            "STRONG BUY":        "🟢",
+            "BUY":               "🟩",
+            "WAIT":              "🟡",
         }
-        emoji = emoji_map.get(signal, "🔵")
+        emoji = emoji_map.get(signal, "🟡")
         
         try:
             upside = ""

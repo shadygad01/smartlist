@@ -953,6 +953,25 @@ def analyze(symbol):
             "regime_multiplier": round(_regime_mult, 3),
             **_snap,
         }
+
+        # Pattern Intelligence 2.0 telemetry (research only — never affects result)
+        try:
+            import pattern_kb as _pkb
+            _sig_id = f"{symbol}_{today}"
+            _ind_data = pattern_data.get("detail") if pattern_data.get("ok") else None
+            _pkb.log_telemetry(
+                signal_id=_sig_id,
+                symbol=symbol,
+                signal_date=today,
+                signal_class=sig if sig not in ("Wait", "Skip") else sig,
+                pattern_score=pattern_data.get("pattern_score") if pattern_data.get("ok") else None,
+                indicators=_ind_data,
+                market_regime=_regime_state,
+            )
+        except Exception:
+            pass
+
+        return result
     except Exception as e:
         return {"ok":False,"error":str(e)}
 
@@ -2227,6 +2246,16 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
         _ebt.daily_run(results=results, signal_date=_today)
     except Exception as _eb_err:
         print(f"  [EarlyBuy] skipped: {_eb_err}")
+
+    # Pattern Intelligence 2.0 — daily incremental learning (research only)
+    try:
+        import pattern_kb as _pkb
+        _pkb_result = _pkb.daily_run()
+        print(f"  [PatternKB] daily_run: {_pkb_result.get('n_signals',0)} signals "
+              f"{_pkb_result.get('n_patterns',0)} patterns "
+              f"dir_corrected={_pkb_result.get('directions_corrected',False)}")
+    except Exception as _pkb_err:
+        print(f"  [PatternKB] skipped: {_pkb_err}")
     changes = detect_signal_changes(results, previous_results)
     if changes:
         send_change_alert(changes)

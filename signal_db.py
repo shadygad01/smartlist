@@ -14,8 +14,59 @@ Signal Database — SQLite
 
 import sqlite3
 import os
+import json
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
+
+# ── RL Weights — lazy-loaded at module level ───────────────────────────────────
+_RL_WEIGHTS: dict = {}
+_RL_WEIGHTS_LOADED = False
+
+def _load_rl_weights() -> dict:
+    """Load smc_rl_weights.json once; return current_weights dict or {}."""
+    global _RL_WEIGHTS, _RL_WEIGHTS_LOADED
+    if _RL_WEIGHTS_LOADED:
+        return _RL_WEIGHTS
+    _RL_WEIGHTS_LOADED = True
+    try:
+        _path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "smc_rl_weights.json")
+        with open(_path) as f:
+            data = json.load(f)
+        _RL_WEIGHTS = data.get("current_weights", {})
+    except Exception:
+        _RL_WEIGHTS = {}
+    return _RL_WEIGHTS
+
+
+def _compute_rl_score(r1, r2, r3, r4, r5, r6, r7, r8, rl_weights: dict) -> int:
+    """
+    Recompute raw score using RL weights.
+    RL weights are continuous (not integer) so we normalize to 100-point scale
+    using same total-max as production (100 pts).
+    Returns integer 0–100.
+    """
+    if not rl_weights:
+        return 0
+    prod_keys = ["r1_price", "r2_ob", "r3_liquidity", "r4_htf",
+                 "r5_avwap", "r6_macd", "r7_div", "r8_demand"]
+    prod_vals = [r1 or 0, r2 or 0, r3 or 0, r4 or 0,
+                 r5 or 0, r6 or 0, r7 or 0, r8 or 0]
+    # Production max weights
+    prod_maxes = [30, 10, 20, 10, 8, 4, 3, 15]  # default maxes
+    # RL max weights
+    rl_maxes   = [rl_weights.get(k, pm) for k, pm in zip(prod_keys, prod_maxes)]
+    # Recompute each gate's contribution: (score/prod_max) × rl_max
+    rl_score_raw = 0.0
+    rl_total_max = sum(rl_maxes)
+    for val, pm, rm in zip(prod_vals, prod_maxes, rl_maxes):
+        frac = val / pm if pm > 0 else 0.0
+        rl_score_raw += frac * rm
+    # Scale to 100
+    if rl_total_max > 0:
+        scaled = (rl_score_raw / rl_total_max) * 100
+    else:
+        scaled = 0.0
+    return min(int(round(scaled)), 100)
 
 _CAIRO = ZoneInfo("Africa/Cairo")
 
@@ -72,6 +123,8 @@ def _migrate_schema(conn: sqlite3.Connection):
     new_cols = {
         "ranking_expectancy": "REAL",
         "ranking_confidence":  "REAL",
+        "rl_score":      "INTEGER",
+        "rl_signal":     "TEXT",
         "sv_hit":        "INTEGER DEFAULT 0",
         "sv_score":      "REAL",
         "sv_price":      "REAL",
@@ -493,6 +546,22 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
             ind = pat.get("detail", {})
             ez  = r.get("entry_zones")
 
+            # ── RL Shadow Score (shadow only — no effect on live decisions) ──
+            _rl_w = _load_rl_weights()
+            _rl_score = _compute_rl_score(
+                p.get("r1_price", 0), p.get("r2_ob", 0),
+                p.get("r3_liquidity", 0), p.get("r4_htf", 0),
+                p.get("r5_avwap", 0), p.get("r6_macd", 0),
+                p.get("r7_div", 0), p.get("r8_demand", 0),
+                _rl_w,
+            ) if _rl_w else None
+            _rl_signal = None
+            if _rl_score is not None:
+                if _rl_score >= 70:   _rl_signal = "Strong Buy"
+                elif _rl_score >= 50: _rl_signal = "Buy"
+                elif _rl_score >= 35: _rl_signal = "Weak Buy"
+                else:                 _rl_signal = "Skip"
+
             conn.execute("""
                 INSERT OR IGNORE INTO signals (
                     id, symbol, signal_date, signal_type,
@@ -523,6 +592,7 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
                     snap_bos, snap_bos_dist, snap_choch, snap_pivot_str,
                     snap_num_touches, snap_sweep_size, snap_vol_exp,
                     snap_reclaim_spd, snap_dist_lo, snap_prem_disc,
+                    rl_score, rl_signal,
                     created_at
                 ) VALUES (
                     :id, :symbol, :signal_date, :signal_type,
@@ -549,6 +619,7 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
                     :snap_bos, :snap_bos_dist, :snap_choch, :snap_pivot_str,
                     :snap_num_touches, :snap_sweep_size, :snap_vol_exp,
                     :snap_reclaim_spd, :snap_dist_lo, :snap_prem_disc,
+                    :rl_score, :rl_signal,
                     :now
                 )
             """, {
@@ -630,6 +701,8 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
                 "snap_reclaim_spd": r.get("snap_reclaim_spd"),
                 "snap_dist_lo":     r.get("snap_dist_lo"),
                 "snap_prem_disc":   r.get("snap_prem_disc"),
+                "rl_score":         _rl_score,
+                "rl_signal":        _rl_signal,
                 "now":           _cairo_now().isoformat(),
             })
             added += 1

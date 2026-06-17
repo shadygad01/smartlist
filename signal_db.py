@@ -438,6 +438,12 @@ def init_db(db_path: str = DB_PATH):
         );
 
         """)
+    # Pattern Intelligence 2.0 tables (research only, no impact on production)
+    try:
+        import pattern_kb as _pkb
+        _pkb._init_tables(conn)
+    except Exception:
+        pass
     # executescript() does an implicit COMMIT, so _migrate_schema runs
     # outside that transaction — each ALTER TABLE commits independently (correct).
     _migrate_schema(conn)

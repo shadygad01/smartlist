@@ -1488,6 +1488,305 @@ def _section_classification_fib() -> str:
 </div>"""
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 12 — PATTERN INTELLIGENCE 2.0
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _section_pattern_intelligence() -> str:
+    html = _section_header("Pattern Intelligence 2.0", "🔬")
+
+    # ── Summary row ──────────────────────────────────────────────────────────
+    n_total   = _db_scalar("SELECT COUNT(*) FROM pattern_knowledge_base WHERE n_total >= 20", default=0)
+    n_impr    = _db_scalar("SELECT COUNT(*) FROM pattern_knowledge_base WHERE status='improving' AND n_total >= 20", default=0)
+    n_stable  = _db_scalar("SELECT COUNT(*) FROM pattern_knowledge_base WHERE status='stable' AND n_total >= 20", default=0)
+    n_deter   = _db_scalar("SELECT COUNT(*) FROM pattern_knowledge_base WHERE status='deteriorating' AND n_total >= 20", default=0)
+    last_run  = _db_scalar(
+        "SELECT run_at FROM pattern_kb_log ORDER BY id DESC LIMIT 1", default="")
+    n_telem   = _db_scalar("SELECT COUNT(*) FROM pattern_telemetry", default=0)
+
+    summary_html = (
+        f'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
+        f'<div style="background:{BG2};border:1px solid {BOR};border-radius:6px;padding:10px 16px;min-width:100px;text-align:center">'
+        f'<div style="color:{B};font-size:1.4em;font-weight:700">{n_total}</div>'
+        f'<div style="color:{DIM};font-size:0.75em">Patterns</div></div>'
+        f'<div style="background:{BG2};border:1px solid {BOR};border-radius:6px;padding:10px 16px;min-width:100px;text-align:center">'
+        f'<div style="color:{G};font-size:1.4em;font-weight:700">{n_impr}</div>'
+        f'<div style="color:{DIM};font-size:0.75em">Improving</div></div>'
+        f'<div style="background:{BG2};border:1px solid {BOR};border-radius:6px;padding:10px 16px;min-width:100px;text-align:center">'
+        f'<div style="color:{A};font-size:1.4em;font-weight:700">{n_stable}</div>'
+        f'<div style="color:{DIM};font-size:0.75em">Stable</div></div>'
+        f'<div style="background:{BG2};border:1px solid {BOR};border-radius:6px;padding:10px 16px;min-width:100px;text-align:center">'
+        f'<div style="color:{R};font-size:1.4em;font-weight:700">{n_deter}</div>'
+        f'<div style="color:{DIM};font-size:0.75em">Deteriorating</div></div>'
+        f'<div style="background:{BG2};border:1px solid {BOR};border-radius:6px;padding:10px 16px;min-width:130px;text-align:center">'
+        f'<div style="color:{FG};font-size:1.1em;font-weight:700">{n_telem}</div>'
+        f'<div style="color:{DIM};font-size:0.75em">Telemetry Logged</div></div>'
+        f'<div style="background:{BG2};border:1px solid {BOR};border-radius:6px;padding:10px 16px;min-width:160px;text-align:center">'
+        f'<div style="color:{DIM};font-size:0.78em">{_ts(last_run) if last_run else "—"}</div>'
+        f'<div style="color:{DIM};font-size:0.75em">Last Research Cycle</div></div>'
+        f'</div>'
+    )
+    html += summary_html
+
+    # ── Top 10 Patterns by MFE40 ──────────────────────────────────────────────
+    top_rows = _db_query("""
+        SELECT pattern_def, n_total, mfe40_mean, expectancy, sharpe,
+               mae40_mean, peak_return_avg, confidence, status
+        FROM pattern_knowledge_base
+        WHERE n_total >= 20 AND mfe40_mean IS NOT NULL
+        ORDER BY mfe40_mean DESC
+        LIMIT 10
+    """)
+
+    if top_rows:
+        tbl = (
+            f'<div style="color:{B};font-size:0.8em;font-weight:600;'
+            f'text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">'
+            f'Top 10 Patterns by MFE40</div>'
+            f'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;'
+            f'font-size:0.82em">'
+            f'<tr style="color:{DIM};text-align:left;border-bottom:1px solid {BOR}">'
+            f'<th style="padding:5px 8px">#</th>'
+            f'<th style="padding:5px 8px">Pattern Definition</th>'
+            f'<th style="padding:5px 8px;text-align:right">N</th>'
+            f'<th style="padding:5px 8px;text-align:right">MFE40</th>'
+            f'<th style="padding:5px 8px;text-align:right">Expectancy</th>'
+            f'<th style="padding:5px 8px;text-align:right">Sharpe</th>'
+            f'<th style="padding:5px 8px;text-align:right">MAE40</th>'
+            f'<th style="padding:5px 8px;text-align:right">Peak</th>'
+            f'<th style="padding:5px 8px">Confidence</th>'
+            f'<th style="padding:5px 8px">Status</th></tr>'
+        )
+        for i, r in enumerate(top_rows, 1):
+            try:
+                flags = json.loads(r["pattern_def"])
+                pat_str = " + ".join(
+                    f'<span style="color:{G}">✓</span>{k.replace("_"," ")}' if v
+                    else f'<span style="color:{R}">✗</span>{k.replace("_"," ")}'
+                    for k, v in flags.items()
+                )
+            except Exception:
+                pat_str = str(r["pattern_def"])[:60]
+
+            conf = r["confidence"] or "—"
+            conf_col = G if "Very High" in conf else (G if "High" in conf else (A if "Moderate" in conf else DIM))
+            status = r["status"] or "active"
+            status_col = G if status == "improving" else (R if status == "deteriorating" else DIM)
+            mfe40 = r["mfe40_mean"]
+            mfe40_col = G if (mfe40 or 0) >= 0.20 else (A if (mfe40 or 0) >= 0.10 else R)
+
+            tbl += (
+                f'<tr style="border-bottom:1px solid {BOR}">'
+                f'<td style="padding:5px 8px;color:{DIM}">{i}</td>'
+                f'<td style="padding:5px 8px;font-size:0.88em">{pat_str}</td>'
+                f'<td style="padding:5px 8px;text-align:right;color:{FG}">{r["n_total"]}</td>'
+                f'<td style="padding:5px 8px;text-align:right;color:{mfe40_col};font-weight:600">'
+                f'{_num(mfe40, ".4f")}</td>'
+                f'<td style="padding:5px 8px;text-align:right">{_num(r["expectancy"], ".4f")}</td>'
+                f'<td style="padding:5px 8px;text-align:right">{_num(r["sharpe"], ".3f")}</td>'
+                f'<td style="padding:5px 8px;text-align:right;color:{R}">{_num(r["mae40_mean"], ".4f")}</td>'
+                f'<td style="padding:5px 8px;text-align:right">{_num(r["peak_return_avg"], ".3f")}</td>'
+                f'<td style="padding:5px 8px;color:{conf_col};font-size:0.85em">{conf}</td>'
+                f'<td style="padding:5px 8px;color:{status_col};font-size:0.85em">{status}</td>'
+                f'</tr>'
+            )
+        tbl += '</table></div>'
+        html += _box("Top Patterns — Live from pattern_knowledge_base", tbl, color=B)
+    else:
+        html += _box("Top Patterns", f'<span style="color:{DIM}">No patterns yet — run pattern_kb.rebuild()</span>')
+
+    # ── Improving Patterns ────────────────────────────────────────────────────
+    impr_rows = _db_query("""
+        SELECT pattern_def, n_total, mfe40_mean, expectancy, yearly_stats, last_updated
+        FROM pattern_knowledge_base
+        WHERE status = 'improving' AND n_total >= 20
+        ORDER BY mfe40_mean DESC
+        LIMIT 5
+    """)
+
+    if impr_rows:
+        impr_html = '<table style="width:100%;border-collapse:collapse;font-size:0.82em">'
+        impr_html += (
+            f'<tr style="color:{DIM};border-bottom:1px solid {BOR}">'
+            f'<th style="padding:4px 8px;text-align:left">Pattern</th>'
+            f'<th style="padding:4px 8px;text-align:right">N</th>'
+            f'<th style="padding:4px 8px;text-align:right">MFE40</th>'
+            f'<th style="padding:4px 8px;text-align:right">Trend</th>'
+            f'<th style="padding:4px 8px;text-align:right">Last Updated</th></tr>'
+        )
+        for r in impr_rows:
+            try:
+                flags = json.loads(r["pattern_def"])
+                pat_str = " + ".join(f'✓{k.replace("_"," ")}' for k, v in flags.items() if v)
+            except Exception:
+                pat_str = str(r["pattern_def"])[:40]
+            # Compute YoY trend from yearly_stats
+            trend_str = "↑"
+            try:
+                ys = json.loads(r["yearly_stats"]) if r["yearly_stats"] else {}
+                yrs = sorted(ys.keys())
+                if len(yrs) >= 2:
+                    delta = (ys[yrs[-1]].get("mfe40") or 0) - (ys[yrs[0]].get("mfe40") or 0)
+                    trend_str = f'<span style="color:{G}">↑ +{delta*100:.1f}pp</span>'
+            except Exception:
+                pass
+            impr_html += (
+                f'<tr style="border-bottom:1px solid {BOR}">'
+                f'<td style="padding:4px 8px;color:{G}">{pat_str}</td>'
+                f'<td style="padding:4px 8px;text-align:right">{r["n_total"]}</td>'
+                f'<td style="padding:4px 8px;text-align:right;font-weight:600">{_num(r["mfe40_mean"],".4f")}</td>'
+                f'<td style="padding:4px 8px;text-align:right">{trend_str}</td>'
+                f'<td style="padding:4px 8px;text-align:right;color:{DIM}">{_ts(r["last_updated"],"%Y-%m-%d")}</td></tr>'
+            )
+        impr_html += '</table>'
+        html += _box("Improving Patterns", impr_html, color=G)
+
+    # ── Deteriorating Patterns ────────────────────────────────────────────────
+    deter_rows = _db_query("""
+        SELECT pattern_def, n_total, mfe40_mean, expectancy, yearly_stats, last_updated
+        FROM pattern_knowledge_base
+        WHERE status = 'deteriorating' AND n_total >= 20
+        ORDER BY mfe40_mean ASC
+        LIMIT 5
+    """)
+
+    if deter_rows:
+        deter_html = '<table style="width:100%;border-collapse:collapse;font-size:0.82em">'
+        deter_html += (
+            f'<tr style="color:{DIM};border-bottom:1px solid {BOR}">'
+            f'<th style="padding:4px 8px;text-align:left">Pattern</th>'
+            f'<th style="padding:4px 8px;text-align:right">N</th>'
+            f'<th style="padding:4px 8px;text-align:right">MFE40</th>'
+            f'<th style="padding:4px 8px;text-align:right">Trend</th></tr>'
+        )
+        for r in deter_rows:
+            try:
+                flags = json.loads(r["pattern_def"])
+                pat_str = " + ".join(f'✗{k.replace("_"," ")}' for k, v in flags.items() if v)
+            except Exception:
+                pat_str = str(r["pattern_def"])[:40]
+            trend_str = "↓"
+            try:
+                ys = json.loads(r["yearly_stats"]) if r["yearly_stats"] else {}
+                yrs = sorted(ys.keys())
+                if len(yrs) >= 2:
+                    delta = (ys[yrs[-1]].get("mfe40") or 0) - (ys[yrs[0]].get("mfe40") or 0)
+                    trend_str = f'<span style="color:{R}">↓ {delta*100:.1f}pp</span>'
+            except Exception:
+                pass
+            deter_html += (
+                f'<tr style="border-bottom:1px solid {BOR}">'
+                f'<td style="padding:4px 8px;color:{R}">{pat_str}</td>'
+                f'<td style="padding:4px 8px;text-align:right">{r["n_total"]}</td>'
+                f'<td style="padding:4px 8px;text-align:right">{_num(r["mfe40_mean"],".4f")}</td>'
+                f'<td style="padding:4px 8px;text-align:right">{trend_str}</td></tr>'
+            )
+        deter_html += '</table>'
+        html += _box("Deteriorating Patterns", deter_html, color=R)
+
+    # ── Dominant Families ─────────────────────────────────────────────────────
+    family_rows = _db_query("""
+        SELECT pattern_def, COUNT(*) as family_count,
+               AVG(mfe40_mean) as avg_mfe40,
+               MAX(n_total) as max_n
+        FROM pattern_knowledge_base
+        WHERE n_total >= 20 AND mfe40_mean IS NOT NULL
+        GROUP BY pattern_def
+        HAVING family_count >= 1
+        ORDER BY avg_mfe40 DESC
+        LIMIT 5
+    """)
+
+    # Better: cluster by dominant flag (most common flag in top patterns)
+    all_top = _db_query("""
+        SELECT pattern_def, n_total, mfe40_mean
+        FROM pattern_knowledge_base
+        WHERE n_total >= 20 AND mfe40_mean IS NOT NULL
+        ORDER BY mfe40_mean DESC
+        LIMIT 50
+    """)
+
+    flag_mfe = {}
+    for r in all_top:
+        try:
+            flags = json.loads(r["pattern_def"])
+            for k, v in flags.items():
+                if v == 1:
+                    if k not in flag_mfe:
+                        flag_mfe[k] = []
+                    flag_mfe[k].append(r["mfe40_mean"] or 0)
+        except Exception:
+            pass
+
+    if flag_mfe:
+        import statistics as _st
+        family_stats = {
+            k: {"count": len(v), "avg_mfe40": _st.mean(v)}
+            for k, v in flag_mfe.items() if len(v) >= 3
+        }
+        family_sorted = sorted(family_stats.items(), key=lambda x: -x[1]["avg_mfe40"])[:8]
+
+        fam_html = '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+        for flag_name, fs in family_sorted:
+            lbl = flag_name.replace("_", " ").title()
+            mfe = fs["avg_mfe40"]
+            col = G if mfe >= 0.20 else (A if mfe >= 0.12 else DIM)
+            fam_html += (
+                f'<div style="background:{BG0};border:1px solid {BOR};border-radius:6px;'
+                f'padding:8px 12px;min-width:120px;text-align:center">'
+                f'<div style="color:{col};font-weight:700;font-size:0.9em">✓ {lbl}</div>'
+                f'<div style="color:{FG};font-size:0.85em">MFE40 {mfe*100:.1f}%</div>'
+                f'<div style="color:{DIM};font-size:0.75em">{fs["count"]} patterns</div></div>'
+            )
+        fam_html += '</div>'
+        html += _box("Dominant Pattern Families (Top 50 by MFE40)", fam_html, color=B)
+
+    # ── Feature Validation ────────────────────────────────────────────────────
+    feat_rows = _db_query("""
+        SELECT feature, direction_design, direction_data, direction_correct,
+               spearman_rho, spearman_p, n_signals
+        FROM pattern_feature_stats
+        ORDER BY ABS(spearman_rho) DESC
+    """)
+
+    if feat_rows:
+        feat_html = '<table style="width:100%;border-collapse:collapse;font-size:0.82em">'
+        feat_html += (
+            f'<tr style="color:{DIM};border-bottom:1px solid {BOR}">'
+            f'<th style="padding:4px 8px;text-align:left">Feature</th>'
+            f'<th style="padding:4px 8px">Design Dir</th>'
+            f'<th style="padding:4px 8px">Data Dir</th>'
+            f'<th style="padding:4px 8px">Match</th>'
+            f'<th style="padding:4px 8px;text-align:right">Spearman ρ</th>'
+            f'<th style="padding:4px 8px;text-align:right">p-value</th>'
+            f'<th style="padding:4px 8px;text-align:right">N</th></tr>'
+        )
+        for fr in feat_rows:
+            correct = fr["direction_correct"]
+            rho = fr["spearman_rho"] or 0
+            p_val = fr["spearman_p"]
+            sig = (p_val is not None and p_val < 0.05)
+            rho_col = G if (sig and abs(rho) >= 0.05) else DIM
+            feat_html += (
+                f'<tr style="border-bottom:1px solid {BOR}">'
+                f'<td style="padding:4px 8px;color:{FG}">{fr["feature"]}</td>'
+                f'<td style="padding:4px 8px;color:{DIM}">{fr["direction_design"] or "—"}</td>'
+                f'<td style="padding:4px 8px;color:{DIM}">{fr["direction_data"] or "—"}</td>'
+                f'<td style="padding:4px 8px;text-align:center">'
+                + ('<td><span style="color:' + G + '">&#10003;</span></td>' if correct
+                   else '<td><span style="color:' + R + '">&#10007;</span></td>')
+                + '</td>'
+                f'<td style="padding:4px 8px;text-align:right;color:{rho_col}">{_num(rho, ".4f")}</td>'
+                f'<td style="padding:4px 8px;text-align:right;color:{G if sig else DIM}">'
+                f'{_num(p_val, ".4f") if p_val is not None else "—"}</td>'
+                f'<td style="padding:4px 8px;text-align:right">{fr["n_signals"] or "—"}</td></tr>'
+            )
+        feat_html += '</table>'
+        html += _box("Feature Validation vs MFE40 (Spearman)", feat_html, color=A)
+
+    return f'<div style="background:{BG1};border:1px solid {BOR};border-radius:8px;padding:20px;margin-bottom:20px">{html}</div>'
+
+
 def build_dashboard() -> str:
     now     = _now_cairo()
     now_str = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -1501,6 +1800,7 @@ def build_dashboard() -> str:
         f'<div id="knowledge">{_section_knowledge_findings()}</div>'
         f'<div id="performance">{_section_alpha_performance()}</div>'
         f'<div id="classification">{_section_classification_fib()}</div>'
+        f'<div id="pattern-intel">{_section_pattern_intelligence()}</div>'
         f'<div id="changes">{_section_changes_since_yesterday()}</div>'
         f'<div id="deployments">{_section_deployment_history()}</div>'
         f'<div id="health">{_section_system_health()}</div>'
@@ -1536,7 +1836,7 @@ def build_dashboard() -> str:
 <div class="header">
   <div>
     <h1>⚡ EGX Executive Operations Center</h1>
-    <div class="meta">EGX Autonomous Bottom Discovery Platform — Live State · 11 Sections</div>
+    <div class="meta">EGX Autonomous Bottom Discovery Platform — Live State · 12 Sections</div>
   </div>
   <div class="meta" style="text-align:right">
     <div style="color:{FG}">{now_str}</div>
@@ -1554,6 +1854,7 @@ def build_dashboard() -> str:
   <a href="#knowledge">📚 Knowledge</a>
   <a href="#performance">📊 Performance</a>
   <a href="#classification">🎯 Classification</a>
+  <a href="#pattern-intel">🔬 Pattern Intel</a>
   <a href="#changes">📅 Changes</a>
   <a href="#deployments">🚀 Deployments</a>
   <a href="#health">🔧 Health</a>
@@ -1563,7 +1864,7 @@ def build_dashboard() -> str:
 <div class="container">
 {body}
 <div class="footer">
-  EGX Autonomous Bottom Discovery Platform · Built {now_str} · 11 sections
+  EGX Autonomous Bottom Discovery Platform · Built {now_str} · 12 sections
   <a href="heatmap.html" style="color:{B};text-decoration:none">📈 Signal Heatmap</a>
 </div>
 </div>

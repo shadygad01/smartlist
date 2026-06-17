@@ -834,6 +834,19 @@ def analyze(symbol):
             sig,tc,tbg,tbr = sig_info(score)
         liq_confirmed = liq_ok
 
+        # ── EARLY BUY (Research Shadow) ──────────────────────────────────────
+        # Research-only classification. Does NOT affect production entry decisions,
+        # open_positions, portfolio, or performance metrics.
+        # Rule: WAIT signal (price_ok=False) + partial discount (r1>0) + raw_score>=65
+        # Historical validation: full-data WR=0.829, OOS WR=0.853 (2025+, N=34)
+        # Promotion policy: requires N>=100, WR>=BUY WR, Exp>=BUY Exp, Sharpe>=BUY Sharpe,
+        #                   OOS + walk-forward validation.
+        _is_early_buy_research = (
+            sig == "Wait"
+            and r1 > 0          # partial discount only — not premium zone
+            and total >= 65     # high raw score despite failed price gate
+        )
+
         entry_zones = None
         _score_gate = 35 if symbol in WHITELIST else 40
         # entry_zones computed for all buy-eligible signals (price_ok + score gate)
@@ -934,6 +947,7 @@ def analyze(symbol):
             "price_gate":       PRICE_GATE,
             "price_ok":         bool(price_ok),
             "liq_confirmed":    bool(liq_confirmed),
+            "early_buy_research": bool(_is_early_buy_research),
             "sv_depth":         _sv_depth,
             "regime_state":     _regime_state,
             "regime_multiplier": round(_regime_mult, 3),
@@ -1832,6 +1846,14 @@ def send_telegram_alerts(results):
             lines.append("")
         lines.append("━━━━━━━━━━━━━━━━━━━━━\n")
 
+    # ── EARLY BUY (Research) section — appended after main alerts ──────
+    early_buy_alerts = [
+        (s, results[s])
+        for s in STOCKS
+        if results[s].get("ok") and results[s].get("early_buy_research")
+    ]
+    early_buy_alerts.sort(key=lambda x: x[1].get("score", 0), reverse=True)
+
     SIGNAL_EMOJI = {
         "INSTITUTIONAL BUY": "🟣",
         "VERY STRONG BUY":   "🟢",
@@ -1913,6 +1935,23 @@ def send_telegram_alerts(results):
                 f"{pi_line}"
                 f"   Data       {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
             )
+
+    # ── Append EARLY BUY (Research) section ────────────────────────────
+    if early_buy_alerts:
+        lines.append("━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(f"🔬 *EARLY BUY — Research Shadow*  _(not for entry)_\n")
+        lines.append(f"_{len(early_buy_alerts)} signal(s) — partial discount, score ≥ 65, price gate pending_\n")
+        for s, r in early_buy_alerts:
+            raw = r.get("raw_score", r["score"])
+            lines.append(
+                f"{'─'*25}\n"
+                f"🔬 *{NAMES.get(s, s)}*  `{s}`\n"
+                f"   Raw Score   *{raw}/100*\n"
+                f"   Price       *{r['price']} EGP*\n"
+                f"   R1 Position {r.get('r1', 0):.0f}/{W_PRICE:.0f} — partial discount\n"
+                f"   _Research tracking only — no portfolio action_\n"
+            )
+        lines.append("━━━━━━━━━━━━━━━━━━━━━")
 
     full_msg = "\n".join(lines)
 
@@ -2180,6 +2219,14 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
         schedule_daily()
     except Exception as _cl_err:
         print(f"  [ContinuousLearning] skipped: {_cl_err}")
+
+    # EARLY BUY Research Shadow — log, enrich outcomes, snapshot performance
+    try:
+        import early_buy_tracker as _ebt
+        _today = now_cairo().strftime("%Y-%m-%d")
+        _ebt.daily_run(results=results, signal_date=_today)
+    except Exception as _eb_err:
+        print(f"  [EarlyBuy] skipped: {_eb_err}")
     changes = detect_signal_changes(results, previous_results)
     if changes:
         send_change_alert(changes)

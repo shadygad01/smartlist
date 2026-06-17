@@ -505,6 +505,17 @@ from signal_engine import (
 PRICE_GATE_NORMAL    = PRICE_GATE_FRAC_NORMAL    * W_PRICE
 PRICE_GATE_WHITELIST = PRICE_GATE_FRAC_WHITELIST * W_PRICE
 
+# ── Regime Filter — loaded from gates_config.json ────────────────────────────
+_GATES_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "gates_config.json")
+try:
+    with open(_GATES_CONFIG_PATH) as _f:
+        _gc = json.load(_f)
+    _REGIME_FILTER_ENABLED = bool(_gc.get("regime_filter_enabled", False))
+    _REGIME_DOWN_MULT      = float(_gc.get("regime_down_mult",      0.70))
+except Exception:
+    _REGIME_FILTER_ENABLED = False
+    _REGIME_DOWN_MULT      = 0.70
+
 def sig_info(score):
     if score>=85: return "Institutional Buy","#155724","#d4edda","#c3e6cb"
     if score>=70: return "Very Strong Buy",  "#155724","#c3e6cb","#b1dfbb"
@@ -773,6 +784,26 @@ def analyze(symbol):
             stock_mult = STOCK_QUALITY.get(symbol, 1.0)
             _tier_lbl  = {1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,"")
         ctx_labels.append(_tier_lbl)
+
+        # ── Regime Filter — multiplied into ctx_mult when bear regime detected ──
+        # Enabled via gates_config.json "regime_filter_enabled": true
+        # Safe default: disabled if key missing. Does NOT change BUY/Wait/Skip
+        # gate logic directly — reduces adj_score so borderline signals fall below gate.
+        _regime_state = ""
+        _regime_mult  = 1.0
+        if _REGIME_FILTER_ENABLED and cur < eq:
+            _sg_trend = (_sg.get("egx30_trend", "") or "") if 'cur' in dir() and cur < eq and '_sg' in dir() else ""
+            # _sg is the score_signal() dict (only available in discount-zone branch)
+            if _sg_trend in ("DOWN", "DOWNTREND", "bearish", "Bearish", "downtrend"):
+                _regime_mult   = _REGIME_DOWN_MULT
+                _regime_state  = "bear"
+                ctx_mult      *= _REGIME_DOWN_MULT
+                ctx_labels.append(f"📉 Bear Regime {_REGIME_DOWN_MULT:.0%}")
+            else:
+                _regime_state = "bull" if _sg_trend else "neutral"
+        elif _REGIME_FILTER_ENABLED and cur >= eq:
+            _regime_state = "neutral"
+
         ctx_label  = " · ".join(x for x in ctx_labels if x)
         score = min(int(round(total * stock_mult * ctx_mult)), 100)
 
@@ -898,12 +929,14 @@ def analyze(symbol):
             "sweep_detected": bool("Sweep" in l3),
             "wick_rejection": bool("wick" in l3.lower()),
             "equal_lows":     bool("Equal Lows" in l3),
-            "ctx_mult":       round(ctx_mult, 3),
-            "stock_mult":     round(stock_mult, 3),
-            "price_gate":     PRICE_GATE,
-            "price_ok":       bool(price_ok),
-            "liq_confirmed":  bool(liq_confirmed),
-            "sv_depth":       _sv_depth,
+            "ctx_mult":         round(ctx_mult, 3),
+            "stock_mult":       round(stock_mult, 3),
+            "price_gate":       PRICE_GATE,
+            "price_ok":         bool(price_ok),
+            "liq_confirmed":    bool(liq_confirmed),
+            "sv_depth":         _sv_depth,
+            "regime_state":     _regime_state,
+            "regime_multiplier": round(_regime_mult, 3),
             **_snap,
         }
     except Exception as e:

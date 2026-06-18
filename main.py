@@ -2007,7 +2007,7 @@ def send_telegram_alerts(results):
         for s in STOCKS
         if results[s].get("ok") and results[s].get("early_buy_research")
     ]
-    early_buy_alerts.sort(key=lambda x: x[1].get("score", 0), reverse=True)
+    early_buy_alerts.sort(key=lambda x: 0.60 * (x[1].get("factor_exp_score", 0) or 0) + 0.40 * (x[1].get("score", 0) or 0), reverse=True)
 
     SIGNAL_EMOJI = {
         "INSTITUTIONAL BUY": "🟣",

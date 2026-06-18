@@ -2392,11 +2392,12 @@ def save_signal_history(results):
             if not isinstance(d, dict) or not d.get("ok"):
                 continue
             entry = {
-                "date":   today,
-                "score":  d.get("score", 0),
-                "price":  d.get("price", 0),
-                "r1":     d.get("r1", 0),
-                "signal": d.get("signal", ""),
+                "date":            today,
+                "score":           d.get("score", 0),
+                "price":           d.get("price", 0),
+                "r1":              d.get("r1", 0),
+                "signal":          d.get("signal", ""),
+                "factor_exp_score": d.get("factor_exp_score", 0),
             }
             stock_hist = hist.setdefault(ticker, [])
             # replace if same date already exists, otherwise append

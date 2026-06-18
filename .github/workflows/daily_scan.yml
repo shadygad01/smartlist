@@ -122,6 +122,19 @@ jobs:
             reports/historical_backtest_report_*.html
           retention-days: 1
 
+      - name: Upload fresh scan JSON artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-state
+          path: |
+            scan_results.json
+            signal_history.json
+            rank_history.json
+            open_positions.json
+            scheduler_state.json
+            scan_status.json
+          retention-days: 1
+
   # ── B ── Research reports (parallel with C) ───────────────────────────────
   research_reports:
     needs: scan_core
@@ -337,6 +350,18 @@ jobs:
         with:
           name: intelligence-web
           path: web_deploy/
+        continue-on-error: true
+
+      - name: Download fresh scan state
+        uses: actions/download-artifact@v4
+        with:
+          name: scan-state
+        continue-on-error: true
+
+      - name: Download research database
+        uses: actions/download-artifact@v4
+        with:
+          name: egx-research-db
         continue-on-error: true
 
       - name: Generate Master Dashboard

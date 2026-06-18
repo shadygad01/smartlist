@@ -1,0 +1,360 @@
+{
+  "generated_at": "2026-06-15",
+  "n_signals": 1051,
+  "n_rejected": 4177,
+  "baseline_r20d": 0.046,
+  "baseline_mfe": 0.1297,
+  "baseline_pf": 2.659,
+  "n_assumptions": 18,
+  "assumptions_protected": 3,
+  "assumptions_untested": 18,
+  "filter_damage": [
+    {
+      "filter": "Equal Lows",
+      "n_with": 44,
+      "n_without": 1007,
+      "pct_rejected": 95.8,
+      "mean_with": 0.0282,
+      "mean_without": 0.0467,
+      "mfe_with": 0.112,
+      "mfe_without": 0.1304,
+      "pf_with": 1.88,
+      "pf_without": 2.52,
+      "wr_with": 0.455,
+      "wr_without": 0.446,
+      "diff": -0.0185,
+      "p_value": 0.246,
+      "significant": false,
+      "missed_winners": 449,
+      "avg_missed_return": 0.0467,
+      "verdict": "Slight drag — borderline"
+    },
+    {
+      "filter": "Order Block Present",
+      "n_with": 175,
+      "n_without": 876,
+      "pct_rejected": 83.3,
+      "mean_with": 0.0341,
+      "mean_without": 0.0483,
+      "mfe_with": 0.1162,
+      "mfe_without": 0.1324,
+      "pf_with": 1.95,
+      "pf_without": 2.62,
+      "wr_with": 0.429,
+      "wr_without": 0.45,
+      "diff": -0.0142,
+      "p_value": 0.164,
+      "significant": false,
+      "missed_winners": 394,
+      "avg_missed_return": 0.0483,
+      "verdict": "Slight drag — borderline"
+    },
+    {
+      "filter": "Stopping Volume",
+      "n_with": 19,
+      "n_without": 1032,
+      "pct_rejected": 98.2,
+      "mean_with": 0.033,
+      "mean_without": 0.0462,
+      "mfe_with": 0.0833,
+      "mfe_without": 0.1305,
+      "pf_with": 3.15,
+      "pf_without": 2.49,
+      "wr_with": 0.263,
+      "wr_without": 0.45,
+      "diff": -0.0132,
+      "p_value": 0.444,
+      "significant": false,
+      "missed_winners": 464,
+      "avg_missed_return": 0.0462,
+      "verdict": "Slight drag — borderline"
+    },
+    {
+      "filter": "Sweep Detected",
+      "n_with": 477,
+      "n_without": 574,
+      "pct_rejected": 54.6,
+      "mean_with": 0.0528,
+      "mean_without": 0.0403,
+      "mfe_with": 0.1327,
+      "mfe_without": 0.1272,
+      "pf_with": 2.98,
+      "pf_without": 2.18,
+      "wr_with": 0.476,
+      "wr_without": 0.422,
+      "diff": 0.0125,
+      "p_value": 0.117,
+      "significant": false,
+      "missed_winners": 242,
+      "avg_missed_return": 0.0403,
+      "verdict": "Slight edge — borderline (not significant)"
+    },
+    {
+      "filter": "HTF Higher High",
+      "n_with": 216,
+      "n_without": 835,
+      "pct_rejected": 79.4,
+      "mean_with": 0.0548,
+      "mean_without": 0.0437,
+      "mfe_with": 0.1393,
+      "mfe_without": 0.1272,
+      "pf_with": 2.92,
+      "pf_without": 2.39,
+      "wr_with": 0.472,
+      "wr_without": 0.44,
+      "diff": 0.0111,
+      "p_value": 0.282,
+      "significant": false,
+      "missed_winners": 367,
+      "avg_missed_return": 0.0437,
+      "verdict": "Slight edge — borderline (not significant)"
+    },
+    {
+      "filter": "HTF HH AND HL",
+      "n_with": 148,
+      "n_without": 903,
+      "pct_rejected": 85.9,
+      "mean_with": 0.0538,
+      "mean_without": 0.0447,
+      "mfe_with": 0.1312,
+      "mfe_without": 0.1294,
+      "pf_with": 2.77,
+      "pf_without": 2.45,
+      "wr_with": 0.48,
+      "wr_without": 0.441,
+      "diff": 0.0091,
+      "p_value": 0.46,
+      "significant": false,
+      "missed_winners": 398,
+      "avg_missed_return": 0.0447,
+      "verdict": "NEUTRAL — no statistically significant edge"
+    },
+    {
+      "filter": "Wick Rejection",
+      "n_with": 111,
+      "n_without": 940,
+      "pct_rejected": 89.4,
+      "mean_with": 0.0381,
+      "mean_without": 0.0469,
+      "mfe_with": 0.1204,
+      "mfe_without": 0.1308,
+      "pf_with": 2.26,
+      "pf_without": 2.52,
+      "wr_with": 0.405,
+      "wr_without": 0.451,
+      "diff": -0.0088,
+      "p_value": 0.495,
+      "significant": false,
+      "missed_winners": 424,
+      "avg_missed_return": 0.0469,
+      "verdict": "NEUTRAL — no statistically significant edge"
+    },
+    {
+      "filter": "HVN Hit",
+      "n_with": 416,
+      "n_without": 635,
+      "pct_rejected": 60.4,
+      "mean_with": 0.0511,
+      "mean_without": 0.0426,
+      "mfe_with": 0.1392,
+      "mfe_without": 0.1234,
+      "pf_with": 2.74,
+      "pf_without": 2.34,
+      "wr_with": 0.452,
+      "wr_without": 0.443,
+      "diff": 0.0085,
+      "p_value": 0.301,
+      "significant": false,
+      "missed_winners": 281,
+      "avg_missed_return": 0.0426,
+      "verdict": "NEUTRAL — no statistically significant edge"
+    },
+    {
+      "filter": "RSI Divergence",
+      "n_with": 119,
+      "n_without": 932,
+      "pct_rejected": 88.7,
+      "mean_with": 0.0384,
+      "mean_without": 0.0469,
+      "mfe_with": 0.1189,
+      "mfe_without": 0.131,
+      "pf_with": 2.22,
+      "pf_without": 2.53,
+      "wr_with": 0.429,
+      "wr_without": 0.448,
+      "diff": -0.0085,
+      "p_value": 0.466,
+      "significant": false,
+      "missed_winners": 418,
+      "avg_missed_return": 0.0469,
+      "verdict": "NEUTRAL — no statistically significant edge"
+    },
+    {
+      "filter": "MACD Divergence",
+      "n_with": 157,
+      "n_without": 894,
+      "pct_rejected": 85.1,
+      "mean_with": 0.052,
+      "mean_without": 0.0449,
+      "mfe_with": 0.1278,
+      "mfe_without": 0.13,
+      "pf_with": 3.05,
+      "pf_without": 2.41,
+      "wr_with": 0.497,
+      "wr_without": 0.437,
+      "diff": 0.0071,
+      "p_value": 0.492,
+      "significant": false,
+      "missed_winners": 391,
+      "avg_missed_return": 0.0449,
+      "verdict": "NEUTRAL — no statistically significant edge"
+    }
+  ],
+  "top_discoveries": [
+    {
+      "combo": "hvn_hit=1 & price_ok=0",
+      "n": 19,
+      "mean": 0.1422,
+      "mfe": 0.2199,
+      "diff": 0.0962,
+      "p_value": 0.048,
+      "wr": 0.579
+    },
+    {
+      "combo": "htf_hh=1 & rsi_div=1",
+      "n": 28,
+      "mean": 0.0869,
+      "mfe": 0.1605,
+      "diff": 0.0409,
+      "p_value": 0.087,
+      "wr": 0.571
+    },
+    {
+      "combo": "macd_div=1 & hvn_hit=1",
+      "n": 73,
+      "mean": 0.0751,
+      "mfe": 0.1462,
+      "diff": 0.0292,
+      "p_value": 0.052,
+      "wr": 0.589
+    },
+    {
+      "combo": "htf_hh=1 & macd_div=1",
+      "n": 41,
+      "mean": 0.0742,
+      "mfe": 0.1507,
+      "diff": 0.0282,
+      "p_value": 0.101,
+      "wr": 0.585
+    },
+    {
+      "combo": "htf_hh=1 & hvn_hit=1",
+      "n": 89,
+      "mean": 0.0724,
+      "mfe": 0.1562,
+      "diff": 0.0264,
+      "p_value": 0.061,
+      "wr": 0.528
+    }
+  ],
+  "overfitting_audit": [
+    {
+      "finding": "sweep=1 outperforms",
+      "is_diff": 0.0125,
+      "is_pval": 0.117,
+      "oos_diff": 0.0773,
+      "wf_mean_diff": 0.0343,
+      "wf_consistent": true,
+      "wf_fold_diffs": [
+        0.0523,
+        -0.0069,
+        0.0126,
+        0.0789
+      ],
+      "verdict": "CONFIRMED"
+    },
+    {
+      "finding": "htf_hl=1 outperforms htf_hh=1",
+      "is_diff": -0.0095,
+      "is_pval": 0.598,
+      "oos_diff": 0.0377,
+      "wf_mean_diff": 0.0146,
+      "wf_consistent": true,
+      "wf_fold_diffs": [
+        0.0262,
+        -0.0222,
+        0.0166,
+        0.0377
+      ],
+      "verdict": "WEAK"
+    },
+    {
+      "finding": "hvn=1 outperforms hvn=0",
+      "is_diff": 0.0085,
+      "is_pval": 0.301,
+      "oos_diff": 0.0901,
+      "wf_mean_diff": 0.0273,
+      "wf_consistent": true,
+      "wf_fold_diffs": [
+        0.0243,
+        -0.0126,
+        0.0062,
+        0.0913
+      ],
+      "verdict": "CONFIRMED"
+    },
+    {
+      "finding": "r2_ob=0 outperforms r2_ob>0",
+      "is_diff": 0.0142,
+      "is_pval": 0.164,
+      "oos_diff": -0.0381,
+      "wf_mean_diff": 0.0022,
+      "wf_consistent": false,
+      "wf_fold_diffs": [
+        0.0609,
+        -0.0154,
+        0.0016,
+        -0.0383
+      ],
+      "verdict": "OVERFITTED"
+    },
+    {
+      "finding": "score≥55 outperforms score<55",
+      "is_diff": 0.0175,
+      "is_pval": 0.028,
+      "oos_diff": -0.0452,
+      "wf_mean_diff": -0.0091,
+      "wf_consistent": false,
+      "wf_fold_diffs": [
+        0.0402,
+        -0.0293,
+        -0.0011,
+        -0.046
+      ],
+      "verdict": "OVERFITTED"
+    }
+  ],
+  "conclusions": {
+    "q1_protected_assumptions": [
+      "A01: Price below EQ (cur < eq)",
+      "A03: EQ = 50% Fibonacci level",
+      "A14: Swing detection lookback = 60 bars"
+    ],
+    "q2_rejected_opportunities": "4177 discount-zone days were NOT signaled by the scanner. Of these, 1684 (40%) were winners (>5%). Rejected candidates: avg r20d=3.4%, vs accepted avg=4.6%. Buy-zone rejected: avg=4.6%. Key insight: scanner adds significant value — accepted outperforms rejected. PRIMARY BLIND SPOT: score 35-44 signals never stored in DB.",
+    "q3_filters_hurting": [
+      "None confirmed at p<0.10"
+    ],
+    "q4_filters_need_more_weight": [
+      "Sweep Detected (PF=48, strongest edge)"
+    ],
+    "q5_filters_need_less_weight": [
+      "Order Block (r2>0 hurts -1.6%)"
+    ],
+    "q6_remove_entirely": [
+      "r2_ob (Order Block) — data shows OB reduces return by -1.6%, confirmed"
+    ],
+    "q7_architecture": "Current additive weighted sum has OOS R²=-0.15 (negative!). Architecture is not predicting returns. Recommendation: mandatory gate (sweep=1 + r1≥gate) × quality bonus. Non-linear with minimum viable conditions outperforms additive sum.",
+    "q8_highest_impact": "Fix HTF scoring inversion: HH+HL currently scores highest but returns -0.8%. HL-only returns +11.6%. A single logic fix (swap full/partial scoring) could shift system performance significantly.",
+    "q9_system_status": "The scanner identifies real opportunities (mean r20d=+4.6%, PF=2.64). However 3 scoring components are backwards (OB, HTF, Demand). Fixing these 3 components alone could meaningfully improve expectancy without changing signal count. Opportunity flow is healthy at 639 signals."
+  }
+}

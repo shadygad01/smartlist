@@ -1,0 +1,514 @@
+"""
+Pattern Recognition Engine — v2
+=================================
+المؤشرات: 6 مؤشرات مختارة بناءً على ROC-AUC study
+الطريقة:  Threshold Scoring بدل Cosine Similarity
+
+لكل مؤشر، النظام يتعلم من التاريخ:
+  "في أي نطاق كان هذا المؤشر عند الارتدادات الناجحة؟"
+ثم يقيس مدى قرب الوضع الحالي من هذا النطاق.
+
+المؤشرات واتجاهاتها (من الدراسة):
+  stoch_rsi  → منخفض = إشارة (oversold)       AUC=0.632
+  p_vs_ma20  → منخفض = إشارة (تحت المتوسط)   AUC=0.653  ← الأقوى
+  mom_10d    → سلبي  = إشارة (نزل كفاية)      AUC=0.647
+  mom_5d     → سلبي  = إشارة                  AUC=0.604
+  atr_ratio  → مرتفع = إشارة (تقلب متزايد)    AUC=0.614
+  vol_trend  → منخفض = إشارة (الحجم يخف)      AUC=0.592
+"""
+
+import numpy as np
+import pandas as pd
+import json
+import os
+
+
+# ── Constants ─────────────────────────────────────────────────────────────────
+FORWARD_DAYS  = 30   # days to confirm a local low is unbroken
+BOUNCE_MIN    = 0.05  # minimum bounce from the low to count as real demand (5%)
+VOL_THRESHOLD = 0.80  # volume on low day must be > 80% of 20-day average
+BREAK_BUFFER  = 0.02  # low must be broken by > 2% to count as a real loss
+MIN_HISTORY   = 80    # 50 for indicators + 30 for confirmation window
+MIN_REVERSALS = 3
+MIN_DECIDED   = 100   # أقل عدد إشارات محسومة لتحديث الأوزان
+
+LEARNED_WEIGHTS_FILE = "learned_weights.json"
+
+# Auto-update enabled: weights are updated by research_engine.py after each
+# research run with sufficient data (≥30 mature signals).
+# Set to True to lock weights to AUC-derived defaults.
+FREEZE_WEIGHTS = False
+
+# الأوزان الافتراضية من AUC study
+DEFAULT_WEIGHTS = {
+    "p_vs_ma20": 0.21,
+    "mom_10d":   0.20,
+    "stoch_rsi": 0.18,
+    "atr_ratio": 0.15,
+    "mom_5d":    0.14,
+    "vol_trend": 0.12,
+}
+
+DIRECTION = {
+    "stoch_rsi": "lower",
+    "p_vs_ma20": "lower",
+    "mom_10d":   "lower",
+    "mom_5d":    "lower",
+    "atr_ratio": "higher",
+    "vol_trend": "lower",
+}
+
+
+def _load_weights():
+    """يرجع DEFAULT_WEIGHTS دائماً لو FREEZE_WEIGHTS=True (الأوزان المتعلمة noise)."""
+    if FREEZE_WEIGHTS:
+        return DEFAULT_WEIGHTS.copy()
+    if os.path.exists(LEARNED_WEIGHTS_FILE):
+        try:
+            with open(LEARNED_WEIGHTS_FILE) as f:
+                data = json.load(f)
+            w = data.get("weights", {})
+            if set(w.keys()) == set(DEFAULT_WEIGHTS.keys()):
+                return w
+        except Exception:
+            pass
+    return DEFAULT_WEIGHTS.copy()
+
+
+def _load_directions():
+    """يحمّل الاتجاهات المتعلَّمة لو موجودة، وإلا يرجع الافتراضية."""
+    if os.path.exists(LEARNED_WEIGHTS_FILE):
+        try:
+            with open(LEARNED_WEIGHTS_FILE) as f:
+                data = json.load(f)
+            d = data.get("directions", {})
+            if set(d.keys()) == set(DEFAULT_WEIGHTS.keys()):
+                return d
+        except Exception:
+            pass
+    return DIRECTION.copy()
+
+
+WEIGHTS    = _load_weights()
+DIRECTIONS = _load_directions()
+
+
+def _calc_weights_from_signals(decided, min_count=30):
+    """
+    يحسب الأوزان والاتجاهات من إشارات محسومة باستخدام Point-Biserial Correlation.
+    الاتجاه يُحدَّد من البيانات: إذا الإشارات الرابحة عندها متوسط أعلى → "higher".
+    يُرجع (weights_dict, directions_dict) أو (None, None) لو البيانات مش كافية.
+    """
+    if len(decided) < min_count:
+        return None, None
+
+    features = list(DEFAULT_WEIGHTS.keys())
+    correlations = {}
+    directions   = {}
+
+    for feat in features:
+        vals, labels = [], []
+        for s in decided:
+            v = s["indicators"].get(feat)
+            if v is None:
+                continue
+            vals.append(float(v))
+            labels.append(1 if s["outcome"] in ("win", "medium", "large") else 0)
+
+        if len(vals) < min_count:
+            correlations[feat] = DEFAULT_WEIGHTS[feat]
+            directions[feat]   = DIRECTION[feat]
+            continue
+
+        vals_arr   = np.array(vals)
+        labels_arr = np.array(labels)
+        n  = len(vals_arr)
+        n1 = int(labels_arr.sum())
+        n0 = n - n1
+        if n1 == 0 or n0 == 0:
+            correlations[feat] = DEFAULT_WEIGHTS[feat]
+            directions[feat]   = DIRECTION[feat]
+            continue
+
+        m1  = vals_arr[labels_arr == 1].mean()
+        m0  = vals_arr[labels_arr == 0].mean()
+        std = vals_arr.std() + 1e-9
+        rpb = abs((m1 - m0) / std * np.sqrt(n1 * n0 / n**2))
+        correlations[feat] = float(rpb)
+        directions[feat]   = "higher" if m1 > m0 else "lower"
+
+    total = sum(correlations.values()) + 1e-9
+    weights = {k: round(v / total, 4) for k, v in correlations.items()}
+    return weights, directions
+
+
+def update_weights_from_log(log_file="signal_log.json"):
+    """
+    يحسب أوزان global + per-stock من signal_log.json.
+    يحفظ النتيجة في learned_weights.json.
+    يُرجع الأوزان الجديدة أو None لو البيانات مش كافية.
+    """
+    if FREEZE_WEIGHTS:
+        print("  ℹ️  Pattern weights frozen (FREEZE_WEIGHTS=True) — skipping update.")
+        return DEFAULT_WEIGHTS.copy()
+
+    if not os.path.exists(log_file):
+        return None
+
+    try:
+        with open(log_file) as f:
+            data = json.load(f)
+    except Exception:
+        return None
+
+    # small (4-10%) مستبعدة من التدريب — إشاراتها تشبه flat في المؤشرات
+    # فوجودها مع flat يُضعف قدرة النظام على تمييز الإشارات الحقيقية
+    decided = [s for s in data.get("signals", [])
+               if s.get("outcome") in ("win", "loss", "medium", "large", "flat")
+               and s.get("indicators")]
+
+    if len(decided) < MIN_DECIDED:
+        return None
+
+    # ── Global weights + directions ───────────────────────────────────
+    global_weights, global_directions = _calc_weights_from_signals(decided, min_count=MIN_DECIDED)
+    if global_weights is None:
+        return None
+
+    # ── Blend global weights with DEFAULT_WEIGHTS ─────────────────────
+    # alpha = confidence in live data (0 → 0% live, 1 → 85% live)
+    alpha = min(0.85, len(decided) / 500)
+    blended_global = {
+        k: round(alpha * global_weights[k] + (1 - alpha) * DEFAULT_WEIGHTS[k], 4)
+        for k in DEFAULT_WEIGHTS
+    }
+    # normalize
+    total_bg = sum(blended_global.values()) + 1e-9
+    blended_global = {k: round(v / total_bg, 4) for k, v in blended_global.items()}
+
+    # ── Per-stock weights + directions ────────────────────────────────
+    from collections import defaultdict
+    by_symbol = defaultdict(list)
+    for s in decided:
+        by_symbol[s["symbol"]].append(s)
+
+    per_stock = {}
+    for sym, sigs in by_symbol.items():
+        w, d = _calc_weights_from_signals(sigs, min_count=30)
+        if w:
+            n_sym = len(sigs)
+            alpha_sym = min(0.85, n_sym / 200)
+            blended_sym = {
+                k: round(alpha_sym * w[k] + (1 - alpha_sym) * blended_global[k], 4)
+                for k in DEFAULT_WEIGHTS
+            }
+            total_sym = sum(blended_sym.values()) + 1e-9
+            blended_sym = {k: round(v / total_sym, 4) for k, v in blended_sym.items()}
+            per_stock[sym] = {
+                "weights":   blended_sym,
+                "directions": d,
+                "based_on":  n_sym,
+                "alpha":     round(alpha_sym, 2),
+            }
+
+    # ── حفظ ──────────────────────────────────────────────────────────
+    import datetime
+    out = {
+        "weights":    blended_global,
+        "directions": global_directions,
+        "per_stock":  per_stock,
+        "based_on":   len(decided),
+        "alpha":      round(alpha, 2),
+        "updated_at": str(datetime.date.today()),
+    }
+    with open(LEARNED_WEIGHTS_FILE, "w") as f:
+        json.dump(out, f, indent=2)
+
+    print(f"  🔄 Global weights updated from {len(decided)} signals (alpha={alpha:.0%}, blend={alpha:.0%} live + {1-alpha:.0%} default):")
+    for k, v in sorted(blended_global.items(), key=lambda x: -x[1]):
+        old = DEFAULT_WEIGHTS[k]
+        arrow = "↑" if v > old else "↓" if v < old else "="
+        d_old = DIRECTION[k]
+        d_new = global_directions.get(k, d_old)
+        d_mark = "" if d_new == d_old else f"  dir: {d_old}→{d_new} ⚠️"
+        print(f"     {k:<12} {old:.2f} → {v:.4f} {arrow}{d_mark}")
+    print(f"  🔄 Per-stock weights+directions learned for {len(per_stock)} stocks")
+
+    return blended_global
+
+
+def _load_learned_meta():
+    """Reads metadata from learned_weights.json without raising."""
+    if os.path.exists(LEARNED_WEIGHTS_FILE):
+        try:
+            with open(LEARNED_WEIGHTS_FILE) as f:
+                d = json.load(f)
+            return {"alpha": d.get("alpha", 0), "based_on": d.get("based_on", 0), "updated_at": d.get("updated_at", "")}
+        except Exception:
+            pass
+    return {}
+
+
+def _load_per_stock_weights(symbol):
+    """يُرجع (weights, directions) الخاصة بسهم معين، أو الـ global، أو الافتراضية."""
+    # FREEZE_WEIGHTS يجب أن يجمّد كل المسارات — سابقاً كان المسار per-stock
+    # يتجاوز التجميد ويحمّل أوزاناً متعلَّمة موصوفة في التحليل بأنها noise.
+    if FREEZE_WEIGHTS:
+        return DEFAULT_WEIGHTS.copy(), DIRECTION.copy()
+    if os.path.exists(LEARNED_WEIGHTS_FILE):
+        try:
+            with open(LEARNED_WEIGHTS_FILE) as f:
+                data = json.load(f)
+            per_stock = data.get("per_stock", {})
+            if symbol in per_stock:
+                entry = per_stock[symbol]
+                return entry["weights"], entry.get("directions", DIRECTIONS)
+            w = data.get("weights", {})
+            d = data.get("directions", {})
+            if set(w.keys()) == set(DEFAULT_WEIGHTS.keys()):
+                return w, d if set(d.keys()) == set(DEFAULT_WEIGHTS.keys()) else DIRECTIONS
+        except Exception:
+            pass
+    return DEFAULT_WEIGHTS.copy(), DIRECTION.copy()
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _rsi_series(close, period=14):
+    delta = close.diff()
+    ag = delta.clip(lower=0).ewm(alpha=1/period, min_periods=period, adjust=False).mean()
+    al = (-delta).clip(lower=0).ewm(alpha=1/period, min_periods=period, adjust=False).mean()
+    rsi = pd.Series(100.0, index=close.index)
+    mask = al > 0
+    rsi[mask] = 100 - (100 / (1 + ag[mask] / al[mask]))
+    rsi[ag == 0] = 0.0
+    return rsi
+
+def _stoch_rsi(close, period=14, smooth=3):
+    rsi = _rsi_series(close, period)
+    lo  = rsi.rolling(period).min()
+    hi  = rsi.rolling(period).max()
+    k   = (rsi - lo) / (hi - lo + 1e-9)
+    return k.rolling(smooth).mean()
+
+def _atr(df, period=14):
+    tr = pd.concat([
+        df["High"] - df["Low"],
+        (df["High"] - df["Close"].shift()).abs(),
+        (df["Low"]  - df["Close"].shift()).abs(),
+    ], axis=1).max(axis=1)
+    return tr.ewm(alpha=1/period, adjust=False).mean()
+
+
+# ── Extract 6 indicators at index i ───────────────────────────────────────────
+
+def _extract(df, idx):
+    if idx < 50 or idx >= len(df):
+        return None
+
+    close  = df["Close"]
+    volume = df["Volume"]
+
+    p0  = float(close.iloc[idx])
+    p5  = float(close.iloc[idx - 5])
+    p10 = float(close.iloc[idx - 10])
+
+    # Stochastic RSI
+    sr = float(_stoch_rsi(close).iloc[idx])
+    stoch_rsi = np.clip(sr, 0.0, 1.0)
+
+    # Price vs MA20
+    ma20 = float(close.iloc[idx-20:idx].mean())
+    p_vs_ma20 = (p0 / ma20) if ma20 > 0 else 1.0
+
+    # Momentum 10d
+    mom_10d = (p0 - p10) / p10 if p10 > 0 else 0.0
+
+    # Momentum 5d
+    mom_5d = (p0 - p5) / p5 if p5 > 0 else 0.0
+
+    # ATR Ratio (current ATR vs 20-day avg ATR)
+    atr     = _atr(df)
+    atr_now = float(atr.iloc[idx])
+    atr_avg = float(atr.iloc[idx-20:idx].mean())
+    atr_ratio = (atr_now / atr_avg) if atr_avg > 0 else 1.0
+
+    # Volume Trend (avg last 5 days vs avg prior 10 days)
+    v5  = float(volume.iloc[idx-5:idx].mean())
+    v15 = float(volume.iloc[idx-15:idx-5].mean())
+    vol_trend = (v5 / v15) if v15 > 0 else 1.0
+
+    return {
+        "stoch_rsi": stoch_rsi,
+        "p_vs_ma20": p_vs_ma20,
+        "mom_10d":   mom_10d,
+        "mom_5d":    mom_5d,
+        "atr_ratio": atr_ratio,
+        "vol_trend": vol_trend,
+    }
+
+
+# ── Find historical reversals ─────────────────────────────────────────────────
+
+def _find_reversals(df):
+    """
+    Returns (wins, losses) at historical local lows.
+    win  = low held (no close below within FORWARD_DAYS)
+           + bounced >= BOUNCE_MIN from the low
+           + volume on low day > 20-day average volume
+    loss = at least one close below the low within FORWARD_DAYS
+    neutral (held but weak bounce or low volume) = ignored
+    """
+    close  = df["Close"].values
+    volume = df["Volume"].values
+    n      = len(close)
+    wins   = []
+    losses = []
+
+    for i in range(50, n - FORWARD_DAYS):
+        if close[i] > min(close[max(0, i-5):i+1]) * 1.002:
+            continue
+
+        future = close[i+1: i+FORWARD_DAYS+1]
+        cond   = _extract(df, i)
+        if cond is None:
+            continue
+
+        low_broken = any(c < close[i] * (1 - BREAK_BUFFER) for c in future)
+
+        if low_broken:
+            losses.append({"conditions": cond})
+        else:
+            max_gain = (float(np.max(future)) - close[i]) / close[i]
+            avg_vol  = float(np.mean(volume[i-20:i])) if i >= 20 else float(np.mean(volume[:i]))
+            vol_ok   = volume[i] > avg_vol * VOL_THRESHOLD
+            bounce_ok = max_gain >= BOUNCE_MIN
+
+            if bounce_ok and vol_ok:
+                wins.append({"conditions": cond, "gain": round(max_gain, 4)})
+            # else: neutral — held but no real demand confirmation
+
+    return wins, losses
+
+
+# ── Threshold Scoring ─────────────────────────────────────────────────────────
+
+def _indicator_score(current_val, win_vals, direction):
+    """
+    يقيس مدى قرب القيمة الحالية من النطاق المواتي في الارتدادات التاريخية.
+    يستخدم sigmoid حول الـ median للارتدادات الناجحة.
+    يُرجع 0.0 → 1.0
+    """
+    if not win_vals:
+        return 0.5
+
+    win_median = float(np.median(win_vals))
+    win_std    = float(np.std(win_vals)) + 1e-9
+
+    if direction == "lower":
+        # كلما انخفضت القيمة عن الـ median، كلما كانت الإشارة أقوى
+        z = (current_val - win_median) / win_std
+    else:
+        # كلما ارتفعت القيمة عن الـ median، كلما كانت الإشارة أقوى
+        z = (win_median - current_val) / win_std
+
+    # sigmoid: z=0 → 0.5, z=-2 → 0.88, z=+2 → 0.12
+    return float(1 / (1 + np.exp(z * 1.5)))
+
+
+def _threshold_score(current_cond, wins, weights=None, directions=None):
+    """
+    يحسب الـ Pattern Score الكلي (0-100) بجمع نقاط المؤشرات الستة موزونة.
+    weights:    لو None يستخدم الـ global WEIGHTS
+    directions: لو None يستخدم الـ DIRECTIONS المتعلَّمة
+    """
+    if weights is None:
+        weights = WEIGHTS
+    if directions is None:
+        directions = DIRECTIONS
+
+    total  = 0.0
+    detail = {}
+
+    for feat, weight in weights.items():
+        win_vals  = [w["conditions"][feat] for w in wins]
+        cur_val   = current_cond[feat]
+        direction = directions.get(feat, DIRECTION[feat])
+
+        sc = _indicator_score(cur_val, win_vals, direction)
+        total += sc * weight
+        detail[feat] = round(sc, 3)
+
+    return round(total * 100, 1), detail
+
+
+# ── Main API ──────────────────────────────────────────────────────────────────
+
+def analyze_entry_patterns(df, symbol=None):
+    """
+    الدالة الرئيسية.
+
+    Returns:
+    {
+        "ok":            bool
+        "pattern_score": 0-100
+        "win_rate":      0-1   (نسبة الارتدادات الناجحة في التاريخ)
+        "avg_gain":      float (متوسط الربح %)
+        "similar_count": int   (عدد الارتدادات التاريخية المستخدمة)
+        "detail":        dict  (نقطة كل مؤشر)
+        "label":         str
+    }
+    """
+    empty = {"ok": False, "pattern_score": 0, "effective_score": 0,
+             "win_rate": 0, "avg_gain": 0, "similar_count": 0,
+             "low_reliability": False, "detail": {},
+             "label": "Insufficient history"}
+
+    if df is None or len(df) < MIN_HISTORY:
+        n = len(df) if df is not None else 0
+        return {**empty, "label": f"Insufficient data ({n} bars, need {MIN_HISTORY})"}
+
+    current_cond = _extract(df, len(df) - 1)
+    if current_cond is None:
+        return {**empty, "label": "Could not extract current conditions"}
+
+    wins, losses = _find_reversals(df.iloc[:-1])
+
+    if len(wins) < MIN_REVERSALS:
+        return {**empty, "label": f"Limited history — {len(wins)} reversals found (need {MIN_REVERSALS})"}
+
+    weights, directions = _load_per_stock_weights(symbol) if symbol else (WEIGHTS, DIRECTIONS)
+    pattern_score, detail = _threshold_score(current_cond, wins, weights, directions)
+
+    total_decided = len(wins) + len(losses)
+    win_rate = len(wins) / total_decided if total_decided > 0 else 0.0
+    avg_gain = float(np.mean([w["gain"] for w in wins]))
+
+    # Effective score = pattern quality × historical reliability
+    effective_score = round(pattern_score * win_rate, 1)
+    low_reliability = win_rate < 0.25
+
+    # Label
+    if pattern_score >= 70:
+        label = f"Strong setup — {len(wins)}/{total_decided} reversals won, avg +{avg_gain*100:.1f}%"
+    elif pattern_score >= 50:
+        label = f"Moderate setup — {len(wins)}/{total_decided} reversals won, avg +{avg_gain*100:.1f}%"
+    elif pattern_score >= 35:
+        label = f"Weak setup — conditions partially match historical reversals"
+    else:
+        label = f"Poor setup — current conditions differ from historical reversal patterns"
+
+    if low_reliability:
+        label += f" | ⚠️ Low reliability ({win_rate*100:.0f}% win rate)"
+
+    return {
+        "ok":              True,
+        "pattern_score":   pattern_score,
+        "effective_score": effective_score,
+        "win_rate":        round(win_rate, 3),
+        "avg_gain":        round(avg_gain * 100, 2),
+        "similar_count":   len(wins),
+        "low_reliability": low_reliability,
+        "detail":          detail,
+        "label":           label,
+    }

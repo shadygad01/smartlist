@@ -33,8 +33,14 @@ env/
 *~
 
 # Project specific
+egx_research.db-shm
+egx_research.db-wal
+research_report_*.html
 last_scores.json
 oras_history.csv
+signals_history.csv
+telegram_history.txt
+data/
 *.log
 .env
 .env.local
@@ -46,3 +52,92 @@ Thumbs.db
 # Temporary
 *.tmp
 *.temp
+
+# Test and debug files (root-level scratch files only)
+test_*.py
+# Re-include the formal test suite
+!tests/
+!tests/test_*.py
+debug_*.py
+*_test.py
+*_debug.py
+*_manual*.py
+show_*.py
+verify_*.py
+check_*.py
+diagnose_*.py
+final_*.py
+FINAL_*.md
+!reports/FINAL_*.md
+FIX_*.md
+*_ANALYSIS.md
+*_VERIFICATION.md
+INSTRUCTIONS_*.md
+NEXT_*.md
+PRESENTATION.md
+PROBLEM_*.md
+REAL_DATA_*.md
+ROOT_CAUSE_*.md
+troubleshooting_*.md
+RUN_*.py
+
+# HTML report outputs — all go to reports/ or web_deploy/, not committed to root
+quant_research_report_*.html
+adaptive_learning_report_*.html
+gx_learning_report_*.html
+edge_discovery_report_*.html
+logic_analysis_report_*.html
+weight_optimizer_report_*.html
+system_audit_report_*.html
+historical_backtest_report_*.html
+backtest_report.html
+behavior_report.html
+heatmap.html
+email_preview.html
+dashboard.html
+# reports/ folder contents (generated, deployed via GitHub Pages)
+reports/*.html
+
+# HTML files generated during testing
+sample_email.html
+test_email_output.html
+
+# HTML report outputs — all go to reports/ or web_deploy/, not committed to root
+research_report_*.html
+quant_research_report_*.html
+adaptive_learning_report_*.html
+gx_learning_report_*.html
+edge_discovery_report_*.html
+logic_analysis_report_*.html
+weight_optimizer_report_*.html
+system_audit_report_*.html
+historical_backtest_report_*.html
+backtest_report.html
+behavior_report.html
+heatmap.html
+email_preview.html
+# reports/ folder contents (generated, deployed via GitHub Pages)
+reports/*.html
+
+# Backtest and utility scripts
+backtest*.py
+rescore_*.py
+fetch_*.py
+download_*.py
+initialize_*.py
+backfill_*.py
+!backfill_signal_log.py
+!backfill_research_db.py
+!gx_learning_layer.py
+!backfill_signal_log_smc.py
+!backfill_hist_features.py
+print_*.py
+create_*.py
+tell_*.py
+simple_test.py
+scan_results.json
+decision_engine_results.json
+discount_zone_patterns.json
+decision_engine_report_*.html
+discount_zone_report_*.html
+.claude/

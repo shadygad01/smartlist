@@ -1,0 +1,105 @@
+name: Historical Backtest (One-Time)
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: 'Start date for backtest (YYYY-MM-DD)'
+        required: false
+        default: '2021-06-01'
+      end_date:
+        description: 'End date for backtest (default: day before live scanner)'
+        required: false
+        default: '2026-02-07'
+      dry_run:
+        description: 'Dry run — count signals without saving'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: egx-historical-backtest
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180   # up to 3 hours — 5 years × 27 stocks takes time
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Historical Backtester
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          python historical_backtest.py \
+            --start=${{ github.event.inputs.start_date }} \
+            --end=${{ github.event.inputs.end_date }} \
+            ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
+
+      - name: Commit updated signal_history.json
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add signal_history.json
+          git diff --staged --quiet || git commit -m "Add historical backtest signals [skip ci]"
+          git pull origin main --rebase || true
+          git push || true
+
+      - name: Backfill BQ + Features for new signals
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: python backfill_research_db.py
+
+      - name: Backfill signal_log.json with SMC historical signals
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: python backfill_signal_log_smc.py
+
+      - name: Commit research DB + signal_log
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add -f egx_research.db signal_history.json signal_log.json 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "Backfill historical BQ + features + signal_log [skip ci]"
+          git pull origin main --rebase || true
+          git push || true
+
+      - name: Summary
+        run: |
+          python3 - <<'EOF'
+          import sqlite3, json
+          conn = sqlite3.connect("egx_research.db")
+          signals = conn.execute("SELECT COUNT(*) FROM signals").fetchone()[0]
+          bq      = conn.execute("SELECT COUNT(*) FROM bottom_quality").fetchone()[0]
+          feats   = conn.execute("SELECT COUNT(*) FROM signals WHERE feat_dist_swing_low IS NOT NULL").fetchone()[0]
+          conn.close()
+
+          with open("signal_history.json") as f:
+              history = json.load(f)
+          total_entries = sum(len(v) if isinstance(v, list) else 1 for v in history.values())
+          print(f"signal_history.json entries : {total_entries}")
+          print(f"DB signals                  : {signals}")
+          print(f"DB BQ computed              : {bq}")
+          print(f"DB features computed        : {feats}")
+          EOF

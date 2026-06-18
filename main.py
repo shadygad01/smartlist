@@ -3,17 +3,30 @@ import os
 import json
 import re
 import sys
+import html as _html
+import csv
+import socket
 import pandas as pd
 import numpy as np
 import yfinance as yf
 import requests
 import traceback
-import threading
 import time
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
 
-from bs4 import BeautifulSoup
+# yfinance لا يدعم timeout مباشرة — نضع حداً لكل socket operations
+socket.setdefaulttimeout(60)
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pattern_engine import analyze_entry_patterns
+from signal_logger import log_signal, check_outcomes
+try:
+    from snapshot_engine import compute_snapshot_features as _snap_features
+except ImportError:
+    _snap_features = None
+from backfill_signal_log import run_backfill
+from egx_context import is_ramadan, is_cbe_window
+from signal_db import log_signals as db_log_signals
+from daily_tracker import run_all as tracker_run_all
+from research_report import maybe_run_weekly_report
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from email.mime.multipart import MIMEMultipart
@@ -21,13 +34,14 @@ from email.mime.text import MIMEText
 
 CAIRO = ZoneInfo("Africa/Cairo")
 
+_tv_quote_cache: dict = {}   # populated by tv_prefetch_all_quotes() at the top of each scan
+
 # =========================================
 # GLOBAL STATE FOR MONITORING
 # =========================================
 
-last_alerted_stocks = set()  # لتجنب إرسال تنبيهات متكررة
-monitoring_active = True
-last_score_data = {}
+open_positions = {}  # تتبع المراكز المفتوحة: {symbol: {entry_price, fib_targets, current_level, ...}}
+POSITIONS_FILE = "open_positions.json"
 
 # =========================================
 # CONFIG
@@ -44,8 +58,15 @@ STOCKS = [
 ]
 
 # =========================================
-# WHITELIST - Price Gate Threshold >= 12
+# WHITELIST - Price Gate Threshold >= 15
 # =========================================
+# ⚠️ تنبيه منهجي (مراجعة مستقلة 2026-06):
+# الأرقام السابقة هنا (MDD=0%, CAGR=1001%) كانت من تحليل دائري في
+# backtest_analysis.py: عتبات r1 كانت تُحاكى بالفلترة على "العائد المحقق"
+# نفسه (outcome percentiles)، أي اختيار الصفقات بنتيجتها المستقبلية.
+# سجل signal_log التاريخي لا يحتوي r1 أصلاً (smc_score=0 لكل الأحداث).
+# القيم الحالية (15/16) أبقيناها كما هي، لكن لا يوجد دليل صالح يفضّلها
+# على 14 أو 18 — التحقق الحقيقي الوحيد هو سجل الإشارات الحية الآجل.
 WHITELIST = [
     "FWRY.CA",  # Fawry for Banking Technology
     "EAST.CA",  # Eastern Company
@@ -58,8 +79,9 @@ WHITELIST = [
     "GBCO.CA",  # GB Auto
 ]
 
-PRICE_GATE_NORMAL = 18      # For stocks NOT in whitelist
-PRICE_GATE_WHITELIST = 12   # For stocks IN whitelist ONLY
+# PRICE_GATE_NORMAL and PRICE_GATE_WHITELIST are computed as fractions of W_PRICE
+# after signal_engine is imported below (search for "PRICE_GATE_NORMAL =").
+# Fractions stored in config/gates_config.json — auto-track weight optimization.
 
 NAMES = {
     "COMI.CA": "Commercial International Bank",
@@ -85,7 +107,7 @@ NAMES = {
     "ARCC.CA": "Arabian Cement Company",
     "MCQE.CA": "Misr Cement (Qena)",
     "ORWE.CA": "Oriental Weavers",
-    "ISPH.CA": "Integrated Diagnostics Holdings",
+    "ISPH.CA": "Ibnsina Pharma",
     "RMDA.CA": "Rameda Pharmaceutical",
     "OIH.CA":  "Orascom Investment Holding",
     "CCAP.CA": "Qalaa Holdings",
@@ -95,17 +117,17 @@ SECTORS = {
     "COMI.CA": "Banking",
     "TMGH.CA": "Real Estate",
     "ETEL.CA": "Telecommunications",
-    "EGAL.CA": "Banking",
+    "EGAL.CA": "Basic Resources",
     "EAST.CA": "Consumer Goods",
     "ABUK.CA": "Chemicals & Fertilizers",
     "ORAS.CA": "Engineering & Construction",
     "EFIH.CA": "Financial Services",
     "ADIB.CA": "Banking",
     "FWRY.CA": "Financial Technology",
-    "EMFD.CA": "Food & Beverages",
+    "EMFD.CA": "Real Estate",
     "PHDC.CA": "Real Estate",
     "ORHD.CA": "Real Estate",
-    "EFID.CA": "Financial Services",
+    "EFID.CA": "Food & Beverages",
     "HRHO.CA": "Financial Services",
     "JUFO.CA": "Food & Beverages",
     "BTFH.CA": "Financial Services",
@@ -113,7 +135,7 @@ SECTORS = {
     "GBCO.CA": "Automotive",
     "HELI.CA": "Real Estate",
     "ARCC.CA": "Construction Materials",
-    "MCQE.CA": "Healthcare",
+    "MCQE.CA": "Construction Materials",
     "ORWE.CA": "Manufacturing",
     "ISPH.CA": "Healthcare",
     "RMDA.CA": "Healthcare",
@@ -203,22 +225,56 @@ def build_dow_banner(dj):
 </table>"""
 
 
-W_PRICE  = 30
-W_OB     = 10
-W_LIQ    = 20
-W_HTF    = 10
-W_AVWAP  =  8
-W_MACD   =  4
-W_DIV    =  3
-W_DZ     = 15   # Demand Zone Confluence (Stopping Volume + Volume Profile)
+# W_PRICE, W_OB, W_LIQ, W_HTF, W_AVWAP, W_MACD, W_DIV, W_DZ
+# imported from signal_engine (loaded from config/weights.json)
 
-# ── ORAS local history CSV path (stored in repo working directory) ────────────
-ORAS_CSV = "oras_history.csv"
+# ── Stock Quality Tiers ────────────────────────────────────────────────────────
+# ⚠️ تنبيه منهجي (مراجعة مستقلة 2026-06):
+# التصنيفات مشتقة من متوسط عوائد "أحداث قيعان محلية" تاريخية، وليست من
+# إشارات الماسح. فحص ثبات الترتيب بين نصفي الفترة (قبل/بعد 2025-08)
+# أعطى Spearman rho = 0.03 ≈ صفر — أي أن ترتيب الأسهم لا يثبت زمنياً
+# والفروق غالباً ضوضاء + Multiple Testing على 27 سهماً.
+# كذلك بعض القيم ملوثة بأحداث Corporate Actions غير معالَجة (EFID/HELI splits).
+# المضاعفات حالياً غير مؤثرة على اختيار الصفقات (score≥65 دائماً عند عبور
+# بوابة r1) — أثرها فقط على Position Sizing. يُنصح بتحييدها إلى 1.00
+# حتى يتوفر دليل حي مستقر ≥ 12 شهراً.
+STOCK_QUALITY: dict[str, float] = {
+    # Tier A  (expectancy > 10%)
+    "MCQE.CA": 1.15, "RAYA.CA": 1.15, "ORHD.CA": 1.15, "ARCC.CA": 1.15,
+    "OIH.CA":  1.15,   # backtest exp=9.9%, wr=39.8% — promoted from Tier C
+    # Tier B  (expectancy 7–10%)
+    "ETEL.CA": 1.07, "PHDC.CA": 1.07, "CCAP.CA": 1.07, "EFID.CA": 1.07,
+    "ISPH.CA": 1.07,   # backtest exp=9.1%, wr=38.1% — newly added
+    # Tier D  (expectancy < 4%)
+    "JUFO.CA": 0.88, "HRHO.CA": 0.88, "EAST.CA": 0.88, "EFIH.CA": 0.88,
+}
+
+# Context multipliers:
+# المراجعة المستقلة (عوائد close-to-close صادقة، 15 يوم تداول، 2,774 حدثاً):
+#   رمضان    (n=325):  متوسط +0.25%  مقابل +3.40% خارج رمضان  → الاتجاه السالب صحيح
+#   نافذة CBE (n=450):  متوسط +4.76%  مقابل +2.70% خارجها       → الاتجاه الموجب صحيح
+# الاتجاهان مدعومان بالبيانات، لكن المقدار (±30%) غير قابل للمعايرة من السجل
+# الحالي (لا يحتوي scores تاريخية). عملياً المضاعفان غير مؤثرَين على اختيار
+# الصفقات (score بعد البوابة ≥65 دائماً) — الأثر على التصنيف والعرض فقط.
+CTX_RAMADAN_MULT = 0.70
+CTX_CBE_MULT     = 1.30
 
 # =========================================
-# EGX HOLIDAY CALENDAR (2026)
+# POSITION SIZING (Conservative Fund Mode)
+# =========================================
+# ⚠️ الأرقام السابقة هنا (CAGR=958%, MDD=-0.20%) كانت من محاكاة غير قابلة
+# للتنفيذ: خروج عند قمة المستقبل + تعرض متزامن يصل 378% من رأس المال.
+# محاكاة واقعية (قيد تعرض ≤100%، عوائد close-to-close، تكاليف 0.6%) تعطي
+# ترتيب CAGR ≈ 35-50% و MDD ≈ 5-7% لنفس الأحداث — وهذا لسلة "كل قاع محلي"
+# وليس لإشارات الماسح. الأحجام 2%/5% معقولة كإدارة مخاطر متحفظة بذاتها.
+MAX_RISK_PER_TRADE_PCT = 2.0    # % of portfolio to risk on a single new signal
+FULL_POSITION_PCT      = 5.0    # % of portfolio for high-conviction (score >= 70) signals
+
+# =========================================
+# EGX HOLIDAY CALENDAR (2026+)
 # =========================================
 EGX_HOLIDAYS = {
+    # 2026
     date(2026,1,7),  date(2026,1,29),
     date(2026,3,19), date(2026,3,20), date(2026,3,21),
     date(2026,3,22), date(2026,3,23),
@@ -226,13 +282,23 @@ EGX_HOLIDAYS = {
     date(2026,5,26), date(2026,5,27), date(2026,5,28), date(2026,5,29),
     date(2026,6,16), date(2026,7,23),
     date(2026,8,25), date(2026,10,6),
+    # 2027 — fixed national holidays (Islamic holidays TBD by moon sighting)
+    date(2027,1,7),   # Coptic Christmas
+    date(2027,4,25),  # Sinai Liberation Day
+    date(2027,5,1),   # Labour Day
+    date(2027,7,23),  # Revolution Day
+    date(2027,10,6),  # Armed Forces Day
 }
+
+_HOLIDAY_CAL_WARN_AFTER = date(2027, 10, 6)  # update calendar when approaching this date
 
 def is_egx_trading_day(d=None):
     if d is None:
         d = datetime.now(CAIRO).date()
     if d.weekday() in (4, 5):
         return False
+    if d > _HOLIDAY_CAL_WARN_AFTER:
+        print(f"  ⚠️  WARNING: EGX holiday calendar may be incomplete for {d} — update EGX_HOLIDAYS")
     return d not in EGX_HOLIDAYS
 
 def most_recent_trading_day(from_date=None):
@@ -253,10 +319,12 @@ def fmt_cairo(fmt="%A, %d %B %Y  |  %H:%M"): return now_cairo().strftime(fmt)
 
 def tv_get_quote(tv_symbol):
     """
-    Fetch latest close, open, high, low, volume for one symbol
-    from TradingView scanner API.
-    Returns dict or None.
+    Fetch latest quote for one symbol from TradingView scanner API.
+    Checks _tv_quote_cache first (populated by tv_prefetch_all_quotes).
+    Falls back to a single HTTP call if the cache is cold.
     """
+    if tv_symbol in _tv_quote_cache:
+        return _tv_quote_cache[tv_symbol]
     try:
         url = "https://scanner.tradingview.com/egypt/scan"
         payload = {
@@ -285,74 +353,41 @@ def tv_get_quote(tv_symbol):
         return None
 
 
-# =========================================
-# ORAS: TradingView + local CSV history
-# =========================================
-
-def _oras_update_csv(today_date, quote):
+def tv_prefetch_all_quotes(symbols):
     """
-    Append today's ORAS quote to local CSV.
-    CSV columns: Date, Open, High, Low, Close, Volume
+    Fetch all stock quotes in ONE TradingView API call and store in _tv_quote_cache.
+    Reduces 26 serial HTTP requests to a single round-trip.
+    Falls back gracefully — individual calls via tv_get_quote() will still work.
     """
-    new_row = pd.DataFrame([{
-        "Date":   pd.Timestamp(today_date).normalize(),
-        "Open":   quote["open"],
-        "High":   quote["high"],
-        "Low":    quote["low"],
-        "Close":  quote["close"],
-        "Volume": quote["volume"],
-    }])
-
-    if os.path.exists(ORAS_CSV):
-        existing = pd.read_csv(ORAS_CSV, parse_dates=["Date"])
-        existing["Date"] = pd.to_datetime(existing["Date"]).dt.normalize()
-        # Remove duplicate for today if exists then append
-        existing = existing[existing["Date"] != new_row["Date"].iloc[0]]
-        df = pd.concat([existing, new_row], ignore_index=True).sort_values("Date")
-    else:
-        df = new_row
-
-    df.to_csv(ORAS_CSV, index=False)
-    print(f"  [ORAS] CSV updated: {today_date} → close={quote['close']:.2f} EGP")
-    return df
-
-
-def _oras_load_csv(days=120):
-    """Load ORAS history from local CSV, return DataFrame."""
-    if not os.path.exists(ORAS_CSV):
-        return pd.DataFrame()
-    df = pd.read_csv(ORAS_CSV, parse_dates=["Date"])
-    df["Date"] = pd.to_datetime(df["Date"]).dt.normalize()
-    df = df.set_index("Date").sort_index()
-    cut = pd.Timestamp.today().normalize() - pd.Timedelta(days=days + 5)
-    df = df[df.index >= cut]
-    return df
-
-
-def _oras_history(days=120):
-    """
-    1. جيب السعر اللحظي من TradingView Scanner
-    2. سجّله في CSV محلي
-    3. رجّع الـ DataFrame من الـ CSV
-    """
-    today = most_recent_trading_day()
-
-    # Step 1: جيب السعر من TradingView
-    quote = tv_get_quote("EGX:ORAS")
-    if quote and quote["close"]:
-        print(f"  [ORAS] TradingView: close={quote['close']:.2f} EGP")
-        _oras_update_csv(today, quote)
-    else:
-        print("  [ORAS] TradingView failed — using existing CSV only")
-
-    # Step 2: حمّل الـ CSV
-    df = _oras_load_csv(days)
-    if df.empty:
-        print("  [ORAS] WARNING: CSV is empty — no historical data yet")
-        return pd.DataFrame()
-
-    print(f"  [ORAS] CSV: {len(df)} rows | last={df.index[-1].date()} | close={df['Close'].iloc[-1]:.2f} EGP")
-    return df
+    global _tv_quote_cache
+    _tv_quote_cache = {}
+    tv_symbols = [f"EGX:{s.replace('.CA', '')}" for s in symbols]
+    try:
+        url = "https://scanner.tradingview.com/egypt/scan"
+        payload = {
+            "symbols": {"tickers": tv_symbols},
+            "columns": ["close", "volume", "change_abs", "high", "low", "open",
+                        "price_52_week_high", "price_52_week_low"]
+        }
+        r = requests.post(url, json=payload, headers=TV_HEADERS, timeout=30)
+        if r.status_code != 200:
+            print(f"  [TV Batch] HTTP {r.status_code} — falling back to per-stock calls")
+            return
+        for row in r.json().get("data", []):
+            sym = row.get("s", "")
+            d   = row.get("d", [])
+            if not d or d[0] is None:
+                continue
+            _tv_quote_cache[sym] = {
+                "close":  float(d[0]),
+                "volume": float(d[1]) if d[1] is not None else 0,
+                "high":   float(d[3]) if len(d) > 3 and d[3] is not None else float(d[0]),
+                "low":    float(d[4]) if len(d) > 4 and d[4] is not None else float(d[0]),
+                "open":   float(d[5]) if len(d) > 5 and d[5] is not None else float(d[0]),
+            }
+        print(f"  [TV Batch] {len(_tv_quote_cache)}/{len(tv_symbols)} quotes in one call")
+    except Exception as e:
+        print(f"  [TV Batch] Error: {e} — falling back to per-stock calls")
 
 
 # =========================================
@@ -393,11 +428,24 @@ def download_data(symbol, days=110):
     # ORAS.CA is listed on Yahoo Finance and works identically to other EGX stocks.
     # TradingView patch (applied at the end) ensures today's price is always current.
     yf_symbol = symbol if symbol.endswith(".CA") else f"{symbol}.CA"
+
+    # Convert days to yfinance period string
+    if days <= 130:
+        period = "6mo"
+    elif days <= 260:
+        period = "1y"
+    elif days <= 520:
+        period = "2y"
+    else:
+        period = "5y"
+
+    range_param = period   # used by fallback Yahoo API too
+
     df = pd.DataFrame()
 
     try:
         ticker = yf.Ticker(yf_symbol)
-        df = ticker.history(period="6mo", interval="1d", auto_adjust=False, repair=True)
+        df = ticker.history(period=period, interval="1d", auto_adjust=False, repair=True)
         if not df.empty and len(df) > 5:
             df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
             df.index = df.index.tz_localize(None)
@@ -408,8 +456,11 @@ def download_data(symbol, days=110):
         # Fallback: direct Yahoo Finance chart API
         try:
             url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_symbol}"
-                   f"?range=6mo&interval=1d&includeAdjustedClose=false")
+                   f"?range={range_param}&interval=1d&includeAdjustedClose=false")
             r    = requests.get(url, headers=HEADERS, timeout=15)
+            if r.status_code != 200:
+                print(f"  [{symbol}] Yahoo direct API: HTTP {r.status_code}")
+                raise ValueError(f"HTTP {r.status_code}")
             data = r.json()
             res  = data["chart"]["result"][0]
             ind  = res["indicators"]["quote"][0]
@@ -434,583 +485,36 @@ def download_data(symbol, days=110):
     return df
 
 
-def col(df, name):
-    if name not in df.columns: return pd.Series(dtype=float)
-    return df[name].dropna()
-
 # =========================================
-# INDICATORS
+# SIGNAL ENGINE — single source of truth for all gate scoring
 # =========================================
-
-def calc_macd(close):
-    m = close.ewm(span=12).mean() - close.ewm(span=26).mean()
-    s = m.ewm(span=9).mean()
-    return m, s, m - s
-
-def calc_avwap(df):
-    """
-    Anchored VWAP — anchor على آخر swing low حقيقي (أدنى نقطة في آخر 60 bar).
-    بدل anchor ثابت على 1 يناير اللي بيعطي نتائج عشوائية.
-    Returns: (avwap, avwap_lower_band)
-    """
-    d = pd.DataFrame({
-        "H": col(df,"High"), "L": col(df,"Low"),
-        "C": col(df,"Close"),"V": col(df,"Volume"),
-    }).dropna()
-
-    if len(d) < 5:
-        v = float(d["C"].iloc[-1]) if len(d) else 0.0
-        return v, v
-
-    # anchor = آخر swing low في 60 bar
-    lookback   = min(60, len(d))
-    tail_low   = d["L"].tail(lookback)
-    anchor_idx = int(tail_low.values.argmin())
-    anchor_pos = len(d) - lookback + anchor_idx
-
-    # لو الـ anchor هو آخر 3 bars → fallback لـ 20 bar قبله
-    if anchor_pos >= len(d) - 3:
-        anchor_pos = max(0, len(d) - 20)
-
-    d_anc = d.iloc[anchor_pos:].copy()
-    if len(d_anc) < 3:
-        d_anc = d.copy()
-
-    tp  = (d_anc["H"] + d_anc["L"] + d_anc["C"]) / 3
-    av  = (tp * d_anc["V"]).cumsum() / d_anc["V"].cumsum()
-    std = tp.expanding().std().fillna(0)
-    lo  = av - std
-
-    return float(av.iloc[-1]), float(lo.iloc[-1])
-
-def swings(close, lb=80):
-    """
-    Price range levels based on custom SMC framework:
-      0.00 = lo  (swing low  — best buy)
-      0.15 = buy_hi  (top of buy zone)
-      0.50 = eq  (equilibrium)
-      0.85 = sell_lo (bottom of sell zone)
-      1.00 = hi  (swing high — best sell)
-    """
-    hi      = float(close.tail(lb).max())
-    lo      = float(close.tail(lb).min())
-    rng     = hi - lo
-    eq      = lo + rng * 0.50
-    buy_hi  = lo + rng * 0.15   # top of buy zone  (0.15)
-    sell_lo = lo + rng * 0.85   # bottom of sell zone (0.85)
-    return hi, lo, eq, buy_hi, sell_lo
-
-
-
-
-# =========================================
-# STOPPING VOLUME & VOLUME PROFILE
-# =========================================
-
-def calc_stopping_volume(df, eq, lo, lookback=30, vol_mult=1.5, range_ratio=0.5):
-    """
-    Detect Stopping Volume candles inside the discount zone (price < EQ).
-    A SV candle: high volume (effort) + narrow range (no result) + in discount.
-    Returns: sv_detected(bool), sv_score(0-1), sv_desc(str)
-    """
-    needed = ["High", "Low", "Close", "Open", "Volume"]
-    if not all(c in df.columns for c in needed) or len(df) < lookback + 5:
-        return False, 0.0, "Insufficient data for SV scan"
-
-    d         = df[needed].dropna().tail(lookback + 20)
-    avg_vol   = d["Volume"].rolling(lookback).mean()
-    candle_rng = d["High"] - d["Low"]
-    avg_rng   = candle_rng.rolling(lookback).mean()
-
-    sv_candles = []
-    for i in range(lookback, len(d)):
-        c_close = float(d["Close"].iloc[i])
-        c_vol   = float(d["Volume"].iloc[i])
-        c_rng   = float(candle_rng.iloc[i])
-        a_vol   = float(avg_vol.iloc[i])
-        a_rng   = float(avg_rng.iloc[i])
-        if a_vol <= 0 or a_rng <= 0:
-            continue
-        if c_close >= eq:                   # must be in discount zone
-            continue
-        if c_vol < vol_mult * a_vol:        # must be high volume
-            continue
-        if c_rng > range_ratio * a_rng:     # must be narrow range
-            continue
-        discount_range = eq - lo
-        depth = (eq - c_close) / discount_range if discount_range > 0 else 0
-        sv_candles.append({"idx": i, "close": c_close,
-                            "vol_ratio": c_vol / a_vol, "depth": depth})
-
-    if not sv_candles:
-        return False, 0.0, "No Stopping Volume detected in discount zone"
-
-    best  = sorted(sv_candles,
-                   key=lambda x: x["depth"] * 0.6 + min(x["vol_ratio"] / 5, 1.0) * 0.4,
-                   reverse=True)[0]
-    score = min(1.0, best["depth"] * 0.6 + min(best["vol_ratio"] / 5, 1.0) * 0.4)
-    desc  = (f"Stopping Volume @ {best['close']:.1f} — "
-             f"vol {best['vol_ratio']:.1f}x avg — "
-             f"depth {best['depth']*100:.0f}% into discount")
-    return True, score, desc
-
-
-def calc_volume_profile(df, eq, lo, buy_hi, bins=20, hvn_pct=0.70):
-    """
-    Build volume profile over full history; find HVN inside discount zone.
-    Each bar's volume is distributed proportionally across its H-L price range.
-    Returns: hvn_detected(bool), hvn_score(0-1), hvn_price(float), hvn_desc(str)
-    """
-    needed = ["High", "Low", "Close", "Volume"]
-    if not all(c in df.columns for c in needed) or len(df) < 10:
-        return False, 0.0, 0.0, "Insufficient data for VP scan"
-
-    d         = df[needed].dropna()
-    price_min = float(d["Low"].min())
-    price_max = float(d["High"].max())
-    if price_max <= price_min:
-        return False, 0.0, 0.0, "Invalid price range for VP"
-
-    bin_size  = (price_max - price_min) / bins
-    vol_bins  = np.zeros(bins)
-    bin_edges = np.linspace(price_min, price_max, bins + 1)
-
-    for _, row in d.iterrows():
-        h, l, v = float(row["High"]), float(row["Low"]), float(row["Volume"])
-        if v <= 0 or h <= l:
-            continue
-        lo_bin = max(0, int((l - price_min) / bin_size))
-        hi_bin = min(bins - 1, int((h - price_min) / bin_size))
-        span   = hi_bin - lo_bin + 1
-        for b in range(lo_bin, hi_bin + 1):
-            vol_bins[b] += v / span
-
-    threshold     = np.max(vol_bins) * hvn_pct
-    discount_hvns = []
-    for b in range(bins):
-        bin_price = (bin_edges[b] + bin_edges[b + 1]) / 2
-        # HVN لازم يكون في Buy Zone (0–15%) فقط
-        if bin_price >= buy_hi:
-            continue
-        if vol_bins[b] >= threshold:
-            depth = (eq - bin_price) / (eq - lo) if (eq - lo) > 0 else 0
-            discount_hvns.append({"price": bin_price,
-                                   "vol": vol_bins[b], "depth": depth})
-
-    if not discount_hvns:
-        return False, 0.0, 0.0, "No HVN in discount zone"
-
-    best      = max(discount_hvns, key=lambda x: x["vol"])
-    hvn_score = min(1.0, best["vol"] / np.max(vol_bins))
-    desc      = (f"HVN @ {best['price']:.1f} — "
-                 f"{best['vol']/np.max(vol_bins)*100:.0f}% of peak vol — "
-                 f"depth {best['depth']*100:.0f}% into discount")
-    return True, hvn_score, best["price"], desc
-
-
-def sc_demand_zone(df, eq, lo, buy_hi):
-    """
-    Demand Zone Confluence = Stopping Volume + Volume Profile HVN, both in discount.
-    SV + HVN  → full W_DZ  (true institutional demand zone)
-    SV only   → 60% W_DZ   (absorption present, no volume memory)
-    HVN only  → 40% W_DZ   (volume memory, no absorption candle)
-    Neither   → 0
-    """
-    sv_hit, sv_score, sv_desc   = calc_stopping_volume(df, eq, lo)
-    hvn_hit, hvn_score, _, hvn_desc = calc_volume_profile(df, eq, lo, buy_hi)
-
-    if sv_hit and hvn_hit:
-        pts  = W_DZ
-        desc = f"DEMAND ZONE CONFIRMED — {sv_desc} | {hvn_desc}"
-    elif sv_hit:
-        pts  = round(W_DZ * 0.60)
-        desc = f"Stopping Volume only — {sv_desc} | No HVN: {hvn_desc}"
-    elif hvn_hit:
-        pts  = round(W_DZ * 0.40)
-        desc = f"HVN only — {hvn_desc} | No SV: {sv_desc}"
-    else:
-        pts  = 0
-        desc = f"No demand confluence — SV: {sv_desc} | VP: {hvn_desc}"
-
-    return pts, desc
-
-
-# =========================================
-# SMC SCORING
-# =========================================
-
-def sc_price(cur, lo, hi, eq, buy_hi, sell_lo):
-    """
-    Score price position using custom SMC zones:
-      Buy Zone   : lo  → buy_hi  (0.00–0.15) — max score, degrades toward buy_hi
-      Mid Disc.  : buy_hi → eq   (0.15–0.50) — partial score, degrades toward EQ
-      EQ or above: eq → hi       (0.50–1.00) — 0, gate already blocks these
-    """
-    rng = hi - lo
-    if rng <= 0: return 0, "Invalid range"
-
-    if cur <= buy_hi:
-        # Inside buy zone (0.00–0.15): score 100% → 60% linearly
-        ratio = (cur - lo) / (buy_hi - lo) if (buy_hi - lo) > 0 else 0
-        pts   = max(round(W_PRICE * (1.0 - ratio * 0.40)), 0)
-        dist_pct = round((cur - lo) / lo * 100, 1) if lo > 0 else 0
-        return pts, f"Buy Zone @ {cur:.1f} — {dist_pct}% above Deep Discount floor — {pts}/{W_PRICE}"
-
-    if cur < eq:
-        # Mid-discount (0.15–0.50): score 60% → 0% linearly
-        ratio = (cur - buy_hi) / (eq - buy_hi) if (eq - buy_hi) > 0 else 1
-        pts   = max(round(W_PRICE * 0.60 * (1.0 - ratio)), 0)
-        dist_to_dd = round((cur - buy_hi) / rng * 100, 1)
-        return pts, f"Mid-Discount @ {cur:.1f} — {dist_to_dd}% away from Deep Discount — {pts}/{W_PRICE}"
-
-    pct_above_eq = round((cur - eq) / rng * 100, 1)
-    return 0, f"Premium Zone @ {cur:.1f} — {pct_above_eq}% above EQ — SMC setup inactive"
-
-def sc_ob(df, cur, eq, lo, buy_hi):
-    """
-    Order Block Quality — OB حقيقي بناءً على:
-    1. آخر bearish candle قبل move صاعد قوي (impulse ≥ 1.5x avg range)
-    2. OB لازم يكون في discount zone (تحت EQ)
-    3. السعر الحالي لازم يكون فوق الـ OB (مش اخترقه لتحت)
-
-    لو مفيش OB حقيقي → يرجع 0 بدل ما يبعت رقم مضلل.
-    """
-    needed = ["Open", "High", "Low", "Close"]
-    if not all(c in df.columns for c in needed) or len(df) < 10:
-        return 0, "Insufficient data for OB detection"
-
-    d   = df[needed].dropna()
-    rng = d["High"] - d["Low"]
-    avg_rng = float(rng.rolling(20).mean().iloc[-1]) if len(d) >= 20 else float(rng.mean())
-
-    if avg_rng <= 0:
-        return 0, "Invalid range data"
-
-    discount_range = eq - lo
-    if discount_range <= 0:
-        return 0, "Invalid discount range"
-
-    # ── بحث عن OB حقيقي في آخر 40 bar ───────────────────────────────────────
-    ob_candidates = []
-    search = d.tail(40)
-
-    for i in range(len(search) - 2):
-        c_open  = float(search["Open"].iloc[i])
-        c_close = float(search["Close"].iloc[i])
-        c_low   = float(search["Low"].iloc[i])
-        c_high  = float(search["High"].iloc[i])
-
-        # OB candle: bearish (close < open)
-        if c_close >= c_open:
-            continue
-
-        # الـ candle التالية لازم تكون impulse صاعد قوي (≥ 1.5x avg range)
-        next_high  = float(search["High"].iloc[i+1])
-        next_low   = float(search["Low"].iloc[i+1])
-        next_range = next_high - next_low
-        if next_range < avg_rng * 1.5:
-            continue
-
-        # OB level = top of bearish candle (c_high) as resistance turned support
-        ob_level = c_high
-
-        # OB لازم يكون في Buy Zone (0–15%) فقط
-        if ob_level >= buy_hi:
-            continue
-
-        # السعر الحالي لازم يكون فوق الـ OB (مش اخترقه)
-        if cur <= c_low:
-            continue
-
-        # quality بناءً على موقع الـ OB في الـ discount zone
-        ratio   = (ob_level - lo) / discount_range
-        quality = max(0.0, 1.0 - ratio)
-
-        dist = abs(cur - ob_level) / cur
-        ob_candidates.append({
-            "level":   ob_level,
-            "quality": quality,
-            "dist":    dist,
-            "candle":  i,
-        })
-
-    if not ob_candidates:
-        return 0, "No valid OB found in discount zone (last 40 bars)"
-
-    # أفضل OB: أعلى quality × proximity
-    best = max(ob_candidates,
-               key=lambda x: x["quality"] * max(0.1, 1 - x["dist"] * 5))
-
-    ob    = best["level"]
-    qual  = best["quality"]
-    dist  = best["dist"]
-    zone_lbl = "Buy Zone" if ob <= buy_hi else "Mid-Discount"
-
-    if dist > 0.10:
-        pts = round(W_OB * qual * 0.15)
-        return pts, f"OB {ob:.1f} [{zone_lbl}] — far ({dist*100:.0f}% away) → {pts}/{W_OB}"
-    if dist < 0.02:
-        pts = round(W_OB * qual)
-        return pts, f"At OB {ob:.1f} [{zone_lbl}] — quality {qual*100:.0f}% → {pts}/{W_OB}"
-    if dist < 0.05:
-        pts = round(W_OB * qual * 0.6)
-        return pts, f"Near OB {ob:.1f} [{zone_lbl}] — quality {qual*100:.0f}% → {pts}/{W_OB}"
-    pts = round(W_OB * qual * 0.30)
-    return pts, f"OB {ob:.1f} [{zone_lbl}] — moderate distance → {pts}/{W_OB}"
-
-def sc_liquidity(df, cur):
-    """
-    Liquidity Context — 3 أنواع من الـ liquidity events:
-    1. Sweep & Reverse   : السعر اخترق swing low ثم رجع فوقه (stop hunt)
-    2. Equal Lows (EQL)  : مستويات متقاربة تشير لـ liquidity pool تحت
-    3. Rejection Wick    : شمعة بـ lower wick طويل (≥ 2x body) في discount
-
-    الأعلى قيمة = Sweep & Reverse (إثبات أن السوق امتص البيع وعكس)
-    """
-    needed = ["High", "Low", "Close", "Open"]
-    close  = df["Close"].dropna() if "Close" in df.columns else pd.Series(dtype=float)
-
-    if not all(c in df.columns for c in needed) or len(df) < 10:
-        return 0, "Insufficient data for liquidity scan"
-
-    d     = df[needed].dropna()
-    score = 0
-    desc  = []
-
-    # ── 1. Sweep & Reverse (أقوى إشارة) ──────────────────────────────────────
-    if len(d) >= 10:
-        recent   = d.tail(10)
-        swing_lo = float(d["Low"].tail(20).quantile(0.10))  # أدنى 10% من الـ 20 bar
-
-        for i in range(1, len(recent) - 1):
-            c_low   = float(recent["Low"].iloc[i])
-            c_close = float(recent["Close"].iloc[i])
-            prev_lo = float(recent["Low"].iloc[i-1])
-
-            # اخترق الـ swing low ثم أقفل فوقه
-            if c_low < swing_lo and c_close > swing_lo:
-                score += W_LIQ
-                desc.append(f"Sweep & Reverse @ {c_low:.1f} — stop hunt confirmed ✓")
-                break
-
-    # ── 2. Rejection Wick في discount ─────────────────────────────────────────
-    if score == 0 and len(d) >= 5:
-        last5 = d.tail(5)
-        for i in range(len(last5)):
-            o = float(last5["Open"].iloc[i])
-            c = float(last5["Close"].iloc[i])
-            l = float(last5["Low"].iloc[i])
-            h = float(last5["High"].iloc[i])
-            body      = abs(c - o)
-            lower_wick = min(o, c) - l
-            candle_rng = h - l
-
-            if candle_rng <= 0:
-                continue
-            # lower wick ≥ 60% of candle range و close في upper 40%
-            if lower_wick >= candle_rng * 0.60 and c >= l + candle_rng * 0.40:
-                pts = round(W_LIQ * 0.6)
-                score = max(score, pts)
-                desc.append(f"Rejection wick @ {l:.1f} — lower wick {lower_wick/candle_rng*100:.0f}% of range")
-
-    # ── 3. Equal Lows (liquidity pool below) ──────────────────────────────────
-    if score == 0 and len(d) >= 15:
-        lows = d["Low"].tail(15).values
-        eql_count = 0
-        base_lo   = float(d["Low"].tail(15).min())
-        for lv in lows:
-            if abs(lv - base_lo) / base_lo < 0.005:   # within 0.5%
-                eql_count += 1
-        if eql_count >= 3:
-            pts = round(W_LIQ * 0.4)
-            score = pts
-            desc.append(f"Equal Lows x{eql_count} @ {base_lo:.1f} — liquidity pool below")
-
-    if not desc:
-        desc.append("No liquidity event detected")
-
-    return min(score, W_LIQ), " · ".join(desc)
-
-def sc_htf(df):
-    """
-    Higher Timeframe Trend Quality — 3 components (total W_HTF pts):
-      1. MA200 position  : price vs 200-day MA         (40% of W_HTF)
-      2. MA50 slope      : is 50-day MA rising?         (30% of W_HTF)
-      3. HH/HL structure : Higher Highs & Higher Lows   (30% of W_HTF)
-    Scoring:
-      - Full score  → clear recovery signals present
-      - Partial     → mixed signals
-      - Zero        → deep downtrend, no structure yet
-    """
-    close = df["Close"].dropna()
-    n = len(close)
-
-    pts  = 0
-    desc = []
-
-    # ── 1. MA200 position ────────────────────────────────────────────────────
-    w1 = round(W_HTF * 0.40)
-    if n >= 200:
-        ma200 = float(close.rolling(200).mean().iloc[-1])
-        cur   = float(close.iloc[-1])
-        if cur >= ma200:
-            pts += w1
-            desc.append(f"Above MA200 ({ma200:.1f}) ✓")
-        else:
-            gap = round((ma200 - cur) / ma200 * 100, 1)
-            if gap < 5:
-                pts += round(w1 * 0.5)
-                desc.append(f"Near MA200 ({ma200:.1f}, -{gap}%)")
-            else:
-                desc.append(f"Below MA200 ({ma200:.1f}, -{gap}%)")
-    elif n >= 50:
-        # حساب MA50 كبديل لو مفيش 200 يوم
-        ma50 = float(close.rolling(50).mean().iloc[-1])
-        cur  = float(close.iloc[-1])
-        if cur >= ma50:
-            pts += round(w1 * 0.6)
-            desc.append(f"Above MA50 ({ma50:.1f}) [no MA200] ✓")
-        else:
-            desc.append(f"Below MA50 ({ma50:.1f}) [no MA200]")
-    else:
-        desc.append("Insufficient data for MA")
-
-    # ── 2. MA50 slope (last 10 bars) ─────────────────────────────────────────
-    w2 = round(W_HTF * 0.30)
-    if n >= 60:
-        ma50_series = close.rolling(50).mean().dropna()
-        if len(ma50_series) >= 10:
-            slope = float(ma50_series.iloc[-1]) - float(ma50_series.iloc[-10])
-            if slope > 0:
-                pts += w2
-                desc.append(f"MA50 rising (+{slope:.2f}) ✓")
-            elif slope > -float(close.iloc[-1]) * 0.01:
-                pts += round(w2 * 0.4)
-                desc.append(f"MA50 flattening ({slope:.2f})")
-            else:
-                desc.append(f"MA50 falling ({slope:.2f})")
-    else:
-        desc.append("MA50 slope: insufficient data")
-
-    # ── 3. HH / HL structure (last 20 bars, 4 pivots) ────────────────────────
-    w3 = W_HTF - w1 - w2
-    if n >= 20:
-        tail = close.tail(20).values
-        # بنقارن 4 نقاط: أول 5 / تاني 5 / تالت 5 / آخر 5
-        q1 = float(np.mean(tail[0:5]))
-        q2 = float(np.mean(tail[5:10]))
-        q3 = float(np.mean(tail[10:15]))
-        q4 = float(np.mean(tail[15:20]))
-
-        # Higher Lows: كل quarter أعلى من اللي قبله
-        hl_count = sum([q2 > q1, q3 > q2, q4 > q3])
-
-        # Higher Highs: max of each half
-        hh = float(np.max(tail[10:20])) > float(np.max(tail[0:10]))
-
-        if hl_count >= 2 and hh:
-            pts += w3
-            desc.append(f"HH+HL structure ({hl_count}/3 HL) ✓")
-        elif hl_count >= 2 or hh:
-            pts += round(w3 * 0.5)
-            desc.append(f"Partial structure (HL:{hl_count}/3, HH:{hh})")
-        else:
-            desc.append(f"No HH/HL — downtrend structure")
-    else:
-        desc.append("HH/HL: insufficient data")
-
-    return pts, " | ".join(desc)
-
-
-def sc_avwap(cur, av, av_lo):
-    if cur<=av_lo: return W_AVWAP, f"At/below AVWAP lower band {av_lo:.1f}"
-    if cur<av: return max(round(((av-cur)/(av-av_lo))*(W_AVWAP-1)),1), f"Below AVWAP {av:.1f}"
-    return 0, f"Above AVWAP {av:.1f}"
-
-def sc_macd(close):
-    if len(close)<15: return 0,"Not enough data"
-    m,sg,h=calc_macd(close)
-    macd_now  = m.iloc[-1]
-    macd_prev = m.iloc[-2]
-    sig_now   = sg.iloc[-1]
-    sig_prev  = sg.iloc[-2]
-    # فوق الصفر → صفر دايماً
-    if macd_now >= 0:
-        return 0, f"MACD above zero ({macd_now:.4f}) — no score"
-    # تحت الصفر + تقاطع صاعد (crossover) → 4/4
-    crossed_up = macd_prev <= sig_prev and macd_now > sig_now
-    if crossed_up:
-        return W_MACD, f"Bullish crossover BELOW zero ({macd_now:.4f}) — 4/4"
-    # تحت الصفر بدون تقاطع → 2/4
-    half = round(W_MACD / 2)
-    return half, f"MACD below zero ({macd_now:.4f}), no cross yet — 2/4"
-
-def _calc_rsi(close, period=14):
-    """RSI حقيقي بـ Wilder smoothing."""
-    delta = close.diff()
-    gain  = delta.clip(lower=0)
-    loss  = (-delta).clip(lower=0)
-    avg_g = gain.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
-    avg_l = loss.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
-    rs    = avg_g / avg_l.replace(0, np.nan)
-    return 100 - (100 / (1 + rs))
-
-def sc_div(close, ml):
-    """
-    Bullish Divergence Detection — RSI + MACD:
-      - Price makes Lower Low (LL)  while RSI  makes Higher Low → RSI  divergence
-      - Price makes Lower Low (LL)  while MACD makes Higher Low → MACD divergence
-    Lookback: last 30 bars, comparing last 2 swing lows (simple: min of halves).
-    Scoring:
-      Both divergences  → W_DIV      (3/3)
-      RSI  only         → W_DIV * 0.7 (2/3 rounded)
-      MACD only         → W_DIV * 0.5 (1-2/3)
-      None              → 0
-    """
-    if len(close) < 30:
-        return 0, "Insufficient data for divergence"
-
-    # تقسيم آخر 30 bar لنصين — نقارن الـ swing low في كل نص
-    half = 15
-    tail = close.tail(30)
-
-    price_lo1 = float(tail.iloc[:half].min())   # أول نص (قديم)
-    price_lo2 = float(tail.iloc[half:].min())   # تاني نص (حديث)
-
-    # لازم يكون في lower low في السعر عشان يبقى divergence حقيقي
-    if price_lo2 >= price_lo1 * 0.998:
-        return 0, f"No price LL (lo1={price_lo1:.1f}, lo2={price_lo2:.1f}) — no divergence"
-
-    signals = []
-
-    # ── RSI divergence ────────────────────────────────────────────────────────
-    if len(close) >= 44:   # 14 period warmup + 30 tail
-        rsi    = _calc_rsi(close).dropna()
-        if len(rsi) >= 30:
-            rsi_tail = rsi.tail(30)
-            rsi_lo1  = float(rsi_tail.iloc[:half].min())
-            rsi_lo2  = float(rsi_tail.iloc[half:].min())
-            if rsi_lo2 > rsi_lo1 * 1.01:   # RSI higher low (+1% tolerance)
-                signals.append(f"RSI div (RSI {rsi_lo1:.1f}→{rsi_lo2:.1f} ↑, price ↓)")
-
-    # ── MACD divergence ───────────────────────────────────────────────────────
-    if len(ml) >= 30:
-        ml_tail = ml.tail(30)
-        ml_lo1  = float(ml_tail.iloc[:half].min())
-        ml_lo2  = float(ml_tail.iloc[half:].min())
-        if ml_lo2 > ml_lo1 * 1.01:
-            signals.append(f"MACD div (MACD {ml_lo1:.4f}→{ml_lo2:.4f} ↑, price ↓)")
-
-    if len(signals) == 2:
-        return W_DIV, "STRONG: " + " | ".join(signals)
-    elif len(signals) == 1:
-        if "RSI" in signals[0]:
-            pts = round(W_DIV * 0.7)
-        else:
-            pts = round(W_DIV * 0.5)
-        return pts, signals[0]
-    else:
-        return 0, f"No divergence (price LL confirmed: {price_lo1:.1f}→{price_lo2:.1f}, but indicators confirmed trend)"
+from signal_engine import (
+    col, calc_macd, calc_avwap, swings,
+    calc_stopping_volume, calc_volume_profile,
+    sc_demand_zone, sc_price, sc_ob, sc_liquidity,
+    sc_htf, sc_avwap, sc_macd, sc_div,
+    _calc_rsi, _find_pivots, score_signal,
+    W_PRICE, W_OB, W_LIQ, W_HTF, W_AVWAP, W_MACD, W_DIV, W_DZ,
+    PRICE_GATE_FRAC_NORMAL, PRICE_GATE_FRAC_WHITELIST,
+)
+# Effective price gate = fraction × W_PRICE.
+# Proportional design: auto-recalibrates when weight optimization changes W_PRICE.
+# Normal: ~55% of W_PRICE (original design intent: 16/30 ≈ 53%).
+# Whitelist: 50% of W_PRICE (original design intent: 15/30 = 50%).
+# Evidence: alpha audit 2026-06 — gate at 50-55% of W_PRICE → Sharpe=1.265-1.272.
+PRICE_GATE_NORMAL    = PRICE_GATE_FRAC_NORMAL    * W_PRICE
+PRICE_GATE_WHITELIST = PRICE_GATE_FRAC_WHITELIST * W_PRICE
+
+# ── Regime Filter — loaded from gates_config.json ────────────────────────────
+_GATES_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "gates_config.json")
+try:
+    with open(_GATES_CONFIG_PATH) as _f:
+        _gc = json.load(_f)
+    _REGIME_FILTER_ENABLED = bool(_gc.get("regime_filter_enabled", False))
+    _REGIME_DOWN_MULT      = float(_gc.get("regime_down_mult",      0.70))
+except Exception:
+    _REGIME_FILTER_ENABLED = False
+    _REGIME_DOWN_MULT      = 0.70
 
 def sig_info(score):
     if score>=85: return "Institutional Buy","#155724","#d4edda","#c3e6cb"
@@ -1023,7 +527,7 @@ def sig_info(score):
 # ENTRY ZONES (Averaging Strategy)
 # =========================================
 
-def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
+def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo, _sv=None, _hvn=None):
     """
     Calculate 3 entry zones for averaging-down strategy.
     No stop loss — zones are designed for scaled entries with renewable liquidity.
@@ -1049,8 +553,8 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
     if alo < eq:
         levels.append((alo, "AVWAP Lower Band", 1))
 
-    # HVN from volume profile
-    hvn_hit, _, hvn_price, _ = calc_volume_profile(df, eq, lo, buy_hi)
+    # HVN from volume profile (use pre-computed result when available)
+    hvn_hit, _, hvn_price, _ = _hvn if _hvn is not None else calc_volume_profile(df, eq, lo, buy_hi)
     if hvn_hit and hvn_price < eq:
         # check if it's close to an existing level (within 2%) — if so, add confluence
         merged = False
@@ -1062,23 +566,17 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
         if not merged:
             levels.append((hvn_price, "Volume Profile HVN", 2))
 
-    # Stopping Volume candle level
-    sv_hit, _, sv_desc = calc_stopping_volume(df, eq, lo)
-    if sv_hit:
-        # extract price from desc string
-        try:
-            sv_price = float(sv_desc.split("@ ")[1].split(" ")[0])
-            if sv_price < eq:
-                merged = False
-                for i, (p, lbl, cnt) in enumerate(levels):
-                    if abs(p - sv_price) / p < 0.02:
-                        levels[i] = (p, lbl + " + SV", cnt + 1)
-                        merged = True
-                        break
-                if not merged:
-                    levels.append((sv_price, "Stopping Volume", 2))
-        except Exception:
-            pass
+    # Stopping Volume candle level (use pre-computed result when available)
+    sv_hit, _, _sv_desc, sv_price = _sv if _sv is not None else calc_stopping_volume(df, eq, lo)
+    if sv_hit and sv_price > 0 and sv_price < eq:
+        merged = False
+        for i, (p, lbl, cnt) in enumerate(levels):
+            if abs(p - sv_price) / p < 0.02:
+                levels[i] = (p, lbl + " + SV", cnt + 1)
+                merged = True
+                break
+        if not merged:
+            levels.append((sv_price, "Stopping Volume", 2))
 
     # Recent swing low (20-bar)
     if len(df) >= 20:
@@ -1139,9 +637,8 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo):
                  if abs(p - z1_price) / z1_price > 0.005
                  and abs(p - z3_price) / z3_price > 0.005]
     if remaining:
-        z2_price = min(remaining, key=lambda x: abs(x[0] - mid))[0]
-        z2_label = min(remaining, key=lambda x: abs(x[0] - mid))[1]
-        z2_conf  = min(remaining, key=lambda x: abs(x[0] - mid))[2]
+        z2_item  = min(remaining, key=lambda x: abs(x[0] - mid))
+        z2_price, z2_label, z2_conf = z2_item
     else:
         z2_price = (z1_price + z3_price) / 2
         z2_label = "Midpoint Estimate"
@@ -1189,12 +686,19 @@ def analyze(symbol):
         hist_date  = df.index[-1].strftime("%Y-%m-%d")
         cur        = hist_price
         last_dt    = hist_date
-        src        = "TradingView Scanner" if "ORAS" in symbol else "EGX yfinance"
-        is_fresh   = True
+        src        = "yfinance + TradingView patch"   # نفس المصدر لكل الأسهم
+        # حديثة = آخر شمعة بتاريخ آخر يوم تداول فعلي (كانت سابقاً True دائماً)
+        is_fresh   = (hist_date == str(most_recent_trading_day()))
 
         close            = df["Close"]
-        hi,lo,eq,buy_hi,sell_lo = swings(close)
+        hi,lo,eq,buy_hi,sell_lo = swings(df)
         av,alo                  = calc_avwap(df)   # always compute for display
+        sv_result   = None   # populated in discount-zone branch, reused by entry zones
+        hvn_result  = None
+        macd_result = None   # populated in discount-zone branch
+        # Research variable placeholders — filled in discount-zone branch only
+        _rsi_val = None; _macd_hist = None; _macd_signal = None
+        _avwap_gap = 0.0; _sv_depth = 0.0
 
         # ── GATE: Price must be strictly below EQ (< 0.50 level) ─────────────
         # At EQ or above → SMC setup does not exist → all scores locked at zero
@@ -1206,35 +710,122 @@ def analyze(symbol):
             r5,l5 = 0,locked; r6,l6 = 0,locked; r7,l7 = 0,locked
             r8,l8 = 0,locked
         else:
-            # ── Full SMC scoring — price confirmed in discount zone ────────────
-            r1,l1  = sc_price(cur,lo,hi,eq,buy_hi,sell_lo)
-            r2,l2  = sc_ob(df,cur,eq,lo,buy_hi)
-            r3,l3  = sc_liquidity(df,cur)
-            r4,l4  = sc_htf(df)
-            r5,l5  = sc_avwap(cur,av,alo)
-            ml,_,_ = calc_macd(close)
-            r6,l6  = sc_macd(close)
-            r7,l7  = sc_div(close,ml)
-            r8,l8  = sc_demand_zone(df,eq,lo,buy_hi)   # Stopping Volume + Volume Profile
+            # ── Full SMC scoring — signal_engine is the single source of truth ──
+            _sg = score_signal(symbol, df, hi, lo, eq, buy_hi, sell_lo)
+            r1, l1 = _sg["r1_price"],     _sg["desc_price"]
+            r2, l2 = _sg["r2_ob"],        _sg["desc_ob"]
+            r3, l3 = _sg["r3_liquidity"], _sg["desc_liquidity"]
+            r4, l4 = _sg["r4_htf"],       _sg["desc_htf"]
+            r5, l5 = _sg["r5_avwap"],     _sg["desc_avwap"]
+            r6, l6 = _sg["r6_macd"],      _sg["desc_macd"]
+            r7, l7 = _sg["r7_div"],       _sg["desc_div"]
+            r8, l8 = _sg["r8_demand"],    _sg["desc_demand"]
+            av, alo = _sg["avwap"], _sg["avwap_lower"]
+
+            # shared intermediates needed downstream (calc_entry_zones, DB logging)
+            macd_result = calc_macd(close)
+            ml          = macd_result[0]
+            sv_result   = calc_stopping_volume(df, eq, lo)
+            hvn_result  = calc_volume_profile(df, eq, lo, buy_hi)
+
+            # ── Research detail variables ─────────────────────────────────────
+            _rsi_val     = _sg["rsi_val"]
+            _mh          = macd_result[2].dropna()
+            _ms          = macd_result[1].dropna()
+            _macd_hist   = round(float(_mh.iloc[-1]), 4) if len(_mh) > 0 else None
+            _macd_signal = round(float(_ms.iloc[-1]), 4) if len(_ms) > 0 else None
+            _raw_gap     = (av - cur) / max(av - alo, 0.001) if av > cur else 0.0
+            _avwap_gap   = round(min(_raw_gap, 2.0), 4)
+            _sv_depth    = round((eq - sv_result[3]) / max(eq - lo, 0.001), 4) \
+                           if sv_result and sv_result[0] else 0.0
 
         total = min(r1+r2+r3+r4+r5+r6+r7+r8, 100)
 
         # ══════════════════════════════════════════════════════════════════
         # DUAL GATE
-        #   GATE 1 — Price in Deep Discount:  r1 >= 15  (out of W_PRICE=30)
-        #   GATE 2 — Sweep & Reverse confirmed: r3 == W_LIQ (20/20)
+        #   GATE 1 — Price in Deep Discount:
+        #     r1 >= FRAC × W_PRICE  (proportional — tracks weight optimization)
+        #     Normal:    55% × W_PRICE  |  Whitelist: 50% × W_PRICE
+        #     Fractions in config/gates_config.json → signal_engine exports.
+        #   GATE 2 — Sweep & Reverse: r3 >= W_LIQ  [METADATA — not classification]
         #
-        #   r1 >= 15 AND r3 == 20  →  BUY eligible (normal sig_info)
-        #   r1 >= 15 AND r3 <  20  →  WATCH (price ok, waiting for sweep)
-        #   r1 <  15               →  IGNORE (hard block)
+        #   price_ok   →  BUY eligible; sig_info(adj_score) → Buy/Strong/VSB/IB
+        #   !price_ok  →  WAIT (price not in Deep Discount)
+        #   total < 35 →  SKIP
+        #   liq_ok     →  metadata tag shown in alert; never overrides class
         # ══════════════════════════════════════════════════════════════════
-        # ✅ DYNAMIC PRICE GATE - استخدم 12 للـ whitelist، 18 للأسهم العادية
         PRICE_GATE = PRICE_GATE_WHITELIST if symbol in WHITELIST else PRICE_GATE_NORMAL
-        LIQ_GATE   = 12
+        LIQ_GATE   = W_LIQ   # only Sweep & Reverse (20/20) passes to BUY
 
         price_ok = (r1 >= PRICE_GATE)
         liq_ok   = (r3 >= LIQ_GATE)
 
+        # ── Adjusted score: Stock Quality Tier × Context Multiplier ──────
+        # Gate logic uses raw `total`. Signal label + display use `score`.
+        ctx_mult   = 1.0
+        ctx_labels = []
+        if is_ramadan():
+            ctx_mult  *= CTX_RAMADAN_MULT
+            ctx_labels.append("📿 Ramadan −30%")
+        if is_cbe_window():
+            ctx_mult  *= CTX_CBE_MULT
+            ctx_labels.append("🏦 CBE Window +30%")
+        # ranking_engine is the authority; falls back to STOCK_QUALITY when sample_n < 30
+        _factor_exp_score = 0.0
+        try:
+            import ranking_engine as _re
+            _exp = _re.compute_expectancy(symbol)
+            if _exp.sample_n >= 30:
+                stock_mult = _re._expectancy_to_mult(_exp.expectancy)
+                _tier_lbl  = f"📊 E={_exp.expectancy*100:.1f}% n={_exp.sample_n}"
+            else:
+                stock_mult = STOCK_QUALITY.get(symbol, 1.0)
+                _tier_lbl  = {1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,"")
+            # Challenger: factor-level expectancy score (r2–r8, validated +19% top-quartile WR)
+            # Guard: _sg (and sv_result/hvn_result) only exist in discount-zone branch (cur < eq)
+            if cur < eq:
+                _factor_exp_score = _re.factor_expectancy_score({
+                    "r2_ob": r2, "r3_liquidity": r3, "r4_htf": r4,
+                    "r5_avwap": r5, "r6_macd": r6, "r7_div": r7, "r8_demand": r8,
+                    "sv_hit": bool(sv_result[0]) if sv_result else False,
+                    "hvn_hit": bool(hvn_result[0]) if hvn_result else False,
+                })
+        except Exception:
+            stock_mult = STOCK_QUALITY.get(symbol, 1.0)
+            _tier_lbl  = {1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,"")
+        ctx_labels.append(_tier_lbl)
+
+        # ── Regime Filter — multiplied into ctx_mult when bear regime detected ──
+        # Enabled via gates_config.json "regime_filter_enabled": true
+        # Safe default: disabled if key missing. Does NOT change BUY/Wait/Skip
+        # gate logic directly — reduces adj_score so borderline signals fall below gate.
+        _regime_state = ""
+        _regime_mult  = 1.0
+        if _REGIME_FILTER_ENABLED and cur < eq:
+            # _sg is available here since we're inside `if _REGIME_FILTER_ENABLED and cur < eq`
+            _sg_trend = (_sg.get("egx30_trend", "") or "")
+            # _sg is the score_signal() dict (only available in discount-zone branch)
+            if _sg_trend in ("DOWN", "DOWNTREND", "bearish", "Bearish", "downtrend"):
+                _regime_mult   = _REGIME_DOWN_MULT
+                _regime_state  = "bear"
+                ctx_mult      *= _REGIME_DOWN_MULT
+                ctx_labels.append(f"📉 Bear Regime {_REGIME_DOWN_MULT:.0%}")
+            else:
+                _regime_state = "bull" if _sg_trend else "neutral"
+        elif _REGIME_FILTER_ENABLED and cur >= eq:
+            _regime_state = "neutral"
+
+        ctx_label  = " · ".join(x for x in ctx_labels if x)
+        score = min(int(round(total * stock_mult * ctx_mult)), 100)
+
+        # ══ سلم الإشارات الصارم (مصدر حقيقة واحد) ══════════════════════════
+        #   Skip      : الجودة الخام < 35           → لا يُشترى أبداً
+        #   Wait      : السعر غير عميق (r1 < البوابة) أو الـ score المعدّل
+        #               تحت بوابة الدخول (35/40)     → لا شراء بعد
+        #   Buy…      : كل البوابات + Sweep & Reverse → يُشترى فوراً
+        # التسجيل في _register_new_positions يقرأ هذا التصنيف فقط —
+        # فلا يمكن أن يُشترى سهم معروض Skip/Wait أو يُعرض Buy دون شراء.
+        _entry_score_gate = 35 if symbol in WHITELIST else 40
         if total < 35:
             sig = "Skip"
             tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
@@ -1243,16 +834,82 @@ def analyze(symbol):
             tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
             if cur < eq:
                 l1  = l1 + f" ⛔ Price gate failed — not in Deep Discount (need >= {PRICE_GATE}/{W_PRICE})"
-        elif not liq_ok:
+        elif score < _entry_score_gate:
             sig = "Wait"
             tc  = "#721c24"; tbg = "#f8d7da"; tbr = "#f5c6cb"
-            l3  = l3 + " ⏳ Liquidity gate pending — waiting for Sweep & Reverse (need 20/20)"
+            l3  = l3 + f" ⏳ Adjusted score {score} below entry gate ({_entry_score_gate}) — quality pending"
         else:
-            sig,tc,tbg,tbr = sig_info(total)
+            # liq_confirmed = metadata (Sweep & Reverse confirmed); never overrides class
+            if not liq_ok:
+                l3 = l3 + " 🟦 Sweep & Reverse pending — early entry"
+            sig,tc,tbg,tbr = sig_info(score)
+        liq_confirmed = liq_ok
+
+        # ── EARLY BUY (Research Shadow) ──────────────────────────────────────
+        # Research-only classification. Does NOT affect production entry decisions,
+        # open_positions, portfolio, or performance metrics.
+        # Rule: WAIT signal (price_ok=False) + partial discount (r1>0) + raw_score>=65
+        # Historical validation: full-data WR=0.829, OOS WR=0.853 (2025+, N=34)
+        # Promotion policy: requires N>=100, WR>=BUY WR, Exp>=BUY Exp, Sharpe>=BUY Sharpe,
+        #                   OOS + walk-forward validation.
+        _is_early_buy_research = (
+            sig == "Wait"
+            and r1 > 0          # partial discount only — not premium zone
+            and total >= 65     # high raw score despite failed price gate
+        )
 
         entry_zones = None
-        if price_ok and liq_ok and r8 > 0 and total >= 35:
-            entry_zones = calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo)
+        _score_gate = 35 if symbol in WHITELIST else 40
+        # entry_zones computed for all buy-eligible signals (price_ok + score gate)
+        if price_ok and r8 > 0 and total >= _score_gate:
+            entry_zones = calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo,
+                                           _sv=sv_result, _hvn=hvn_result)
+
+        # ── Pattern Recognition + Historical Backtesting ──────────────────────
+        # يشتغل فقط لو السعر في Discount Zone (أقل من EQ)
+        if cur >= eq:
+            pattern_data = {"ok": False, "reason": "premium",
+                            "label": "Price in Premium Zone — pattern analysis inactive"}
+        else:
+            # استخدام 500 يوم (~2 سنة) للحصول على عينة تاريخية أكبر وأدق
+            # fallback للـ df الأصلي (110 يوم) لو 500 رجع فاضي أو قليل
+            df_long = download_data(symbol, 500)
+            if df_long.empty or len(df_long) < 30:
+                df_long = df   # df الأصلي مضمون شغال لكل الأسهم بما فيهم ORAS
+            pattern_data = analyze_entry_patterns(df_long, symbol=symbol)
+
+        try:
+            _vol = df["Volume"]
+            _vol_spike = round(float(_vol.iloc[-1]) / max(float(_vol.iloc[-21:-1].mean()), 1), 2) if len(_vol) > 21 else None
+        except Exception:
+            _vol_spike = None
+
+        # ── Parse OB label → ob_quality / ob_dist ────────────────────────────
+        _ob_qm      = re.search(r'quality\s+(\d+)%', l2)
+        if _ob_qm:
+            _ob_quality = round(int(_ob_qm.group(1)) / 100, 2)
+        elif l2.startswith("OB zone") and "far" in l2 and r2 > 0:
+            # "far" label omits quality — back-calculate: pts = round(W_OB * qual * 0.15)
+            _ob_quality = round(min(r2 / max(W_OB * 0.15, 0.1), 1.0), 2)
+        elif "moderate distance" in l2 and r2 > 0:
+            # moderate: pts = round(W_OB * qual * 0.30)
+            _ob_quality = round(min(r2 / max(W_OB * 0.30, 0.1), 1.0), 2)
+        else:
+            _ob_quality = None
+        _ob_dm      = re.search(r'far\s*\((\d+(?:\.\d+)?)%\s*away\)', l2, re.IGNORECASE)
+        if _ob_dm:
+            _ob_dist = round(float(_ob_dm.group(1)) / 100, 4)
+        elif l2.startswith("At OB"):
+            _ob_dist = 0.01
+        elif l2.startswith("Near OB"):
+            _ob_dist = 0.035
+        elif "moderate distance" in l2:
+            _ob_dist = 0.075
+        else:
+            _ob_dist = None
+
+        # ── Snapshot Features — لا يُغيّر منطق الدخول ───────────────────────
+        _snap = _snap_features(df, cur, eq, lo, hi) if (_snap_features and cur < eq) else {}
 
         return {
             "ok":True,"price":round(cur,2),"last_dt":last_dt,
@@ -1260,8 +917,10 @@ def analyze(symbol):
             "target":round(cur*1.12,2),
             "eq":round(eq,2),"buy_hi":round(buy_hi,2),"sell_lo":round(sell_lo,2),
             "avwap":round(av,2),"avwap_l":round(alo,2),
-            "score":total,"signal":sig,"tc":tc,"tbg":tbg,"tbr":tbr,"r1":r1,
+            "score":score,"raw_score":total,"ctx_label":ctx_label,
+            "signal":sig,"tc":tc,"tbg":tbg,"tbr":tbr,"r1":r1,
             "entry_zones": entry_zones,
+            "pattern": pattern_data,
             "rows":[
                 ("Price Position",      r1,W_PRICE,l1),
                 ("Liquidity Context",   r3,W_LIQ,  l3),
@@ -1272,49 +931,136 @@ def analyze(symbol):
                 ("MACD vs Zero",        r6,W_MACD, l6),
                 ("Divergence",          r7,W_DIV,  l7),
             ],
+            "sv_hit":    bool(sv_result[0])         if sv_result   else False,
+            "sv_score":  round(float(sv_result[1]),3) if sv_result else 0.0,
+            "sv_price":  round(float(sv_result[3]),2) if sv_result and sv_result[0] else None,
+            "hvn_hit":   bool(hvn_result[0])          if hvn_result else False,
+            "hvn_score": round(float(hvn_result[1]),3) if hvn_result else 0.0,
+            "hvn_price": round(float(hvn_result[2]),2) if hvn_result and hvn_result[0] else None,
+            "macd_val":  round(float(macd_result[0].iloc[-1]),4) if macd_result is not None and len(macd_result[0]) > 0 else None,
+            "vol_spike": _vol_spike,
+            # 18 extended research variables
+            "rsi_val":        _rsi_val,
+            "macd_hist":      _macd_hist,
+            "macd_signal":    _macd_signal,
+            "rsi_div":        bool("RSI div" in l7),
+            "macd_div":       bool("MACD div" in l7),
+            "ob_quality":     _ob_quality,
+            "ob_dist":        _ob_dist,
+            "htf_hh":         bool("HH+HL" in l4 or "HH:True" in l4),
+            "htf_hl":         bool("HH+HL" in l4 or "HL:True" in l4),
+            "avwap_gap":      _avwap_gap,
+            "sweep_detected": bool("Sweep" in l3),
+            "wick_rejection": bool("wick" in l3.lower()),
+            "equal_lows":     bool("Equal Lows" in l3),
+            "ctx_mult":         round(ctx_mult, 3),
+            "stock_mult":       round(stock_mult, 3),
+            "price_gate":       PRICE_GATE,
+            "price_ok":         bool(price_ok),
+            "liq_confirmed":    bool(liq_confirmed),
+            "early_buy_research": bool(_is_early_buy_research),
+            "sv_depth":         _sv_depth,
+            "regime_state":     _regime_state,
+            "regime_multiplier": round(_regime_mult, 3),
+            "factor_exp_score": round(_factor_exp_score, 2),
+            **_snap,
         }
+
+        # Pattern Intelligence 2.0 telemetry (research only — never affects result)
+        try:
+            import pattern_kb as _pkb
+            _sig_id = f"{symbol}_{today}"
+            _ind_data = pattern_data.get("detail") if pattern_data.get("ok") else None
+            # Gate flags for PKB pattern lookup (binary: gate scored > 0)
+            _gate_flags = {
+                "r1_price":      1 if (r1 or 0) > 0 else 0,
+                "r2_ob":         1 if (r2 or 0) > 0 else 0,
+                "r3_liquidity":  1 if (r3 or 0) > 0 else 0,
+                "r4_htf":        1 if (r4 or 0) > 0 else 0,
+                "r5_avwap":      1 if (r5 or 0) > 0 else 0,
+                "r6_macd":       1 if (r6 or 0) > 0 else 0,
+                "r7_div":        1 if (r7 or 0) > 0 else 0,
+                "r8_demand":     1 if (r8 or 0) > 0 else 0,
+                "sweep_detected": 1 if result.get("sweep_detected") else 0,
+                "wick_rejection": 1 if result.get("wick_rejection") else 0,
+                "equal_lows":     1 if result.get("equal_lows") else 0,
+                "sv_hit":         1 if result.get("sv_hit") else 0,
+                "hvn_hit":        1 if result.get("hvn_hit") else 0,
+            }
+            _pkb.log_telemetry(
+                signal_id=_sig_id,
+                symbol=symbol,
+                signal_date=today,
+                signal_class=sig if sig not in ("Wait", "Skip") else sig,
+                pattern_score=pattern_data.get("pattern_score") if pattern_data.get("ok") else None,
+                indicators=_ind_data,
+                market_regime=_regime_state,
+                gate_flags=_gate_flags,
+            )
+        except Exception:
+            pass
+
+        return result
     except Exception as e:
         return {"ok":False,"error":str(e)}
-
-# =========================================
-# NEWS
-# =========================================
-
-def get_news(symbol):
-    return [{"headline":"News aggregator synchronized","date_str":"","days_ago":0}]
 
 # =========================================
 # SAVE HISTORY
 # =========================================
 
 def save_history(stock, r):
-    row={"date":now_cairo().strftime("%Y-%m-%d"),"stock":stock,
-         "company":NAMES.get(stock,stock),"price":r.get("price","N/A"),
-         "last_dt":r.get("last_dt","N/A"),"fresh":r.get("is_fresh",False),
-         "signal":r.get("signal","N/A"),"score":r.get("score",0),
-         "target":r.get("target","N/A")}
-    df=pd.DataFrame([row]); f="signals_history.csv"
-    if os.path.exists(f): df=pd.concat([pd.read_csv(f),df],ignore_index=True)
-    df.to_csv(f,index=False)
+    row = {"date": now_cairo().strftime("%Y-%m-%d"), "stock": stock,
+           "company": NAMES.get(stock, stock), "price": r.get("price", "N/A"),
+           "last_dt": r.get("last_dt", "N/A"), "fresh": r.get("is_fresh", False),
+           "signal": r.get("signal", "N/A"), "score": r.get("score", 0),
+           "target": r.get("target", "N/A")}
+    f = "signals_history.csv"
+    file_exists = os.path.exists(f)
+    with open(f, "a", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=row.keys())
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(row)
 
 # =========================================
 # HTML HELPERS
 # =========================================
 
-def pill(sc,mx):
-    pct=int(sc/mx*100) if mx else 0
-    bg,fg=(("#d4edda","#155724") if pct>=70 else (("#fff3cd","#856404") if pct>=40 else ("#f8d7da","#721c24")))
-    return f'<span style="display:inline-block;padding:2px 9px;border-radius:10px;font-size:12px;font-weight:bold;background:{bg};color:{fg};">{sc}/{mx}</span>'
+def pill(sc, mx):
+    pct = int(sc / mx * 100) if mx else 0
+    if pct >= 70:
+        bg, fg = "#d1f0dd", "#1a7340"
+    elif pct >= 40:
+        bg, fg = "#fef3c7", "#7a5c00"
+    else:
+        bg, fg = "#fde8e8", "#a02020"
+    return (
+        f'<span style="display:inline-block;padding:3px 10px;border-radius:10px;'
+        f'font-family:Arial,sans-serif;font-size:11px;font-weight:700;'
+        f'background:{bg};color:{fg};">{sc}/{mx}</span>'
+    )
 
 def bar(score):
-    fg="#1e7e34" if score>=70 else ("#856404" if score>=45 else "#b02a2a")
-    f=max(2,score); e=100-f
-    return (f'<table cellpadding="0" cellspacing="0" border="0" style="display:inline-table;vertical-align:middle;margin-right:6px;">'
-            f'<tr><td width="{f}" height="10" bgcolor="{fg}"></td><td width="{e}" height="10" bgcolor="#e0e0e0"></td></tr></table>'
-            f'<span style="font-weight:bold;color:{fg};font-size:14px;">{score}/100</span>')
+    if score >= 70:
+        fg, bg_track = "#1a7340", "#c8ecd8"
+    elif score >= 45:
+        fg, bg_track = "#7a5c00", "#fdefc3"
+    else:
+        fg, bg_track = "#a02020", "#f9d5d5"
+    fill = max(2, score)
+    return (
+        f'<span style="display:inline-flex;align-items:center;gap:8px;vertical-align:middle;">'
+        f'<span style="display:inline-block;width:100px;height:8px;border-radius:4px;background:{bg_track};overflow:hidden;">'
+        f'<span style="display:block;width:{fill}%;height:100%;background:{fg};border-radius:4px;"></span>'
+        f'</span>'
+        f'<span style="font-family:Arial,sans-serif;font-weight:700;font-size:14px;color:{fg};">{score}<span style="font-size:11px;font-weight:400;color:#888;">/100</span></span>'
+        f'</span>'
+    )
 
 def fresh_badge(is_fresh, last_dt):
-    return f'<span style="font-size:11px;padding:2px 7px;border-radius:6px;background:#d4edda;color:#155724;margin-left:8px;">Validated: {last_dt}</span>'
+    if is_fresh:
+        return f'<span style="font-size:11px;padding:2px 7px;border-radius:6px;background:#d4edda;color:#155724;margin-left:8px;">✓ {last_dt}</span>'
+    return f'<span style="font-size:11px;padding:2px 7px;border-radius:6px;background:#fff3cd;color:#856404;margin-left:8px;">⚠ Stale: {last_dt}</span>'
 
 # =========================================
 # BUILD REPORT
@@ -1377,25 +1123,252 @@ def build_ez_html(r):
             f'</td></tr></table>')
 
 
-def build_report(holiday_mode=False, last_trading=None):
-    results={}; news={}
+def build_pattern_html(r):
+    """Renders the Pattern Recognition + Backtesting block for a stock card."""
+    p = r.get("pattern")
+    header = (
+        '<div style="margin:10px 0 4px 0;font-family:Arial,sans-serif;font-size:12px;'
+        'font-weight:bold;color:#1C4587;letter-spacing:0.5px;border-left:4px solid #1C4587;'
+        'padding-left:8px;">PATTERN INTELLIGENCE — HISTORICAL ANALYSIS</div>'
+    )
+    if not p or not p.get("ok"):
+        reason = p.get("reason", "") if p else ""
+        if reason == "premium":
+            msg = "⛔ Price in Premium Zone — pattern analysis inactive (only runs in Discount Zone)"
+            bg, border = "#fff3cd", "#ffeeba"
+        else:
+            msg = f"⚠️ {p.get('label', 'Insufficient historical data for pattern analysis') if p else 'Insufficient historical data for pattern analysis'}"
+            bg, border = "#f8f9fa", "#dee2e6"
+        return (
+            header +
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0" '
+            f'style="border:1px solid {border};background:{bg};margin-bottom:8px;">'
+            f'<tr><td style="padding:10px 14px;font-family:Arial,sans-serif;font-size:12px;color:#555;">'
+            f'{msg}</td></tr></table>'
+        )
+
+    ps      = p["pattern_score"]
+    gain    = p["avg_gain"]
+    cnt     = p["similar_count"]
+    lbl     = p["label"]
+    detail  = p.get("detail", {})
+    eff_raw = p.get("effective_score", 0)
+    eff_v   = eff_raw / 20
+    eff_lbl = "Excellent" if eff_v >= 3 else "Strong" if eff_v >= 2 else "Moderate" if eff_v >= 1 else "Weak"
+    wr      = p.get("win_rate", 0)
+
+    if ps >= 70:
+        bar_color = "#155724"; bg = "#d4edda"; border = "#c3e6cb"
+        badge_txt = "Strong Setup"
+    elif ps >= 50:
+        bar_color = "#856404"; bg = "#fff3cd"; border = "#ffeeba"
+        badge_txt = "Moderate Setup"
+    elif ps >= 35:
+        bar_color = "#5a6268"; bg = "#f8f9fa"; border = "#dee2e6"
+        badge_txt = "Weak Setup"
+    else:
+        bar_color = "#721c24"; bg = "#fff5f5"; border = "#f5c6cb"
+        badge_txt = "Poor Setup"
+
+    bar_w = max(4, min(100, int(ps)))
+
+    return (
+        header +
+        f'<table width="100%" cellpadding="0" cellspacing="0" border="0" '
+        f'style="border:1px solid {border};border-collapse:collapse;background:{bg};">'
+        f'<tr><td style="padding:10px 14px;">'
+        f'<table width="100%" cellpadding="0" cellspacing="0"><tr>'
+        # Pattern Score
+        f'<td width="28%" style="font-family:Arial,sans-serif;">'
+        f'<div style="font-size:10px;color:#555;font-weight:bold;margin-bottom:4px;">PATTERN SCORE</div>'
+        f'<div style="font-size:22px;font-weight:bold;color:{bar_color};">{ps:.0f}<span style="font-size:13px;">/100</span></div>'
+        f'<div style="background:#e0e0e0;border-radius:4px;height:6px;margin-top:4px;">'
+        f'<div style="width:{bar_w}%;background:{bar_color};height:6px;border-radius:4px;"></div></div>'
+        f'</td>'
+        # Effective Score
+        f'<td width="22%" style="font-family:Arial,sans-serif;padding-left:12px;">'
+        f'<div style="font-size:10px;color:#555;font-weight:bold;margin-bottom:4px;">EFFECTIVE SCORE</div>'
+        f'<div style="font-size:22px;font-weight:bold;color:{bar_color};">{eff_v:.1f}<span style="font-size:13px;">/5</span></div>'
+        f'<div style="font-size:10px;color:#777;margin-top:2px;">{eff_lbl} — {wr*100:.0f}% win rate</div>'
+        f'</td>'
+        # Badge + label
+        f'<td style="font-family:Arial,sans-serif;padding-left:12px;vertical-align:middle;">'
+        f'<span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;'
+        f'font-weight:bold;background:{bar_color};color:#fff;">{badge_txt}</span>'
+        f'<div style="font-size:11px;color:#555;margin-top:6px;">{lbl}</div>'
+        f'</td>'
+        f'</tr></table>'
+        f'</td></tr></table>'
+    )
+
+
+FIB_LABELS = {0: "12% Min", 1: "23.6%", 2: "38.2%", 3: "50%", 4: "61.8%", 5: "100%", 6: "150%", 7: "200%"}
+
+def _target_box_html(symbol, r, positions):
+    pos = positions.get(symbol)
+    if pos and pos.get("status") == "open":
+        dyn_tgt = pos["target"]
+        fib_lbl = FIB_LABELS.get(pos.get("current_level", 0), "—")
+        return (
+            '<div style="font-family:Arial,sans-serif;font-size:10px;color:#155724;font-weight:bold;letter-spacing:1px;">🎯 DYNAMIC TARGET</div>'
+            f'<div style="font-family:Arial,sans-serif;font-size:17px;font-weight:bold;color:#155724;">{dyn_tgt:.2f} EGP</div>'
+            f'<div style="font-family:Arial,sans-serif;font-size:10px;color:#0B5394;margin-top:2px;">Fib {fib_lbl}</div>'
+        )
+    return (
+        '<div style="font-family:Arial,sans-serif;font-size:10px;color:#155724;font-weight:bold;letter-spacing:1px;">TARGET</div>'
+        f'<div style="font-family:Arial,sans-serif;font-size:17px;font-weight:bold;color:#155724;">{r["target"]} EGP</div>'
+        '<div style="font-family:Arial,sans-serif;font-size:11px;color:#888;margin-top:2px;">Initial</div>'
+    )
+
+def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     print("  Fetching Dow Jones status...")
     dj = get_dow_jones_status()
     dow_banner = build_dow_banner(dj)
+    positions = load_open_positions()
 
-    for s in STOCKS:
-        print(f"  Analyzing: {NAMES.get(s,s)} ...")
-        results[s]=analyze(s); news[s]=get_news(s); save_history(s,results[s])
+    if _cached_results is not None:
+        results = _cached_results
+    else:
+        tv_prefetch_all_quotes(STOCKS)   # one batch TV call instead of 26 serial calls
+        results = {}
+        workers = min(8, len(STOCKS))
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            future_to_sym = {executor.submit(analyze, s): s for s in STOCKS}
+            for future in as_completed(future_to_sym):
+                s = future_to_sym[future]
+                results[s] = future.result()
+                print(f"  Done: {NAMES.get(s, s)}")
+        for s in STOCKS:               # save_history writes CSV — keep it sequential
+            save_history(s, results[s])
 
-    # ── Sort stocks by score descending for the entire report ────────────────
-    sorted_stocks = sorted(STOCKS, key=lambda s: results[s].get("score", 0), reverse=True)
+    # ── Sort stocks: BUY family → Wait → Skip, each group by score desc
+    BUY_FAMILY   = {"buy", "strong buy", "very strong buy", "institutional buy"}
+    WAIT_FAMILY  = {"wait"}
+
+    def _sort_key(s):
+        sig = results[s].get("signal", "").lower()
+        fexp  = results[s].get("factor_exp_score", 0) or 0
+        score = results[s].get("score", 0) or 0
+        blended = 0.60 * fexp + 0.40 * score
+        if sig in BUY_FAMILY:
+            group = 0
+        elif sig in WAIT_FAMILY:
+            group = 1
+        else:
+            group = 2
+        return (group, -blended)
+
+    sorted_stocks = sorted(STOCKS, key=_sort_key)
+
+    # ── Rank change data from previous session ────────────────────────────────
+    _prev_ranks = load_rank_changes()
+
+    def _rank_delta_html(sym, current_rank):
+        prev = _prev_ranks.get(sym)
+        if prev is None or prev == current_rank:
+            return ""
+        delta = prev - current_rank  # positive = moved up
+        if delta > 0:
+            return f'<span style="color:#1a7340;font-size:11px;font-weight:700;">▲{delta}</span>'
+        return f'<span style="color:#b02a2a;font-size:11px;font-weight:700;">▼{abs(delta)}</span>'
+
+    # ── TOP RANKED OPPORTUNITIES block ───────────────────────────────────────
+    def _build_ranking_block():
+        rows_a = ""  # A-tier: top 5 BUY
+        rows_b = ""  # B-tier: next 5 BUY
+        buy_rank = 0
+        for s in sorted_stocks:
+            r = results[s]
+            if not r.get("ok"): continue
+            sig_l = r.get("signal", "").lower()
+            if sig_l not in BUY_FAMILY: continue
+            buy_rank += 1
+            fexp    = r.get("factor_exp_score", 0) or 0
+            score   = r.get("score", 0) or 0
+            blended = 0.60 * fexp + 0.40 * score
+            delta_h = _rank_delta_html(s, buy_rank)
+            tier = "A" if buy_rank <= 5 else "B"
+            tier_col = "#0B5394" if tier == "A" else "#5b6c82"
+            row_bg = "#f0f7ff" if buy_rank % 2 == 1 else "#ffffff"
+            sig_badges = {
+                "institutional buy": ("#3a0078", "#ede0ff", "🟣"),
+                "very strong buy":   ("#155724", "#d4edda", "🟢"),
+                "strong buy":        ("#1a5c2a", "#d4edda", "🟢"),
+                "buy":               ("#145214", "#e8f5e9", "🟩"),
+            }
+            sc, sb, em = sig_badges.get(sig_l, ("#333", "#eee", ""))
+            row = f"""
+<tr style="background:{row_bg};border-bottom:1px solid #dde8f5;">
+  <td style="padding:11px 14px;font-family:Arial,sans-serif;width:36px;text-align:center;">
+    <div style="font-size:18px;font-weight:800;color:{tier_col};">#{buy_rank}</div>
+    <div style="font-size:10px;font-weight:700;color:{tier_col};letter-spacing:0.5px;">{tier}-TIER</div>
+  </td>
+  <td style="padding:11px 14px;font-family:Arial,sans-serif;">
+    <div style="font-size:15px;font-weight:700;color:#111;">{NAMES.get(s, s)}</div>
+    <div style="font-size:10px;color:#999;margin-top:1px;">{s}</div>
+  </td>
+  <td style="padding:11px 14px;font-family:Arial,sans-serif;">
+    <span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:{sb};color:{sc};border:1px solid {sc}20;">{em} {r.get("signal","")}</span>
+  </td>
+  <td align="right" style="padding:11px 14px;font-family:Arial,sans-serif;">
+    <div style="font-size:16px;font-weight:800;color:#1a3a5c;">{blended:.1f}</div>
+    <div style="font-size:10px;color:#999;">rank score</div>
+  </td>
+  <td align="right" style="padding:11px 14px;font-family:Arial,sans-serif;">
+    <div style="font-size:14px;font-weight:600;color:#0B5394;">{fexp:.1f}</div>
+    <div style="font-size:10px;color:#999;">expectancy</div>
+  </td>
+  <td align="right" style="padding:11px 14px;font-family:Arial,sans-serif;">
+    <div style="font-size:14px;font-weight:600;color:#444;">{score}</div>
+    <div style="font-size:10px;color:#999;">SMC</div>
+  </td>
+  <td align="center" style="padding:11px 14px;font-family:Arial,sans-serif;width:40px;">{delta_h}</td>
+</tr>"""
+            if buy_rank <= 5:
+                rows_a += row
+            elif buy_rank <= 10:
+                rows_b += row
+            if buy_rank >= 10:
+                break
+        if not rows_a:
+            return ""
+        tier_b_block = f"""
+<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#5b6c82;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f7f9fc;border-top:1px solid #dde8f5;">B-TIER — Watchlist (#6–#10)</div>
+<table width="100%" cellpadding="0" cellspacing="0" border="0"><tbody>{rows_b}</tbody></table>""" if rows_b else ""
+        return f"""
+<div style="font-family:Arial,sans-serif;margin:20px 0;border:2px solid #1a3a5c;border-radius:8px;overflow:hidden;">
+  <div style="background:linear-gradient(135deg,#1a3a5c,#0B5394);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <span style="color:#fff;font-size:15px;font-weight:800;letter-spacing:0.3px;">🏆 TOP RANKED OPPORTUNITIES</span>
+      <span style="color:#8fb8d8;font-size:11px;margin-left:10px;">0.60 × Expectancy + 0.40 × SMC Score</span>
+    </div>
+    <span style="color:#8fb8d8;font-size:11px;">{fmt_cairo("%d %b %Y")}</span>
+  </div>
+  <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#0B5394;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f0f7ff;">A-TIER — Top Opportunities (#1–#5)</div>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <thead>
+      <tr style="background:#e8f0f8;border-bottom:2px solid #c8daf5;">
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:center;">Rank</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;">Stock</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;">Signal</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">Rank Score</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">Expectancy</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">SMC</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:center;">Δ</th>
+      </tr>
+    </thead>
+    <tbody>{rows_a}</tbody>
+  </table>
+  {tier_b_block}
+</div>"""
+
+    _ranking_block = _build_ranking_block()
 
     fresh_n=sum(1 for s in STOCKS if results[s].get("ok") and results[s].get("is_fresh"))
     stale  =[NAMES.get(s,s) for s in STOCKS if results[s].get("ok") and not results[s].get("is_fresh")]
     dq_c   ="#155724" if not stale else "#856404"
     dq_bg  ="#d4edda" if not stale else "#fff3cd"
     dq_msg =(f"All {fresh_n} stocks — data fully verified" if not stale else f"{fresh_n}/{len(STOCKS)} fresh")
-    weights=""
 
     parts=[]
     holiday_banner=""
@@ -1407,12 +1380,71 @@ def build_report(holiday_mode=False, last_trading=None):
   </td></tr>
 </table>"""
 
+    # ── Open Positions section ────────────────────────────────────────────────
+    open_pos_rows = ""
+    open_pos_list = [(sym, p) for sym, p in positions.items() if p.get("status") == "open"]
+    open_pos_list.sort(key=lambda x: (
+        ((results[x[0]]["price"] - x[1]["entry_price"]) / x[1]["entry_price"])
+        if x[0] in results and results[x[0]].get("ok") else
+        ((x[1].get("current_price", x[1]["entry_price"]) - x[1]["entry_price"]) / x[1]["entry_price"])
+    ), reverse=True)
+    if open_pos_list:
+        for sym, p in open_pos_list:
+            entry   = p["entry_price"]
+            dyn_tgt = p["target"]
+            if sym in results and results[sym].get("ok"):
+                cur_price = results[sym]["price"]
+            elif "current_price" in p:
+                cur_price = p["current_price"]
+            else:
+                cur_price = "—"
+            pnl_pct = ((float(cur_price) - entry) / entry * 100) if cur_price != "—" else None
+            pnl_str = (f'+{pnl_pct:.1f}%' if pnl_pct and pnl_pct >= 0 else f'{pnl_pct:.1f}%') if pnl_pct is not None else "—"
+            pnl_col = "#155724" if (pnl_pct or 0) >= 0 else "#721c24"
+            entry_date = p.get("entry_date", "")[:10]
+            entry_score = p.get("entry_effective_score") or p.get("entry_pattern_score") or p.get("entry_score", 0)
+            reinforced = p.get("reinforced", False)
+            reinf_price = p.get("reinforcement_price")
+            avg_price   = p.get("avg_price")
+            if reinforced and reinf_price:
+                entry_cell = (
+                    f"{entry:.2f} EGP<br>"
+                    f"<span style='font-size:11px;color:#c0392b;'>🔄 Re-buy: {reinf_price:.2f} EGP</span><br>"
+                    f"<span style='font-size:11px;color:#7d3c98;font-weight:bold;'>Avg: {avg_price:.2f} EGP</span>"
+                )
+            else:
+                entry_cell = f"{entry:.2f} EGP"
+            open_pos_rows += f"""
+<tr style="border-bottom:1px solid #e8f0f8;">
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#1C4587;">{NAMES.get(sym, sym)}<br><span style="font-size:10px;color:#999;">{sym}</span></td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;">{entry_cell}</td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;color:{pnl_col};font-weight:bold;">{cur_price} EGP &nbsp;<span style="font-size:11px;">({pnl_str})</span></td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;">{dyn_tgt:.2f} EGP</td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;">{entry_date}</td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#4a4a4a;text-align:center;">{entry_score}</td>
+</tr>"""
+        open_positions_block = f"""
+<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;margin:20px 0 6px 0;letter-spacing:0.5px;">📊 Open Positions — Dynamic Target</div>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #c8daf5;border-collapse:collapse;margin-bottom:20px;">
+  <tr style="background:#0B5394;">
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Stock</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Entry Price</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Current Price</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Dynamic Target</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Entry Date</th>
+    <th align="center" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">🧠 Pattern</th>
+  </tr>
+  {open_pos_rows}
+</table>"""
+    else:
+        open_positions_block = ""
+
     parts.append(f"""
 {holiday_banner}
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0B5394;">
-  <tr><td style="padding:20px 24px;">
-    <div style="font-family:Arial,sans-serif;color:#fff;font-size:22px;font-weight:bold;">EGX Institutional Swing Scanner</div>
-    <div style="font-family:Arial,sans-serif;color:#bdd7f5;font-size:13px;margin-top:5px;">{fmt_cairo("%A, %d %B %Y  |  %H:%M")} Cairo</div>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a3a5c;">
+  <tr><td style="padding:22px 28px;">
+    <div style="font-family:Arial,sans-serif;color:#fff;font-size:20px;font-weight:700;letter-spacing:0.3px;">EGX Institutional Swing Scanner</div>
+    <div style="font-family:Arial,sans-serif;color:#8fb8d8;font-size:12px;margin-top:6px;letter-spacing:0.3px;">{fmt_cairo("%A, %d %B %Y  ·  %H:%M")} Cairo</div>
   </td></tr>
 </table>
 {dow_banner}
@@ -1420,85 +1452,135 @@ def build_report(holiday_mode=False, last_trading=None):
   <tr><td style="font-family:Arial,sans-serif;font-size:12px;color:{dq_c};">
     <b>Data Status:</b> {dq_msg}
   </td></tr>
-</table>""")
+</table>
+{_ranking_block}
+{open_positions_block}""")
 
+    SUMMARY_SIGNALS = {"buy", "strong buy", "very strong buy", "institutional buy", "wait"}
     wr=""
-    for s in sorted_stocks:
+    for idx, s in enumerate(sorted_stocks):
         r=results[s]
-        if not r["ok"] or r["score"]<35: continue
-        if r.get("r1", 0) < 18: continue
-        _,tc,tbg,tbr=sig_info(r["score"])
+        if not r["ok"]: continue
+        if r.get("signal","").lower() not in SUMMARY_SIGNALS: continue
+        _sig_l = r.get("signal","").lower()
+        if _sig_l in ("wait","skip"):
+            tc,tbg,tbr = "#721c24","#f8d7da","#f5c6cb"
+        else:
+            _,tc,tbg,tbr = sig_info(r["score"])
+        in_portfolio = s in positions and positions[s].get("status") == "open"
+        portfolio_badge = ' <span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:bold;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;">🔵 In Portfolio</span>' if in_portfolio else ""
+        raw_s = r.get("raw_score", r["score"])
+        raw_tag_s = f'<span style="font-size:10px;color:#aaa;margin-left:4px;">raw {raw_s}</span>' if raw_s != r["score"] else ""
+        ctx_tag_s = f'<span style="font-size:10px;color:#888;background:#f4f4f4;padding:1px 6px;border-radius:8px;margin-left:6px;">{r["ctx_label"]}</span>' if r.get("ctx_label") else ""
+        row_bg = "#fff" if idx % 2 == 0 else "#f9fafb"
         wr+=f"""
-<tr style="border-bottom:1px solid #e0e0e0;">
-  <td style="padding:10px 12px;font-family:Arial,sans-serif;">
-    <b style="font-size:14px;">{NAMES.get(s,s)}</b> {fresh_badge(r["is_fresh"],r["last_dt"])}<br>
-    <span style="font-size:11px;color:#888;">{s} · {SECTORS.get(s,"")}</span></td>
-  <td style="padding:10px 12px;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">{r["price"]} EGP</td>
-  <td style="padding:10px 12px;">
-    <span style="font-family:Arial,sans-serif;display:inline-block;padding:4px 12px;border-radius:14px;font-size:12px;font-weight:bold;background:{tbg};color:{tc};border:1px solid {tbr};">{r["signal"]}</span></td>
-  <td style="padding:10px 12px;">{bar(r["score"])}</td>
-  <td style="padding:10px 12px;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;color:#155724;">{r["target"]} EGP</td>
+<tr style="background:{row_bg};border-bottom:1px solid #edf0f3;">
+  <td style="padding:12px 14px;font-family:Arial,sans-serif;">
+    <div style="font-size:14px;font-weight:600;color:#111;">{NAMES.get(s,s)}</div>
+    <div style="font-size:11px;color:#999;margin-top:2px;">{s} · {SECTORS.get(s,"")}</div>
+    <div style="margin-top:4px;">{fresh_badge(r["is_fresh"],r["last_dt"])}{portfolio_badge}</div>
+  </td>
+  <td align="right" style="padding:12px 14px;font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:#111;white-space:nowrap;">{r["price"]}<span style="font-size:11px;font-weight:400;color:#999;margin-left:3px;">EGP</span></td>
+  <td style="padding:12px 14px;">
+    <span style="font-family:Arial,sans-serif;display:inline-block;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:0.3px;background:{tbg};color:{tc};border:1px solid {tbr};">{r["signal"]}</span>
+  </td>
+  <td style="padding:12px 14px;">
+    {bar(r["score"])}{raw_tag_s}{ctx_tag_s}
+  </td>
+  <td style="padding:12px 14px;text-align:right;font-family:Arial,sans-serif;white-space:nowrap;">
+    {"<div style='font-size:14px;font-weight:700;color:#1a7340;'>" + f'{positions[s]["target"]:.2f}' + " <span style='font-size:11px;font-weight:400;color:#999;'>EGP</span></div><div style='font-size:10px;color:#0B5394;margin-top:2px;'>🎯 " + FIB_LABELS.get(positions[s].get("current_level",0),"") + "</div>" if s in positions and positions[s].get("status")=="open" else "<div style='font-size:14px;font-weight:700;color:#1a7340;'>" + str(r["target"]) + " <span style='font-size:11px;font-weight:400;color:#999;'>EGP</span></div>"}
+  </td>
 </tr>"""
 
     parts.append(f"""
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;border:1px solid #c3e6cb;background:#f8fff8;">
-  <tr style="background:#2e6b20;">
-    <th align="left" style="padding:9px 12px;font-family:Arial,sans-serif;color:#fff;font-size:12px;">Company</th>
-    <th align="left" style="padding:9px 12px;font-family:Arial,sans-serif;color:#fff;font-size:12px;">Price</th>
-    <th align="left" style="padding:9px 12px;font-family:Arial,sans-serif;color:#fff;font-size:12px;">Signal</th>
-    <th align="left" style="padding:9px 12px;font-family:Arial,sans-serif;color:#fff;font-size:12px;">SMC Score</th>
-    <th align="left" style="padding:9px 12px;font-family:Arial,sans-serif;color:#fff;font-size:12px;">Target</th>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;border:1px solid #dde3ea;border-radius:6px;overflow:hidden;border-collapse:separate;">
+  <tr style="background:#1a3a5c;">
+    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Company</th>
+    <th align="right" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Price</th>
+    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Signal</th>
+    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Rank Score / SMC</th>
+    <th align="right" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Target</th>
   </tr>
-  {wr or '<tr><td colspan="5" style="padding:14px;font-family:Arial,sans-serif;color:#856404;">No stocks reached Watch threshold today.</td></tr>'}
+  {wr or '<tr><td colspan="5" style="padding:16px 14px;font-family:Arial,sans-serif;font-size:13px;color:#888;">No data available.</td></tr>'}
 </table>""")
 
     for s in sorted_stocks:
-        r=results[s]; nws=news[s]
+        r = results[s]
         if not r["ok"]:
             parts.append(f"""
 <table width="100%" cellpadding="12" cellspacing="0" border="0" style="margin:24px 0;border-top:3px solid #b02a2a;background:#fff5f5;border:1px solid #f5c6cb;">
   <tr><td style="font-family:Arial,sans-serif;">
     <b style="color:#721c24;font-size:16px;">{NAMES.get(s,s)}</b> <span style="font-size:12px;color:#999;margin-left:8px;">{s}</span><br>
-    <span style="color:#721c24;font-size:13px;">Error: {r.get("error","unknown")}</span>
+    <span style="color:#721c24;font-size:13px;">Error: {_html.escape(r.get("error","unknown"))}</span>
   </td></tr></table>"""); continue
 
-        _,tc,tbg,tbr=sig_info(r["score"])
+        _sig_l2 = r.get("signal","").lower()
+        if _sig_l2 in ("wait","skip"):
+            tc,tbg,tbr = "#721c24","#f8d7da","#f5c6cb"
+        else:
+            _,tc,tbg,tbr = sig_info(r["score"])
         ind_rows=""
-        for nm,sc,mx,lb in r["rows"]:
-            bg="#f0fff4" if sc==mx else ("#fff8f8" if sc==0 else "#fffdf0")
+        for i,(nm,sc,mx,lb) in enumerate(r["rows"]):
+            row_bg = "#fff" if i % 2 == 0 else "#f9fafb"
             ind_rows+=f"""
-<tr style="background:{bg};border-bottom:1px solid #eee;">
-  <td width="175" style="padding:9px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#444;border-right:1px solid #eee;">{nm}</td>
-  <td width="65" style="padding:9px 12px;text-align:center;">{pill(sc,mx)}</td>
-  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;color:#333;">{lb}</td>
+<tr style="background:{row_bg};border-bottom:1px solid #edf0f3;">
+  <td width="170" style="padding:9px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:600;color:#444;border-right:1px solid #eee;">{nm}</td>
+  <td width="70" style="padding:9px 12px;text-align:center;border-right:1px solid #eee;">{pill(sc,mx)}</td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:12px;color:#555;">{lb}</td>
 </tr>"""
 
         ez_html = build_ez_html(r)
         parts.append(f"""
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:32px;border-top:3px solid #0B5394;">
-  <tr><td style="padding:12px 0 2px 0;">
-    <span style="font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:#1C4587;">{NAMES.get(s,s)}</span>
-    <span style="font-family:Arial,sans-serif;font-size:12px;color:#aaa;margin-left:8px;">{s} · {SECTORS.get(s,"")}</span>
-    {fresh_badge(r["is_fresh"],r["last_dt"])}
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:36px;border-top:3px solid #1a3a5c;">
+  <tr><td style="padding:14px 0 4px 0;">
+    <span style="font-family:Arial,sans-serif;font-size:20px;font-weight:700;color:#1a3a5c;">{NAMES.get(s,s)}</span>
+    <span style="font-family:Arial,sans-serif;font-size:12px;color:#bbb;margin-left:10px;font-weight:400;">{s}</span>
+    <span style="font-family:Arial,sans-serif;font-size:12px;color:#ccc;margin-left:4px;">· {SECTORS.get(s,"")}</span>
+    <span style="margin-left:10px;">{fresh_badge(r["is_fresh"],r["last_dt"])}</span>
   </td></tr>
 </table>
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{tbg};border:1px solid {tbr};margin:8px 0;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{tbg};border:1px solid {tbr};border-radius:6px;margin:8px 0;">
   <tr>
-    <td style="padding:14px 16px;">
-      <div style="font-family:Arial,sans-serif;font-size:17px;font-weight:bold;color:{tc};">{r["signal"]}</div>
-      <div style="font-family:Arial,sans-serif;font-size:13px;color:#444;margin-top:6px;">SMC Score: &nbsp;{bar(r["score"])}</div>
+    <td style="padding:16px 20px;">
+      <div style="font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:{tc};letter-spacing:0.3px;">{r["signal"]}</div>
+      {"<div style='margin-top:4px;'><span style='font-family:Arial,sans-serif;font-size:11px;color:#666;background:#f0f0f0;padding:2px 8px;border-radius:10px;'>" + r["ctx_label"] + "</span></div>" if r.get("ctx_label") else ""}
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:12px;">
+        <tr>
+          <td style="text-align:center;padding:8px 10px;background:rgba(0,0,0,0.06);border-radius:6px;">
+            <div style="font-family:Arial,sans-serif;font-size:20px;font-weight:800;color:{tc};">{round(0.60*(r.get("factor_exp_score",0) or 0)+0.40*r["score"],1)}</div>
+            <div style="font-family:Arial,sans-serif;font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;">Rank Score</div>
+          </td>
+          <td width="8"></td>
+          <td style="text-align:center;padding:8px 10px;background:rgba(0,0,0,0.04);border-radius:6px;">
+            <div style="font-family:Arial,sans-serif;font-size:16px;font-weight:700;color:#0B5394;">{r.get("factor_exp_score",0) or 0}</div>
+            <div style="font-family:Arial,sans-serif;font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;">Expectancy</div>
+          </td>
+          <td width="8"></td>
+          <td style="text-align:center;padding:8px 10px;background:rgba(0,0,0,0.04);border-radius:6px;">
+            <div style="font-family:Arial,sans-serif;font-size:16px;font-weight:700;color:#444;">{r["score"]}</div>
+            <div style="font-family:Arial,sans-serif;font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;">SMC</div>
+          </td>
+        </tr>
+      </table>
+      <div style="margin-top:8px;">{bar(r["score"])}</div>
+      {"<div style='font-family:Arial,sans-serif;font-size:11px;color:#999;margin-top:4px;'>raw&nbsp;" + str(r.get("raw_score","")) + "</div>" if r.get("raw_score") and r["raw_score"] != r["score"] else ""}
     </td>
-    <td align="right" style="padding:14px 16px;">
-      <div style="font-family:Arial,sans-serif;font-size:24px;font-weight:bold;color:#222;">{r["price"]} EGP</div>
-      <div style="font-family:Arial,sans-serif;font-size:11px;color:#888;">{r["last_dt"]} · {r.get("price_src","")}</div>
+    <td align="right" style="padding:16px 20px;white-space:nowrap;vertical-align:top;">
+      <div style="font-family:Arial,sans-serif;font-size:26px;font-weight:bold;color:#111;">{r["price"]}</div>
+      <div style="font-family:Arial,sans-serif;font-size:12px;color:#888;margin-top:2px;">EGP</div>
     </td>
   </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 10px 0;background:#f9fafb;border:1px solid #e8eaed;border-radius:6px;">
+  <tr><td style="padding:9px 14px;">
+    <span style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.8px;">Decision Driver &nbsp;</span>
+    <span style="font-family:Arial,sans-serif;font-size:12px;color:#444;">{"Discount gate passed. Factor expectancy ranking drove entry." if r["signal"] not in ("Wait","Skip") else ("In discount zone. Price gate failed — not yet in Deep Discount." if r["signal"]=="Wait" and r.get("r1",0)>0 else "In discount zone. Entry score or price gate not yet met." if r["signal"]=="Wait" else "Above equilibrium — premium zone. SMC setup inactive.")}</span>
+  </td></tr>
 </table>
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0;">
   <tr>
     <td width="130" style="padding:10px 16px;background:#d4edda;border:1px solid #c3e6cb;text-align:center;">
-      <div style="font-family:Arial,sans-serif;font-size:10px;color:#155724;font-weight:bold;letter-spacing:1px;">TARGET</div>
-      <div style="font-family:Arial,sans-serif;font-size:17px;font-weight:bold;color:#155724;">{r["target"]} EGP</div>
+      {_target_box_html(s, r, positions)}
     </td>
     <td width="12"></td>
     <td style="padding:10px 14px;background:#f4f8ff;border:1px solid #d0e4f7;font-family:Arial,sans-serif;font-size:12px;color:#444;">
@@ -1506,21 +1588,24 @@ def build_report(holiday_mode=False, last_trading=None):
     </td>
   </tr>
 </table>
-<div style="font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#555;margin:12px 0 5px 0;letter-spacing:0.5px;">SMC INDICATOR BREAKDOWN</div>
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-collapse:collapse;">
-  <tr style="background:#f5f5f5;border-bottom:1px solid #ddd;">
-    <th width="175" align="left" style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;border-right:1px solid #eee;">Indicator</th>
-    <th width="65" align="center" style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;">Score</th>
-    <th align="left" style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;">Reading</th>
+<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#888;margin:16px 0 6px 0;letter-spacing:1px;text-transform:uppercase;">SMC Indicator Breakdown</div>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e8eaed;border-collapse:collapse;border-radius:4px;overflow:hidden;">
+  <tr style="background:#f6f7f9;">
+    <th width="170" align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#777;font-weight:600;border-right:1px solid #eee;letter-spacing:0.4px;">Indicator</th>
+    <th width="70" align="center" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#777;font-weight:600;border-right:1px solid #eee;">Score</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#777;font-weight:600;">Reading</th>
   </tr>
   {ind_rows}
 </table>
 {ez_html}
+{build_pattern_html(r)}
 """)
 
     parts.append(f"""
-<table width="100%" cellpadding="12" cellspacing="0" border="0" style="margin-top:30px;background:#f0f0f0;border-top:1px solid #ddd;">
-  <tr><td align="center" style="font-family:Arial,sans-serif;font-size:11px;color:#999;">EGX Institutional Scanner · TradingView Data Engine</td></tr>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:40px;border-top:1px solid #e8eaed;">
+  <tr><td align="center" style="padding:16px;font-family:Arial,sans-serif;font-size:11px;color:#bbb;letter-spacing:0.4px;">
+    EGX Institutional Scanner &nbsp;·&nbsp; TradingView Data Engine
+  </td></tr>
 </table>""")
 
     html = f"""<!DOCTYPE html><html><body style="margin:0;padding:20px;background:#eef2f7;"><table width="680" cellpadding="0" cellspacing="0" border="0" align="center" style="background:#ffffff;border:1px solid #d0d7e2;"><tr><td style="padding:0 24px 24px 24px;">{"".join(parts)}</td></tr></table></body></html>"""
@@ -1554,6 +1639,270 @@ def send_email(html, subject_suffix=""):
 # TELEGRAM ALERTS
 # =========================================
 
+def send_telegram_zone3_reinforcement(symbol, entry_price, reinforcement_price, avg_price):
+    """Send alert when Zone 3 reinforcement is triggered"""
+    token   = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return False
+
+    name = NAMES.get(symbol, symbol)
+    drop_pct = ((reinforcement_price - entry_price) / entry_price) * 100
+
+    def fib_levels_str(ep):
+        levels = [
+            (12.0, ep * 1.120),
+            (23.6, ep * 1.236),
+            (38.2, ep * 1.382),
+            (50.0, ep * 1.500),
+        ]
+        return "\n".join(
+            f"   {'Min +12.0%':10}  {price:.2f} EGP" if pct == 12.0
+            else f"   Fib {pct:.1f}%   {price:.2f} EGP"
+            for pct, price in levels
+        )
+
+    message = (
+        f"🔄 *Zone 3 Reinforcement — Adding to Position*\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"*{name}*  `{symbol}`\n\n"
+        f"🟢 *Initial Entry*\n"
+        f"   Price       {entry_price:.2f} EGP\n"
+        f"{fib_levels_str(entry_price)}\n\n"
+        f"🔵 *Zone 3 Re-entry*\n"
+        f"   Price       {reinforcement_price:.2f} EGP\n"
+        f"   Drop        *{drop_pct:.1f}%* from initial entry\n"
+        f"{fib_levels_str(reinforcement_price)}\n\n"
+        f"📐 *New Avg Entry:  {avg_price:.2f} EGP*\n"
+        f"⚠️  Exit on first weakness after +12%\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}"
+    )
+
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
+            timeout=10,
+        )
+        return True
+    except Exception as e:
+        print(f"❌ Telegram error: {e}")
+        return False
+
+
+def send_telegram_target_update(symbol, entry_price, old_target, new_target, current_price, fib_level):
+    """Send alert when dynamic target is updated"""
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not token or not chat_id:
+        return False
+
+    old_pct = ((old_target - entry_price) / entry_price) * 100
+    new_pct = ((new_target - entry_price) / entry_price) * 100
+
+    message = (
+        f"🚀 *Dynamic Target Updated*\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"*{NAMES.get(symbol, symbol)}*  `{symbol}`\n\n"
+        f"   Entry         {entry_price:.2f} EGP\n"
+        f"   Current       {current_price:.2f} EGP\n\n"
+        f"   Old Target    {old_target:.2f} EGP  (*+{old_pct:.1f}%*)\n"
+        f"   New Target    *{new_target:.2f} EGP*  (*+{new_pct:.1f}%*) ⬆️\n\n"
+        f"   Fib Level     *{fib_level:.1f}%*\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}"
+    )
+
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
+            timeout=10,
+        )
+        return True
+    except Exception as e:
+        print(f"❌ Telegram error: {e}")
+        return False
+
+# =========================================
+# POSITION TRACKING & MANAGEMENT
+# =========================================
+
+def load_open_positions():
+    """Load open positions from JSON file"""
+    global open_positions
+    if os.path.exists(POSITIONS_FILE):
+        try:
+            with open(POSITIONS_FILE, 'r') as f:
+                open_positions = json.load(f)
+        except Exception as e:
+            print(f"⚠️ Error loading positions: {e}")
+            open_positions = {}
+    return open_positions
+
+def save_open_positions():
+    """Save open positions to JSON file"""
+    try:
+        with open(POSITIONS_FILE, 'w') as f:
+            json.dump(open_positions, f, indent=2)
+    except Exception as e:
+        print(f"❌ Error saving positions: {e}")
+
+def suggested_position_size(portfolio_value: float, entry_score: int) -> dict:
+    """
+    Score-proportional sizing: allocates more capital to high-conviction signals.
+    Tiered by score to improve risk-adjusted returns while keeping MDD minimal.
+    """
+    if entry_score >= 75:
+        pct, tier = 5.0, "Excellent"
+    elif entry_score >= 65:
+        pct, tier = 3.5, "Very Good"
+    elif entry_score >= 55:
+        pct, tier = 2.5, "Good"
+    elif entry_score >= 45:
+        pct, tier = 1.5, "Moderate"
+    else:
+        pct, tier = 1.0, "Weak"
+    amount = portfolio_value * pct / 100
+    return {"pct": pct, "amount": round(amount, 2), "tier": tier}
+
+
+def add_position(symbol, entry_price, entry_date, volatility_min_target=0.12, entry_score=0, entry_pattern_score=0, entry_effective_score=0):
+    """Add new position when entry signal is triggered"""
+    global open_positions
+
+    # حساب أهداف Fibonacci
+    fib_levels = [0.236, 0.382, 0.50, 0.618, 1.0, 1.5, 2.0]
+    min_tgt = entry_price * (1 + volatility_min_target)
+    fib_targets = [min_tgt]
+    for lv in fib_levels:
+        p = entry_price * (1 + lv)
+        if p >= min_tgt:
+            fib_targets.append(p)
+
+    open_positions[symbol] = {
+        "entry_date": entry_date,
+        "entry_price": entry_price,
+        "fib_targets": fib_targets,
+        "current_level": 0,
+        "target": fib_targets[0],
+        "status": "open",
+        "entry_score": entry_score,
+        "entry_pattern_score": entry_pattern_score,
+        "entry_effective_score": entry_effective_score,
+        "suggested_risk_pct": FULL_POSITION_PCT if entry_score >= 70 else MAX_RISK_PER_TRADE_PCT,
+    }
+    save_open_positions()
+    print(f"✅ Position added: {symbol} @ {entry_price:.2f} EGP")
+
+def update_position_target(symbol, new_level, current_price):
+    """Update position target and send notification"""
+    global open_positions
+
+    if symbol not in open_positions:
+        return False
+
+    pos = open_positions[symbol]
+    old_target = pos["target"]
+    old_level = pos["current_level"]
+
+    if new_level >= len(pos["fib_targets"]):
+        return False
+
+    pos["current_level"] = new_level
+    pos["target"] = pos["fib_targets"][new_level]   # new_level = التارجت التالي غير المتجاوز
+    save_open_positions()
+
+    # إرسال تنبيه
+    fib_pct = ((pos["target"] - pos["entry_price"]) / pos["entry_price"]) * 100
+    send_telegram_target_update(
+        symbol,
+        pos["entry_price"],
+        old_target,
+        pos["target"],
+        current_price,
+        fib_pct
+    )
+
+    print(f"🚀 {symbol}: Target raised from {old_target:.2f} to {pos['target']:.2f}")
+    return True
+
+def close_position(symbol, exit_price, reason="manual"):
+    """Close position and record the trade"""
+    global open_positions
+
+    if symbol not in open_positions:
+        return False
+
+    pos = open_positions[symbol]
+    pnl = exit_price - pos["entry_price"]
+    pnl_pct = (pnl / pos["entry_price"]) * 100
+
+    pos["status"] = "closed"
+    pos["exit_price"] = exit_price
+    pos["exit_reason"] = reason
+    pos["pnl"] = pnl
+    pos["pnl_pct"] = pnl_pct
+    save_open_positions()
+
+    print(f"❌ Position closed: {symbol} | PnL: {pnl_pct:.2f}%")
+    return True
+
+def monitor_positions(current_prices):
+    """Monitor open positions and update targets"""
+    global open_positions
+
+    for symbol in list(open_positions.keys()):
+        if open_positions[symbol]["status"] != "open":
+            continue
+
+        if symbol not in current_prices:
+            continue
+
+        price = current_prices[symbol]
+        pos = open_positions[symbol]
+        fib_targets = pos["fib_targets"]
+
+        # إيجاد أول تارجت لم يُتجاوز بعد (next_level = index التارجت التالي المطلوب)
+        next_level = pos["current_level"]
+        for i in range(pos["current_level"], len(fib_targets)):
+            if price >= fib_targets[i]:
+                next_level = i + 1
+            else:
+                break
+        next_level = min(next_level, len(fib_targets) - 1)
+
+        if next_level > pos["current_level"]:
+            update_position_target(symbol, next_level, price)
+
+def monitor_reinforcement(current_prices, results):
+    """Check if any open position has hit Zone 3 — trigger re-buy reinforcement once."""
+    global open_positions
+
+    for symbol in list(open_positions.keys()):
+        pos = open_positions[symbol]
+        if pos["status"] != "open" or pos.get("reinforced"):
+            continue
+        if symbol not in current_prices or symbol not in results:
+            continue
+        ez = results[symbol].get("entry_zones")
+        if not ez or "z3" not in ez:
+            continue
+        z3 = ez["z3"]
+        cur = current_prices[symbol]
+        if z3["lo"] <= cur <= z3["hi"]:
+            entry_price = pos["entry_price"]
+            avg_price = round((entry_price + cur) / 2, 2)
+            open_positions[symbol]["reinforced"] = True
+            open_positions[symbol]["reinforcement_price"] = round(cur, 2)
+            open_positions[symbol]["avg_price"] = avg_price
+            save_open_positions()
+            print(f"🔄 Z3 Reinforcement triggered: {symbol} @ {cur:.2f} (avg {avg_price:.2f})")
+            send_telegram_zone3_reinforcement(symbol, entry_price, round(cur, 2), avg_price)
+
+
 def send_telegram_alerts(results):
     """
     Send a Telegram message for every stock with score >= 35.
@@ -1565,20 +1914,61 @@ def send_telegram_alerts(results):
         print("Telegram: TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not set — skipping.")
         return
 
+    # Load open positions
+    positions = load_open_positions()
+
     # Collect qualifying stocks sorted by score descending
+    # Skip مستبعدة — الجودة الخام تحت 35 ليست إشارة حتى لو المضاعفات رفعت الـ score
     alerts = [
         (s, results[s])
         for s in STOCKS
-        if results[s].get("ok") and results[s].get("score", 0) >= 35
+        if results[s].get("ok")
+        and results[s].get("signal") != "Skip"
+        and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
     ]
-    alerts.sort(key=lambda x: x[1].get("score", 0), reverse=True)
+    alerts.sort(key=lambda x: 0.60 * (x[1].get("factor_exp_score", 0) or 0) + 0.40 * (x[1].get("score", 0) or 0), reverse=True)
 
     if not alerts:
         # Send a "nothing today" summary so you know the scan ran
         msg = (
             f"📊 *EGX Daily Scan — {now_cairo().strftime('%d %b %Y')}*\n"
-            f"No stocks reached the Watch threshold (≥35) today."
+            f"━━━━━━━━━━━━━━━━━━━━━\n"
+            f"No setups reached the Wait threshold (≥35) today."
         )
+        open_pos = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
+        open_pos.sort(key=lambda x: (
+            ((results[x[0]]["price"] - x[1]["entry_price"]) / x[1]["entry_price"])
+            if x[0] in results and results[x[0]].get("ok") else
+            ((x[1].get("current_price", x[1]["entry_price"]) - x[1]["entry_price"]) / x[1]["entry_price"])
+        ), reverse=True)
+        if open_pos:
+            msg += f"\n\n━━━━━━━━━━━━━━━━━━━━━"
+            msg += f"\n📂 *Open Positions  ({len(open_pos)})*\n"
+            for sym, pos in open_pos:
+                entry = pos["entry_price"]
+                tgt   = pos["target"]
+                if sym in results and results[sym].get("ok"):
+                    cur_price = results[sym].get("price", "—")
+                elif "current_price" in pos:
+                    cur_price = pos["current_price"]
+                else:
+                    cur_price = "—"
+                if cur_price != "—":
+                    pnl_pct = ((float(cur_price) - entry) / entry * 100)
+                    pnl_str = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
+                    cur_str = f"{cur_price} EGP  ({pnl_str})"
+                else:
+                    cur_str = "—"
+                score_tag = f"  |  Entry Score {pos['entry_score']}" if pos.get('entry_score') else ""
+                msg += f"\n📌 *{sym}*  {NAMES.get(sym, sym)}"
+                msg += f"\n   Entry   {entry:.2f} EGP"
+                msg += f"\n   Now     {cur_str}"
+                msg += f"\n   Target  *{tgt:.2f} EGP*{score_tag}"
+                if pos.get("reinforced") and pos.get("reinforcement_price"):
+                    msg += f"\n   Re-buy  {pos['reinforcement_price']:.2f} EGP"
+                    msg += f"\n   Avg     *{pos['avg_price']:.2f} EGP*"
+                msg += "\n"
+            msg += "━━━━━━━━━━━━━━━━━━━━━"
         try:
             requests.post(
                 f"https://api.telegram.org/bot{token}/sendMessage",
@@ -1591,45 +1981,154 @@ def send_telegram_alerts(results):
 
     # Build one summary message with all qualifying stocks
     date_str = now_cairo().strftime("%d %b %Y")
-    lines = [f"📊 *EGX Daily Scan — {date_str}*\n_{len(alerts)} stock(s) above threshold_\n"]
+    lines = [
+        f"📊 *EGX Daily Scan — {date_str}*",
+        f"━━━━━━━━━━━━━━━━━━━━━",
+        f"_{len(alerts)} setup(s) above threshold_\n",
+    ]
+
+    # Add open positions section if any exist
+    open_positions_list = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
+    open_positions_list.sort(key=lambda x: (
+        ((results[x[0]]["price"] - x[1]["entry_price"]) / x[1]["entry_price"])
+        if x[0] in results and results[x[0]].get("ok") else
+        ((x[1].get("current_price", x[1]["entry_price"]) - x[1]["entry_price"]) / x[1]["entry_price"])
+    ), reverse=True)
+    if open_positions_list:
+        lines.append("━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(f"📂 *Open Positions  ({len(open_positions_list)})*\n")
+        for sym, pos in open_positions_list:
+            entry = pos["entry_price"]
+            tgt   = pos["target"]
+            if sym in results and results[sym].get("ok"):
+                cur_price = results[sym].get("price", "—")
+            elif "current_price" in pos:
+                cur_price = pos["current_price"]
+            else:
+                cur_price = "—"
+            if cur_price != "—":
+                pnl_pct = ((float(cur_price) - entry) / entry * 100)
+                pnl_str = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
+                cur_str = f"{cur_price} EGP  ({pnl_str})"
+            else:
+                cur_str = "—"
+            score_tag = f"  |  Entry Score {pos['entry_score']}" if pos.get('entry_score') else ""
+            lines.append(f"📌 *{sym}*  {NAMES.get(sym, sym)}")
+            lines.append(f"   Entry   {entry:.2f} EGP")
+            lines.append(f"   Now     {cur_str}")
+            lines.append(f"   Target  *{tgt:.2f} EGP*{score_tag}")
+            if pos.get("reinforced") and pos.get("reinforcement_price"):
+                lines.append(f"   Re-buy  {pos['reinforcement_price']:.2f} EGP")
+                lines.append(f"   Avg     *{pos['avg_price']:.2f} EGP*")
+            lines.append("")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━\n")
+
+    # ── EARLY BUY (Research) section — appended after main alerts ──────
+    early_buy_alerts = [
+        (s, results[s])
+        for s in STOCKS
+        if results[s].get("ok") and results[s].get("early_buy_research")
+    ]
+    early_buy_alerts.sort(key=lambda x: 0.60 * (x[1].get("factor_exp_score", 0) or 0) + 0.40 * (x[1].get("score", 0) or 0), reverse=True)
 
     SIGNAL_EMOJI = {
-        "STRONG BUY":  "🟢",
-        "BUY":         "🟩",
-        "WATCH":       "🟡",
-        "NEUTRAL":     "⚪",
-        "SELL":        "🔴",
-        "STRONG SELL": "🔴",
+        "INSTITUTIONAL BUY": "🟣",
+        "VERY STRONG BUY":   "🟢",
+        "STRONG BUY":        "🟢",
+        "BUY":               "🟩",
+        "WAIT":              "🟡",
+        "NEUTRAL":           "⚪",
+        "SELL":              "🔴",
+        "STRONG SELL":       "🔴",
     }
+    BUY_FAMILY_UPPER = {"BUY", "STRONG BUY", "VERY STRONG BUY", "INSTITUTIONAL BUY"}
 
     for s, r in alerts:
         signal_upper = r.get("signal", "").upper()
         emoji        = SIGNAL_EMOJI.get(signal_upper, "🔵")
         fresh_flag   = "✅" if r.get("is_fresh") else "⚠️"
-        is_buy       = signal_upper in ("BUY", "STRONG BUY")
+        is_buy       = signal_upper in BUY_FAMILY_UPPER
 
-        if is_buy:
-            # Full details for BUY / STRONG BUY
-            upside = ""
-            try:
-                pct    = (float(r["target"]) - float(r["price"])) / float(r["price"]) * 100
-                upside = f" (+{pct:.1f}%)"
-            except Exception:
-                pass
-            lines.append(
-                f"{emoji} *{NAMES.get(s, s)}* `{s}`\n"
-                f"   Signal: *{r['signal']}*  |  Score: *{r['score']}/100*\n"
-                f"   Price: *{r['price']} EGP*  →  Target: *{r['target']} EGP*{upside}\n"
-                f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
+        in_portfolio = s in positions and positions[s].get("status") == "open"
+        portfolio_tag = "  🔵 _In Portfolio_" if in_portfolio else ""
+
+        # Pattern Intelligence line
+        pat = r.get("pattern", {})
+        if pat and pat.get("ok"):
+            warn = "  ⚠️ _Low reliability_" if pat.get("low_reliability") else ""
+            _ev = pat['effective_score'] / 20
+            _el = "Excellent" if _ev >= 3 else "Strong" if _ev >= 2 else "Moderate" if _ev >= 1 else "Weak"
+            pi_line = (
+                f"   🧠 Pattern    *{pat['pattern_score']:.0f}/100*  |  Effective *{_ev:.1f}/5* ({_el}){warn}\n"
+                f"      Win Rate   *{pat['win_rate']*100:.0f}%*  |  Avg Gain *+{pat['avg_gain']:.1f}%*"
+                f"  ({pat['similar_count']} cases)\n"
             )
         else:
-            # WATCH only — no target, no buy mention
+            pi_line = ""
+
+        raw = r.get("raw_score", r["score"])
+        adj_tag = f"  _(raw {raw})_" if raw != r["score"] else ""
+        ctx_str = f"   {r['ctx_label']}\n" if r.get("ctx_label") else ""
+
+        if is_buy:
+            target_to_display = r["target"]
+            if in_portfolio:
+                target_to_display = positions[s]["target"]
+
+            upside = ""
+            try:
+                pct = (float(target_to_display) - float(r["price"])) / float(r["price"]) * 100
+                upside = f"  (+{pct:.1f}%)"
+            except Exception:
+                pass
+
+            if in_portfolio:
+                size_line = "   💼 _Monitoring open position — no new entry_\n"
+            else:
+                score_val = r.get("score", 0)
+                sizing = suggested_position_size(1, score_val)
+                size_line = f"   💼 Position Size  *{sizing['pct']:.1f}%* of portfolio  ({sizing['tier']})\n"
+
             lines.append(
-                f"{emoji} *{NAMES.get(s, s)}* `{s}`\n"
-                f"   👀 Watch  |  Score: *{r['score']}/100*\n"
-                f"   Price: *{r['price']} EGP*\n"
-                f"   Data: {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
+                f"{'─'*25}\n"
+                f"{emoji} *{NAMES.get(s, s)}*  `{s}`{portfolio_tag}\n"
+                f"   Signal     *{r['signal']}*\n"
+                f"   SMC Score  *{r['score']}/100*{adj_tag}\n"
+                f"{ctx_str}"
+                f"   Price      *{r['price']} EGP*\n"
+                f"   Target     *{round(float(target_to_display), 2)} EGP*{upside}\n"
+                f"{size_line}"
+                f"{pi_line}"
+                f"   Data       {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
             )
+        else:
+            lines.append(
+                f"{'─'*25}\n"
+                f"{emoji} *{NAMES.get(s, s)}*  `{s}`{portfolio_tag}\n"
+                f"   Signal     {emoji} {r.get('signal', 'Wait')}\n"
+                f"   SMC Score  *{r['score']}/100*{adj_tag}\n"
+                f"{ctx_str}"
+                f"   Price      *{r['price']} EGP*\n"
+                f"{pi_line}"
+                f"   Data       {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
+            )
+
+    # ── Append EARLY BUY (Research) section ────────────────────────────
+    if early_buy_alerts:
+        lines.append("━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(f"🔬 *EARLY BUY — Research Shadow*  _(not for entry)_\n")
+        lines.append(f"_{len(early_buy_alerts)} signal(s) — partial discount, score ≥ 65, price gate pending_\n")
+        for s, r in early_buy_alerts:
+            raw = r.get("raw_score", r["score"])
+            lines.append(
+                f"{'─'*25}\n"
+                f"🔬 *{NAMES.get(s, s)}*  `{s}`\n"
+                f"   Raw Score   *{raw}/100*\n"
+                f"   Price       *{r['price']} EGP*\n"
+                f"   R1 Position {r.get('r1', 0):.0f}/{W_PRICE:.0f} — partial discount\n"
+                f"   _Research tracking only — no portfolio action_\n"
+            )
+        lines.append("━━━━━━━━━━━━━━━━━━━━━")
 
     full_msg = "\n".join(lines)
 
@@ -1669,20 +2168,22 @@ def send_alert_for_high_score(stock, score, result):
     """
     إرسال تنبيه فوري عندما يصل score إلى 35+
     """
-    print(f"\n🚨 ALERT: {NAMES.get(stock, stock)} ({stock}) وصل score {score}/100!")
+    print(f"\n🚨 ALERT: {NAMES.get(stock, stock)} ({stock}) score {score}/100!")
     
     # إرسال Telegram
     token = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     
     if token and chat_id:
-        signal = result.get("signal", "WATCH").upper()
+        signal = result.get("signal", "WAIT").upper()
         emoji_map = {
-            "STRONG BUY": "🟢",
-            "BUY": "🟩",
-            "WATCH": "🟡",
+            "INSTITUTIONAL BUY": "🟣",
+            "VERY STRONG BUY":   "🟢",
+            "STRONG BUY":        "🟢",
+            "BUY":               "🟩",
+            "WAIT":              "🟡",
         }
-        emoji = emoji_map.get(signal, "🔵")
+        emoji = emoji_map.get(signal, "🟡")
         
         try:
             upside = ""
@@ -1692,12 +2193,31 @@ def send_alert_for_high_score(stock, score, result):
             except:
                 pass
             
+            pat = result.get("pattern", {})
+            pi_line = ""
+            if pat and pat.get("ok"):
+                _ev = pat['effective_score'] / 20
+                _el = "Excellent" if _ev >= 3 else "Strong" if _ev >= 2 else "Moderate" if _ev >= 1 else "Weak"
+                pi_line = (
+                    f"\n   🧠 Pattern    *{pat['pattern_score']:.0f}/100*  |  Effective *{_ev:.1f}/5* ({_el})"
+                    f"\n      Win Rate   *{pat['win_rate']*100:.0f}%*  |  Avg Gain *+{pat['avg_gain']:.1f}%*"
+                    f"  ({pat['similar_count']} cases)"
+                )
+
+            raw_alert = result.get("raw_score", score)
+            adj_tag = f"  _(raw {raw_alert})_" if raw_alert != score else ""
+            ctx_alert = f"\n   {result['ctx_label']}" if result.get("ctx_label") else ""
             msg = (
-                f"🚨 *ALERT* — {emoji} {NAMES.get(stock, stock)}\n"
-                f"Score: *{score}/100*  |  Signal: *{signal}*\n"
-                f"Price: *{result['price']} EGP*\n"
-                f"Target: *{result['target']} EGP*{upside}\n"
-                f"Time: {now_cairo().strftime('%H:%M:%S')}"
+                f"🚨 *Real-Time Alert*\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"{emoji} *{NAMES.get(stock, stock)}*  `{stock}`\n\n"
+                f"   Signal     *{signal}*\n"
+                f"   SMC Score  *{score}/100*{adj_tag}{ctx_alert}\n"
+                f"   Price      *{result['price']} EGP*\n"
+                f"   Target     *{round(float(result['target']), 2)} EGP*{upside}"
+                f"{pi_line}\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}"
             )
             
             requests.post(
@@ -1710,180 +2230,261 @@ def send_alert_for_high_score(stock, score, result):
             print(f"❌ Telegram alert error: {e}")
 
 
+
+
 # =========================================
-# MONITORING FUNCTION
+# UTILITY HELPERS
 # =========================================
 
-def monitor_scores():
-    """
-    مراقبة الـ scores بشكل مستمر وإرسال تنبيهات فوراً عند الوصول إلى 35+
-    """
-    global last_alerted_stocks
-    
-    print(f"\n▶️ بدء المراقبة المستمرة في {fmt_cairo()}")
-    
-    while monitoring_active:
-        try:
-            # تنفيذ التحليل
-            html, results = build_report(holiday_mode=False)
-            
-            # البحث عن stocks وصلت 35+
-            current_qualified = {
-                s for s in STOCKS
-                if results[s].get("ok") and results[s].get("score", 0) >= 35
-            }
-            
-            # إرسال تنبيهات للـ stocks الجديدة
-            new_alerts = current_qualified - last_alerted_stocks
-            for stock in new_alerts:
-                score = results[stock].get("score", 0)
-                send_alert_for_high_score(stock, score, results[stock])
-                last_alerted_stocks.add(stock)
-            
-            # حفظ البيانات الحالية
-            global last_score_data
-            last_score_data = results
-            
-            # انتظر 5 دقائق قبل التحديث التالي
-            time.sleep(300)
-            
-        except Exception as e:
-            print(f"❌ Monitor error: {e}")
-            traceback.print_exc()
-            time.sleep(60)
+def is_market_hours():
+    """True if current Cairo time is between 10:00 and 14:30."""
+    now = now_cairo()
+    t = now.hour * 60 + now.minute
+    return 600 <= t <= 870   # 10:00–14:30
 
+def is_trading_day_today():
+    """Alias for is_egx_trading_day() using today's date."""
+    return is_egx_trading_day(today_cairo())
 
 # =========================================
 # SCHEDULED TASKS
 # =========================================
 
-def daily_scan():
+def _collect_current_prices(results):
+    return {
+        s: results[s]["price"] for s in STOCKS
+        if results[s].get("ok")
+        and isinstance(results[s].get("price"), (int, float))
+        and results[s]["price"] > 0
+    }
+
+_BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy"}
+
+def _register_new_positions(results):
     """
-    المسح اليومي في تمام الساعة 8:30 صباحاً
+    Registers new positions for all buy-eligible signals.
+    Eligibility: total >= 35 AND r1 >= PRICE_GATE AND adj_score >= entry_gate.
+    liq_ok (Sweep & Reverse) is metadata only — does not block position entry.
+    Signal class (Buy/Strong Buy/Very Strong Buy/Institutional Buy) reflects adj_score tier.
     """
-    print(f"\n📅 Daily scan started at {fmt_cairo()}")
-    
-    # تحميل النتائج السابقة
+    # Single source of truth: signal field — classify() ensures all buy classes
+    # passed both the price gate and the adj_score entry gate.
+    qualifying = {
+        s for s in STOCKS
+        if results[s].get("ok") and results[s].get("signal") in _BUY_SIGNALS
+    }
+    for stock in qualifying:
+        positions = load_open_positions()
+        if stock not in positions:
+            price = results[stock].get("price", 0)
+            if price > 0:
+                pat = results[stock].get("pattern") or {}
+                add_position(stock, price, datetime.now(CAIRO).isoformat(),
+                             entry_score=results[stock].get("score", 0),
+                             entry_pattern_score=round(pat.get("pattern_score", 0)),
+                             entry_effective_score=round(pat.get("effective_score", 0)))
+                print(f"📌 تسجيل مركز جديد ({results[stock].get('signal')}): {NAMES.get(stock, stock)} @ {price}")
+
+def backfill_pattern_scores():
+    """
+    للمراكز المفتوحة التي لا تحتوي على entry_pattern_score،
+    يحسب الـ pattern_score على البيانات حتى تاريخ الدخول ويحدّثها.
+    """
+    positions = load_open_positions()
+    needs_backfill = [
+        (sym, p) for sym, p in positions.items()
+        if p.get("status") == "open" and not p.get("entry_pattern_score")
+    ]
+
+    if not needs_backfill:
+        return
+
+    print(f"\n🔄 Backfilling pattern scores for {len(needs_backfill)} positions...")
+    from pattern_engine import analyze_entry_patterns
+
+    updated = 0
+    for sym, p in needs_backfill:
+        try:
+            entry_date_str = str(p.get("entry_date", ""))[:10]
+            # نجلب 2 سنة من البيانات ثم نقطع عند تاريخ الدخول
+            df = download_data(sym, days=520)
+            if df is None or df.empty:
+                print(f"  ⚠️  {sym}: no data")
+                continue
+
+            entry_dt = pd.Timestamp(entry_date_str)
+            df_at_entry = df[df.index <= entry_dt]
+
+            if len(df_at_entry) < 80:
+                print(f"  ⚠️  {sym}: insufficient data at entry ({len(df_at_entry)} bars)")
+                continue
+
+            result = analyze_entry_patterns(df_at_entry, symbol=sym)
+            score = round(result.get("pattern_score", 0)) if result.get("ok") else 0
+            positions[sym]["entry_pattern_score"] = score
+            updated += 1
+            print(f"  ✅ {sym}: pattern_score at entry = {score}")
+
+        except Exception as e:
+            print(f"  ❌ {sym}: {e}")
+
+    if updated:
+        with open(POSITIONS_FILE, "w") as f:
+            json.dump(positions, f, indent=2)
+        print(f"✅ Backfilled {updated} positions\n")
+
+
+def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
+    """
+    Shared workflow for daily and manual scans:
+    1. Fetch data once
+    2. Register new positions + update targets
+    3. Rebuild HTML from cached data (no re-fetch)
+    4. Send email + Telegram
+    5. Save results + detect changes
+    """
     previous_results = load_previous_results()
-    
+
+    # Step 0: backfill missing pattern scores for existing positions
+    backfill_pattern_scores()
+
+    # Step 1: fetch data
+    html, results = build_report(holiday_mode=holiday_mode, last_trading=last_trading)
+
+    # Step 2: register positions, update targets
+    _register_new_positions(results)
+    cur_prices = _collect_current_prices(results)
+    monitor_positions(cur_prices)
+    monitor_reinforcement(cur_prices, results)
+    resolved = check_outcomes(cur_prices)
+
+    # Always refresh learned weights (uses backfill + live data)
+    try:
+        import pattern_engine as _pe
+        new_w = _pe.update_weights_from_log()
+        if new_w:
+            _pe.WEIGHTS = new_w
+            print(f"  🧠 Weights refreshed (alpha={_pe._load_learned_meta().get('alpha', 0):.0%})")
+    except Exception:
+        pass
+
+    # Step 3: rebuild HTML using cached prices (no extra HTTP calls)
+    html, _ = build_report(holiday_mode=holiday_mode, last_trading=last_trading,
+                           _cached_results=results)
+
+    # Step 4: send
+    send_email(html, subject_suffix=email_suffix)
+    send_telegram_alerts(results)
+
+    # Step 5: persist + change alerts
+    save_scan_results(results)
+    save_signal_history(results)
+    save_rank_history(results)
+
+    # Step 6: log signals for outcome tracking
+    for s in STOCKS:
+        if results.get(s, {}).get("ok"):
+            log_signal(s, results[s])
+
+    # Step 7: research platform — تسجيل + متابعة + تقرير أسبوعي
+    db_log_signals(results, SECTORS, STOCK_QUALITY, is_ramadan(), is_cbe_window())
+    tracker_run_all(verbose=False)
+    maybe_run_weekly_report()
+
+    # Layer 10: continuous learning — runs if >= 10 new outcomes and > 24h since last cycle
+    try:
+        from continuous_learning import schedule_daily
+        schedule_daily()
+    except Exception as _cl_err:
+        print(f"  [ContinuousLearning] skipped: {_cl_err}")
+
+    # EARLY BUY Research Shadow — log, enrich outcomes, snapshot performance
+    try:
+        import early_buy_tracker as _ebt
+        _today = now_cairo().strftime("%Y-%m-%d")
+        _ebt.daily_run(results=results, signal_date=_today)
+    except Exception as _eb_err:
+        print(f"  [EarlyBuy] skipped: {_eb_err}")
+
+    # Pattern Intelligence 2.0 — daily incremental learning (research only)
+    try:
+        import pattern_kb as _pkb
+        _pkb_result = _pkb.daily_run()
+        print(f"  [PatternKB] daily_run: {_pkb_result.get('n_signals',0)} signals "
+              f"{_pkb_result.get('n_patterns',0)} patterns "
+              f"dir_corrected={_pkb_result.get('directions_corrected',False)}")
+    except Exception as _pkb_err:
+        print(f"  [PatternKB] skipped: {_pkb_err}")
+    changes = detect_signal_changes(results, previous_results)
+    if changes:
+        send_change_alert(changes)
+
+
+def _ensure_backfill():
+    """يشغّل الباكتست التاريخي مرة واحدة فقط لو السجل فاضي أو صغير."""
+    import os, json
+    log_file = "signal_log.json"
+    try:
+        if os.path.exists(log_file):
+            with open(log_file) as f:
+                data = json.load(f)
+            hist_count = sum(1 for s in data.get("signals", [])
+                             if s.get("source") == "backfill")
+            if hist_count >= 50:
+                return  # عنده بيانات كافية
+        print("  🔄 Running historical backfill (first time setup)...")
+        run_backfill(period="2y")
+        # بعد الـ backfill، حدّث الأوزان فوراً
+        try:
+            from pattern_engine import update_weights_from_log
+            update_weights_from_log()
+        except Exception:
+            pass
+    except Exception as e:
+        print(f"  ⚠️ Backfill skipped: {e}")
+
+
+def daily_scan():
+    print(f"\n📅 Daily scan started at {fmt_cairo()}")
+    _ensure_backfill()
     if is_egx_trading_day(today_cairo()):
-        html, _results = build_report(holiday_mode=False)
-        send_email(html)
-        send_telegram_alerts(_results)
-        
-        # حفظ النتائج الحالية
-        save_scan_results(_results)
-        
-        # كشف التغييرات وإرسال تنبيهات
-        changes = detect_signal_changes(_results, previous_results)
-        if changes:
-            send_change_alert(changes)
+        _run_scan_workflow(holiday_mode=False, last_trading=None, email_suffix="")
     else:
         last_td = most_recent_trading_day(today_cairo())
-        html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
-        send_email(html, subject_suffix=f" (Holiday — Last Session: {last_td})")
-        send_telegram_alerts(_results)
-        
-        # حفظ النتائج الحالية
-        save_scan_results(_results)
-        
-        # كشف التغييرات وإرسال تنبيهات
-        changes = detect_signal_changes(_results, previous_results)
-        if changes:
-            send_change_alert(changes)
+        _run_scan_workflow(
+            holiday_mode=True,
+            last_trading=str(last_td),
+            email_suffix=f" (Holiday — Last Session: {last_td})",
+        )
+    print("\n✅ Daily scan completed!")
 
 
 def continuous_scan():
-    """
-    المسح المستمر كل 5 دقائق (10:00 AM - 2:30 PM فقط)
-    الـ Scheduler يتحكم في أوقات التشغيل
-    يكتشف أي تغيير في الإشارات ويرسل تنبيهات فورية
-    """
     print(f"\n🔄 Continuous scan at {fmt_cairo()}")
-    
-    # تحميل النتائج السابقة
     previous_results = load_previous_results()
-    
-    # إجراء المسح الحالي
     html, current_results = build_report(holiday_mode=False)
-    
-    # حفظ النتائج الحالية
     save_scan_results(current_results)
-    
-    # كشف التغييرات وإرسال تنبيهات فورية
+    save_signal_history(current_results)
     changes = detect_signal_changes(current_results, previous_results)
     if changes:
         print(f"🚨 Found {len(changes)} signal change(s)!")
         send_change_alert(changes)
     else:
-        print(f"ℹ️ No signal changes detected")
+        print("ℹ️ No signal changes detected")
 
 
 def manual_scan():
-    """
-    مسح يدوي عند الطلب
-    """
     print(f"\n🔄 Manual scan at {fmt_cairo()}")
-    
-    previous_results = load_previous_results()
-    
-    if is_egx_trading_day(today_cairo()):
-        html, _results = build_report(holiday_mode=False)
-        send_email(html, subject_suffix=" — Manual Scan")
-        send_telegram_alerts(_results)
-        save_scan_results(_results)
-        changes = detect_signal_changes(_results, previous_results)
-        if changes:
-            send_change_alert(changes)
-    else:
-        last_td = most_recent_trading_day(today_cairo())
-        html, _results = build_report(holiday_mode=True, last_trading=str(last_td))
-        send_email(html, subject_suffix=f" — Manual Scan (Holiday)")
-        send_telegram_alerts(_results)
-        save_scan_results(_results)
-        changes = detect_signal_changes(_results, previous_results)
-        if changes:
-            send_change_alert(changes)
-
-
-# =========================================
-# RUN
-# =========================================
-
-# =========================================
-# HELPER FUNCTIONS FOR TIME CHECKS
-# =========================================
-
-def is_market_hours():
-    """
-    تحقق إذا الساعة الحالية بين 10 صباحاً و 2:30 مساءً (Cairo Time)
-    """
-    now = now_cairo()
-    hour = now.hour
-    minute = now.minute
-    
-    # 10:00 AM to 14:30 (2:30 PM)
-    start_time = 10 * 60  # 600 minutes
-    end_time = 14 * 60 + 30  # 870 minutes
-    current_time = hour * 60 + minute
-    
-    return start_time <= current_time <= end_time
-
-def is_trading_day_today():
-    """
-    تحقق إذا اليوم يوم تداول (أحد لخميس + ليس عطلة)
-    """
-    today = today_cairo()
-    
-    # 0=Monday, 1=Tuesday, ..., 6=Sunday
-    # Cairo market: Sunday-Thursday
-    if today.weekday() >= 4:  # Friday(4) or Saturday(5)
-        return False
-    
-    if today in EGX_HOLIDAYS:
-        return False
-    
-    return True
+    _ensure_backfill()
+    holiday = not is_egx_trading_day(today_cairo())
+    last_td = most_recent_trading_day(today_cairo()) if holiday else None
+    suffix = f" — Manual Scan{' (Holiday)' if holiday else ''}"
+    _run_scan_workflow(
+        holiday_mode=holiday,
+        last_trading=str(last_td) if last_td else None,
+        email_suffix=suffix,
+    )
+    print("\n✅ Manual scan completed!")
 
 # =========================================
 # PERSISTENT STATE MANAGEMENT
@@ -1899,6 +2500,113 @@ def save_scan_results(results):
         print(f"✅ Results saved to scan_results.json")
     except Exception as e:
         print(f"❌ Error saving results: {e}")
+
+
+_SIGNAL_HISTORY_DAYS = 1825  # keep 5 years — protects historical backtest data for ML
+
+def save_signal_history(results):
+    """
+    Append today's per-stock scan data to signal_history.json for heatmap.
+    Keeps a rolling window of _SIGNAL_HISTORY_DAYS to prevent unbounded growth.
+    """
+    try:
+        today = date.today().isoformat()
+        cutoff = (date.today() - timedelta(days=_SIGNAL_HISTORY_DAYS)).isoformat()
+        hist = {}
+        if os.path.exists("signal_history.json"):
+            with open("signal_history.json", "r", encoding="utf-8") as f:
+                hist = json.load(f)
+        for ticker, d in results.items():
+            if not isinstance(d, dict) or not d.get("ok"):
+                continue
+            entry = {
+                "date":            today,
+                "score":           d.get("score", 0),
+                "price":           d.get("price", 0),
+                "r1":              d.get("r1", 0),
+                "signal":          d.get("signal", ""),
+                "factor_exp_score": d.get("factor_exp_score", 0),
+            }
+            stock_hist = hist.setdefault(ticker, [])
+            # replace if same date already exists, otherwise append
+            existing = [i for i, e in enumerate(stock_hist) if e.get("date") == today]
+            if existing:
+                stock_hist[existing[0]] = entry
+            else:
+                stock_hist.append(entry)
+            # prune entries older than the rolling window
+            hist[ticker] = [e for e in stock_hist if e.get("date", "") >= cutoff]
+        with open("signal_history.json", "w", encoding="utf-8") as f:
+            json.dump(hist, f, ensure_ascii=False, separators=(",", ":"))
+        print(f"✅ signal_history.json updated ({today})")
+    except Exception as e:
+        print(f"❌ Error saving signal history: {e}")
+
+
+_RANK_HISTORY_DAYS = 90  # rolling window for rank movement tracking
+
+
+def save_rank_history(results):
+    """
+    Persist daily blended rank snapshot to rank_history.json.
+    Enables rank-change indicators (▲/▼) across sessions.
+    Keeps a rolling 90-day window.
+    """
+    try:
+        today = date.today().isoformat()
+        cutoff = (date.today() - timedelta(days=_RANK_HISTORY_DAYS)).isoformat()
+        hist = {}
+        if os.path.exists("rank_history.json"):
+            with open("rank_history.json", "r", encoding="utf-8") as f:
+                hist = json.load(f)
+        # Compute blended rank for every valid stock
+        ranked = []
+        for sym, r in results.items():
+            if not isinstance(r, dict) or not r.get("ok"):
+                continue
+            fexp  = r.get("factor_exp_score", 0) or 0
+            score = r.get("score", 0) or 0
+            sig   = r.get("signal", "")
+            blended = 0.60 * fexp + 0.40 * score
+            ranked.append((sym, blended, fexp, score, sig))
+        ranked.sort(key=lambda x: x[1], reverse=True)
+        snapshot = {}
+        for rank_pos, (sym, blended, fexp, score, sig) in enumerate(ranked, 1):
+            snapshot[sym] = {
+                "rank":    rank_pos,
+                "blended": round(blended, 2),
+                "fexp":    round(fexp, 2),
+                "score":   score,
+                "signal":  sig,
+            }
+        hist[today] = snapshot
+        # Prune old entries
+        hist = {d: v for d, v in hist.items() if d >= cutoff}
+        with open("rank_history.json", "w", encoding="utf-8") as f:
+            json.dump(hist, f, ensure_ascii=False, separators=(",", ":"))
+        print(f"✅ rank_history.json updated ({today}, {len(snapshot)} stocks)")
+    except Exception as e:
+        print(f"❌ Error saving rank history: {e}")
+
+
+def load_rank_changes():
+    """
+    Return dict mapping symbol → previous_rank (most recent prior session).
+    Returns empty dict if no history available.
+    """
+    try:
+        if not os.path.exists("rank_history.json"):
+            return {}
+        with open("rank_history.json", "r", encoding="utf-8") as f:
+            hist = json.load(f)
+        today = date.today().isoformat()
+        past_dates = sorted([d for d in hist if d < today], reverse=True)
+        if not past_dates:
+            return {}
+        prev = hist[past_dates[0]]
+        return {sym: v["rank"] for sym, v in prev.items()}
+    except Exception:
+        return {}
 
 
 def load_previous_results():
@@ -1924,21 +2632,28 @@ def detect_signal_changes(current_results, previous_results):
         current = current_results.get(stock, {})
         previous = previous_results.get(stock, {})
         
-        current_sig = current.get("sig", "Skip")
-        previous_sig = previous.get("sig", "Skip")
+        current_sig = current.get("signal", "Skip")
+        previous_sig = previous.get("signal", "Skip")
         current_score = current.get("score", 0)
+        current_raw_score = current.get("raw_score", current_score)
         current_price = current.get("price", "N/A")
         current_target = current.get("target", "N/A")
 
-        # إذا تغيرت الإشارة من Skip/Wait إلى BUY أو STRONG BUY
-        if (previous_sig in ["Skip", "Wait"] and current_sig in ["Buy", "Strong Buy"]):
+        # Signal upgraded from Skip/Wait into a buy class
+        BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy"}
+        if previous_sig in ("Skip", "Wait") and current_sig in BUY_SIGNALS:
             changed_stocks.append({
                 "stock": stock,
                 "from": previous_sig,
                 "to": current_sig,
                 "score": current_score,
+                "raw_score": current_raw_score,
+                "factor_exp_score": current.get("factor_exp_score", 0),
+                "ctx_label": current.get("ctx_label", ""),
                 "price": current_price,
-                "target": current_target
+                "target": current_target,
+                "entry_zones": current.get("entry_zones", None),
+                "pattern": current.get("pattern", {}),
             })
     
     return changed_stocks
@@ -1947,119 +2662,304 @@ def detect_signal_changes(current_results, previous_results):
 def send_change_email(changed_stocks):
     """
     إرسال Email فوري عند تغيير أي سهم (whitelist أو عادي) إلى BUY
-    مع تمييز الـ whitelist بـ ⭐
     """
     if not changed_stocks:
         return
-    
-    sender = os.getenv("EMAIL_USER")
+
+    sender   = os.getenv("EMAIL_USER")
     password = os.getenv("EMAIL_PASS")
-    
     if not sender or not password:
         print("⚠️ Email config missing for change alert")
         return
-    
-    # بناء HTML للإيميل
-    html_body = f"""
-    <html style="font-family: Arial, sans-serif; direction: rtl;">
-    <body style="background-color: #f5f5f5; padding: 20px;">
-        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h2 style="color: #d32f2f; text-align: center;">🚨 تنبيه: إشارة شراء جديدة</h2>
-            <hr style="border: none; border-top: 2px solid #d32f2f;">
-            
-            <p style="color: #333; font-size: 14px;">
-                <strong>الوقت:</strong> {fmt_cairo()}
-            </p>
-    """
-    
-    # فصل الأسهم إلى whitelist وعادي
-    whitelist_stocks = [s for s in changed_stocks if s['stock'] in WHITELIST]
-    normal_stocks = [s for s in changed_stocks if s['stock'] not in WHITELIST]
-    
-    # أسهم Whitelist أولاً (مع تمييز)
+
+    time_str = fmt_cairo()
+
+    def _gain_str(price, target):
+        try:
+            pct = round(((float(target) - float(price)) / float(price)) * 100, 1)
+            return f"+{pct}%"
+        except Exception:
+            return ""
+
+    def _stock_card(item, is_whitelist):
+        stock  = item["stock"]
+        price  = item.get("price", "N/A")
+        target = item.get("target", "N/A")
+        score  = item.get("score", 0)
+        fexp   = float(item.get("factor_exp_score", 0) or 0)
+        blended = round(0.60 * fexp + 0.40 * score, 1)
+        signal = item.get("to", "Buy")
+        ez     = item.get("entry_zones")
+
+        gain  = _gain_str(price, target)
+        bar_w = min(int(score), 100)
+        # gradient spans the filled portion — short bars stay amber, long bars reach deep green
+        bar_gradient = "linear-gradient(90deg,#f59e0b 0%,#eab308 25%,#84cc16 50%,#22c55e 75%,#16a34a 100%)"
+
+        # Zone 1 → سعر الدخول المقترح
+        entry_price = price
+        if ez and "z1" in ez:
+            entry_price = ez["z1"]["center"]
+
+        # Zone 3 → منطقة Deep Value
+        z3_lo = z3_hi = None
+        if ez and "z3" in ez:
+            z3_lo = ez["z3"]["lo"]
+            z3_hi = ez["z3"]["hi"]
+
+        hdr_bg    = "#b45309" if is_whitelist else "#1d4ed8"
+        hdr_label = f"⭐ {stock} — WHITELIST" if is_whitelist else f"📈 {stock}"
+
+        pat = item.get("pattern", {})
+        if pat and pat.get("ok"):
+            _pev = pat.get("effective_score", 0) / 20
+            _pel = "Excellent" if _pev >= 3 else "Strong" if _pev >= 2 else "Moderate" if _pev >= 1 else "Weak"
+            border_col = "#f59e0b" if pat.get("low_reliability") else "#7ee787"
+            warn_row   = (
+                f'<tr><td colspan="4" style="padding-top:8px;">'
+                f'<p style="color:#f59e0b;font-size:10px;margin:0;">⚠️ Low reliability — '
+                f'This stock rarely forms a real bottom ({pat["win_rate"]*100:.0f}% win rate)</p>'
+                f'</td></tr>'
+            ) if pat.get("low_reliability") else ""
+            pat_row = (
+                f'<tr><td style="padding:12px 16px 0;">'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+                f' style="background:#0d1117;border-radius:10px;border-left:4px solid {border_col};">'
+                f'<tr><td style="padding:12px 15px;">'
+                f'<p style="color:#94a3b8;font-size:10px;text-transform:uppercase;'
+                f'letter-spacing:1px;margin:0 0 10px 0;">🧠 Pattern Intelligence</p>'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+                f'<tr>'
+                f'<td style="vertical-align:top;">'
+                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Pattern</p>'
+                f'<p style="color:#7ee787;font-size:22px;font-weight:bold;margin:0;">'
+                f'{pat["pattern_score"]:.0f}</p>'
+                f'</td>'
+                f'<td style="text-align:right;vertical-align:top;">'
+                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Win Rate</p>'
+                f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0;">'
+                f'{pat["win_rate"]*100:.0f}%</p>'
+                f'</td>'
+                f'<td style="text-align:right;vertical-align:top;">'
+                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Effective</p>'
+                f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0 0 1px 0;">{_pev:.1f}/5</p>'
+                f'<p style="color:#94a3b8;font-size:10px;margin:0;">{_pel}</p>'
+                f'</td>'
+                f'</tr>'
+                + warn_row +
+                f'</table>'
+                f'</td></tr></table>'
+                f'</td></tr>'
+            )
+        else:
+            pat_row = ""
+
+        if z3_lo is not None:
+            dv_row = (
+                f'<tr><td style="padding:0 16px 16px;">'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+                f' style="background:#0d1117;border-radius:10px;border-left:4px solid #818cf8;">'
+                f'<tr><td style="padding:12px 15px;">'
+                f'<p style="color:#94a3b8;font-size:10px;text-transform:uppercase;'
+                f'letter-spacing:1px;margin:0 0 8px 0;">🔷 منطقة Deep Value — Zone 3</p>'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+                f'<tr>'
+                f'<td style="color:#818cf8;font-size:14px;font-weight:bold;">{z3_lo} EGP</td>'
+                f'<td align="center" style="color:#4b5563;font-size:13px;">↔</td>'
+                f'<td align="right" style="color:#818cf8;font-size:14px;font-weight:bold;">{z3_hi} EGP</td>'
+                f'</tr></table>'
+                f'</td></tr></table>'
+                f'</td></tr>'
+            )
+        else:
+            dv_row = (
+                f'<tr><td style="padding:0 16px 16px;">'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+                f' style="background:#0d1117;border-radius:10px;border-left:4px solid #374151;">'
+                f'<tr><td style="padding:10px 15px;">'
+                f'<p style="color:#4b5563;font-size:11px;margin:0;">🔷 Deep Value Zone: غير متاح</p>'
+                f'</td></tr></table>'
+                f'</td></tr>'
+            )
+
+        return (
+            f'<tr><td style="padding:3px 0 0;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a1f36;">'
+
+            # ── card header ──
+            f'<tr><td style="background:{hdr_bg};padding:12px 18px;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'<tr>'
+            f'<td style="color:#fff;font-size:15px;font-weight:bold;">{hdr_label}</td>'
+            f'<td align="right">'
+            f'<span style="background:rgba(0,0,0,0.28);color:#fff;padding:4px 12px;'
+            f'border-radius:20px;font-size:12px;font-weight:bold;">{signal}</span>'
+            f'</td>'
+            f'</tr></table>'
+            f'</td></tr>'
+
+            # ── current price + target ──
+            f'<tr><td style="padding:14px 16px 0;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'<tr>'
+            f'<td width="48%" style="background:#0d1117;border-radius:10px;padding:14px;text-align:center;vertical-align:top;">'
+            f'<p style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:0 0 5px 0;">السعر الحالي</p>'
+            f'<p style="color:#f8fafc;font-size:22px;font-weight:bold;margin:0 0 2px 0;">{price}</p>'
+            f'<p style="color:#64748b;font-size:11px;margin:0;">EGP</p>'
+            f'</td>'
+            f'<td width="4%">&nbsp;</td>'
+            f'<td width="48%" style="background:#0d1117;border-radius:10px;padding:14px;text-align:center;vertical-align:top;">'
+            f'<p style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:0 0 5px 0;">التارجت المستهدف</p>'
+            f'<p style="color:#22c55e;font-size:22px;font-weight:bold;margin:0 0 2px 0;">{target}</p>'
+            f'<p style="color:#22c55e;font-size:11px;margin:0;">{gain}</p>'
+            f'</td>'
+            f'</tr></table>'
+            f'</td></tr>'
+
+            # ── ranking metrics block ──
+            f'<tr><td style="padding:12px 16px 0;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0d1117;border-radius:10px;">'
+            f'<tr><td style="padding:12px 15px;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'<tr>'
+            f'<td style="text-align:center;padding:6px 8px;background:#131929;border-radius:6px;">'
+            f'<div style="color:#f8fafc;font-size:20px;font-weight:800;">{blended}</div>'
+            f'<div style="color:#5b8dee;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;margin-top:2px;">Rank Score</div>'
+            f'</td>'
+            f'<td width="8">&nbsp;</td>'
+            f'<td style="text-align:center;padding:6px 8px;background:#131929;border-radius:6px;">'
+            f'<div style="color:#60a5fa;font-size:16px;font-weight:700;">{fexp:.1f}</div>'
+            f'<div style="color:#5b8dee;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;margin-top:2px;">Expectancy</div>'
+            f'</td>'
+            f'<td width="8">&nbsp;</td>'
+            f'<td style="text-align:center;padding:6px 8px;background:#131929;border-radius:6px;">'
+            f'<div style="color:#94a3b8;font-size:16px;font-weight:700;">{score:.0f}</div>'
+            f'<div style="color:#5b8dee;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;margin-top:2px;">SMC</div>'
+            f'</td>'
+            f'</tr></table>'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+            f' style="margin-top:10px;background:#1e2641;border-radius:20px;overflow:hidden;">'
+            f'<tr>'
+            f'<td width="{bar_w}%" style="background:{bar_gradient};height:6px;border-radius:20px;font-size:1px;">&nbsp;</td>'
+            f'<td style="height:6px;font-size:1px;">&nbsp;</td>'
+            f'</tr></table>'
+            f'<div style="margin-top:8px;padding:6px 10px;background:#0a0f1e;border-radius:6px;">'
+            f'<span style="color:#6b7280;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;">Decision Driver &nbsp;</span>'
+            f'<span style="color:#9ca3af;font-size:11px;">Discount gate passed. Factor expectancy ranking drove entry.</span>'
+            f'</div>'
+            f'</td></tr></table>'
+            f'</td></tr>'
+
+            # ── pattern intelligence ──
+            + pat_row +
+
+            # ── entry price (Zone 1) ──
+            f'<tr><td style="padding:12px 16px 0;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0d1117;border-radius:10px;">'
+            f'<tr><td style="padding:12px 15px;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'<tr>'
+            f'<td style="color:#94a3b8;font-size:12px;">🎯 سعر الدخول</td>'
+            f'<td align="right" style="color:#fbbf24;font-size:16px;font-weight:bold;">{entry_price} EGP</td>'
+            f'</tr></table>'
+            f'</td></tr></table>'
+            f'</td></tr>'
+
+            # ── deep value zone ──
+            + dv_row +
+
+            f'</table></td></tr>'
+        )
+
+    whitelist_stocks = [s for s in changed_stocks if s["stock"] in WHITELIST]
+    normal_stocks    = [s for s in changed_stocks if s["stock"] not in WHITELIST]
+    total_count      = len(changed_stocks)
+
+    cards_html = ""
+
     if whitelist_stocks:
-        html_body += "<h3 style='color: #f57c00; margin-top: 20px; border-bottom: 2px solid #ff9800; padding-bottom: 10px;'>⭐ أسهم قائمة البيضاء (Whitelist)</h3>"
-        
+        cards_html += (
+            f'<tr><td style="padding:18px 18px 8px;">'
+            f'<p style="color:#f59e0b;font-size:12px;font-weight:bold;'
+            f'letter-spacing:1.5px;margin:0;text-transform:uppercase;">'
+            f'⭐ Whitelist Stocks ({len(whitelist_stocks)})</p>'
+            f'<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">'
+            f'<tr><td style="background:#d97706;height:2px;border-radius:1px;"></td></tr>'
+            f'</table></td></tr>'
+        )
         for item in whitelist_stocks:
-            html_body += f"""
-            <div style="background-color: #fff3e0; border-right: 4px solid #ff9800; padding: 15px; margin: 10px 0; border-radius: 4px;">
-                <h3 style="color: #f57c00; margin: 0 0 10px 0;">⭐ {item['stock']} - WHITELIST ⭐</h3>
-                <table style="width: 100%; color: #333; font-size: 13px;">
-                    <tr>
-                        <td style="padding: 5px;"><strong>الإشارة:</strong></td>
-                        <td style="padding: 5px;">{item['from']} → <strong style="color: #2e7d32;">{item['to']}</strong></td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px;"><strong>الـ Score:</strong></td>
-                        <td style="padding: 5px;">{item['score']:.1f}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px;"><strong>سعر الشراء:</strong></td>
-                        <td style="padding: 5px;"><strong style="color: #d32f2f;">{item.get('price', 'N/A')} EGP</strong></td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px;"><strong>السعر المستهدف:</strong></td>
-                        <td style="padding: 5px;"><strong style="color: #2e7d32;">{item.get('target', 'N/A')} EGP</strong></td>
-                    </tr>
-                </table>
-            </div>
-            """
-    
-    # أسهم عادية (بدون تمييز)
+            cards_html += _stock_card(item, True)
+
     if normal_stocks:
-        html_body += "<h3 style='color: #1976d2; margin-top: 20px; border-bottom: 2px solid #2196f3; padding-bottom: 10px;'>📈 أسهم عادية</h3>"
-        
+        cards_html += (
+            f'<tr><td style="padding:18px 18px 8px;">'
+            f'<p style="color:#60a5fa;font-size:12px;font-weight:bold;'
+            f'letter-spacing:1.5px;margin:0;text-transform:uppercase;">'
+            f'📈 Stocks ({len(normal_stocks)})</p>'
+            f'<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">'
+            f'<tr><td style="background:#3b82f6;height:2px;border-radius:1px;"></td></tr>'
+            f'</table></td></tr>'
+        )
         for item in normal_stocks:
-            html_body += f"""
-            <div style="background-color: #e3f2fd; border-right: 4px solid #2196f3; padding: 15px; margin: 10px 0; border-radius: 4px;">
-                <h3 style="color: #1565c0; margin: 0 0 10px 0;">📈 {item['stock']}</h3>
-                <table style="width: 100%; color: #333; font-size: 13px;">
-                    <tr>
-                        <td style="padding: 5px;"><strong>الإشارة:</strong></td>
-                        <td style="padding: 5px;">{item['from']} → <strong style="color: #2e7d32;">{item['to']}</strong></td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px;"><strong>الـ Score:</strong></td>
-                        <td style="padding: 5px;">{item['score']:.1f}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px;"><strong>سعر الشراء:</strong></td>
-                        <td style="padding: 5px;"><strong style="color: #d32f2f;">{item.get('price', 'N/A')} EGP</strong></td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px;"><strong>السعر المستهدف:</strong></td>
-                        <td style="padding: 5px;"><strong style="color: #2e7d32;">{item.get('target', 'N/A')} EGP</strong></td>
-                    </tr>
-                </table>
-            </div>
-            """
-    
-    html_body += """
-            <hr style="border: none; border-top: 2px solid #ddd; margin-top: 20px;">
-            <p style="color: #666; font-size: 12px; text-align: center;">
-                EGX SMC Scanner © 2026
-            </p>
-        </div>
-    </body>
-    </html>
-    """
-    
+            cards_html += _stock_card(item, False)
+
+    html_body = (
+        '<!DOCTYPE html><html><head>'
+        '<meta charset="UTF-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '</head>'
+        '<body style="margin:0;padding:0;background:#0d1117;font-family:Arial,Helvetica,sans-serif;">'
+        '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+        ' style="background:#0d1117;padding:24px 0;">'
+        '<tr><td align="center">'
+        '<table width="560" cellpadding="0" cellspacing="0" border="0"'
+        ' style="max-width:560px;width:100%;">'
+
+        # header
+        '<tr><td style="background:#141928;border-radius:16px 16px 0 0;'
+        'padding:28px 28px 20px;text-align:center;">'
+        '<p style="color:#ef4444;font-size:32px;margin:0 0 10px;">🚨</p>'
+        '<h1 style="color:#ffffff;font-size:22px;font-weight:bold;'
+        'margin:0 0 8px;letter-spacing:2px;text-transform:uppercase;">Buy Signal Alert</h1>'
+        f'<p style="color:#94a3b8;font-size:13px;margin:0 0 18px;">📅 {time_str}</p>'
+        '<table width="100%" cellpadding="0" cellspacing="0">'
+        '<tr><td style="background:#ef4444;height:3px;border-radius:2px;font-size:1px;">&nbsp;</td></tr>'
+        '</table>'
+        '</td></tr>'
+
+        # cards wrapper
+        '<tr><td style="background:#1a1f36;padding:0 18px;">'
+        '<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+        + cards_html +
+        '</table>'
+        '</td></tr>'
+
+        # footer
+        '<tr><td style="background:#141928;border-radius:0 0 16px 16px;'
+        'padding:14px;text-align:center;">'
+        '<p style="color:#374151;font-size:11px;margin:0;letter-spacing:0.5px;">'
+        'EGX SMC Scanner &copy; 2026</p>'
+        '</td></tr>'
+
+        '</table>'
+        '</td></tr></table>'
+        '</body></html>'
+    )
+
     msg = MIMEMultipart("alternative")
     date_str = now_cairo().strftime("%Y-%m-%d %H:%M")
-    total_count = len(changed_stocks)
-    msg["Subject"] = f"🚨 تنبيه: {total_count} أسهم تغيرت إلى BUY — {date_str}"
-    msg["From"] = sender
-    msg["To"] = EMAIL
+    msg["Subject"] = f"🚨 Signal Alert: {total_count} stock(s) moved to BUY — {date_str}"
+    msg["From"]    = sender
+    msg["To"]      = EMAIL
     msg.attach(MIMEText(html_body, "html", "utf-8"))
-    
+
     try:
         with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as srv:
-            srv.ehlo()
-            srv.starttls()
-            srv.ehlo()
+            srv.ehlo(); srv.starttls(); srv.ehlo()
             srv.login(sender, password)
             srv.sendmail(sender, EMAIL, msg.as_string())
-        print(f"📧 Email alert sent for {total_count} stock(s) ({len(whitelist_stocks)} whitelist, {len(normal_stocks)} normal)")
+        print(f"📧 Email alert sent for {total_count} stock(s) "
+              f"({len(whitelist_stocks)} whitelist, {len(normal_stocks)} normal)")
         return True
     except Exception as e:
         print(f"❌ Email error: {e}")
@@ -2067,53 +2967,59 @@ def send_change_email(changed_stocks):
 
 
 def send_change_alert(changed_stocks):
-    """
-    إرسال تنبيه Telegram فوري عند تغيير الإشارة
-    مع علامة مميزة ⭐ للأسهم من قائمة الـ whitelist
-    + Email للجميع مع التمييز
-    """
+    """Send instant Telegram alert when a signal flips to BUY."""
     if not changed_stocks:
         return
-    
+
     token = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    
+
     if not token or not chat_id:
-        print("⚠️ Telegram config missing")
+        print("Telegram config missing")
         return
-    
-    message = "🚨 **إشارة تغير إلى BUY!**\n\n"
+
+    date_str = now_cairo().strftime("%d %b %Y  %H:%M")
+    lines = [
+        f"🚨 *Signal Change — BUY Triggered*",
+        f"━━━━━━━━━━━━━━━━━━━━━",
+        f"_{date_str}_\n",
+    ]
+
     for item in changed_stocks:
-        stock = item['stock']
-        price = item.get('price', 'N/A')
+        stock  = item['stock']
+        price  = item.get('price', 'N/A')
         target = item.get('target', 'N/A')
-        
-        # ⭐ علامة مميزة للأسهم من الـ whitelist
-        whitelist_badge = "⭐ **WHITELIST** ⭐" if stock in WHITELIST else ""
-        
-        message += f"📈 {stock}"
-        if whitelist_badge:
-            message += f" {whitelist_badge}\n"
-        else:
-            message += "\n"
-        
-        message += f"  └─ {item['from']} → {item['to']}\n"
-        message += f"  └─ Score: {item['score']:.1f}\n"
-        message += f"  └─ السعر الحالي: {price} EGP\n"
-        message += f"  └─ السعر المستهدف: {target} EGP\n\n"
-    
-    # إرسال Telegram
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
-    
+        raw_c  = item.get("raw_score", item["score"])
+        adj_tag = f"  _(raw {raw_c:.0f})_" if raw_c != item["score"] else ""
+        ctx_line = f"\n   {item['ctx_label']}" if item.get("ctx_label") else ""
+        wl_tag  = "  ⭐ _Watchlist_" if stock in WHITELIST else ""
+
+        try:
+            upside = f"  (+{(float(target) - float(price)) / float(price) * 100:.1f}%)"
+        except Exception:
+            upside = ""
+
+        lines.append(f"{'─'*25}")
+        lines.append(f"📈 *{NAMES.get(stock, stock)}*  `{stock}`{wl_tag}")
+        lines.append(f"   {item['from']}  →  *{item['to']}*")
+        lines.append(f"   SMC Score  *{item['score']:.0f}/100*{adj_tag}{ctx_line}")
+        lines.append(f"   Price      *{price} EGP*")
+        lines.append(f"   Target     *{target} EGP*{upside}\n")
+
+    message = "\n".join(lines)
+
     try:
-        response = requests.post(url, json=payload, timeout=10)
+        response = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
+            timeout=10,
+        )
         if response.status_code == 200:
-            print(f"✅ Signal change alert sent to Telegram")
+            print("Signal change alert sent to Telegram")
         else:
-            print(f"❌ Telegram error: {response.text}")
+            print(f"Telegram error: {response.text}")
     except Exception as e:
-        print(f"❌ Error sending Telegram alert: {e}")
+        print(f"Error sending Telegram alert: {e}")
     
     # إرسال Email للجميع مع التمييز
     send_change_email(changed_stocks)
@@ -2132,13 +3038,15 @@ if __name__ == "__main__":
     # DETERMINE RUN MODE BASED ON TIME
     # =========================================
     
-    manual_run = os.getenv("MANUAL_RUN", "False") == "True"
+    manual_run  = os.getenv("MANUAL_RUN",  "False") == "True"
+    force_daily = os.getenv("FORCE_DAILY", "False") == "True"
     hour = now_cairo().hour
     minute = now_cairo().minute
-    
+
     print(f"Current time: {hour:02d}:{minute:02d}")
-    print(f"Manual run: {manual_run}\n")
-    
+    print(f"Manual run: {manual_run}")
+    print(f"Force daily: {force_daily}\n")
+
     try:
         # =========================================
         # MODE 1: MANUAL RUN (Any time)
@@ -2151,12 +3059,12 @@ if __name__ == "__main__":
             print("\n✅ Manual scan completed!")
             print("="*60 + "\n")
             sys.exit(0)
-        
+
         # =========================================
-        # MODE 2: DAILY SCAN (8:30 AM exactly)
+        # MODE 2: DAILY SCAN (7:00 AM or force_daily)
         # =========================================
-        elif hour == 8 and 25 <= minute <= 35:
-            print("📅 DAILY SCAN MODE (8:30 AM)")
+        elif force_daily or hour == 7:
+            print("📅 DAILY SCAN MODE (7:00 AM)")
             print("="*60 + "\n")
             daily_scan()
             print("\n✅ Daily scan completed!")
@@ -2180,7 +3088,7 @@ if __name__ == "__main__":
         else:
             print(f"⏳ No action scheduled for {hour:02d}:{minute:02d}")
             print("   Configured times:")
-            print("   - 08:30 (Daily Report)")
+            print("   - 09:00 (Daily Report)")
             print("   - 10:00-14:30 (Continuous Scan)")
             print("   - Any time (Manual Run)")
             print("="*60 + "\n")

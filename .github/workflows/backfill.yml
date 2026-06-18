@@ -1,0 +1,45 @@
+name: Backfill Research DB
+
+on:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run DB backfill
+        run: python backfill_research_db.py
+
+      - name: Commit updated DB
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          # Force WAL checkpoint so main DB file is fully written before git reads it
+          python3 -c "import sqlite3; c=sqlite3.connect('egx_research.db'); c.execute('PRAGMA wal_checkpoint(TRUNCATE)'); c.close()" 2>/dev/null || true
+          ls -lh egx_research.db 2>/dev/null || echo "WARNING: egx_research.db not found"
+          ls -lh research_results.json 2>/dev/null || echo "INFO: research_results.json not present (optional)"
+          git add -f egx_research.db 2>/dev/null || echo "WARNING: could not stage egx_research.db"
+          git add -f research_results.json 2>/dev/null || true
+          git diff --staged --stat
+          git diff --staged --quiet || git commit -m "Backfill research DB from signal_history [skip ci]"
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          git pull origin "$BRANCH" --rebase || true
+          git push origin HEAD:"$BRANCH" || true

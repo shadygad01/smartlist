@@ -1,0 +1,328 @@
+{
+  "run_at": "2026-06-18T08:10:34.838793",
+  "n_total": 560,
+  "oos": {
+    "train_n": 392,
+    "test_n": 168,
+    "cutoff": "2025-09-01",
+    "production": {
+      "label": "Production OOS",
+      "n": 168,
+      "pool_win_rate": 0.4345,
+      "pool_expectancy": 0.0532,
+      "pool_mfe40d": 0.2057,
+      "top_q_wr": 0.4286,
+      "top_q_exp": 0.05818,
+      "top_q_mfe40d": 0.211,
+      "top_decile_wr": 0.5625,
+      "spearman_r20d": 0.0062,
+      "deployed_expectancy": 0.0511
+    },
+    "challenger": {
+      "label": "Challenger OOS",
+      "n": 168,
+      "pool_win_rate": 0.4345,
+      "pool_expectancy": 0.0532,
+      "pool_mfe40d": 0.2057,
+      "top_q_wr": 0.619,
+      "top_q_exp": 0.10046,
+      "top_q_mfe40d": 0.245,
+      "top_decile_wr": 0.5625,
+      "spearman_r20d": 0.2644,
+      "deployed_expectancy": 0.11836
+    }
+  },
+  "wf": {
+    "folds": [
+      {
+        "fold": 1,
+        "window": "2022-05-25 \u2192 2023-08-02",
+        "n": 93,
+        "production": {
+          "label": "Production fold 1",
+          "n": 93,
+          "pool_win_rate": 0.4516,
+          "pool_expectancy": 0.0661,
+          "pool_mfe40d": 0.2232,
+          "top_q_wr": 0.6957,
+          "top_q_exp": 0.12992,
+          "top_q_mfe40d": 0.2778,
+          "top_decile_wr": 0.6667,
+          "spearman_r20d": 0.2383,
+          "deployed_expectancy": 0.11024
+        },
+        "challenger": {
+          "label": "Challenger fold 1",
+          "n": 93,
+          "pool_win_rate": 0.4516,
+          "pool_expectancy": 0.0661,
+          "pool_mfe40d": 0.2232,
+          "top_q_wr": 0.7391,
+          "top_q_exp": 0.12027,
+          "top_q_mfe40d": 0.2216,
+          "top_decile_wr": 0.8889,
+          "spearman_r20d": 0.3077,
+          "deployed_expectancy": 0.11294
+        }
+      },
+      {
+        "fold": 2,
+        "window": "2023-08-02 \u2192 2024-06-02",
+        "n": 93,
+        "production": {
+          "label": "Production fold 2",
+          "n": 93,
+          "pool_win_rate": 0.3656,
+          "pool_expectancy": 0.0424,
+          "pool_mfe40d": 0.2286,
+          "top_q_wr": 0.3913,
+          "top_q_exp": 0.01468,
+          "top_q_mfe40d": 0.2169,
+          "top_decile_wr": 0.3333,
+          "spearman_r20d": -0.0587,
+          "deployed_expectancy": 0.0388
+        },
+        "challenger": {
+          "label": "Challenger fold 2",
+          "n": 93,
+          "pool_win_rate": 0.3656,
+          "pool_expectancy": 0.0424,
+          "pool_mfe40d": 0.2286,
+          "top_q_wr": 0.3913,
+          "top_q_exp": 0.05717,
+          "top_q_mfe40d": 0.1768,
+          "top_decile_wr": 0.2222,
+          "spearman_r20d": -0.1245,
+          "deployed_expectancy": 0.03319
+        }
+      },
+      {
+        "fold": 3,
+        "window": "2024-06-03 \u2192 2025-04-17",
+        "n": 93,
+        "production": {
+          "label": "Production fold 3",
+          "n": 93,
+          "pool_win_rate": 0.3763,
+          "pool_expectancy": 0.04567,
+          "pool_mfe40d": 0.1619,
+          "top_q_wr": 0.2609,
+          "top_q_exp": 0.0488,
+          "top_q_mfe40d": 0.1567,
+          "top_decile_wr": 0.2222,
+          "spearman_r20d": -0.0334,
+          "deployed_expectancy": 0.05245
+        },
+        "challenger": {
+          "label": "Challenger fold 3",
+          "n": 93,
+          "pool_win_rate": 0.3763,
+          "pool_expectancy": 0.04567,
+          "pool_mfe40d": 0.1619,
+          "top_q_wr": 0.6087,
+          "top_q_exp": 0.10029,
+          "top_q_mfe40d": 0.2439,
+          "top_decile_wr": 0.4444,
+          "spearman_r20d": 0.2005,
+          "deployed_expectancy": 0.06176
+        }
+      },
+      {
+        "fold": 4,
+        "window": "2025-04-23 \u2192 2026-02-15",
+        "n": 93,
+        "production": {
+          "label": "Production fold 4",
+          "n": 93,
+          "pool_win_rate": 0.3011,
+          "pool_expectancy": 0.0152,
+          "pool_mfe40d": 0.1642,
+          "top_q_wr": 0.3043,
+          "top_q_exp": 0.03395,
+          "top_q_mfe40d": 0.1749,
+          "top_decile_wr": 0.1111,
+          "spearman_r20d": -0.0982,
+          "deployed_expectancy": -0.0031
+        },
+        "challenger": {
+          "label": "Challenger fold 4",
+          "n": 93,
+          "pool_win_rate": 0.3011,
+          "pool_expectancy": 0.0152,
+          "pool_mfe40d": 0.1642,
+          "top_q_wr": 0.2174,
+          "top_q_exp": -0.01095,
+          "top_q_mfe40d": 0.1452,
+          "top_decile_wr": 0.2222,
+          "spearman_r20d": -0.2361,
+          "deployed_expectancy": -0.00652
+        }
+      },
+      {
+        "fold": 5,
+        "window": "2026-02-15 \u2192 2026-04-14",
+        "n": 93,
+        "production": {
+          "label": "Production fold 5",
+          "n": 93,
+          "pool_win_rate": 0.5376,
+          "pool_expectancy": 0.07457,
+          "pool_mfe40d": 0.2295,
+          "top_q_wr": 0.5217,
+          "top_q_exp": 0.07008,
+          "top_q_mfe40d": 0.233,
+          "top_decile_wr": 0.6667,
+          "spearman_r20d": -0.0909,
+          "deployed_expectancy": 0.05982
+        },
+        "challenger": {
+          "label": "Challenger fold 5",
+          "n": 93,
+          "pool_win_rate": 0.5376,
+          "pool_expectancy": 0.07457,
+          "pool_mfe40d": 0.2295,
+          "top_q_wr": 0.6522,
+          "top_q_exp": 0.12376,
+          "top_q_mfe40d": 0.2869,
+          "top_decile_wr": 0.6667,
+          "spearman_r20d": 0.4166,
+          "deployed_expectancy": 0.12829
+        }
+      }
+    ],
+    "aggregate": {
+      "production": {
+        "label": "Production WF",
+        "n": 465,
+        "pool_win_rate": 0.4065,
+        "pool_expectancy": 0.04879,
+        "pool_mfe40d": 0.2015,
+        "top_q_wr": 0.4224,
+        "top_q_exp": 0.04682,
+        "top_q_mfe40d": 0.2043,
+        "top_decile_wr": 0.3913,
+        "spearman_r20d": 0.024,
+        "deployed_expectancy": 0.05106
+      },
+      "challenger": {
+        "label": "Challenger WF",
+        "n": 465,
+        "pool_win_rate": 0.4065,
+        "pool_expectancy": 0.04879,
+        "pool_mfe40d": 0.2015,
+        "top_q_wr": 0.5517,
+        "top_q_exp": 0.08528,
+        "top_q_mfe40d": 0.2242,
+        "top_decile_wr": 0.6087,
+        "spearman_r20d": 0.1164,
+        "deployed_expectancy": 0.05678
+      }
+    }
+  },
+  "regime": {
+    "first_half": {
+      "production": {
+        "label": "Production first_half",
+        "n": 280,
+        "pool_win_rate": 0.3714,
+        "pool_expectancy": 0.04244,
+        "pool_mfe40d": 0.1963,
+        "top_q_wr": 0.4714,
+        "top_q_exp": 0.05633,
+        "top_q_mfe40d": 0.2112,
+        "top_decile_wr": 0.5,
+        "spearman_r20d": 0.0979,
+        "deployed_expectancy": 0.05662
+      },
+      "challenger": {
+        "label": "Challenger first_half",
+        "n": 280,
+        "pool_win_rate": 0.3714,
+        "pool_expectancy": 0.04244,
+        "pool_mfe40d": 0.1963,
+        "top_q_wr": 0.4571,
+        "top_q_exp": 0.05997,
+        "top_q_mfe40d": 0.1774,
+        "top_decile_wr": 0.5357,
+        "spearman_r20d": 0.0178,
+        "deployed_expectancy": 0.04775
+      }
+    },
+    "second_half": {
+      "production": {
+        "label": "Production second_half",
+        "n": 280,
+        "pool_win_rate": 0.4071,
+        "pool_expectancy": 0.04592,
+        "pool_mfe40d": 0.186,
+        "top_q_wr": 0.4429,
+        "top_q_exp": 0.05727,
+        "top_q_mfe40d": 0.2026,
+        "top_decile_wr": 0.4286,
+        "spearman_r20d": 0.0368,
+        "deployed_expectancy": 0.05569
+      },
+      "challenger": {
+        "label": "Challenger second_half",
+        "n": 280,
+        "pool_win_rate": 0.4071,
+        "pool_expectancy": 0.04592,
+        "pool_mfe40d": 0.186,
+        "top_q_wr": 0.4714,
+        "top_q_exp": 0.0591,
+        "top_q_mfe40d": 0.2096,
+        "top_decile_wr": 0.6071,
+        "spearman_r20d": 0.171,
+        "deployed_expectancy": 0.05427
+      }
+    }
+  },
+  "decision": {
+    "winner": "CHALLENGER",
+    "metrics_won": 5,
+    "metrics_total": 6,
+    "temporally_stable": false,
+    "wf_confirmed": true,
+    "comparison": {
+      "top_q_wr": {
+        "production": 0.4286,
+        "challenger": 0.619,
+        "winner": "challenger",
+        "delta": 0.1904
+      },
+      "top_q_exp": {
+        "production": 0.05818,
+        "challenger": 0.10046,
+        "winner": "challenger",
+        "delta": 0.04228
+      },
+      "top_q_mfe40d": {
+        "production": 0.211,
+        "challenger": 0.245,
+        "winner": "challenger",
+        "delta": 0.034
+      },
+      "top_decile_wr": {
+        "production": 0.5625,
+        "challenger": 0.5625,
+        "winner": "production",
+        "delta": 0.0
+      },
+      "spearman_r20d": {
+        "production": 0.0062,
+        "challenger": 0.2644,
+        "winner": "challenger",
+        "delta": 0.2582
+      },
+      "deployed_expectancy": {
+        "production": 0.0511,
+        "challenger": 0.11836,
+        "winner": "challenger",
+        "delta": 0.06726
+      }
+    },
+    "reason": "Challenger won 5/6 OOS metrics, WF confirmed",
+    "oos_n_production": 168,
+    "oos_n_challenger": 168
+  }
+}

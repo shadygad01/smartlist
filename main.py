@@ -1498,7 +1498,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Company</th>
     <th align="right" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Price</th>
     <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Signal</th>
-    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">SMC Score</th>
+    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Rank Score / SMC</th>
     <th align="right" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Target</th>
   </tr>
   {wr or '<tr><td colspan="5" style="padding:16px 14px;font-family:Arial,sans-serif;font-size:13px;color:#888;">No data available.</td></tr>'}
@@ -1543,17 +1543,39 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
   <tr>
     <td style="padding:16px 20px;">
       <div style="font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:{tc};letter-spacing:0.3px;">{r["signal"]}</div>
-      <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
-        {bar(r["score"])}
-        {"<span style='font-family:Arial,sans-serif;font-size:11px;color:#666;background:#f0f0f0;padding:2px 8px;border-radius:10px;margin-left:8px;'>" + r["ctx_label"] + "</span>" if r.get("ctx_label") else ""}
-        {"<span style='font-family:Arial,sans-serif;font-size:11px;color:#999;margin-left:6px;'>raw&nbsp;" + str(r.get("raw_score","")) + "</span>" if r.get("raw_score") and r["raw_score"] != r["score"] else ""}
-      </div>
+      {"<div style='margin-top:4px;'><span style='font-family:Arial,sans-serif;font-size:11px;color:#666;background:#f0f0f0;padding:2px 8px;border-radius:10px;'>" + r["ctx_label"] + "</span></div>" if r.get("ctx_label") else ""}
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:12px;">
+        <tr>
+          <td style="text-align:center;padding:8px 10px;background:rgba(0,0,0,0.06);border-radius:6px;">
+            <div style="font-family:Arial,sans-serif;font-size:20px;font-weight:800;color:{tc};">{round(0.60*(r.get("factor_exp_score",0) or 0)+0.40*r["score"],1)}</div>
+            <div style="font-family:Arial,sans-serif;font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;">Rank Score</div>
+          </td>
+          <td width="8"></td>
+          <td style="text-align:center;padding:8px 10px;background:rgba(0,0,0,0.04);border-radius:6px;">
+            <div style="font-family:Arial,sans-serif;font-size:16px;font-weight:700;color:#0B5394;">{r.get("factor_exp_score",0) or 0}</div>
+            <div style="font-family:Arial,sans-serif;font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;">Expectancy</div>
+          </td>
+          <td width="8"></td>
+          <td style="text-align:center;padding:8px 10px;background:rgba(0,0,0,0.04);border-radius:6px;">
+            <div style="font-family:Arial,sans-serif;font-size:16px;font-weight:700;color:#444;">{r["score"]}</div>
+            <div style="font-family:Arial,sans-serif;font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;">SMC</div>
+          </td>
+        </tr>
+      </table>
+      <div style="margin-top:8px;">{bar(r["score"])}</div>
+      {"<div style='font-family:Arial,sans-serif;font-size:11px;color:#999;margin-top:4px;'>raw&nbsp;" + str(r.get("raw_score","")) + "</div>" if r.get("raw_score") and r["raw_score"] != r["score"] else ""}
     </td>
-    <td align="right" style="padding:16px 20px;white-space:nowrap;">
+    <td align="right" style="padding:16px 20px;white-space:nowrap;vertical-align:top;">
       <div style="font-family:Arial,sans-serif;font-size:26px;font-weight:bold;color:#111;">{r["price"]}</div>
       <div style="font-family:Arial,sans-serif;font-size:12px;color:#888;margin-top:2px;">EGP</div>
     </td>
   </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 10px 0;background:#f9fafb;border:1px solid #e8eaed;border-radius:6px;">
+  <tr><td style="padding:9px 14px;">
+    <span style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.8px;">Decision Driver &nbsp;</span>
+    <span style="font-family:Arial,sans-serif;font-size:12px;color:#444;">{"Discount gate passed. Factor expectancy ranking drove entry." if r["signal"] not in ("Wait","Skip") else ("In discount zone. Price gate failed — not yet in Deep Discount." if r["signal"]=="Wait" and r.get("r1",0)>0 else "In discount zone. Entry score or price gate not yet met." if r["signal"]=="Wait" else "Above equilibrium — premium zone. SMC setup inactive.")}</span>
+  </td></tr>
 </table>
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0;">
   <tr>
@@ -2626,6 +2648,7 @@ def detect_signal_changes(current_results, previous_results):
                 "to": current_sig,
                 "score": current_score,
                 "raw_score": current_raw_score,
+                "factor_exp_score": current.get("factor_exp_score", 0),
                 "ctx_label": current.get("ctx_label", ""),
                 "price": current_price,
                 "target": current_target,
@@ -2663,6 +2686,8 @@ def send_change_email(changed_stocks):
         price  = item.get("price", "N/A")
         target = item.get("target", "N/A")
         score  = item.get("score", 0)
+        fexp   = float(item.get("factor_exp_score", 0) or 0)
+        blended = round(0.60 * fexp + 0.40 * score, 1)
         signal = item.get("to", "Buy")
         ez     = item.get("entry_zones")
 
@@ -2791,21 +2816,37 @@ def send_change_email(changed_stocks):
             f'</tr></table>'
             f'</td></tr>'
 
-            # ── score bar ──
+            # ── ranking metrics block ──
             f'<tr><td style="padding:12px 16px 0;">'
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0d1117;border-radius:10px;">'
             f'<tr><td style="padding:12px 15px;">'
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
             f'<tr>'
-            f'<td style="color:#94a3b8;font-size:11px;letter-spacing:0.5px;">Score</td>'
-            f'<td align="right" style="color:#f8fafc;font-size:14px;font-weight:bold;">{score:.0f} / 100</td>'
+            f'<td style="text-align:center;padding:6px 8px;background:#131929;border-radius:6px;">'
+            f'<div style="color:#f8fafc;font-size:20px;font-weight:800;">{blended}</div>'
+            f'<div style="color:#5b8dee;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;margin-top:2px;">Rank Score</div>'
+            f'</td>'
+            f'<td width="8">&nbsp;</td>'
+            f'<td style="text-align:center;padding:6px 8px;background:#131929;border-radius:6px;">'
+            f'<div style="color:#60a5fa;font-size:16px;font-weight:700;">{fexp:.1f}</div>'
+            f'<div style="color:#5b8dee;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;margin-top:2px;">Expectancy</div>'
+            f'</td>'
+            f'<td width="8">&nbsp;</td>'
+            f'<td style="text-align:center;padding:6px 8px;background:#131929;border-radius:6px;">'
+            f'<div style="color:#94a3b8;font-size:16px;font-weight:700;">{score:.0f}</div>'
+            f'<div style="color:#5b8dee;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;margin-top:2px;">SMC</div>'
+            f'</td>'
             f'</tr></table>'
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-            f' style="margin-top:8px;background:#1e2641;border-radius:20px;overflow:hidden;">'
+            f' style="margin-top:10px;background:#1e2641;border-radius:20px;overflow:hidden;">'
             f'<tr>'
-            f'<td width="{bar_w}%" style="background:{bar_gradient};height:8px;border-radius:20px;font-size:1px;">&nbsp;</td>'
-            f'<td style="height:8px;font-size:1px;">&nbsp;</td>'
+            f'<td width="{bar_w}%" style="background:{bar_gradient};height:6px;border-radius:20px;font-size:1px;">&nbsp;</td>'
+            f'<td style="height:6px;font-size:1px;">&nbsp;</td>'
             f'</tr></table>'
+            f'<div style="margin-top:8px;padding:6px 10px;background:#0a0f1e;border-radius:6px;">'
+            f'<span style="color:#6b7280;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;">Decision Driver &nbsp;</span>'
+            f'<span style="color:#9ca3af;font-size:11px;">Discount gate passed. Factor expectancy ranking drove entry.</span>'
+            f'</div>'
             f'</td></tr></table>'
             f'</td></tr>'
 

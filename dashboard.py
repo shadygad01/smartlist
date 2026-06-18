@@ -50,14 +50,15 @@ def _load_scan() -> dict:
     history = _load("signal_history.json")
     if not history:
         return {}
+    # signal_history is stored newest-first; sigs[0] is the most recent record.
     return {
         stock: {
-            "price":            sigs[-1].get("price", 0),
-            "score":            sigs[-1].get("score", 0),
-            "signal":           sigs[-1].get("signal", "-"),
-            "r1":               sigs[-1].get("r1", 0),
-            "factor_exp_score": sigs[-1].get("factor_exp_score", 0),
-            "early_buy_research": sigs[-1].get("early_buy_research", False),
+            "price":            sigs[0].get("price", 0),
+            "score":            sigs[0].get("score", 0),
+            "signal":           sigs[0].get("signal", "-"),
+            "r1":               sigs[0].get("r1", 0),
+            "factor_exp_score": sigs[0].get("factor_exp_score", 0),
+            "early_buy_research": sigs[0].get("early_buy_research", False),
             "ok":               True,
         }
         for stock, sigs in history.items()

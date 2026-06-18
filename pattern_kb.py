@@ -774,27 +774,88 @@ def _rank(vals):
 # PHASE 2 — TELEMETRY LOGGING
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _lookup_best_pattern(conn, gate_flags: dict) -> tuple:
+    """
+    Given a signal's gate flags dict (flag_name -> 0/1), find the best matching
+    pattern from pattern_knowledge_base.
+    Best = most specific (most required flags satisfied) then highest expectancy.
+    Returns (pattern_id, mfe40_mean, expectancy, peak_return_avg, n_total) or all-None.
+    """
+    rows = conn.execute("""
+        SELECT pattern_id, pattern_def, n_total, mfe40_mean, expectancy, peak_return_avg
+        FROM pattern_knowledge_base
+        WHERE n_total >= ?
+        ORDER BY n_total DESC
+    """, (MIN_N_PATTERN,)).fetchall()
+
+    best_pid = None
+    best_mfe40 = None
+    best_exp = None
+    best_peak = None
+    best_matched = 0
+    best_n = 0
+    best_specificity = -1
+
+    for row in rows:
+        pid, pat_def_str, n_total, mfe40, exp, peak = row
+        try:
+            pat_def = json.loads(pat_def_str)
+        except Exception:
+            continue
+        # Check if all required flags in this pattern are present in the signal
+        match = True
+        for flag, required_val in pat_def.items():
+            if gate_flags.get(flag, 0) != required_val:
+                match = False
+                break
+        if not match:
+            continue
+        # Prefer: more required flags (specificity) then higher expectancy
+        specificity = len(pat_def)
+        if (specificity > best_specificity or
+                (specificity == best_specificity and (exp or 0) > (best_exp or 0))):
+            best_specificity = specificity
+            best_pid = pid
+            best_mfe40 = mfe40
+            best_exp = exp
+            best_peak = peak
+            best_matched = n_total
+            best_n = n_total
+
+    return best_pid, best_mfe40, best_exp, best_peak, best_matched
+
+
 def log_telemetry(signal_id, symbol, signal_date, signal_class,
                   pattern_score, indicators, market_regime=None,
+                  gate_flags: dict = None,
                   db_path=DB_PATH):
     """
     Log per-signal pattern telemetry. Called from main.py scan workflow.
     Does NOT modify entry decisions. Research only.
+    gate_flags: dict of flag_name -> 0/1 (r1_price, r2_ob, ..., sv_hit, hvn_hit, etc.)
     """
     try:
         conn = sqlite3.connect(db_path)
         _init_tables(conn)
 
-        # Look up best matching pattern from KB
+        # Look up best matching pattern from KB using gate flags
         pid = None
         hist_mfe40 = None
         hist_exp = None
         hist_peak = None
         matched = None
-        conf = None
 
-        # Simple confidence from pattern_score thresholds
-        if pattern_score is None:
+        if gate_flags:
+            pid, hist_mfe40, hist_exp, hist_peak, matched = _lookup_best_pattern(conn, gate_flags)
+
+        # Confidence from pattern_score AND pattern match quality
+        if hist_mfe40 is not None and pattern_score is not None and pattern_score >= 50:
+            conf = "High"
+        elif hist_mfe40 is not None and (matched or 0) >= 50:
+            conf = "Moderate"
+        elif hist_mfe40 is not None:
+            conf = "Low"
+        elif pattern_score is None:
             conf = "Very Low"
         elif pattern_score >= 70:
             conf = "High"

@@ -1787,23 +1787,101 @@ def _section_pattern_intelligence() -> str:
     return f'<div style="background:{BG1};border:1px solid {BOR};border-radius:8px;padding:20px;margin-bottom:20px">{html}</div>'
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# EXECUTIVE SUMMARY — Single compact header panel (no duplicates)
+# Shows: biggest win, biggest deterioration, latest promoted/rejected, top/bottom alpha source
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _section_executive_summary() -> str:
+    kb_data = _load("knowledge_base.json")
+    ff = _ff_list(kb_data)
+
+    # Latest promoted/rejected
+    last_promo = _db_query("SELECT deployed_at, note FROM deployment_log WHERE action='PROMOTE' ORDER BY id DESC LIMIT 1")
+    last_rb    = _db_query("SELECT deployed_at, note FROM deployment_log WHERE action='ROLLBACK' ORDER BY id DESC LIMIT 1")
+    last_val   = _db_query("SELECT verdict, oos_wr, run_at FROM validation_runs ORDER BY id DESC LIMIT 1")
+    lv = last_val[0] if last_val else {}
+
+    # Best/worst alpha sources from KB
+    positives = sorted([f for f in ff if isinstance(f, dict) and f.get("verdict") == "POSITIVE"],
+                       key=lambda x: (x.get("win_rate") or 0), reverse=True)
+    negatives = sorted([f for f in ff if isinstance(f, dict) and f.get("verdict") == "NEGATIVE"],
+                       key=lambda x: (x.get("win_rate") or 1))
+
+    best_alpha  = positives[0] if positives else {}
+    worst_alpha = negatives[0] if negatives else {}
+
+    # Latest discovery (newest finding regardless of verdict)
+    all_sorted = sorted([f for f in ff if isinstance(f, dict)],
+                        key=lambda x: str(x.get("recorded_at", "")), reverse=True)
+    latest_disc = all_sorted[0] if all_sorted else {}
+
+    oos_wr  = lv.get("oos_wr", 0) or 0
+    alpha_ok = lv.get("verdict") == "APPROVED"
+
+    def _exec_cell(label, value, sub="", col=FG):
+        return (f'<div style="flex:1;min-width:160px;background:{BG2};border:1px solid {BOR};'
+                f'border-radius:6px;padding:12px 14px">'
+                f'<div style="font-size:0.72em;color:{DIM};text-transform:uppercase;'
+                f'letter-spacing:0.05em;margin-bottom:4px">{label}</div>'
+                f'<div style="font-size:1.0em;font-weight:700;color:{col}">{value}</div>'
+                f'<div style="font-size:0.74em;color:{DIM};margin-top:3px">{sub}</div>'
+                f'</div>')
+
+    cells = (
+        _exec_cell("Alpha Status",
+                   _badge(alpha_ok, "VERIFIED", "UNVERIFIED"),
+                   f"OOS WR {_pct(oos_wr)} · {_ts(lv.get('run_at'))}",
+                   G if alpha_ok else R)
+        + _exec_cell("Strongest Alpha",
+                     best_alpha.get("factor", "—"),
+                     f"WR {_pct(best_alpha.get('win_rate'))} · n={best_alpha.get('sample_n','?')}",
+                     G)
+        + _exec_cell("Weakest Alpha",
+                     worst_alpha.get("factor", "—"),
+                     f"WR {_pct(worst_alpha.get('win_rate'))} · n={worst_alpha.get('sample_n','?')}",
+                     R)
+        + _exec_cell("Latest Discovery",
+                     latest_disc.get("factor", "—"),
+                     f"{latest_disc.get('verdict','?')} · {str(latest_disc.get('recorded_at',''))[:10]}",
+                     G if latest_disc.get("verdict") == "POSITIVE" else R if latest_disc.get("verdict") == "NEGATIVE" else A)
+        + _exec_cell("Last Promoted",
+                     _ts(last_promo[0].get("deployed_at")) if last_promo else "—",
+                     (last_promo[0].get("note") or "")[:40] if last_promo else "no promotions yet",
+                     G)
+        + _exec_cell("Last Rollback",
+                     _ts(last_rb[0].get("deployed_at")) if last_rb else "—",
+                     (last_rb[0].get("note") or "")[:40] if last_rb else "no rollbacks",
+                     R if last_rb else DIM)
+    )
+
+    return f"""
+<div style="background:{BG1};border:2px solid {B};border-radius:10px;padding:16px 20px;margin-bottom:18px">
+  {_section_header("EXECUTIVE SUMMARY", "🎯")}
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">{cells}</div>
+</div>"""
+
+
 def build_dashboard() -> str:
     now     = _now_cairo()
     now_str = now.strftime("%Y-%m-%d %H:%M:%S")
 
+    # Ordered by importance: executive summary → status → snapshot → performance →
+    # learning → pipeline → research → knowledge → classification → health → pattern intel (research-only)
+    # REMOVED: deployment_history (covered by learning/todays_learning deployments box)
+    # REMOVED: changes_since_yesterday (covered by todays_learning)
     body = (
+        f'<div id="exec-summary">{_section_executive_summary()}</div>'
         f'<div id="alpha-status">{_section_alpha_status()}</div>'
-        f'<div id="pipeline">{_section_bottom_pipeline()}</div>'
-        f'<div id="learning">{_section_todays_learning()}</div>'
-        f'<div id="research">{_section_current_research()}</div>'
         f'<div id="snapshot">{_section_production_snapshot()}</div>'
-        f'<div id="knowledge">{_section_knowledge_findings()}</div>'
         f'<div id="performance">{_section_alpha_performance()}</div>'
+        f'<div id="learning">{_section_todays_learning()}</div>'
+        f'<div id="pipeline">{_section_bottom_pipeline()}</div>'
+        f'<div id="research">{_section_current_research()}</div>'
+        f'<div id="knowledge">{_section_knowledge_findings()}</div>'
         f'<div id="classification">{_section_classification_fib()}</div>'
-        f'<div id="pattern-intel">{_section_pattern_intelligence()}</div>'
-        f'<div id="changes">{_section_changes_since_yesterday()}</div>'
-        f'<div id="deployments">{_section_deployment_history()}</div>'
         f'<div id="health">{_section_system_health()}</div>'
+        f'<div id="pattern-intel">{_section_pattern_intelligence()}</div>'
     )
 
     return f"""<!DOCTYPE html>
@@ -1836,7 +1914,7 @@ def build_dashboard() -> str:
 <div class="header">
   <div>
     <h1>⚡ EGX Executive Operations Center</h1>
-    <div class="meta">EGX Autonomous Bottom Discovery Platform — Live State · 12 Sections</div>
+    <div class="meta">EGX Autonomous Bottom Discovery Platform — Live State · 11 Sections</div>
   </div>
   <div class="meta" style="text-align:right">
     <div style="color:{FG}">{now_str}</div>
@@ -1846,25 +1924,24 @@ def build_dashboard() -> str:
 
 <div class="nav">
   <span style="color:{DIM};font-size:0.85em">GO TO:</span>
-  <a href="#alpha-status" class="active">⚡ Status</a>
-  <a href="#pipeline">🔭 Pipeline</a>
-  <a href="#learning">🧠 Learning</a>
-  <a href="#research">🔬 Research</a>
-  <a href="#snapshot">🎯 Alpha Snapshot</a>
-  <a href="#knowledge">📚 Knowledge</a>
+  <a href="#exec-summary" class="active">🎯 Summary</a>
+  <a href="#alpha-status">⚡ Status</a>
+  <a href="#snapshot">📈 Snapshot</a>
   <a href="#performance">📊 Performance</a>
+  <a href="#learning">🧠 Learning</a>
+  <a href="#pipeline">🔭 Pipeline</a>
+  <a href="#research">🔬 Research</a>
+  <a href="#knowledge">📚 Knowledge</a>
   <a href="#classification">🎯 Classification</a>
-  <a href="#pattern-intel">🔬 Pattern Intel</a>
-  <a href="#changes">📅 Changes</a>
-  <a href="#deployments">🚀 Deployments</a>
   <a href="#health">🔧 Health</a>
+  <a href="#pattern-intel">🔬 Pattern Intel</a>
   <a href="heatmap.html" style="border-color:{G};color:{G}">📈 Heatmap</a>
 </div>
 
 <div class="container">
 {body}
 <div class="footer">
-  EGX Autonomous Bottom Discovery Platform · Built {now_str} · 12 sections
+  EGX Autonomous Bottom Discovery Platform · Built {now_str} · 11 sections
   <a href="heatmap.html" style="color:{B};text-decoration:none">📈 Signal Heatmap</a>
 </div>
 </div>

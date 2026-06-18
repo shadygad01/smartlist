@@ -771,6 +771,7 @@ def analyze(symbol):
             ctx_mult  *= CTX_CBE_MULT
             ctx_labels.append("🏦 CBE Window +30%")
         # ranking_engine is the authority; falls back to STOCK_QUALITY when sample_n < 30
+        _factor_exp_score = 0.0
         try:
             import ranking_engine as _re
             _exp = _re.compute_expectancy(symbol)
@@ -780,6 +781,14 @@ def analyze(symbol):
             else:
                 stock_mult = STOCK_QUALITY.get(symbol, 1.0)
                 _tier_lbl  = {1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,"")
+            # Challenger: factor-level expectancy score (r2–r8, validated +19% top-quartile WR)
+            if '_sg' in dir():
+                _factor_exp_score = _re.factor_expectancy_score({
+                    "r2_ob": r2, "r3_liquidity": r3, "r4_htf": r4,
+                    "r5_avwap": r5, "r6_macd": r6, "r7_div": r7, "r8_demand": r8,
+                    "sv_hit": bool(sv_result[0]) if sv_result else False,
+                    "hvn_hit": bool(hvn_result[0]) if hvn_result else False,
+                })
         except Exception:
             stock_mult = STOCK_QUALITY.get(symbol, 1.0)
             _tier_lbl  = {1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,"")
@@ -951,6 +960,7 @@ def analyze(symbol):
             "sv_depth":         _sv_depth,
             "regime_state":     _regime_state,
             "regime_multiplier": round(_regime_mult, 3),
+            "factor_exp_score": round(_factor_exp_score, 2),
             **_snap,
         }
 

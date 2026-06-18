@@ -42,6 +42,29 @@ def _load(path, default=None):
         return default if default is not None else {}
 
 
+def _load_scan() -> dict:
+    """Load scan_results.json; fall back to latest signal_history.json entry per stock."""
+    scan = _load("scan_results.json")
+    if scan:
+        return scan
+    history = _load("signal_history.json")
+    if not history:
+        return {}
+    return {
+        stock: {
+            "price":            sigs[-1].get("price", 0),
+            "score":            sigs[-1].get("score", 0),
+            "signal":           sigs[-1].get("signal", "-"),
+            "r1":               sigs[-1].get("r1", 0),
+            "factor_exp_score": sigs[-1].get("factor_exp_score", 0),
+            "early_buy_research": sigs[-1].get("early_buy_research", False),
+            "ok":               True,
+        }
+        for stock, sigs in history.items()
+        if sigs
+    }
+
+
 def _ts(iso, fmt="%Y-%m-%d %H:%M"):
     if not iso:
         return "—"
@@ -1793,8 +1816,8 @@ def _section_pattern_intelligence() -> str:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _section_top_ranked() -> str:
-    """TOP RANKED OPPORTUNITIES panel — reads scan_results.json + rank_history.json."""
-    scan  = _load("scan_results.json")
+    """TOP RANKED OPPORTUNITIES panel — reads scan_results.json (falls back to signal_history)."""
+    scan  = _load_scan()
     ranks = _load("rank_history.json")
 
     # Compute blended score for all valid stocks from today's scan
@@ -1824,7 +1847,7 @@ def _section_top_ranked() -> str:
     if not ranked:
         return f"""<div class="section" style="border-left:4px solid {B}">
   {_section_header("TOP RANKED OPPORTUNITIES", "🏆")}
-  <div style="color:{DIM};font-size:0.85em;padding:12px 0">No live scan data — run daily scan to populate.</div>
+  <div style="color:{DIM};font-size:0.85em;padding:12px 0">No BUY signals in current scan.</div>
 </div>"""
 
     # Resolve rank changes from history
@@ -1942,7 +1965,7 @@ def _section_top_ranked() -> str:
 
 def _section_top_watchlist() -> str:
     """WAIT — Watchlist panel: signals in discount zone but below entry gate, sorted by blended score."""
-    scan = _load("scan_results.json")
+    scan = _load_scan()
 
     today_str = datetime.now(CAIRO).strftime("%Y-%m-%d")
     watchlist = []

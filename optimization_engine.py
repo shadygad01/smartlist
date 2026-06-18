@@ -199,7 +199,9 @@ def _run_weight_gradient(db_path: str, config_path: str) -> tuple:
             n = len(df)
         return params_before, params_after, metric_val, n
     except Exception as exc:
-        print(f"[optimization_engine] weight_gradient error: {exc}")
+        import traceback
+        print(f"[optimization_engine] weight_gradient CRITICAL: {exc}")
+        print(traceback.format_exc())
         params_before = _read_current_weights(config_path)
         return params_before, params_before, 0.0, 0
 
@@ -294,19 +296,11 @@ def _run_expectancy_gradient(db_path: str, config_path: str) -> tuple:
     avg_loss = sum(losses) / len(losses) if losses else 0.0
     base_exp = wr * avg_win + (1 - wr) * avg_loss
 
-    # Simple +/-5% perturbation per weight; keep best
+    # Coordinate descent on per-weight perturbations requires raw per-signal factor
+    # components (r1..r8) which are not stored — delegate to weight_optimizer which
+    # uses scipy L-BFGS-B over its own in-memory dataset.
     best_params = dict(params_before)
     best_exp = base_exp
-    for key in list(params_before.keys()):
-        if not isinstance(params_before[key], (int, float)):
-            continue
-        for delta in (+0.05, -0.05):
-            candidate = dict(params_before)
-            candidate[key] = round(params_before[key] * (1 + delta), 4)
-            # Expectancy doesn't change with weight tweaks in this simplified version;
-            # record candidate for downstream validation to decide
-            # Real improvement: re-score signals with new weights (delegated to weight_optimizer)
-            pass
 
     try:
         import weight_optimizer as wo
@@ -315,12 +309,15 @@ def _run_expectancy_gradient(db_path: str, config_path: str) -> tuple:
         if opt and "optimal_weights" in opt:
             best_params = {k: round(v, 4) for k, v in opt["optimal_weights"].items()}
             m = opt.get("metrics_optimized", {})
-            # Use optimizer's expected_return directly — same metric formula as base_exp.
-            # Previous code used opt_wr * avg_win (peak_1y) vs base_exp from r20d —
-            # that metric mismatch produced fake +0.55 improvement every cycle.
             best_exp = float(m.get("expected_return", base_exp))
-    except Exception:
-        pass
+        else:
+            print(f"[optimization_engine] weight_optimizer returned empty result — staying at params_before")
+    except Exception as exc:
+        import traceback
+        print(f"[optimization_engine] CRITICAL: weight_optimizer failed: {exc}")
+        print(traceback.format_exc())
+        # Do NOT swallow — record failure in return so caller can log it
+        return params_before, params_before, base_exp, n
 
     return params_before, best_params, best_exp, n
 

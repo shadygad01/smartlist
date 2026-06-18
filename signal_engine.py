@@ -66,8 +66,8 @@ class GateConfig:
                     loaded = json.load(f)
                 self.gates.update({k: v for k, v in loaded.items()
                                    if k in _DEFAULT_GATES})
-            except Exception:
-                pass
+            except Exception as exc:
+                print(f"[signal_engine] WARNING: failed to load gates config: {exc}")
 
         if os.path.exists(weights_path):
             try:
@@ -75,8 +75,8 @@ class GateConfig:
                     loaded = json.load(f)
                 self.weights.update({k: v for k, v in loaded.items()
                                      if k in _DEFAULT_WEIGHTS})
-            except Exception:
-                pass
+            except Exception as exc:
+                print(f"[signal_engine] WARNING: failed to load weights config: {exc}")
 
         # Convenience attributes — gates
         self.sv_vol_mult    = self.gates["sc_demand_sv_vol_mult"]

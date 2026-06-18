@@ -31,18 +31,18 @@ from typing import Optional
 
 
 # ── Evidence-Prior Weights ────────────────────────────────────────────────────
-# Derived from mfe_40d Pearson correlations across 646 historical buy signals:
-#   r6_macd  +0.223  r5_avwap +0.163  r4_htf   +0.136
-#   r3_liq   +0.131  r8_demand+0.129  r7_div   +0.024  r2_ob  −0.007
-# Normalised so they sum to 1.0 (negative → floored at 0, tiny positives kept small).
+# Derived from peak_return_1y Pearson correlations (N=560 signals, current optimized weights):
+#   r5_avwap +0.258  r6_macd  +0.205  r4_htf   +0.163
+#   r3_liq   +0.139  r7_div   +0.118  r8_demand+0.100  r2_ob  −0.051
+# Normalised to sum=1.0; negative → floored at 0.
 _PRIOR_WEIGHTS = {
-    "r2_ob":        0.00,   # near-zero / negative historical correlation
-    "r3_liquidity": 0.195,
-    "r4_htf":       0.202,
-    "r5_avwap":     0.243,
-    "r6_macd":      0.332,
-    "r7_div":       0.028,
-    "r8_demand":    0.000,  # weak; interactions captured via demand_bonus
+    "r2_ob":        0.000,  # negative correlation → floor at 0
+    "r3_liquidity": 0.141,
+    "r4_htf":       0.166,
+    "r5_avwap":     0.262,
+    "r6_macd":      0.208,
+    "r7_div":       0.120,
+    "r8_demand":    0.103,
 }
 
 # Max possible values for each factor (from signal_engine defaults)

@@ -1228,14 +1228,16 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 
     def _sort_key(s):
         sig = results[s].get("signal", "").lower()
-        score = results[s].get("score", 0)
+        fexp  = results[s].get("factor_exp_score", 0) or 0
+        score = results[s].get("score", 0) or 0
+        blended = 0.60 * fexp + 0.40 * score
         if sig in BUY_FAMILY:
             group = 0
         elif sig in WAIT_FAMILY:
             group = 1
         else:
             group = 2
-        return (group, -score)
+        return (group, -blended)
 
     sorted_stocks = sorted(STOCKS, key=_sort_key)
 
@@ -1778,7 +1780,7 @@ def send_telegram_alerts(results):
         and results[s].get("signal") != "Skip"
         and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
     ]
-    alerts.sort(key=lambda x: x[1].get("score", 0), reverse=True)
+    alerts.sort(key=lambda x: 0.60 * (x[1].get("factor_exp_score", 0) or 0) + 0.40 * (x[1].get("score", 0) or 0), reverse=True)
 
     if not alerts:
         # Send a "nothing today" summary so you know the scan ran

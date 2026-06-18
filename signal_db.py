@@ -599,6 +599,7 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
                     snap_num_touches, snap_sweep_size, snap_vol_exp,
                     snap_reclaim_spd, snap_dist_lo, snap_prem_disc,
                     rl_score, rl_signal,
+                    ranking_expectancy,
                     created_at
                 ) VALUES (
                     :id, :symbol, :signal_date, :signal_type,
@@ -626,6 +627,7 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
                     :snap_num_touches, :snap_sweep_size, :snap_vol_exp,
                     :snap_reclaim_spd, :snap_dist_lo, :snap_prem_disc,
                     :rl_score, :rl_signal,
+                    :ranking_expectancy,
                     :now
                 )
             """, {
@@ -709,6 +711,7 @@ def log_signals(results: dict, sectors: dict, stock_quality: dict,
                 "snap_prem_disc":   r.get("snap_prem_disc"),
                 "rl_score":         _rl_score,
                 "rl_signal":        _rl_signal,
+                "ranking_expectancy": float(r.get("factor_exp_score", 0) or 0),
                 "now":           _cairo_now().isoformat(),
             })
             added += 1

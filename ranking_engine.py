@@ -133,18 +133,19 @@ def compute_expectancy(
 
 
 # ── Factor-Level Expectancy (Challenger Layer 2) ──────────────────────────────
-# Evidence-prior weights derived from mfe_40d Pearson correlations (N=560 signals):
-#   r6_macd +0.223, r5_avwap +0.163, r4_htf +0.136, r3_liq +0.131,
-#   r8_demand +0.129, r7_div +0.024, r2_ob -0.007
+# Evidence-prior weights derived from peak_return_1y Pearson correlations (N=560 signals,
+# recalibrated with current optimized production weights):
+#   r5_avwap +0.258, r6_macd +0.205, r4_htf +0.163, r3_liq +0.139,
+#   r7_div +0.118, r8_demand +0.100, r2_ob -0.051 (floor 0)
 # Normalised to sum=1.0; negative floor at 0.
 _FACTOR_WEIGHTS = {
-    "r2_ob":        0.00,
-    "r3_liquidity": 0.195,
-    "r4_htf":       0.202,
-    "r5_avwap":     0.243,
-    "r6_macd":      0.332,
-    "r7_div":       0.028,
-    "r8_demand":    0.000,
+    "r2_ob":        0.000,
+    "r3_liquidity": 0.141,
+    "r4_htf":       0.166,
+    "r5_avwap":     0.262,
+    "r6_macd":      0.208,
+    "r7_div":       0.120,
+    "r8_demand":    0.103,
 }
 def _get_factor_max() -> dict:
     """

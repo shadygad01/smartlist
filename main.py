@@ -971,6 +971,22 @@ def analyze(symbol):
             import pattern_kb as _pkb
             _sig_id = f"{symbol}_{today}"
             _ind_data = pattern_data.get("detail") if pattern_data.get("ok") else None
+            # Gate flags for PKB pattern lookup (binary: gate scored > 0)
+            _gate_flags = {
+                "r1_price":      1 if (r1 or 0) > 0 else 0,
+                "r2_ob":         1 if (r2 or 0) > 0 else 0,
+                "r3_liquidity":  1 if (r3 or 0) > 0 else 0,
+                "r4_htf":        1 if (r4 or 0) > 0 else 0,
+                "r5_avwap":      1 if (r5 or 0) > 0 else 0,
+                "r6_macd":       1 if (r6 or 0) > 0 else 0,
+                "r7_div":        1 if (r7 or 0) > 0 else 0,
+                "r8_demand":     1 if (r8 or 0) > 0 else 0,
+                "sweep_detected": 1 if result.get("sweep_detected") else 0,
+                "wick_rejection": 1 if result.get("wick_rejection") else 0,
+                "equal_lows":     1 if result.get("equal_lows") else 0,
+                "sv_hit":         1 if result.get("sv_hit") else 0,
+                "hvn_hit":        1 if result.get("hvn_hit") else 0,
+            }
             _pkb.log_telemetry(
                 signal_id=_sig_id,
                 symbol=symbol,
@@ -979,6 +995,7 @@ def analyze(symbol):
                 pattern_score=pattern_data.get("pattern_score") if pattern_data.get("ok") else None,
                 indicators=_ind_data,
                 market_regime=_regime_state,
+                gate_flags=_gate_flags,
             )
         except Exception:
             pass

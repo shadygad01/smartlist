@@ -38,6 +38,12 @@ _DEFAULT_GATES = {
     "sc_demand_sv_lookback":    30,
     "sc_demand_hvn_bins":       20,
     "sc_demand_hvn_pct":        0.70,
+    "sc_demand_hvn_only_frac":  0.00,   # HVN-only scoring fraction of W_DZ
+                                         # Evidence (alpha audit 2026-06-18, N=890):
+                                         # HVN-only shows no significant alpha vs Neither
+                                         # (p>0.50 all tests, delta<0 in 2021/2022 p<0.05).
+                                         # OOS survivors improve from Exp=0.1806→0.2120 at 0.00.
+                                         # Prior value: 0.40 (overweighted — no evidence basis).
     "swings_lookback":          80,
     "macd_fast":                12,
     "macd_slow":                26,
@@ -84,6 +90,7 @@ class GateConfig:
         self.sv_lookback    = self.gates["sc_demand_sv_lookback"]
         self.hvn_bins       = self.gates["sc_demand_hvn_bins"]
         self.hvn_pct        = self.gates["sc_demand_hvn_pct"]
+        self.hvn_only_frac  = self.gates["sc_demand_hvn_only_frac"]
         self.swings_lb      = self.gates["swings_lookback"]
         self.price_gate_frac_normal    = self.gates["price_gate_frac_normal"]
         self.price_gate_frac_whitelist = self.gates["price_gate_frac_whitelist"]
@@ -112,6 +119,9 @@ W_MACD  = _default_cfg.w_macd
 W_DIV   = _default_cfg.w_div
 W_DZ    = _default_cfg.w_dz
 
+# HVN-only demand fraction — calibrated from alpha audit 2026-06-18 (N=890)
+HVN_ONLY_FRAC = _default_cfg.hvn_only_frac
+
 # Price gate fractions (proportional — auto-tracks W_PRICE through weight optimization)
 PRICE_GATE_FRAC_NORMAL    = _default_cfg.price_gate_frac_normal
 PRICE_GATE_FRAC_WHITELIST = _default_cfg.price_gate_frac_whitelist
@@ -125,7 +135,7 @@ def reload_weights(config_path: str = "config/") -> dict:
     Returns dict of new weight values.
     """
     global _default_cfg, W_PRICE, W_OB, W_LIQ, W_HTF, W_AVWAP, W_MACD, W_DIV, W_DZ
-    global PRICE_GATE_FRAC_NORMAL, PRICE_GATE_FRAC_WHITELIST
+    global PRICE_GATE_FRAC_NORMAL, PRICE_GATE_FRAC_WHITELIST, HVN_ONLY_FRAC
     _weights_path = os.path.join(config_path, "weights.json")
     _gates_path = os.path.join(config_path, "gates_config.json")
     _default_cfg = GateConfig(gates_path=_gates_path, weights_path=_weights_path)
@@ -137,6 +147,7 @@ def reload_weights(config_path: str = "config/") -> dict:
     W_MACD  = _default_cfg.w_macd
     W_DIV   = _default_cfg.w_div
     W_DZ    = _default_cfg.w_dz
+    HVN_ONLY_FRAC             = _default_cfg.hvn_only_frac
     PRICE_GATE_FRAC_NORMAL    = _default_cfg.price_gate_frac_normal
     PRICE_GATE_FRAC_WHITELIST = _default_cfg.price_gate_frac_whitelist
     return {
@@ -342,9 +353,9 @@ def calc_volume_profile(df, eq, lo, buy_hi, bins=20, hvn_pct=0.70):
 def sc_demand_zone(df, eq, lo, buy_hi, _sv=None, _hvn=None):
     """
     Demand Zone Confluence = Stopping Volume + Volume Profile HVN, both in discount.
-    SV + HVN  → full W_DZ  (true institutional demand zone)
-    SV only   → 60% W_DZ   (absorption present, no volume memory)
-    HVN only  → 40% W_DZ   (volume memory, no absorption candle)
+    SV + HVN  → full W_DZ               (institutional demand: absorption + volume memory)
+    SV only   → 60% W_DZ                (absorption present, no volume memory)
+    HVN only  → HVN_ONLY_FRAC × W_DZ   (configurable; evidence-calibrated 2026-06-18)
     Neither   → 0
     _sv/_hvn: pre-computed tuples from calc_stopping_volume / calc_volume_profile
               to avoid recomputing when called from analyze().
@@ -359,7 +370,7 @@ def sc_demand_zone(df, eq, lo, buy_hi, _sv=None, _hvn=None):
         pts  = round(W_DZ * 0.60)
         desc = f"Stopping Volume only — {sv_desc} | No HVN: {hvn_desc}"
     elif hvn_hit:
-        pts  = round(W_DZ * 0.40)
+        pts  = round(W_DZ * HVN_ONLY_FRAC)
         desc = f"HVN only — {hvn_desc} | No SV: {sv_desc}"
     else:
         pts  = 0

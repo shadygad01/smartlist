@@ -771,6 +771,7 @@ def analyze(symbol):
             ctx_mult  *= CTX_CBE_MULT
             ctx_labels.append("🏦 CBE Window +30%")
         # ranking_engine is the authority; falls back to STOCK_QUALITY when sample_n < 30
+        _factor_exp_score = 0.0
         try:
             import ranking_engine as _re
             _exp = _re.compute_expectancy(symbol)
@@ -780,6 +781,15 @@ def analyze(symbol):
             else:
                 stock_mult = STOCK_QUALITY.get(symbol, 1.0)
                 _tier_lbl  = {1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,"")
+            # Challenger: factor-level expectancy score (r2–r8, validated +19% top-quartile WR)
+            # Guard: _sg (and sv_result/hvn_result) only exist in discount-zone branch (cur < eq)
+            if cur < eq:
+                _factor_exp_score = _re.factor_expectancy_score({
+                    "r2_ob": r2, "r3_liquidity": r3, "r4_htf": r4,
+                    "r5_avwap": r5, "r6_macd": r6, "r7_div": r7, "r8_demand": r8,
+                    "sv_hit": bool(sv_result[0]) if sv_result else False,
+                    "hvn_hit": bool(hvn_result[0]) if hvn_result else False,
+                })
         except Exception:
             stock_mult = STOCK_QUALITY.get(symbol, 1.0)
             _tier_lbl  = {1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,"")
@@ -792,7 +802,8 @@ def analyze(symbol):
         _regime_state = ""
         _regime_mult  = 1.0
         if _REGIME_FILTER_ENABLED and cur < eq:
-            _sg_trend = (_sg.get("egx30_trend", "") or "") if 'cur' in dir() and cur < eq and '_sg' in dir() else ""
+            # _sg is available here since we're inside `if _REGIME_FILTER_ENABLED and cur < eq`
+            _sg_trend = (_sg.get("egx30_trend", "") or "")
             # _sg is the score_signal() dict (only available in discount-zone branch)
             if _sg_trend in ("DOWN", "DOWNTREND", "bearish", "Bearish", "downtrend"):
                 _regime_mult   = _REGIME_DOWN_MULT
@@ -951,6 +962,7 @@ def analyze(symbol):
             "sv_depth":         _sv_depth,
             "regime_state":     _regime_state,
             "regime_multiplier": round(_regime_mult, 3),
+            "factor_exp_score": round(_factor_exp_score, 2),
             **_snap,
         }
 
@@ -1218,14 +1230,16 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 
     def _sort_key(s):
         sig = results[s].get("signal", "").lower()
-        score = results[s].get("score", 0)
+        fexp  = results[s].get("factor_exp_score", 0) or 0
+        score = results[s].get("score", 0) or 0
+        blended = 0.60 * fexp + 0.40 * score
         if sig in BUY_FAMILY:
             group = 0
         elif sig in WAIT_FAMILY:
             group = 1
         else:
             group = 2
-        return (group, -score)
+        return (group, -blended)
 
     sorted_stocks = sorted(STOCKS, key=_sort_key)
 
@@ -1768,7 +1782,7 @@ def send_telegram_alerts(results):
         and results[s].get("signal") != "Skip"
         and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
     ]
-    alerts.sort(key=lambda x: x[1].get("score", 0), reverse=True)
+    alerts.sort(key=lambda x: 0.60 * (x[1].get("factor_exp_score", 0) or 0) + 0.40 * (x[1].get("score", 0) or 0), reverse=True)
 
     if not alerts:
         # Send a "nothing today" summary so you know the scan ran

@@ -60,8 +60,11 @@ lookup    = {stock: {sig['date']: sig for sig in sigs}
              for stock, sigs in history.items()}
 
 today_scores = {
-    t: {'score':  d.get('score', 0), 'price':  d.get('price', 0),
-        'signal': d.get('signal', '-'), 'r1': d.get('r1', 0)}
+    t: {'score':           d.get('score', 0),
+        'factor_exp_score': d.get('factor_exp_score', 0),
+        'price':            d.get('price', 0),
+        'signal':           d.get('signal', '-'),
+        'r1':               d.get('r1', 0)}
     for t, d in scan_results.items()
 }
 
@@ -99,24 +102,32 @@ best_ret_ticker = next(
 )
 
 # ── Buy signals (any signal containing "buy") ─────────────────────────────
+def _blended(d):
+    """0.60 × factor_exp_score + 0.40 × score — matches main.py live ranking."""
+    return 0.60 * (d.get('factor_exp_score', 0) or 0) + 0.40 * (d.get('score', 0) or 0)
+
 strong_buy = [
-    {'ticker': t, 'score': d.get('score', 0), 'price': d.get('price', 0),
+    {'ticker': t, 'score': d.get('score', 0),
+     'factor_exp_score': d.get('factor_exp_score', 0),
+     'price': d.get('price', 0),
      'signal': d.get('signal', '-'), 'r1': d.get('r1', 0),
      'pattern': d.get('pattern') or {}}
     for t, d in scan_results.items()
     if 'buy' in d.get('signal', '').lower()
 ]
-strong_buy.sort(key=lambda x: x['score'], reverse=True)
+strong_buy.sort(key=_blended, reverse=True)
 
 # ── Pending signals (score > 0, excluding buy signals) ───────────────────
 pending = [
-    {'ticker': t, 'score': d.get('score', 0), 'price': d.get('price', 0),
+    {'ticker': t, 'score': d.get('score', 0),
+     'factor_exp_score': d.get('factor_exp_score', 0),
+     'price': d.get('price', 0),
      'signal': d.get('signal', '-'), 'r1': d.get('r1', 0),
      'buy_hi': d.get('buy_hi', 0)}
     for t, d in scan_results.items()
     if d.get('score', 0) > 0 and 'buy' not in d.get('signal', '').lower()
 ]
-pending.sort(key=lambda x: x['score'], reverse=True)
+pending.sort(key=_blended, reverse=True)
 
 stocks_with_history = [s for s in history if history[s]]
 max_score_stock = max(

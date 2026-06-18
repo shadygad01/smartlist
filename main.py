@@ -1260,6 +1260,110 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 
     sorted_stocks = sorted(STOCKS, key=_sort_key)
 
+    # ── Rank change data from previous session ────────────────────────────────
+    _prev_ranks = load_rank_changes()
+
+    def _rank_delta_html(sym, current_rank):
+        prev = _prev_ranks.get(sym)
+        if prev is None or prev == current_rank:
+            return ""
+        delta = prev - current_rank  # positive = moved up
+        if delta > 0:
+            return f'<span style="color:#1a7340;font-size:11px;font-weight:700;">▲{delta}</span>'
+        return f'<span style="color:#b02a2a;font-size:11px;font-weight:700;">▼{abs(delta)}</span>'
+
+    # ── TOP RANKED OPPORTUNITIES block ───────────────────────────────────────
+    def _build_ranking_block():
+        rows_a = ""  # A-tier: top 5 BUY
+        rows_b = ""  # B-tier: next 5 BUY
+        buy_rank = 0
+        for s in sorted_stocks:
+            r = results[s]
+            if not r.get("ok"): continue
+            sig_l = r.get("signal", "").lower()
+            if sig_l not in BUY_FAMILY: continue
+            buy_rank += 1
+            fexp    = r.get("factor_exp_score", 0) or 0
+            score   = r.get("score", 0) or 0
+            blended = 0.60 * fexp + 0.40 * score
+            delta_h = _rank_delta_html(s, buy_rank)
+            tier = "A" if buy_rank <= 5 else "B"
+            tier_col = "#0B5394" if tier == "A" else "#5b6c82"
+            row_bg = "#f0f7ff" if buy_rank % 2 == 1 else "#ffffff"
+            sig_badges = {
+                "institutional buy": ("#3a0078", "#ede0ff", "🟣"),
+                "very strong buy":   ("#155724", "#d4edda", "🟢"),
+                "strong buy":        ("#1a5c2a", "#d4edda", "🟢"),
+                "buy":               ("#145214", "#e8f5e9", "🟩"),
+            }
+            sc, sb, em = sig_badges.get(sig_l, ("#333", "#eee", ""))
+            row = f"""
+<tr style="background:{row_bg};border-bottom:1px solid #dde8f5;">
+  <td style="padding:11px 14px;font-family:Arial,sans-serif;width:36px;text-align:center;">
+    <div style="font-size:18px;font-weight:800;color:{tier_col};">#{buy_rank}</div>
+    <div style="font-size:10px;font-weight:700;color:{tier_col};letter-spacing:0.5px;">{tier}-TIER</div>
+  </td>
+  <td style="padding:11px 14px;font-family:Arial,sans-serif;">
+    <div style="font-size:15px;font-weight:700;color:#111;">{NAMES.get(s, s)}</div>
+    <div style="font-size:10px;color:#999;margin-top:1px;">{s}</div>
+  </td>
+  <td style="padding:11px 14px;font-family:Arial,sans-serif;">
+    <span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:{sb};color:{sc};border:1px solid {sc}20;">{em} {r.get("signal","")}</span>
+  </td>
+  <td align="right" style="padding:11px 14px;font-family:Arial,sans-serif;">
+    <div style="font-size:16px;font-weight:800;color:#1a3a5c;">{blended:.1f}</div>
+    <div style="font-size:10px;color:#999;">rank score</div>
+  </td>
+  <td align="right" style="padding:11px 14px;font-family:Arial,sans-serif;">
+    <div style="font-size:14px;font-weight:600;color:#0B5394;">{fexp:.1f}</div>
+    <div style="font-size:10px;color:#999;">expectancy</div>
+  </td>
+  <td align="right" style="padding:11px 14px;font-family:Arial,sans-serif;">
+    <div style="font-size:14px;font-weight:600;color:#444;">{score}</div>
+    <div style="font-size:10px;color:#999;">SMC</div>
+  </td>
+  <td align="center" style="padding:11px 14px;font-family:Arial,sans-serif;width:40px;">{delta_h}</td>
+</tr>"""
+            if buy_rank <= 5:
+                rows_a += row
+            elif buy_rank <= 10:
+                rows_b += row
+            if buy_rank >= 10:
+                break
+        if not rows_a:
+            return ""
+        tier_b_block = f"""
+<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#5b6c82;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f7f9fc;border-top:1px solid #dde8f5;">B-TIER — Watchlist (#6–#10)</div>
+<table width="100%" cellpadding="0" cellspacing="0" border="0"><tbody>{rows_b}</tbody></table>""" if rows_b else ""
+        return f"""
+<div style="font-family:Arial,sans-serif;margin:20px 0;border:2px solid #1a3a5c;border-radius:8px;overflow:hidden;">
+  <div style="background:linear-gradient(135deg,#1a3a5c,#0B5394);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <span style="color:#fff;font-size:15px;font-weight:800;letter-spacing:0.3px;">🏆 TOP RANKED OPPORTUNITIES</span>
+      <span style="color:#8fb8d8;font-size:11px;margin-left:10px;">0.60 × Expectancy + 0.40 × SMC Score</span>
+    </div>
+    <span style="color:#8fb8d8;font-size:11px;">{fmt_cairo("%d %b %Y")}</span>
+  </div>
+  <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#0B5394;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f0f7ff;">A-TIER — Top Opportunities (#1–#5)</div>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <thead>
+      <tr style="background:#e8f0f8;border-bottom:2px solid #c8daf5;">
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:center;">Rank</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;">Stock</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;">Signal</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">Rank Score</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">Expectancy</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">SMC</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:center;">Δ</th>
+      </tr>
+    </thead>
+    <tbody>{rows_a}</tbody>
+  </table>
+  {tier_b_block}
+</div>"""
+
+    _ranking_block = _build_ranking_block()
+
     fresh_n=sum(1 for s in STOCKS if results[s].get("ok") and results[s].get("is_fresh"))
     stale  =[NAMES.get(s,s) for s in STOCKS if results[s].get("ok") and not results[s].get("is_fresh")]
     dq_c   ="#155724" if not stale else "#856404"
@@ -1349,6 +1453,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     <b>Data Status:</b> {dq_msg}
   </td></tr>
 </table>
+{_ranking_block}
 {open_positions_block}""")
 
     SUMMARY_SIGNALS = {"buy", "strong buy", "very strong buy", "institutional buy", "wait"}
@@ -2252,6 +2357,7 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
     # Step 5: persist + change alerts
     save_scan_results(results)
     save_signal_history(results)
+    save_rank_history(results)
 
     # Step 6: log signals for outcome tracking
     for s in STOCKS:
@@ -2392,11 +2498,12 @@ def save_signal_history(results):
             if not isinstance(d, dict) or not d.get("ok"):
                 continue
             entry = {
-                "date":   today,
-                "score":  d.get("score", 0),
-                "price":  d.get("price", 0),
-                "r1":     d.get("r1", 0),
-                "signal": d.get("signal", ""),
+                "date":            today,
+                "score":           d.get("score", 0),
+                "price":           d.get("price", 0),
+                "r1":              d.get("r1", 0),
+                "signal":          d.get("signal", ""),
+                "factor_exp_score": d.get("factor_exp_score", 0),
             }
             stock_hist = hist.setdefault(ticker, [])
             # replace if same date already exists, otherwise append
@@ -2412,6 +2519,72 @@ def save_signal_history(results):
         print(f"✅ signal_history.json updated ({today})")
     except Exception as e:
         print(f"❌ Error saving signal history: {e}")
+
+
+_RANK_HISTORY_DAYS = 90  # rolling window for rank movement tracking
+
+
+def save_rank_history(results):
+    """
+    Persist daily blended rank snapshot to rank_history.json.
+    Enables rank-change indicators (▲/▼) across sessions.
+    Keeps a rolling 90-day window.
+    """
+    try:
+        today = date.today().isoformat()
+        cutoff = (date.today() - timedelta(days=_RANK_HISTORY_DAYS)).isoformat()
+        hist = {}
+        if os.path.exists("rank_history.json"):
+            with open("rank_history.json", "r", encoding="utf-8") as f:
+                hist = json.load(f)
+        # Compute blended rank for every valid stock
+        ranked = []
+        for sym, r in results.items():
+            if not isinstance(r, dict) or not r.get("ok"):
+                continue
+            fexp  = r.get("factor_exp_score", 0) or 0
+            score = r.get("score", 0) or 0
+            sig   = r.get("signal", "")
+            blended = 0.60 * fexp + 0.40 * score
+            ranked.append((sym, blended, fexp, score, sig))
+        ranked.sort(key=lambda x: x[1], reverse=True)
+        snapshot = {}
+        for rank_pos, (sym, blended, fexp, score, sig) in enumerate(ranked, 1):
+            snapshot[sym] = {
+                "rank":    rank_pos,
+                "blended": round(blended, 2),
+                "fexp":    round(fexp, 2),
+                "score":   score,
+                "signal":  sig,
+            }
+        hist[today] = snapshot
+        # Prune old entries
+        hist = {d: v for d, v in hist.items() if d >= cutoff}
+        with open("rank_history.json", "w", encoding="utf-8") as f:
+            json.dump(hist, f, ensure_ascii=False, separators=(",", ":"))
+        print(f"✅ rank_history.json updated ({today}, {len(snapshot)} stocks)")
+    except Exception as e:
+        print(f"❌ Error saving rank history: {e}")
+
+
+def load_rank_changes():
+    """
+    Return dict mapping symbol → previous_rank (most recent prior session).
+    Returns empty dict if no history available.
+    """
+    try:
+        if not os.path.exists("rank_history.json"):
+            return {}
+        with open("rank_history.json", "r", encoding="utf-8") as f:
+            hist = json.load(f)
+        today = date.today().isoformat()
+        past_dates = sorted([d for d in hist if d < today], reverse=True)
+        if not past_dates:
+            return {}
+        prev = hist[past_dates[0]]
+        return {sym: v["rank"] for sym, v in prev.items()}
+    except Exception:
+        return {}
 
 
 def load_previous_results():

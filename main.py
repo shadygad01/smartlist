@@ -782,7 +782,8 @@ def analyze(symbol):
                 stock_mult = STOCK_QUALITY.get(symbol, 1.0)
                 _tier_lbl  = {1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,"")
             # Challenger: factor-level expectancy score (r2–r8, validated +19% top-quartile WR)
-            if '_sg' in dir():
+            # Guard: _sg (and sv_result/hvn_result) only exist in discount-zone branch (cur < eq)
+            if cur < eq:
                 _factor_exp_score = _re.factor_expectancy_score({
                     "r2_ob": r2, "r3_liquidity": r3, "r4_htf": r4,
                     "r5_avwap": r5, "r6_macd": r6, "r7_div": r7, "r8_demand": r8,
@@ -801,7 +802,8 @@ def analyze(symbol):
         _regime_state = ""
         _regime_mult  = 1.0
         if _REGIME_FILTER_ENABLED and cur < eq:
-            _sg_trend = (_sg.get("egx30_trend", "") or "") if 'cur' in dir() and cur < eq and '_sg' in dir() else ""
+            # _sg is available here since we're inside `if _REGIME_FILTER_ENABLED and cur < eq`
+            _sg_trend = (_sg.get("egx30_trend", "") or "")
             # _sg is the score_signal() dict (only available in discount-zone branch)
             if _sg_trend in ("DOWN", "DOWNTREND", "bearish", "Bearish", "downtrend"):
                 _regime_mult   = _REGIME_DOWN_MULT

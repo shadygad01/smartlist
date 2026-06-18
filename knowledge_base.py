@@ -28,7 +28,8 @@ _FINDING_KEYS = (
     "fib_15pct", "fib_30pct", "fib_50pct", "fib_100pct",
     "tail_contribution", "top10pct_contribution",
     "multi_bagger_pct", "sample_n",
-    "verdict",          # 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'TAIL_DRIVER'
+    "verdict",           # 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'TAIL_DRIVER'
+    "suggested_weight",  # optimizer blend target; None until computed
     "recorded_at", "source",
 )
 
@@ -156,6 +157,31 @@ class KnowledgeBase:
         return [f for f in self._data["factor_findings"]
                 if not self.should_retest(f)[0]]
 
+    def backfill_suggested_weights(self, config_weights: dict) -> int:
+        """
+        For existing KB entries that have a verdict but no suggested_weight,
+        compute one from the current production weight:
+          NEGATIVE → reduce 30%   POSITIVE/TAIL_DRIVER → increase 20%
+        Safe: only writes to the JSON file, never touches config/weights.json.
+        Returns number of entries updated.
+        """
+        updated = 0
+        for factor, entry in self._data["factor_findings"].items():
+            if entry.get("suggested_weight") is not None:
+                continue
+            verdict = entry.get("verdict")
+            current_w = config_weights.get(factor)
+            if current_w is None or verdict not in ("POSITIVE", "NEGATIVE", "TAIL_DRIVER"):
+                continue
+            if verdict == "NEGATIVE":
+                entry["suggested_weight"] = round(float(current_w) * 0.70, 4)
+            else:  # POSITIVE or TAIL_DRIVER
+                entry["suggested_weight"] = round(float(current_w) * 1.20, 4)
+            updated += 1
+        if updated:
+            self._save()
+        return updated
+
     def summary(self) -> dict:
         ff = self._data["factor_findings"]
         return {
@@ -201,6 +227,16 @@ def get_kb() -> KnowledgeBase:
     kb = KnowledgeBase()
     if not kb.get_all_factors():
         seed_prior_findings(kb)
+    # Backfill any suggested_weights missing from existing entries
+    try:
+        cfg_file = os.path.join("config", "weights.json")
+        if os.path.exists(cfg_file):
+            import json as _json
+            with open(cfg_file, encoding="utf-8") as _f:
+                _cfg = _json.load(_f)
+            kb.backfill_suggested_weights(_cfg)
+    except Exception:
+        pass
     return kb
 
 

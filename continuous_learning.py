@@ -151,6 +151,74 @@ class LearningMemory:
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
+def reconcile_from_deployment_log(
+    db_path: str = "egx_research.db",
+    memory: Optional["LearningMemory"] = None,
+) -> int:
+    """
+    Sync gx_learning_memory.json from deployment_log (authoritative promotion record).
+    Adds synthetic cycle entries for PROMOTE actions not already tracked in memory.
+    Returns the number of entries reconciled.
+    """
+    if memory is None:
+        memory = LearningMemory()
+
+    tracked_ids: set = set()
+    for cycle in memory._data.get("cycles", []):
+        dlid = cycle.get("deployment_log_id")
+        if dlid is not None:
+            tracked_ids.add(int(dlid))
+
+    try:
+        conn = sqlite3.connect(db_path)
+        rows = conn.execute(
+            """SELECT id, deployed_at, triggered_by, note
+               FROM deployment_log
+               WHERE action = 'PROMOTE'
+               ORDER BY id ASC"""
+        ).fetchall()
+        conn.close()
+    except Exception:
+        return 0
+
+    reconciled = 0
+    for row_id, ts, triggered_by, note in rows:
+        if int(row_id) in tracked_ids:
+            continue
+        synthetic = {
+            "started_at": ts,
+            "finished_at": ts,
+            "recorded_at": ts,
+            "outcomes_processed": 0,
+            "labs_run": [],
+            "drift_detected": False,
+            "optimized": True,
+            "promoted": True,
+            "verdict": "APPROVED",
+            "deployment_log_id": row_id,
+            "triggered_by": triggered_by or "unknown",
+            "note": note or "",
+            "reconciled": True,
+            "dry_run": False,
+        }
+        memory._data["cycles"].append(synthetic)
+        memory._data["total_cycles"] = memory._data.get("total_cycles", 0) + 1
+        reconciled += 1
+
+    if reconciled > 0:
+        # Set last_cycle_at to most recent promotion timestamp
+        all_promo_times = [
+            c.get("recorded_at", c.get("finished_at", ""))
+            for c in memory._data["cycles"]
+            if c.get("promoted")
+        ]
+        if all_promo_times:
+            memory._data["last_cycle_at"] = max(t for t in all_promo_times if t)
+        memory._save()
+
+    return reconciled
+
+
 def _count_new_outcomes(db_path: str, since: Optional[str]) -> int:
     """
     Count bottom_quality rows with r20d filled.
@@ -280,6 +348,17 @@ def _run_labs(db_path: str) -> dict:
                 }, source="regime_lab")
         except Exception as e:
             improvements["regime"] = {"error": str(e), "n_signals": 0}
+
+    # Backfill any KB entries that have verdicts but no suggested_weight yet
+    if kb:
+        try:
+            cfg_file = os.path.join("config", "weights.json")
+            if os.path.exists(cfg_file):
+                with open(cfg_file, encoding="utf-8") as _f:
+                    _cfg_w = json.load(_f)
+                kb.backfill_suggested_weights(_cfg_w)
+        except Exception:
+            pass
 
     return improvements
 
@@ -484,6 +563,7 @@ def schedule_daily(db_path: str = "egx_research.db") -> Optional[dict]:
     Returns cycle_result dict if cycle ran, else None.
     """
     memory = LearningMemory()
+    reconcile_from_deployment_log(db_path=db_path, memory=memory)
     now = datetime.now()
 
     # Check time since last cycle

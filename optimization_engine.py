@@ -294,19 +294,11 @@ def _run_expectancy_gradient(db_path: str, config_path: str) -> tuple:
     avg_loss = sum(losses) / len(losses) if losses else 0.0
     base_exp = wr * avg_win + (1 - wr) * avg_loss
 
-    # Simple +/-5% perturbation per weight; keep best
+    # Coordinate descent on per-weight perturbations requires raw per-signal factor
+    # components (r1..r8) which are not stored — delegate to weight_optimizer which
+    # uses scipy L-BFGS-B over its own in-memory dataset.
     best_params = dict(params_before)
     best_exp = base_exp
-    for key in list(params_before.keys()):
-        if not isinstance(params_before[key], (int, float)):
-            continue
-        for delta in (+0.05, -0.05):
-            candidate = dict(params_before)
-            candidate[key] = round(params_before[key] * (1 + delta), 4)
-            # Expectancy doesn't change with weight tweaks in this simplified version;
-            # record candidate for downstream validation to decide
-            # Real improvement: re-score signals with new weights (delegated to weight_optimizer)
-            pass
 
     try:
         import weight_optimizer as wo

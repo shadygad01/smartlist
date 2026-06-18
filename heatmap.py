@@ -125,7 +125,7 @@ pending = [
      'signal': d.get('signal', '-'), 'r1': d.get('r1', 0),
      'buy_hi': d.get('buy_hi', 0)}
     for t, d in scan_results.items()
-    if d.get('score', 0) > 0 and 'buy' not in d.get('signal', '').lower()
+    if d.get('signal', '').lower() == 'wait'
 ]
 pending.sort(key=_blended, reverse=True)
 
@@ -717,14 +717,22 @@ function buildHeatmap() {{
     }}
 
     // ── Render: strong buy → pending → sectors → open positions ─────────────
-    const buyStocks = [...STRONG_BUY].sort((a,b) => (TODAY_SC[b]?.score||0)-(TODAY_SC[a]?.score||0));
+    const buyStocks = [...STRONG_BUY].sort((a,b) => {{
+        const ba = (TODAY_SC[b]?.factor_exp_score||0)*0.6+(TODAY_SC[b]?.score||0)*0.4;
+        const bb = (TODAY_SC[a]?.factor_exp_score||0)*0.6+(TODAY_SC[a]?.score||0)*0.4;
+        return ba - bb;
+    }});
     if (buyStocks.length) {{
         addSectionLabel('🚀 Strong Buy');
         buyStocks.forEach(addStockRow);
     }}
-    const pendingStocks = [...PENDING].sort((a,b) => (TODAY_SC[b]?.score||0)-(TODAY_SC[a]?.score||0));
+    const pendingStocks = [...PENDING].sort((a,b) => {{
+        const ba = (TODAY_SC[b]?.factor_exp_score||0)*0.6+(TODAY_SC[b]?.score||0)*0.4;
+        const bb = (TODAY_SC[a]?.factor_exp_score||0)*0.6+(TODAY_SC[a]?.score||0)*0.4;
+        return ba - bb;
+    }});
     if (pendingStocks.length) {{
-        addSectionLabel('⏳ Pending Signals');
+        addSectionLabel('👀 WAIT — Watchlist');
         pendingStocks.forEach(addStockRow);
     }}
     SECTORS.forEach(([sector, stocks]) => {{

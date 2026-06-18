@@ -357,8 +357,8 @@ def _run_labs(db_path: str) -> dict:
                 with open(cfg_file, encoding="utf-8") as _f:
                     _cfg_w = json.load(_f)
                 kb.backfill_suggested_weights(_cfg_w)
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"[continuous_learning] WARNING: KB backfill_suggested_weights failed: {exc}")
 
     return improvements
 
@@ -386,8 +386,10 @@ def _run_optimization(db_path: str, config_dir: str,
                 if sw is not None and factor in weights:
                     # Blend: 70% optimizer + 30% KB suggestion
                     weights[factor] = round(weights[factor] * 0.70 + float(sw) * 0.30, 2)
-        except Exception:
-            pass
+        except Exception as exc:
+            import traceback as _tb
+            print(f"[continuous_learning] WARNING: KB blend failed: {exc}")
+            print(_tb.format_exc())
 
         return {
             "weights": weights,
@@ -548,8 +550,8 @@ def run_learning_cycle(
         try:
             from knowledge_base import get_kb
             get_kb().log_cycle(cycle_result)
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"[continuous_learning] WARNING: KB log_cycle failed: {exc}")
 
     return cycle_result
 

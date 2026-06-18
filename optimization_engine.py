@@ -199,7 +199,9 @@ def _run_weight_gradient(db_path: str, config_path: str) -> tuple:
             n = len(df)
         return params_before, params_after, metric_val, n
     except Exception as exc:
-        print(f"[optimization_engine] weight_gradient error: {exc}")
+        import traceback
+        print(f"[optimization_engine] weight_gradient CRITICAL: {exc}")
+        print(traceback.format_exc())
         params_before = _read_current_weights(config_path)
         return params_before, params_before, 0.0, 0
 
@@ -307,12 +309,15 @@ def _run_expectancy_gradient(db_path: str, config_path: str) -> tuple:
         if opt and "optimal_weights" in opt:
             best_params = {k: round(v, 4) for k, v in opt["optimal_weights"].items()}
             m = opt.get("metrics_optimized", {})
-            # Use optimizer's expected_return directly — same metric formula as base_exp.
-            # Previous code used opt_wr * avg_win (peak_1y) vs base_exp from r20d —
-            # that metric mismatch produced fake +0.55 improvement every cycle.
             best_exp = float(m.get("expected_return", base_exp))
-    except Exception:
-        pass
+        else:
+            print(f"[optimization_engine] weight_optimizer returned empty result — staying at params_before")
+    except Exception as exc:
+        import traceback
+        print(f"[optimization_engine] CRITICAL: weight_optimizer failed: {exc}")
+        print(traceback.format_exc())
+        # Do NOT swallow — record failure in return so caller can log it
+        return params_before, params_before, base_exp, n
 
     return params_before, best_params, best_exp, n
 

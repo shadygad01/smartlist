@@ -1792,6 +1792,150 @@ def _section_pattern_intelligence() -> str:
 # Shows: biggest win, biggest deterioration, latest promoted/rejected, top/bottom alpha source
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _section_top_ranked() -> str:
+    """TOP RANKED OPPORTUNITIES panel — reads scan_results.json + rank_history.json."""
+    scan  = _load("scan_results.json")
+    ranks = _load("rank_history.json")
+
+    # Compute blended score for all valid stocks from today's scan
+    today_str = datetime.now(CAIRO).strftime("%Y-%m-%d")
+    ranked = []
+    for sym, r in scan.items():
+        if not isinstance(r, dict) or not r.get("ok"):
+            continue
+        fexp    = float(r.get("factor_exp_score", 0) or 0)
+        score   = float(r.get("score", 0) or 0)
+        blended = 0.60 * fexp + 0.40 * score
+        ranked.append({
+            "sym": sym,
+            "name": sym,
+            "signal": r.get("signal", "—"),
+            "fexp": fexp,
+            "score": score,
+            "blended": blended,
+            "price": r.get("price", 0),
+        })
+    ranked.sort(key=lambda x: x["blended"], reverse=True)
+
+    if not ranked:
+        return f"""<div class="section" style="border-left:4px solid {B}">
+  {_section_header("TOP RANKED OPPORTUNITIES", "🏆")}
+  <div style="color:{DIM};font-size:0.85em;padding:12px 0">No live scan data — run daily scan to populate.</div>
+</div>"""
+
+    # Resolve rank changes from history
+    prev_ranks: dict = {}
+    past_dates = sorted([d for d in ranks if d < today_str], reverse=True)
+    if past_dates:
+        prev_snap = ranks.get(past_dates[0], {})
+        prev_ranks = {sym: v.get("rank") for sym, v in prev_snap.items()}
+
+    def _delta(sym, cur_rank):
+        prev = prev_ranks.get(sym)
+        if prev is None or prev == cur_rank:
+            return ""
+        d = prev - cur_rank
+        if d > 0:
+            return f'<span style="color:{G};font-weight:700;font-size:0.85em">▲{d}</span>'
+        return f'<span style="color:{R};font-weight:700;font-size:0.85em">▼{abs(d)}</span>'
+
+    def _sig_color(sig):
+        sl = sig.lower()
+        if "institutional" in sl: return "#c084fc"
+        if "very strong"   in sl: return G
+        if "strong"        in sl: return G
+        if "buy"           in sl: return "#86efac"
+        if "wait"          in sl: return A
+        return DIM
+
+    rows = ""
+    for cur_rank, item in enumerate(ranked[:10], 1):
+        sym   = item["sym"]
+        tier  = "A" if cur_rank <= 5 else "B"
+        tier_col = B if tier == "A" else DIM
+        sig_col  = _sig_color(item["signal"])
+        delta_h  = _delta(sym, cur_rank)
+        rows += f"""
+<tr style="border-bottom:1px solid {BOR}">
+  <td style="padding:9px 12px;text-align:center;width:50px">
+    <span style="color:{tier_col};font-size:1.1em;font-weight:800">#{cur_rank}</span><br>
+    <span style="color:{tier_col};font-size:0.68em;font-weight:700;letter-spacing:0.5px">{tier}-TIER</span>
+  </td>
+  <td style="padding:9px 12px">
+    <span style="color:{FG};font-weight:700;font-size:0.95em">{sym}</span><br>
+    <span style="color:{DIM};font-size:0.75em">{item["price"]} EGP</span>
+  </td>
+  <td style="padding:9px 12px">
+    <span style="color:{sig_col};font-size:0.82em;font-weight:600">{item["signal"]}</span>
+  </td>
+  <td style="padding:9px 12px;text-align:right">
+    <span style="color:#fff;font-size:1.05em;font-weight:800">{item["blended"]:.1f}</span><br>
+    <span style="color:{DIM};font-size:0.7em">rank score</span>
+  </td>
+  <td style="padding:9px 12px;text-align:right">
+    <span style="color:{B};font-size:0.9em;font-weight:600">{item["fexp"]:.1f}</span><br>
+    <span style="color:{DIM};font-size:0.7em">expectancy</span>
+  </td>
+  <td style="padding:9px 12px;text-align:right">
+    <span style="color:{FG};font-size:0.9em">{int(item["score"])}</span><br>
+    <span style="color:{DIM};font-size:0.7em">SMC</span>
+  </td>
+  <td style="padding:9px 12px;text-align:center;width:42px">{delta_h}</td>
+</tr>"""
+        if cur_rank == 5 and len(ranked) > 5:
+            rows += f"""<tr><td colspan="7" style="padding:5px 12px;background:{BG2};font-size:0.75em;color:{DIM};font-weight:700;letter-spacing:0.5px;text-transform:uppercase">B-TIER — Watchlist (#6–#10)</td></tr>"""
+
+    # Largest movers section
+    movers_html = ""
+    if prev_ranks:
+        movers = []
+        for cur_rank, item in enumerate(ranked, 1):
+            prev = prev_ranks.get(item["sym"])
+            if prev is None: continue
+            delta = prev - cur_rank
+            movers.append((item["sym"], item["signal"], prev, cur_rank, delta))
+        movers.sort(key=lambda x: abs(x[4]), reverse=True)
+        if movers:
+            promo_html = "  ".join(
+                f'<span style="color:{G};font-size:0.82em;font-weight:600">{s} #{pr}→#{cr} <b>▲{d}</b></span>'
+                for s, sig, pr, cr, d in movers[:3] if d > 0
+            )
+            demo_html = "  ".join(
+                f'<span style="color:{R};font-size:0.82em;font-weight:600">{s} #{pr}→#{cr} <b>▼{abs(d)}</b></span>'
+                for s, sig, pr, cr, d in movers[:3] if d < 0
+            )
+            movers_html = f"""
+<div style="display:flex;gap:20px;flex-wrap:wrap;padding:10px 14px;background:{BG2};border-top:1px solid {BOR};font-size:0.82em">
+  <div><span style="color:{DIM};font-size:0.78em;text-transform:uppercase;letter-spacing:0.5px">▲ Largest Promotions &nbsp;</span>{promo_html or '<span style="color:'+DIM+'">—</span>'}</div>
+  <div><span style="color:{DIM};font-size:0.78em;text-transform:uppercase;letter-spacing:0.5px">▼ Largest Demotions &nbsp;</span>{demo_html or '<span style="color:'+DIM+'">—</span>'}</div>
+</div>"""
+
+    return f"""<div class="section" style="border-left:4px solid {B}">
+  {_section_header("TOP RANKED OPPORTUNITIES", "🏆")}
+  <div style="font-size:0.78em;color:{DIM};margin-bottom:10px">
+    Formula: <code style="color:{B}">0.60 × factor_exp_score + 0.40 × SMC score</code> &nbsp;·&nbsp;
+    Sorted by production ranking key &nbsp;·&nbsp; {today_str}
+  </div>
+  <div style="overflow-x:auto">
+  <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;min-width:500px">
+    <thead>
+      <tr style="background:{BG2};border-bottom:2px solid {BOR}">
+        <th style="padding:7px 12px;font-size:0.75em;color:{DIM};text-align:center;text-transform:uppercase;letter-spacing:0.5px">Rank</th>
+        <th style="padding:7px 12px;font-size:0.75em;color:{DIM};text-transform:uppercase;letter-spacing:0.5px">Stock</th>
+        <th style="padding:7px 12px;font-size:0.75em;color:{DIM};text-transform:uppercase;letter-spacing:0.5px">Signal</th>
+        <th style="padding:7px 12px;font-size:0.75em;color:{DIM};text-align:right;text-transform:uppercase;letter-spacing:0.5px">Rank Score</th>
+        <th style="padding:7px 12px;font-size:0.75em;color:{DIM};text-align:right;text-transform:uppercase;letter-spacing:0.5px">Expectancy</th>
+        <th style="padding:7px 12px;font-size:0.75em;color:{DIM};text-align:right;text-transform:uppercase;letter-spacing:0.5px">SMC</th>
+        <th style="padding:7px 12px;font-size:0.75em;color:{DIM};text-align:center;text-transform:uppercase;letter-spacing:0.5px">Δ Rank</th>
+      </tr>
+    </thead>
+    <tbody>{rows}</tbody>
+  </table>
+  </div>
+  {movers_html}
+</div>"""
+
+
 def _section_executive_summary() -> str:
     kb_data = _load("knowledge_base.json")
     ff = _ff_list(kb_data)
@@ -1871,6 +2015,7 @@ def build_dashboard() -> str:
     # REMOVED: deployment_history (covered by learning/todays_learning deployments box)
     # REMOVED: changes_since_yesterday (covered by todays_learning)
     body = (
+        f'<div id="top-ranked">{_section_top_ranked()}</div>'
         f'<div id="exec-summary">{_section_executive_summary()}</div>'
         f'<div id="alpha-status">{_section_alpha_status()}</div>'
         f'<div id="snapshot">{_section_production_snapshot()}</div>'
@@ -1924,7 +2069,8 @@ def build_dashboard() -> str:
 
 <div class="nav">
   <span style="color:{DIM};font-size:0.85em">GO TO:</span>
-  <a href="#exec-summary" class="active">🎯 Summary</a>
+  <a href="#top-ranked" class="active" style="border-color:{B};color:{B}">🏆 Rankings</a>
+  <a href="#exec-summary">🎯 Summary</a>
   <a href="#alpha-status">⚡ Status</a>
   <a href="#snapshot">📈 Snapshot</a>
   <a href="#performance">📊 Performance</a>
@@ -1941,7 +2087,7 @@ def build_dashboard() -> str:
 <div class="container">
 {body}
 <div class="footer">
-  EGX Autonomous Bottom Discovery Platform · Built {now_str} · 11 sections
+  EGX Autonomous Bottom Discovery Platform · Built {now_str} · 12 sections
   <a href="heatmap.html" style="color:{B};text-decoration:none">📈 Signal Heatmap</a>
 </div>
 </div>

@@ -1799,9 +1799,13 @@ def _section_top_ranked() -> str:
 
     # Compute blended score for all valid stocks from today's scan
     today_str = datetime.now(CAIRO).strftime("%Y-%m-%d")
+    BUY_FAMILY = {"buy", "strong buy", "very strong buy", "institutional buy"}
     ranked = []
     for sym, r in scan.items():
         if not isinstance(r, dict) or not r.get("ok"):
+            continue
+        sig_lower = (r.get("signal", "") or "").lower()
+        if sig_lower not in BUY_FAMILY:
             continue
         fexp    = float(r.get("factor_exp_score", 0) or 0)
         score   = float(r.get("score", 0) or 0)
@@ -1936,6 +1940,95 @@ def _section_top_ranked() -> str:
 </div>"""
 
 
+def _section_top_watchlist() -> str:
+    """WAIT — Watchlist panel: signals in discount zone but below entry gate, sorted by blended score."""
+    scan = _load("scan_results.json")
+
+    today_str = datetime.now(CAIRO).strftime("%Y-%m-%d")
+    watchlist = []
+    for sym, r in scan.items():
+        if not isinstance(r, dict) or not r.get("ok"):
+            continue
+        sig_lower = (r.get("signal", "") or "").lower()
+        if sig_lower != "wait":
+            continue
+        fexp    = float(r.get("factor_exp_score", 0) or 0)
+        score   = float(r.get("score", 0) or 0)
+        blended = 0.60 * fexp + 0.40 * score
+        is_early = bool(r.get("early_buy_research", False))
+        watchlist.append({
+            "sym": sym,
+            "signal": r.get("signal", "—"),
+            "fexp": fexp,
+            "score": score,
+            "blended": blended,
+            "price": r.get("price", 0),
+            "early": is_early,
+        })
+    watchlist.sort(key=lambda x: x["blended"], reverse=True)
+
+    if not watchlist:
+        return f"""<div class="section" style="border-left:4px solid {A}">
+  {_section_header("WAIT — WATCHLIST", "👀")}
+  <div style="color:{DIM};font-size:0.85em;padding:12px 0">No WAIT signals in current scan.</div>
+</div>"""
+
+    rows = ""
+    for i, item in enumerate(watchlist[:10], 1):
+        early_tag = (
+            f' &nbsp;<span style="background:#713f12;color:#fef08a;font-size:0.68em;font-weight:700;'
+            f'padding:1px 5px;border-radius:3px;letter-spacing:0.4px">EARLY BUY RESEARCH</span>'
+            if item["early"] else ""
+        )
+        rows += f"""
+<tr style="border-bottom:1px solid {BOR}">
+  <td style="padding:9px 12px;text-align:center;width:40px">
+    <span style="color:{A};font-size:1.0em;font-weight:700">#{i}</span>
+  </td>
+  <td style="padding:9px 12px">
+    <span style="color:{FG};font-weight:700;font-size:0.95em">{item["sym"]}</span>{early_tag}<br>
+    <span style="color:{DIM};font-size:0.75em">{item["price"]} EGP</span>
+  </td>
+  <td style="padding:9px 12px">
+    <span style="color:{A};font-size:0.82em;font-weight:600">Wait</span>
+  </td>
+  <td style="padding:9px 12px;text-align:right">
+    <span style="color:#fff;font-size:1.0em;font-weight:700">{item["blended"]:.1f}</span><br>
+    <span style="color:{DIM};font-size:0.7em">rank score</span>
+  </td>
+  <td style="padding:9px 12px;text-align:right">
+    <span style="color:{B};font-size:0.9em;font-weight:600">{item["fexp"]:.1f}</span><br>
+    <span style="color:{DIM};font-size:0.7em">expectancy</span>
+  </td>
+  <td style="padding:9px 12px;text-align:right">
+    <span style="color:{FG};font-size:0.9em">{int(item["score"])}</span><br>
+    <span style="color:{DIM};font-size:0.7em">SMC</span>
+  </td>
+</tr>"""
+
+    return f"""<div class="section" style="border-left:4px solid {A}" id="watchlist">
+  {_section_header("WAIT — WATCHLIST", "👀")}
+  <div style="font-size:0.78em;color:{DIM};margin-bottom:10px">
+    In discount zone · price gate or entry score not yet met · monitor for entry &nbsp;·&nbsp; {today_str}
+  </div>
+  <div style="overflow-x:auto">
+  <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;min-width:460px">
+    <thead>
+      <tr style="background:{BG2};border-bottom:2px solid {BOR}">
+        <th style="padding:7px 12px;font-size:0.75em;color:{DIM};text-align:center;text-transform:uppercase;letter-spacing:0.5px">#</th>
+        <th style="padding:7px 12px;font-size:0.75em;color:{DIM};text-transform:uppercase;letter-spacing:0.5px">Stock</th>
+        <th style="padding:7px 12px;font-size:0.75em;color:{DIM};text-transform:uppercase;letter-spacing:0.5px">Status</th>
+        <th style="padding:7px 12px;font-size:0.75em;color:{DIM};text-align:right;text-transform:uppercase;letter-spacing:0.5px">Rank Score</th>
+        <th style="padding:7px 12px;font-size:0.75em;color:{DIM};text-align:right;text-transform:uppercase;letter-spacing:0.5px">Expectancy</th>
+        <th style="padding:7px 12px;font-size:0.75em;color:{DIM};text-align:right;text-transform:uppercase;letter-spacing:0.5px">SMC</th>
+      </tr>
+    </thead>
+    <tbody>{rows}</tbody>
+  </table>
+  </div>
+</div>"""
+
+
 def _section_executive_summary() -> str:
     kb_data = _load("knowledge_base.json")
     ff = _ff_list(kb_data)
@@ -2016,6 +2109,7 @@ def build_dashboard() -> str:
     # REMOVED: changes_since_yesterday (covered by todays_learning)
     body = (
         f'<div id="top-ranked">{_section_top_ranked()}</div>'
+        f'<div id="top-watchlist">{_section_top_watchlist()}</div>'
         f'<div id="exec-summary">{_section_executive_summary()}</div>'
         f'<div id="alpha-status">{_section_alpha_status()}</div>'
         f'<div id="snapshot">{_section_production_snapshot()}</div>'

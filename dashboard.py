@@ -2149,6 +2149,29 @@ def _section_research_lab() -> str:
 
 
 
+def _section_notebooklm() -> str:
+    """NotebookLM Discovery Engine — delegates to _notebooklm_section for clean code."""
+    try:
+        from discovery_engine import get_discovery_data
+        from _notebooklm_section import build_notebooklm_section
+        data = get_discovery_data()
+        return build_notebooklm_section(
+            data=data,
+            BG1=BG1, BG2=BG2, BOR=BOR, FG=FG, DIM=DIM,
+            G=G, R=R, A=A, B=B,
+            _section_header=_section_header,
+            _box=_box,
+            _ts=_ts,
+        )
+    except Exception as _e:
+        return (
+            '<div style="background:' + BG1 + ';border:2px solid ' + BOR + ';border-radius:10px;'
+            'padding:24px;margin-bottom:18px">'
+            + _section_header("NotebookLM Discovery Engine", "🔬")
+            + '<p style="color:' + R + '">Discovery module unavailable: ' + str(_e) + '</p></div>'
+        )
+
+
 def build_dashboard() -> str:
     now     = _now_cairo()
     now_str = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -2172,6 +2195,7 @@ def build_dashboard() -> str:
         f'<div id="health">{_section_system_health()}</div>'
         f'<div id="pattern-intel">{_section_pattern_intelligence()}</div>'
         f'<div id="research-lab">{_section_research_lab()}</div>'
+        f'<div id="notebooklm-engine">{_section_notebooklm()}</div>'
     )
 
     return f"""<!DOCTYPE html>
@@ -2227,6 +2251,7 @@ def build_dashboard() -> str:
   <a href="#health">🔧 Health</a>
   <a href="#pattern-intel">🔬 Pattern Intel</a>
   <a href="#research-lab" style="border-color:{B};color:{B}">🧪 Research Lab</a>
+  <a href="#notebooklm-engine" style="border-color:{G};color:{G}">🔬 NotebookLM</a>
   <a href="heatmap.html" style="border-color:{G};color:{G}">📈 Heatmap</a>
 </div>
 

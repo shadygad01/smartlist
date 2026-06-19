@@ -50,15 +50,15 @@ def _load_scan() -> dict:
     history = _load("signal_history.json")
     if not history:
         return {}
-    # signal_history is stored newest-first; sigs[0] is the most recent record.
+    # signal_history is stored oldest-first (appended); sigs[-1] is the most recent record.
     return {
         stock: {
-            "price":            sigs[0].get("price", 0),
-            "score":            sigs[0].get("score", 0),
-            "signal":           sigs[0].get("signal", "-"),
-            "r1":               sigs[0].get("r1", 0),
-            "factor_exp_score": sigs[0].get("factor_exp_score", 0),
-            "early_buy_research": sigs[0].get("early_buy_research", False),
+            "price":            sigs[-1].get("price", 0),
+            "score":            sigs[-1].get("score", 0),
+            "signal":           sigs[-1].get("signal", "-"),
+            "r1":               sigs[-1].get("r1", 0),
+            "factor_exp_score": sigs[-1].get("factor_exp_score", 0),
+            "early_buy_research": sigs[-1].get("early_buy_research", False),
             "ok":               True,
         }
         for stock, sigs in history.items()
@@ -1823,13 +1823,14 @@ def _section_top_ranked() -> str:
 
     # Compute blended score for all valid stocks from today's scan
     today_str = datetime.now(CAIRO).strftime("%Y-%m-%d")
-    BUY_FAMILY = {"buy", "strong buy", "very strong buy", "institutional buy"}
+    # Match email's SUMMARY_SIGNALS exactly
+    SUMMARY_SIGNALS = {"buy", "strong buy", "very strong buy", "institutional buy", "wait"}
     ranked = []
     for sym, r in scan.items():
         if not isinstance(r, dict) or not r.get("ok"):
             continue
         sig_lower = (r.get("signal", "") or "").lower()
-        if sig_lower not in BUY_FAMILY:
+        if sig_lower not in SUMMARY_SIGNALS:
             continue
         fexp    = float(r.get("factor_exp_score", 0) or 0)
         score   = float(r.get("score", 0) or 0)

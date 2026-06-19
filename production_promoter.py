@@ -168,13 +168,29 @@ def promote(
         print(f"  5. Improvement size:  {artifacts.get('improvement_size', '(not specified)')}")
         print(f"  6. Behavior change:   {artifacts.get('behavior_change', '(not specified)')}")
         print("  ── END FINAL AUDIT ──\n")
-        # Hard gate: validated promotions must identify which r1-r8 factor they improve
-        if validation_run_id is not None and not _target_factor:
-            raise ValueError(
-                "PROMOTION REQUIREMENT (Constitution §PROMOTION REQUIREMENT): "
-                "target_factor is mandatory for validated promotions. "
-                "Specify which r1-r8 factor (r1_price..r8_demand) this change improves."
-            )
+        # Hard gates (Constitution §PROMOTION REQUIREMENT + §PRODUCTION IMPACT RULE):
+        # All four fields are mandatory for validated promotions.
+        if validation_run_id is not None:
+            if not _target_factor:
+                raise ValueError(
+                    "PROMOTION REQUIREMENT (§PROMOTION REQUIREMENT): "
+                    "target_factor is mandatory. Which r1-r8 factor does this improve?"
+                )
+            if not artifacts.get("expected_improvement"):
+                raise ValueError(
+                    "PROMOTION REQUIREMENT (§KNOWLEDGE ASSET REQUIREMENT): "
+                    "expected_improvement is mandatory. Quantify the expected gain (e.g. '+3% expectancy')."
+                )
+            if not artifacts.get("evidence_summary"):
+                raise ValueError(
+                    "PROMOTION REQUIREMENT (§FINAL AUDIT): "
+                    "evidence_summary is mandatory. What evidence supports this improvement?"
+                )
+            if not _production_metric:
+                raise ValueError(
+                    "PROMOTION REQUIREMENT (§PRODUCTION IMPACT RULE): "
+                    "production_metric is mandatory. Which production metric improves?"
+                )
         # System-level expectancy check — warn on regression; block unless override=True
         try:
             with open("backtest_report.json") as _f:

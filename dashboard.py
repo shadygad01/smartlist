@@ -343,59 +343,299 @@ def _section_bottom_pipeline() -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SECTION 3 — TODAY'S LEARNING  [IMPROVED]
+# SECTION 3 — BACKBONE HEALTH: R1-R8 CENTRIC  [CONSTITUTION COMPLIANT]
 # ══════════════════════════════════════════════════════════════════════════════
 
+# R1-R8 backbone definitions — single source of truth for dashboard
+_R1R8_DEFS = [
+    ("r1_price",     "① r1 · Price Zone",    30),
+    ("r2_ob",        "② r2 · Order Block",   10),
+    ("r3_liquidity", "③ r3 · Liquidity",     20),
+    ("r4_htf",       "④ r4 · HTF Structure", 10),
+    ("r5_avwap",     "⑤ r5 · AVWAP",          8),
+    ("r6_macd",      "⑥ r6 · MACD Context",   4),
+    ("r7_div",       "⑦ r7 · Divergence",     3),
+    ("r8_demand",    "⑧ r8 · Demand Zone",   15),
+]
+
+# Labs whose output routes to each r-factor (from SUBFACTOR_PARENT mapping)
+_FACTOR_LABS = {
+    "r1_price":     ["factor_lab", "discount_zone_miner"],
+    "r2_ob":        ["factor_lab"],
+    "r3_liquidity": ["factor_lab", "edge_discovery"],
+    "r4_htf":       ["factor_lab"],
+    "r5_avwap":     ["factor_lab"],
+    "r6_macd":      ["factor_lab"],
+    "r7_div":       ["factor_lab"],
+    "r8_demand":    ["factor_lab", "discount_zone_miner"],
+}
+
+# Sub-signals that route to each r-factor (from knowledge_base.SUBFACTOR_PARENT)
+_SUBFACTOR_TO_RFACTOR = {
+    "wick_rejection": "r3_liquidity", "equal_lows": "r3_liquidity",
+    "sweep_detected": "r3_liquidity", "order_block_present": "r2_ob",
+    "stopping_volume": "r8_demand",   "hvn_hit": "r8_demand",
+    "sv_hit": "r8_demand",            "htf_higher_high": "r4_htf",
+    "htf_hh_and_hl": "r4_htf",       "htf_hh": "r4_htf",
+    "htf_hl": "r4_htf",              "rsi_div": "r7_div",
+    "macd_div": "r7_div",
+}
+
+
+def _factor_status_label(finding: dict, sug_w) -> tuple:
+    """Return (label, color) for a factor's current constitution status."""
+    if not finding:
+        return "Stable", DIM
+    verdict = finding.get("verdict", "")
+    val_st  = finding.get("validation_status", "pending")
+    if sug_w is not None and val_st == "validated":
+        return "Promotion Candidate", B
+    if verdict in ("POSITIVE", "TAIL_DRIVER"):
+        return "Improving", G
+    if verdict == "NEGATIVE":
+        return "Needs Improvement", R
+    if finding and val_st == "pending":
+        return "Under Investigation", A
+    return "Stable", DIM
+
+
 def _section_todays_learning() -> str:
-    mem    = _load("gx_learning_memory.json")
-    cycles = mem.get("cycles", [])
+    """Backbone Health — R1-R8 centric primary view (Constitution §THE BACKBONE)."""
+    kb_data  = _load("knowledge_base.json")
+    ff_raw   = kb_data.get("factor_findings", {}) if isinstance(kb_data, dict) else {}
+    archived = kb_data.get("archived_findings", {}) if isinstance(kb_data, dict) else {}
+    weights  = _load("config/weights.json")
+    rm       = _load("gx_research_memory.json")
+    ri       = rm.get("research_items", {}) if isinstance(rm, dict) else {}
+    mem      = _load("gx_learning_memory.json")
+    cycles   = mem.get("cycles", []) if isinstance(mem, dict) else []
 
-    kb_data        = _load("knowledge_base.json")
-    factor_findings = _ff_list(kb_data)
+    today_str = _now_cairo().strftime("%Y-%m-%d")
 
-    deployments = _db_query("SELECT * FROM deployment_log ORDER BY id DESC LIMIT 10")
-    val_rows    = _db_query(
-        "SELECT id, run_at, verdict, oos_wr, oos_sharpe, val_wr FROM validation_runs ORDER BY id DESC LIMIT 5"
-    )
-    exp_rows    = _db_query(
-        "SELECT lab, run_at, n_signals FROM experiment_log ORDER BY id DESC LIMIT 5"
+    # Map research items to r-factors (by indicator field)
+    factor_ri_count: dict = {}
+    for _itm in ri.values():
+        ind = _itm.get("indicator", "")
+        target = ind if ind in {k for k, _, _ in _R1R8_DEFS} else _SUBFACTOR_TO_RFACTOR.get(ind)
+        if target:
+            factor_ri_count[target] = factor_ri_count.get(target, 0) + 1
+
+    # Count archived sub-signals per r-factor
+    factor_archived: dict = {}
+    for sf, dat in (archived.items() if isinstance(archived, dict) else []):
+        parent = dat.get("routes_to") or _SUBFACTOR_TO_RFACTOR.get(sf)
+        if parent:
+            factor_archived[parent] = factor_archived.get(parent, 0) + 1
+
+    # ── Backbone summary (weakest / strongest / needs-improvement / candidates) ──
+    r1r8_keys = [k for k, _, _ in _R1R8_DEFS]
+    scored = [
+        (k, ff_raw.get(k, {}))
+        for k in r1r8_keys if isinstance(ff_raw.get(k), dict)
+    ]
+    weakest   = min(scored, key=lambda x: x[1].get("win_rate") or 1, default=(None, {}))
+    strongest = max(scored, key=lambda x: x[1].get("win_rate") or 0, default=(None, {}))
+
+    needs_impr = []
+    promo_cands = []
+    for k, _, dw in _R1R8_DEFS:
+        f = ff_raw.get(k, {}) if isinstance(ff_raw.get(k), dict) else {}
+        st, _ = _factor_status_label(f, f.get("suggested_weight"))
+        if st == "Needs Improvement":  needs_impr.append(k)
+        if st == "Promotion Candidate": promo_cands.append(k)
+
+    summary_bar = (
+        f'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'
+        f'<div style="background:{BG2};border:1px solid {R};border-radius:6px;padding:10px;text-align:center">'
+        f'<div style="font-size:0.68em;color:{DIM};margin-bottom:3px;text-transform:uppercase">Weakest Factor</div>'
+        f'<div style="font-size:0.88em;font-weight:700;color:{R}">{weakest[0] or "—"}</div>'
+        f'<div style="font-size:0.73em;color:{DIM}">WR {_pct(weakest[1].get("win_rate")) if weakest[0] else "—"}</div>'
+        f'</div>'
+        f'<div style="background:{BG2};border:1px solid {G};border-radius:6px;padding:10px;text-align:center">'
+        f'<div style="font-size:0.68em;color:{DIM};margin-bottom:3px;text-transform:uppercase">Strongest Factor</div>'
+        f'<div style="font-size:0.88em;font-weight:700;color:{G}">{strongest[0] or "—"}</div>'
+        f'<div style="font-size:0.73em;color:{DIM}">WR {_pct(strongest[1].get("win_rate")) if strongest[0] else "—"}</div>'
+        f'</div>'
+        f'<div style="background:{BG2};border:1px solid {R};border-radius:6px;padding:10px;text-align:center">'
+        f'<div style="font-size:0.68em;color:{DIM};margin-bottom:3px;text-transform:uppercase">Needs Improvement</div>'
+        f'<div style="font-size:0.88em;font-weight:700;color:{R}">{len(needs_impr)}/8</div>'
+        f'<div style="font-size:0.73em;color:{DIM}">{", ".join(needs_impr[:2]) or "none"}</div>'
+        f'</div>'
+        f'<div style="background:{BG2};border:1px solid {B};border-radius:6px;padding:10px;text-align:center">'
+        f'<div style="font-size:0.68em;color:{DIM};margin-bottom:3px;text-transform:uppercase">Promotion Candidates</div>'
+        f'<div style="font-size:0.88em;font-weight:700;color:{B}">{len(promo_cands)}/8</div>'
+        f'<div style="font-size:0.73em;color:{DIM}">{", ".join(promo_cands[:2]) or "none"}</div>'
+        f'</div>'
+        f'</div>'
     )
 
-    today_str    = _now_cairo().strftime("%Y-%m-%d")
-    yesterday_str = (_now_cairo() - timedelta(days=1)).strftime("%Y-%m-%d")
+    # ── 8 R1-R8 factor cards ──────────────────────────────────────────────────
+    cards_html = ""
+    for key, label, default_w in _R1R8_DEFS:
+        f = ff_raw.get(key, {}) if isinstance(ff_raw.get(key), dict) else {}
+        cur_w   = float(weights.get(key, default_w))
+        sug_w   = f.get("suggested_weight")
+        sug_wf  = float(sug_w) if sug_w is not None else None
+        verdict = f.get("verdict", "—")
+        wr      = f.get("win_rate")
+        exp_    = f.get("expectancy")
+        exp_imp = str(f.get("expected_improvement") or f.get("production_impact") or "—")[:45]
+        val_st  = f.get("validation_status", "—")
+        n_samp  = f.get("sample_n", "—")
+        n_arch  = factor_archived.get(key, 0)
+        n_ri    = factor_ri_count.get(key, 0)
+        labs    = ", ".join(_FACTOR_LABS.get(key, ["factor_lab"]))
 
-    today_cycles = [c for c in reversed(cycles) if str(c.get("recorded_at", "")).startswith(today_str)]
-    all_recent   = list(reversed(cycles))[:8]
-    shown_cycles = today_cycles if today_cycles else all_recent
+        status, st_col = _factor_status_label(f, sug_wf)
+        vrd_col = G if verdict in ("POSITIVE", "TAIL_DRIVER") else R if verdict == "NEGATIVE" else DIM
 
-    # ── Summary card: ACTIVITY TODAY / MOST RECENT CYCLE ──────────────────────
-    # Use today_str (not yesterday_str) so counts only reflect genuine today activity.
-    # If nothing ran today, all counts will be 0 and the box must say so explicitly.
-    n_new_outcomes  = _db_scalar(
-        "SELECT COUNT(*) FROM bottom_quality WHERE computed_at >= ?", (today_str,)
-    )
-    n_new_signals   = _db_scalar(
-        "SELECT COUNT(*) FROM signals WHERE created_at >= ?", (today_str,)
-    )
-    n_new_findings  = sum(
-        1 for f in factor_findings
-        if isinstance(f, dict) and str(f.get("recorded_at", "")) >= today_str
-    )
-    n_new_promos    = _db_scalar(
+        promo_note = ""
+        if sug_wf is not None:
+            delta = sug_wf - cur_w
+            sign  = "+" if delta >= 0 else ""
+            promo_note = (
+                f'<div style="margin-top:6px;padding:4px 6px;background:{BG0};'
+                f'border-radius:4px;font-size:0.75em;color:{A}">'
+                f'Suggested weight: {sug_wf:.2f} ({sign}{delta:.2f})</div>'
+            )
+
+        cards_html += (
+            f'<div style="background:{BG2};border:1px solid '
+            f'{st_col if status not in ("Stable","Monitoring") else BOR};'
+            f'border-radius:8px;padding:12px 13px">'
+
+            f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">'
+            f'<span style="font-size:0.83em;font-weight:700;color:{FG}">{label}</span>'
+            f'<span style="background:{st_col};color:#000;padding:2px 7px;border-radius:3px;'
+            f'font-size:0.68em;font-weight:700">{status.upper()}</span>'
+            f'</div>'
+
+            f'<div style="display:grid;grid-template-columns:90px 1fr;gap:3px 6px;font-size:0.77em">'
+            f'<span style="color:{DIM}">Verdict</span>'
+            f'<span style="color:{vrd_col};font-weight:600">{verdict}</span>'
+            f'<span style="color:{DIM}">Weight</span>'
+            f'<span style="color:{B}">{cur_w:.1f}'
+            f'<span style="color:{DIM};font-size:0.85em"> (dflt {default_w})</span></span>'
+            f'<span style="color:{DIM}">Win Rate</span>'
+            f'<span style="color:{G if (wr or 0)>=0.40 else DIM}">'
+            f'{_pct(wr) if wr else "—"}</span>'
+            f'<span style="color:{DIM}">Expectancy</span>'
+            f'<span style="color:{FG}">{_pct(exp_) if exp_ else "—"}</span>'
+            f'<span style="color:{DIM}">Exp. Impact</span>'
+            f'<span style="color:{A}">{exp_imp}</span>'
+            f'<span style="color:{DIM}">Validation</span>'
+            f'<span style="color:{G if val_st=="validated" else A if val_st=="pending" else DIM}">'
+            f'{val_st}</span>'
+            f'<span style="color:{DIM}">Open Findings</span>'
+            f'<span style="color:{A if n_arch else DIM}">{n_arch} sub-signals</span>'
+            f'<span style="color:{DIM}">Linked Research</span>'
+            f'<span style="color:{B if n_ri else DIM}">{n_ri} items</span>'
+            f'<span style="color:{DIM}">Active Labs</span>'
+            f'<span style="color:{FG}">{labs}</span>'
+            f'<span style="color:{DIM}">Sample</span>'
+            f'<span style="color:{DIM}">n={n_samp}</span>'
+            f'</div>'
+            f'{promo_note}'
+            f'</div>'
+        )
+
+    # ── Activity summary (secondary — not the primary focus) ─────────────────
+    today_cycles = [c for c in reversed(cycles)
+                    if str(c.get("recorded_at", "")).startswith(today_str)]
+    last_cycle   = (today_cycles or list(reversed(cycles)) or [{}])[0]
+    n_promoted   = _db_scalar(
         "SELECT COUNT(*) FROM deployment_log WHERE action='PROMOTE' AND deployed_at >= ?",
         (today_str,)
     )
-    n_new_rollbacks = _db_scalar(
-        "SELECT COUNT(*) FROM deployment_log WHERE action='ROLLBACK' AND deployed_at >= ?",
-        (today_str,)
+    n_outcomes = _db_scalar(
+        "SELECT COUNT(*) FROM bottom_quality WHERE computed_at >= ?", (today_str,)
     )
-    n_new_val       = _db_scalar(
-        "SELECT COUNT(*) FROM validation_runs WHERE run_at >= ?", (today_str,)
+    deployments = _db_query("SELECT * FROM deployment_log ORDER BY id DESC LIMIT 5")
+    dep_rows = "".join(
+        f'<tr>'
+        f'<td style="padding:4px 10px;color:{DIM};font-size:0.79em;white-space:nowrap">'
+        f'{_ts(d.get("deployed_at"))}</td>'
+        f'<td style="padding:4px 10px">'
+        f'{_badge(d.get("action")=="PROMOTE","PROMOTE","ROLLBACK",d.get("action")=="ROLLBACK")}</td>'
+        f'<td style="padding:4px 10px;font-size:0.79em;color:#aab">{d.get("triggered_by","—")}</td>'
+        f'<td style="padding:4px 10px;font-size:0.79em;color:{DIM}">'
+        f'{str(d.get("note",""))[:55]}</td>'
+        f'</tr>'
+        for d in deployments
+    ) or f'<tr><td colspan=4 style="color:{DIM};padding:4px 10px;font-size:0.8em">—</td></tr>'
+
+    lv_txt = (
+        f'verdict={last_cycle.get("verdict","?")} · '
+        f'{"promoted" if last_cycle.get("promoted") else "not promoted"}'
+    ) if last_cycle else "no cycles recorded"
+
+    act_summary = (
+        f'<div style="display:flex;gap:20px;font-size:0.8em;flex-wrap:wrap;color:{DIM};margin-bottom:6px">'
+        f'<span>Today ({today_str}): '
+        f'<b style="color:{FG}">{len(today_cycles)}</b> cycle(s) · '
+        f'<b style="color:{G}">{n_promoted}</b> promotion(s) · '
+        f'<b style="color:{B}">{n_outcomes}</b> outcomes matured</span>'
+        f'<span>Last cycle: <b style="color:{FG}">{lv_txt}</b></span>'
+        f'</div>'
     )
-    n_new_exp       = _db_scalar(
-        "SELECT COUNT(*) FROM experiment_log WHERE run_at >= ?", (today_str,)
-    )
-    # Signals waiting for maturation (no mfe_40d yet)
+
+    return f"""
+<div style="background:{BG1};border:1px solid {BOR};border-radius:10px;padding:20px 24px;margin-bottom:18px">
+  {_section_header("BACKBONE HEALTH — R1-R8", "🧠")}
+
+  {summary_bar}
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+    {cards_html}
+  </div>
+
+  {_box("Activity Today",
+    act_summary +
+    f'<table style="width:100%;border-collapse:collapse">'
+    f'<tr style="font-size:0.77em;color:{DIM}">'
+    f'<th style="text-align:left;padding:3px 10px">Time</th>'
+    f'<th style="text-align:left;padding:3px 10px">Action</th>'
+    f'<th style="text-align:left;padding:3px 10px">Triggered By</th>'
+    f'<th style="text-align:left;padding:3px 10px">Note</th></tr>'
+    f'{dep_rows}</table>'
+  )}
+</div>"""
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 4 — R1-R8 EVOLUTION PIPELINE  [CONSTITUTION COMPLIANT]
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _section_current_research() -> str:
+    """R1-R8 Evolution Pipeline — research organized by backbone factor."""
+    kb_data  = _load("knowledge_base.json")
+    ff_raw   = kb_data.get("factor_findings", {}) if isinstance(kb_data, dict) else {}
+    archived = kb_data.get("archived_findings", {}) if isinstance(kb_data, dict) else {}
+    weights  = _load("config/weights.json")
+    rm       = _load("gx_research_memory.json")
+    ri       = rm.get("research_items", {}) if isinstance(rm, dict) else {}
+
+    MIN_OUTCOMES_PER_CYCLE = 10
+    MAX_PROMOTIONS_PER_DAY = 3
+    mem_summary = {}
+    try:
+        from continuous_learning import LearningMemory, MIN_OUTCOMES_PER_CYCLE, MAX_PROMOTIONS_PER_DAY
+        mem_summary = LearningMemory().get_summary()
+    except BaseException:
+        pass
+
+    recent_promo = 0
+    try:
+        from continuous_learning import LearningMemory
+        recent_promo = LearningMemory().get_recent_promotions_count(hours=24)
+    except BaseException:
+        pass
+
+    last_exp   = _db_query("SELECT lab, run_at FROM experiment_log ORDER BY id DESC LIMIT 1")
+    last_verd  = _db_query("SELECT verdict, oos_wr, run_at FROM validation_runs ORDER BY id DESC LIMIT 1")
+    lv         = last_verd[0] if last_verd else {}
+    n_outcomes = _db_scalar("SELECT COUNT(*) FROM bottom_quality WHERE mfe_40d IS NOT NULL") or 0
+    today_str  = _now_cairo().strftime("%Y-%m-%d")
     cutoff_40d = (_now_cairo() - timedelta(days=40)).strftime("%Y-%m-%d")
     n_maturing = _db_scalar(
         "SELECT COUNT(*) FROM signals s LEFT JOIN bottom_quality bq ON s.id=bq.signal_id "
@@ -403,282 +643,148 @@ def _section_todays_learning() -> str:
         (cutoff_40d, today_str)
     )
 
-    # Recent learning cycle info — most recent cycle from any date
-    last_cycle = shown_cycles[0] if shown_cycles else {}
-    promoted_today = any(c.get("promoted") for c in today_cycles)
+    # Map research items to r-factors
+    factor_ri: dict = {k: [] for k, _, _ in _R1R8_DEFS}
+    unmapped_ri = []
+    for iid, itm in ri.items():
+        ind = itm.get("indicator", "")
+        target = ind if ind in factor_ri else _SUBFACTOR_TO_RFACTOR.get(ind)
+        if target and target in factor_ri:
+            factor_ri[target].append(itm)
+        else:
+            unmapped_ri.append(itm)
 
-    nothing_today = (n_new_outcomes == 0 and n_new_findings == 0 and n_new_val == 0
-                     and n_new_exp == 0 and n_new_promos == 0)
+    # Map archived sub-signals per r-factor
+    factor_arch: dict = {k: [] for k, _, _ in _R1R8_DEFS}
+    for sf, dat in (archived.items() if isinstance(archived, dict) else []):
+        parent = dat.get("routes_to") or _SUBFACTOR_TO_RFACTOR.get(sf)
+        if parent and parent in factor_arch:
+            factor_arch[parent].append((sf, dat))
 
-    def _delta_item(icon, label, val, col=FG, show_zero=True):
-        if not show_zero and val == 0:
-            return ""
-        sign = "+" if val > 0 else ""
-        return (f'<div style="display:flex;align-items:center;gap:8px;padding:6px 0;'
-                f'border-bottom:1px solid {BOR}">'
-                f'<span style="font-size:1em">{icon}</span>'
-                f'<span style="color:{DIM};font-size:0.83em;flex:1">{label}</span>'
-                f'<span style="font-size:1.0em;font-weight:700;color:{col}">{sign}{val}</span>'
-                f'</div>')
+    # ── Per-factor evolution pipeline rows ───────────────────────────────────
+    pipeline_rows = ""
+    for key, label, default_w in _R1R8_DEFS:
+        f     = ff_raw.get(key, {}) if isinstance(ff_raw.get(key), dict) else {}
+        cur_w = float(weights.get(key, default_w))
+        sug_w = f.get("suggested_weight")
+        sug_wf = float(sug_w) if sug_w is not None else None
 
-    if nothing_today:
-        no_learning_notice = (
-            f'<div style="padding:12px 0;color:{A};font-size:0.9em;font-weight:600">'
-            f'No new learnings today ({today_str}).</div>'
-            f'<div style="color:{DIM};font-size:0.82em">Last cycle: '
-            f'{_ts(last_cycle.get("finished_at", last_cycle.get("recorded_at")))} — '
-            f'verdict={last_cycle.get("verdict","?")} '
-            f'{"promoted=True" if last_cycle.get("promoted") else ""}'
-            f'</div>'
-        )
-        summary_items = no_learning_notice
-    else:
-        summary_items = (
-            _delta_item("📈", "Outcomes matured (mfe_40d computed)", n_new_outcomes, G if n_new_outcomes else FG, True)
-            + _delta_item("🧬", "New factors classified in knowledge base", n_new_findings, G if n_new_findings else FG, True)
-            + _delta_item("🔬", "Validation runs completed", n_new_val, B if n_new_val else FG, True)
-            + _delta_item("🧪", "Experiments executed (labs)", n_new_exp, B if n_new_exp else FG, True)
-            + _delta_item("⬆", "Promotions to production", n_new_promos, G if n_new_promos else A, True)
-            + _delta_item("⬇", "Rollbacks triggered", n_new_rollbacks, R if n_new_rollbacks else FG, True)
-            + _delta_item("🆕", "New signals stored", n_new_signals, G if n_new_signals else FG, True)
-            + _delta_item("⏳", "Signals waiting for maturation", n_maturing, A, True)
-        )
+        verdict = f.get("verdict", "—")
+        val_st  = f.get("validation_status", "—")
+        exp_imp = str(f.get("expected_improvement") or f.get("production_impact") or "—")[:40]
+        n_ri_   = len(factor_ri.get(key, []))
+        n_arch_ = len(factor_arch.get(key, []))
 
-    summary_html = _box(
-        f"TODAY THE SYSTEM LEARNED ({today_str})",
-        f'<div style="font-size:0.85em">{summary_items}</div>',
-        color=B if not nothing_today else A
-    )
+        status, st_col = _factor_status_label(f, sug_wf)
 
-    # ── Learning cycles ───────────────────────────────────────────────────────
-    def _cycle_badge(c):
-        v  = c.get("verdict", "?")
-        ok = v == "APPROVED"
-        rb = c.get("auto_rolled_back", False)
-        cb = c.get("circuit_breaker_reason", "")
-        if rb: return _badge(False, "APPROVED", "AUTO-ROLLBACK")
-        if cb: return _badge(False, "APPROVED", "CIRCUIT-BREAKER", warn=True)
-        return _badge(ok, "APPROVED", v)
+        # Pipeline stage
+        if sug_wf is not None and val_st == "validated":
+            stage, sc = "Promotion Candidate", B
+        elif verdict in ("POSITIVE", "TAIL_DRIVER") and val_st == "validated":
+            stage, sc = "Validated", G
+        elif f and val_st == "pending":
+            stage, sc = "Validation", A
+        elif f:
+            stage, sc = "Discovery", A
+        else:
+            stage, sc = "Monitoring", DIM
 
-    cycle_rows = "".join(
-        f'<tr>'
-        f'<td style="padding:5px 10px;color:{DIM};font-size:0.8em;white-space:nowrap">{_ts(c.get("finished_at", c.get("recorded_at")))}</td>'
-        f'<td style="padding:5px 10px">{_cycle_badge(c)}</td>'
-        f'<td style="padding:5px 10px;font-size:0.8em;color:#aab">outcomes={c.get("outcomes_processed","?")}</td>'
-        f'<td style="padding:5px 10px;font-size:0.8em;color:#aab">{"✅ Promoted" if c.get("promoted") else "Not promoted"}</td>'
-        f'<td style="padding:5px 10px;font-size:0.79em;color:{DIM}">{c.get("rollback_reason", c.get("circuit_breaker_reason", ""))[:50]}</td>'
-        f'</tr>'
-        for c in shown_cycles
-    ) or f'<tr><td colspan=5 style="color:{DIM};padding:5px 10px;font-size:0.8em">No cycles recorded yet</td></tr>'
+        # Next action
+        if stage == "Promotion Candidate":
+            nxt = f"Promote — suggested weight {sug_wf:.2f} vs current {cur_w:.2f}"
+        elif verdict == "NEGATIVE":
+            nxt = "Investigate — factor_lab targets this factor next cycle"
+        elif n_ri_ > 0:
+            nxt = f"{n_ri_} active research item(s)"
+        elif n_arch_ > 0:
+            nxt = f"{n_arch_} sub-signal(s) archived — awaiting r-factor improvement"
+        else:
+            nxt = "Monitoring — awaiting new outcome data"
 
-    dep_rows = "".join(
-        f'<tr>'
-        f'<td style="padding:4px 10px;color:{DIM};font-size:0.79em;white-space:nowrap">{_ts(d.get("deployed_at"))}</td>'
-        f'<td style="padding:4px 10px">{_badge(d.get("action")=="PROMOTE","PROMOTE","ROLLBACK",d.get("action")=="ROLLBACK")}</td>'
-        f'<td style="padding:4px 10px;font-size:0.79em;color:#aab">{d.get("triggered_by","—")}</td>'
-        f'<td style="padding:4px 10px;font-size:0.79em;color:{DIM}">{str(d.get("note",""))[:60]}</td>'
-        f'</tr>'
-        for d in deployments
-    ) or f'<tr><td colspan=4 style="color:{DIM};padding:4px 10px;font-size:0.8em">—</td></tr>'
+        vrd_col = G if verdict in ("POSITIVE","TAIL_DRIVER") else R if verdict == "NEGATIVE" else DIM
 
-    # KB findings - newest first
-    recent_findings = sorted(factor_findings, key=lambda x: x.get("recorded_at", ""), reverse=True)[:8]
-    finding_rows = "".join(
-        f'<tr>'
-        f'<td style="padding:4px 10px;color:{DIM};font-size:0.79em">{_ts(f.get("recorded_at"))}</td>'
-        f'<td style="padding:4px 10px;font-size:0.8em;'
-        f'color:{G if f.get("verdict")=="POSITIVE" else R if f.get("verdict")=="NEGATIVE" else A}">'
-        f'{f.get("verdict","?")}</td>'
-        f'<td style="padding:4px 10px;font-size:0.8em;color:{FG}">{f.get("factor","?")}</td>'
-        f'<td style="padding:4px 10px;font-size:0.79em;color:{DIM}">{f.get("source","—")}</td>'
-        f'</tr>'
-        for f in recent_findings
-    ) or f'<tr><td colspan=4 style="color:{DIM};padding:4px 10px;font-size:0.8em">No findings yet</td></tr>'
-
-    matured = _db_query("""
-        SELECT s.symbol, s.signal_date, bq.mfe_40d, bq.computed_at
-        FROM bottom_quality bq JOIN signals s ON s.id = bq.signal_id
-        WHERE bq.mfe_40d IS NOT NULL AND bq.computed_at >= ?
-        ORDER BY bq.computed_at DESC LIMIT 5
-    """, ((_now_cairo() - timedelta(days=3)).strftime("%Y-%m-%d"),))
-
-    mat_rows = "".join(
-        f'<tr>'
-        f'<td style="padding:4px 10px;font-size:0.8em;color:{FG};font-weight:600">{m.get("symbol","?")}</td>'
-        f'<td style="padding:4px 10px;font-size:0.79em;color:{DIM}">{m.get("signal_date","?")}</td>'
-        f'<td style="padding:4px 10px;font-size:0.8em;'
-        f'color:{G if (m.get("mfe_40d") or 0) >= 0.07 else R}">{_pct(m.get("mfe_40d"))}</td>'
-        f'<td style="padding:4px 10px;font-size:0.79em;color:{DIM}">{_ts(m.get("computed_at"))}</td>'
-        f'</tr>'
-        for m in matured
-    ) or f'<tr><td colspan=4 style="color:{DIM};padding:4px 10px;font-size:0.8em">No new outcomes in last 3 days</td></tr>'
-
-    return f"""
-<div style="background:{BG1};border:1px solid {BOR};border-radius:10px;padding:20px 24px;margin-bottom:18px">
-  {_section_header("TODAY'S LEARNING", "🧠")}
-
-  {summary_html}
-
-  {_box("Learning Cycles (today / most recent)",
-    f'<table style="width:100%;border-collapse:collapse">'
-    f'<tr style="font-size:0.77em;color:{DIM}">'
-    f'<th style="text-align:left;padding:3px 10px">Time</th>'
-    f'<th style="text-align:left;padding:3px 10px">Verdict</th>'
-    f'<th style="text-align:left;padding:3px 10px">Outcomes</th>'
-    f'<th style="text-align:left;padding:3px 10px">Production</th>'
-    f'<th style="text-align:left;padding:3px 10px">Note</th></tr>'
-    f'{cycle_rows}</table>')}
-
-  {_box("Deployments",
-    f'<table style="width:100%;border-collapse:collapse">'
-    f'<tr style="font-size:0.77em;color:{DIM}">'
-    f'<th style="text-align:left;padding:3px 10px">Time</th>'
-    f'<th style="text-align:left;padding:3px 10px">Action</th>'
-    f'<th style="text-align:left;padding:3px 10px">Triggered By</th>'
-    f'<th style="text-align:left;padding:3px 10px">Note</th></tr>'
-    f'{dep_rows}</table>')}
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    {_box("Knowledge Base Findings (newest first)",
-      f'<table style="width:100%;border-collapse:collapse">'
-      f'<tr style="font-size:0.77em;color:{DIM}">'
-      f'<th style="text-align:left;padding:3px 10px">Time</th>'
-      f'<th style="text-align:left;padding:3px 10px">Verdict</th>'
-      f'<th style="text-align:left;padding:3px 10px">Factor</th>'
-      f'<th style="text-align:left;padding:3px 10px">Source</th></tr>'
-      f'{finding_rows}</table>')}
-
-    {_box("Newly Matured Outcomes (last 3 days)",
-      f'<table style="width:100%;border-collapse:collapse">'
-      f'<tr style="font-size:0.77em;color:{DIM}">'
-      f'<th style="text-align:left;padding:3px 10px">Symbol</th>'
-      f'<th style="text-align:left;padding:3px 10px">Signal Date</th>'
-      f'<th style="text-align:left;padding:3px 10px">MFE 40d</th>'
-      f'<th style="text-align:left;padding:3px 10px">Computed</th></tr>'
-      f'{mat_rows}</table>')}
-  </div>
-</div>"""
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# SECTION 4 — CURRENT RESEARCH  [IMPROVED]
-# ══════════════════════════════════════════════════════════════════════════════
-
-def _section_current_research() -> str:
-    mem_summary = {}
-    MIN_OUTCOMES_PER_CYCLE = 5
-    MAX_PROMOTIONS_PER_DAY = 3
-    try:
-        from continuous_learning import LearningMemory, MIN_OUTCOMES_PER_CYCLE, MAX_PROMOTIONS_PER_DAY
-        mem_summary = LearningMemory().get_summary()
-    except BaseException:
-        pass
-
-    last_exp       = _db_query("SELECT lab, run_at, n_signals FROM experiment_log ORDER BY id DESC LIMIT 3")
-    n_outcomes     = _db_scalar("SELECT COUNT(*) FROM bottom_quality WHERE mfe_40d IS NOT NULL")
-    n_val          = _db_scalar("SELECT COUNT(*) FROM validation_runs")
-    last_verdict   = _db_query("SELECT verdict, oos_wr, run_at FROM validation_runs ORDER BY id DESC LIMIT 1")
-    lv             = last_verdict[0] if last_verdict else {}
-
-    cutoff_40d  = (_now_cairo() - timedelta(days=40)).strftime("%Y-%m-%d")
-    today_str   = _now_cairo().strftime("%Y-%m-%d")
-    n_maturing  = _db_scalar(
-        "SELECT COUNT(*) FROM signals s LEFT JOIN bottom_quality bq ON s.id=bq.signal_id "
-        "WHERE s.signal_date >= ? AND s.signal_date <= ? AND bq.mfe_40d IS NULL",
-        (cutoff_40d, today_str)
-    )
-
-    recent     = mem_summary.get("recent_cycles", [])
-    last_cycle = recent[-1] if recent else {}
-    last_outcomes  = last_cycle.get("outcomes_processed", 0) or 0
-    need_more      = max(0, MIN_OUTCOMES_PER_CYCLE - last_outcomes)
-
-    try:
-        from continuous_learning import LearningMemory
-        recent_promo = LearningMemory().get_recent_promotions_count(hours=24)
-    except BaseException:
-        recent_promo = 0
-
-    cb_ok          = recent_promo < MAX_PROMOTIONS_PER_DAY
-    pending_promo  = lv.get("verdict") == "APPROVED" and not last_cycle.get("promoted", False)
-
-    # Research memory — show WHY / EXPECTED IMPACT for active items
-    rm             = _load("gx_research_memory.json")
-    backlog        = rm.get("backlog", [])
-    research_items = rm.get("research_items", {})
-    run_log        = rm.get("run_log", [])
-    last_research  = run_log[-1] if run_log else {}
-
-    # Impact label helper
-    def _impact_label(impact_val):
-        v = float(impact_val) if impact_val else 0
-        if v > 0.05:   return f'<span style="color:{G};font-weight:600">HIGH</span>'
-        if v > 0.02:   return f'<span style="color:{A};font-weight:600">MEDIUM</span>'
-        return f'<span style="color:{DIM}">LOW</span>'
-
-    def _priority_col(p):
-        return {
-            "CRITICAL": R, "HIGH": A, "MEDIUM": B, "LOW": DIM
-        }.get(str(p).upper(), DIM)
-
-    # Top research items from backlog (highest priority first)
-    priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
-    sorted_backlog = sorted(backlog,
-        key=lambda x: (priority_order.get(str(x.get("priority","")).upper(), 9),
-                       -(float(x.get("impact", 0)) or 0)))[:6]
-
-    research_cards = ""
-    for item in sorted_backlog:
-        title   = item.get("title", "?")[:80]
-        why     = item.get("next_action", item.get("evidence", "Insufficient evidence"))
-        why     = str(why)[:120] if why else "—"
-        impact  = item.get("impact", 0)
-        prio    = str(item.get("priority", "?"))
-        status  = str(item.get("status", "?"))
-        ind     = item.get("indicator", "?")
-        p_col   = _priority_col(prio)
-        research_cards += (
-            f'<div style="background:{BG0};border:1px solid {BOR};border-radius:7px;'
-            f'padding:10px 14px;margin-bottom:8px">'
-            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
-            f'<span style="font-size:0.75em;font-weight:700;color:{p_col};'
-            f'background:{BG2};padding:2px 7px;border-radius:4px">{prio}</span>'
-            f'<span style="font-size:0.83em;color:{FG};font-weight:600">{title}</span>'
-            f'</div>'
-            f'<div style="display:grid;grid-template-columns:80px 1fr;gap:4px 12px;font-size:0.8em">'
-            f'<span style="color:{DIM}">WHAT</span>'
-            f'<span style="color:{FG}">{ind} — {status}</span>'
-            f'<span style="color:{DIM}">WHY</span>'
-            f'<span style="color:#aab">{why}</span>'
-            f'<span style="color:{DIM}">IMPACT</span>'
-            f'<span>{_impact_label(impact)} ({_pct(impact) if impact else "—"})</span>'
-            f'</div></div>'
+        pipeline_rows += (
+            f'<tr style="border-bottom:1px solid {BOR}">'
+            f'<td style="padding:7px 10px;font-size:0.82em;font-weight:600;color:{FG}">{label}</td>'
+            f'<td style="padding:7px 10px">'
+            f'<span style="background:{sc};color:#000;padding:2px 7px;border-radius:3px;'
+            f'font-size:0.70em;font-weight:700">{stage.upper()}</span></td>'
+            f'<td style="padding:7px 10px;font-size:0.79em;color:{vrd_col}">{verdict}</td>'
+            f'<td style="padding:7px 10px;font-size:0.78em;color:{A}">{exp_imp}</td>'
+            f'<td style="padding:7px 10px;font-size:0.78em;color:{DIM}">{nxt[:65]}</td>'
+            f'</tr>'
         )
 
-    if not research_cards:
-        research_cards = f'<div style="color:{DIM};font-size:0.83em">No active research items</div>'
+    # ── Unmapped research (Research Only — no production influence) ──────────
+    unmapped_html = ""
+    if unmapped_ri:
+        u_rows = "".join(
+            f'<tr>'
+            f'<td style="padding:4px 10px;font-size:0.79em;color:{A}">'
+            f'{u.get("indicator","?")}</td>'
+            f'<td style="padding:4px 10px;font-size:0.79em;color:{FG}">'
+            f'{str(u.get("title","?"))[:55]}</td>'
+            f'<td style="padding:4px 10px;font-size:0.75em;color:{DIM}">'
+            f'Research Only · Production Influence = No</td>'
+            f'</tr>'
+            for u in unmapped_ri[:5]
+        )
+        unmapped_html = _box(
+            f"Unmapped Research Assets ({len(unmapped_ri)} — Research Only, No Production Influence)",
+            f'<table style="width:100%;border-collapse:collapse">'
+            f'<tr style="font-size:0.73em;color:{DIM}">'
+            f'<th style="text-align:left;padding:3px 10px">Indicator</th>'
+            f'<th style="text-align:left;padding:3px 10px">Title</th>'
+            f'<th style="text-align:left;padding:3px 10px">Status</th></tr>'
+            f'{u_rows}</table>', color=DIM
+        )
 
-    # Pipeline state summary
-    pipe_rows = "".join([
-        _row2("Currently Running",   ", ".join(e.get("lab","?") for e in last_exp) if last_exp else "—",
-              f'last run: {_ts(last_exp[0].get("run_at") if last_exp else None)}'),
-        _row2("Waiting For Data",    f"{n_maturing} signals maturing",
-              "need mfe_40d outcome (up to 40 days after signal_date)"),
-        _row2("Research Backlog",    f"{len(backlog)} items",
-              f'last_research={_ts(last_research.get("date"))} | {last_research.get("n_active",0)} active'),
-        _row2("Pending Validation",  f"Need {need_more} more" if need_more > 0 else "Ready to validate",
-              f"threshold={MIN_OUTCOMES_PER_CYCLE} outcomes/cycle | last had {last_outcomes}"),
-        _row2("Promotion Gate",      _badge(cb_ok, "OPEN", "CIRCUIT BREAKER", warn=not cb_ok),
-              f"{recent_promo}/{MAX_PROMOTIONS_PER_DAY} promotions in 24h | "
-              f'{"APPROVED verdict pending" if pending_promo else "no cycle pending"}'),
+    # ── System pipeline state ─────────────────────────────────────────────────
+    recent_c = mem_summary.get("recent_cycles", [])
+    last_c   = recent_c[-1] if recent_c else {}
+    last_out = last_c.get("outcomes_processed", 0) or 0
+    need_more = max(0, MIN_OUTCOMES_PER_CYCLE - last_out)
+    cb_ok     = recent_promo < MAX_PROMOTIONS_PER_DAY
+    pend_promo = lv.get("verdict") == "APPROVED" and not last_c.get("promoted", False)
+
+    sys_rows = "".join([
+        _row2("Outcomes (mfe_40d)", f"{n_outcomes:,}",
+              f"{n_maturing} signals still maturing"),
+        _row2("Last Lab Run",
+              _ts(last_exp[0].get("run_at")) if last_exp else "—",
+              last_exp[0].get("lab","—") if last_exp else ""),
+        _row2("Last Validation",
+              _badge(lv.get("verdict")=="APPROVED","APPROVED",lv.get("verdict","—")),
+              f'OOS WR={_pct(lv.get("oos_wr"))} · {_ts(lv.get("run_at"))}'),
+        _row2("Promotion Gate",
+              _badge(cb_ok, "OPEN", "CIRCUIT BREAKER", warn=not cb_ok),
+              f"{recent_promo}/{MAX_PROMOTIONS_PER_DAY} promotions in 24h"
+              + (" · APPROVED pending" if pend_promo else "")),
+        _row2("Data Threshold",
+              f"Need {need_more} more" if need_more else "Ready",
+              f"threshold={MIN_OUTCOMES_PER_CYCLE} · last cycle had {last_out}"),
     ])
 
     return f"""
 <div style="background:{BG1};border:1px solid {BOR};border-radius:10px;padding:20px 24px;margin-bottom:18px">
-  {_section_header("CURRENT RESEARCH", "🔬")}
-  {_box("Live Pipeline State",
-    f'<table style="width:100%;border-collapse:collapse">{pipe_rows}</table>')}
-  {_box("Active Research Items — What · Why · Expected Impact", research_cards, color=B)}
+  {_section_header("R1-R8 EVOLUTION PIPELINE", "🔬")}
+
+  {_box("Factor Evolution — Stage · Verdict · Expected Impact · Next Action",
+    f'<table style="width:100%;border-collapse:collapse">'
+    f'<tr style="font-size:0.73em;color:{DIM}">'
+    f'<th style="text-align:left;padding:3px 10px">Factor</th>'
+    f'<th style="text-align:left;padding:3px 10px">Pipeline Stage</th>'
+    f'<th style="text-align:left;padding:3px 10px">Verdict</th>'
+    f'<th style="text-align:left;padding:3px 10px">Expected Impact</th>'
+    f'<th style="text-align:left;padding:3px 10px">Next Action</th></tr>'
+    f'{pipeline_rows}</table>'
+  )}
+
+  {unmapped_html}
+
+  {_box("System Pipeline State",
+    f'<table style="width:100%;border-collapse:collapse">{sys_rows}</table>'
+  )}
 </div>"""
 
 
@@ -2193,9 +2299,9 @@ def build_dashboard() -> str:
   <a href="#alpha-status">⚡ Status</a>
   <a href="#snapshot">📈 Snapshot</a>
   <a href="#performance">📊 Performance</a>
-  <a href="#learning">🧠 Learning</a>
+  <a href="#learning">🧠 Backbone</a>
   <a href="#pipeline">🔭 Pipeline</a>
-  <a href="#research">🔬 Research</a>
+  <a href="#research">🔬 Evolution</a>
   <a href="#knowledge">📚 Knowledge</a>
   <a href="#classification">🎯 Classification</a>
   <a href="#health">🔧 Health</a>

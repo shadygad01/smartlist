@@ -491,6 +491,7 @@ def _enrich_with_validation_evidence(
     enriched["proposed_oos_sharpe"] = oos_sharpe
 
     # 3. Historical validation (from backtest_report.json)
+    # Raises ValueError if file is absent or malformed — historical evidence is mandatory.
     try:
         with open("backtest_report.json") as _f:
             _bt = json.load(_f)
@@ -502,11 +503,16 @@ def _enrich_with_validation_evidence(
             f"win_rate={_wr:.2%}, n={_n}"
         )
         enriched["proposed_expectancy"] = _exp
-    except Exception:
-        enriched.setdefault("historical_validation",
-                            "SKIPPED_NO_DATA: backtest_report.json unavailable")
+    except Exception as _he:
+        raise ValueError(
+            f"historical_validation: backtest_report.json unavailable or malformed — "
+            f"cannot confirm historical performance. "
+            f"Constitution §RANKING AND SCORING PROTECTION RULE requires historical evidence. "
+            f"Error: {_he}"
+        )
 
-    # 4. Shadow validation (challenger_validation — optional, non-blocking if module absent)
+    # 4. Shadow validation (challenger_validation — required; raises if module absent)
+    # Raises ValueError if module fails — shadow evidence is mandatory.
     try:
         import challenger_validation as _cv
         _shadow = _cv.run(db_path=db_path, verbose=False)
@@ -517,9 +523,15 @@ def _enrich_with_validation_evidence(
             f"PASSED: challenger_validation winner={_winner}, "
             f"metrics_won={_metrics}/{_total}"
         )
-    except Exception as _e:
-        enriched.setdefault("shadow_validation",
-                            f"SKIPPED_MODULE_UNAVAILABLE: {type(_e).__name__}: {_e}")
+    except ValueError:
+        raise
+    except Exception as _se:
+        raise ValueError(
+            f"shadow_validation: challenger_validation unavailable or failed — "
+            f"cannot confirm shadow performance. "
+            f"Constitution §RANKING AND SCORING PROTECTION RULE requires shadow evidence. "
+            f"Error: {type(_se).__name__}: {_se}"
+        )
 
     return enriched
 

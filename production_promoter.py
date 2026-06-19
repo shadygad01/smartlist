@@ -131,23 +131,32 @@ def promote(
     conn.row_factory = sqlite3.Row
 
     try:
-        # Validate the validation run if provided
-        if validation_run_id is not None:
-            row = conn.execute(
-                "SELECT verdict FROM validation_runs WHERE id = ?",
-                (validation_run_id,),
-            ).fetchone()
-            if row is None:
-                raise ValueError(f"validation_run_id {validation_run_id} not found.")
-            verdict = row["verdict"]
-            if verdict == "REJECTED":
-                raise ValueError(
-                    f"Cannot promote: validation run {validation_run_id} was REJECTED."
-                )
-            if verdict not in ("APPROVED", "FURTHER_RESEARCH"):
-                raise ValueError(
-                    f"Cannot promote: validation run {validation_run_id} has verdict '{verdict}'."
-                )
+        # §PROMOTION REQUIREMENT: validation_run_id is mandatory for every promotion.
+        # There is no manual-override bypass via validation_run_id=None.
+        if validation_run_id is None:
+            raise ValueError(
+                "PROMOTION REQUIREMENT (§PROMOTION PIPELINE): "
+                "validation_run_id is mandatory. No promotion is permitted without a "
+                "DB-backed validation run. Call validation_engine.run_train_val_oos() "
+                "first to obtain a validation_run_id."
+            )
+
+        # Verify the validation run verdict
+        row = conn.execute(
+            "SELECT verdict FROM validation_runs WHERE id = ?",
+            (validation_run_id,),
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"validation_run_id {validation_run_id} not found.")
+        verdict = row["verdict"]
+        if verdict == "REJECTED":
+            raise ValueError(
+                f"Cannot promote: validation run {validation_run_id} was REJECTED."
+            )
+        if verdict not in ("APPROVED", "FURTHER_RESEARCH"):
+            raise ValueError(
+                f"Cannot promote: validation run {validation_run_id} has verdict '{verdict}'."
+            )
 
         # ── Constitution: Final Audit (advisory warnings + system-level gate) ──
         _target_factor     = artifacts.get("target_factor")
@@ -169,59 +178,62 @@ def promote(
         print(f"  6. Behavior change:   {artifacts.get('behavior_change', '(not specified)')}")
         print("  ── END FINAL AUDIT ──\n")
         # Hard gates (Constitution §PROMOTION REQUIREMENT + §PRODUCTION IMPACT RULE):
-        # All four fields are mandatory for validated promotions.
-        if validation_run_id is not None:
-            if not _target_factor:
-                raise ValueError(
-                    "PROMOTION REQUIREMENT (§PROMOTION REQUIREMENT): "
-                    "target_factor is mandatory. Which r1-r8 factor does this improve?"
-                )
-            if not artifacts.get("expected_improvement"):
-                raise ValueError(
-                    "PROMOTION REQUIREMENT (§KNOWLEDGE ASSET REQUIREMENT): "
-                    "expected_improvement is mandatory. Quantify the expected gain (e.g. '+3% expectancy')."
-                )
-            if not artifacts.get("evidence_summary"):
-                raise ValueError(
-                    "PROMOTION REQUIREMENT (§FINAL AUDIT): "
-                    "evidence_summary is mandatory. What evidence supports this improvement?"
-                )
-            if not _production_metric:
-                raise ValueError(
-                    "PROMOTION REQUIREMENT (§PRODUCTION IMPACT RULE): "
-                    "production_metric is mandatory. Which production metric improves?"
-                )
-            # §FINAL AUDIT Q5 + Q6: mandatory for validated promotions
-            if not artifacts.get("improvement_size"):
-                raise ValueError(
-                    "FINAL AUDIT (Constitution §FINAL AUDIT Q5): "
-                    "improvement_size is mandatory. Quantify improvement size "
-                    "(e.g. '+3% expectancy OOS, optimization #42')."
-                )
-            if not artifacts.get("behavior_change"):
-                raise ValueError(
-                    "FINAL AUDIT (Constitution §FINAL AUDIT Q6): "
-                    "behavior_change is mandatory. Describe system behavior change "
-                    "(e.g. 'r3_liquidity weight: 0.18→0.22')."
-                )
-            # §RANKING AND SCORING PROTECTION RULE: all 4 validation evidences required
-            _missing_validations = [
-                v for v in (
-                    "historical_validation",
-                    "shadow_validation",
-                    "incremental_alpha_validation",
-                    "production_impact_validation",
-                )
-                if not artifacts.get(v)
-            ]
-            if _missing_validations:
-                raise ValueError(
-                    f"RANKING AND SCORING PROTECTION RULE "
-                    f"(Constitution §RANKING AND SCORING PROTECTION RULE): "
-                    f"Promotion blocked — missing validation evidence: {_missing_validations}. "
-                    f"All 4 required: historical_validation, shadow_validation, "
-                    f"incremental_alpha_validation, production_impact_validation."
-                )
+        # Unconditional — applies to ALL promotions regardless of validation_run_id.
+        # validation_run_id=None is NOT a bypass. No exceptions.
+        if not _target_factor:
+            raise ValueError(
+                "PROMOTION REQUIREMENT (§PROMOTION REQUIREMENT): "
+                "target_factor is mandatory. Which r1-r8 factor does this improve?"
+            )
+        if not artifacts.get("expected_improvement"):
+            raise ValueError(
+                "PROMOTION REQUIREMENT (§KNOWLEDGE ASSET REQUIREMENT): "
+                "expected_improvement is mandatory. Quantify the expected gain (e.g. '+3% expectancy')."
+            )
+        if not artifacts.get("evidence_summary"):
+            raise ValueError(
+                "PROMOTION REQUIREMENT (§FINAL AUDIT): "
+                "evidence_summary is mandatory. What evidence supports this improvement?"
+            )
+        if not _production_metric:
+            raise ValueError(
+                "PROMOTION REQUIREMENT (§PRODUCTION IMPACT RULE): "
+                "production_metric is mandatory. Which production metric improves?"
+            )
+        # §FINAL AUDIT Q5 + Q6: mandatory for all promotions
+        if not artifacts.get("improvement_size"):
+            raise ValueError(
+                "FINAL AUDIT (Constitution §FINAL AUDIT Q5): "
+                "improvement_size is mandatory. Quantify improvement size "
+                "(e.g. '+3% expectancy OOS, optimization #42')."
+            )
+        if not artifacts.get("behavior_change"):
+            raise ValueError(
+                "FINAL AUDIT (Constitution §FINAL AUDIT Q6): "
+                "behavior_change is mandatory. Describe system behavior change "
+                "(e.g. 'r3_liquidity weight: 0.18→0.22')."
+            )
+        # §RANKING AND SCORING PROTECTION RULE: all 4 validation evidences required.
+        # "SKIPPED_..." values are rejected — skipped ≠ validated.
+        # Only values starting with "PASSED" satisfy the gate.
+        _missing_validations = [
+            v for v in (
+                "historical_validation",
+                "shadow_validation",
+                "incremental_alpha_validation",
+                "production_impact_validation",
+            )
+            if not artifacts.get(v)
+            or not str(artifacts.get(v, "")).upper().startswith("PASSED")
+        ]
+        if _missing_validations:
+            raise ValueError(
+                f"RANKING AND SCORING PROTECTION RULE "
+                f"(Constitution §RANKING AND SCORING PROTECTION RULE): "
+                f"Promotion blocked — missing or unvalidated evidence: {_missing_validations}. "
+                f"All 4 must be present and start with 'PASSED': historical_validation, "
+                f"shadow_validation, incremental_alpha_validation, production_impact_validation."
+            )
         # System-level expectancy check — warn on regression; block unless override=True
         try:
             with open("backtest_report.json") as _f:

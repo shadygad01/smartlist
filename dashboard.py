@@ -2167,7 +2167,7 @@ def _section_notebooklm() -> str:
         return (
             '<div style="background:' + BG1 + ';border:2px solid ' + BOR + ';border-radius:10px;'
             'padding:24px;margin-bottom:18px">'
-            + _section_header("NotebookLM Discovery Engine", "🔬")
+            + _section_header("SmartList Learning Engine", "🧠")
             + '<p style="color:' + R + '">Discovery module unavailable: ' + str(_e) + '</p></div>'
         )
 
@@ -2251,7 +2251,7 @@ def build_dashboard() -> str:
   <a href="#health">🔧 Health</a>
   <a href="#pattern-intel">🔬 Pattern Intel</a>
   <a href="#research-lab" style="border-color:{B};color:{B}">🧪 Research Lab</a>
-  <a href="#notebooklm-engine" style="border-color:{G};color:{G}">🔬 NotebookLM</a>
+  <a href="#notebooklm-engine" style="border-color:{G};color:{G}">🧠 Learning</a>
   <a href="heatmap.html" style="border-color:{G};color:{G}">📈 Heatmap</a>
 </div>
 

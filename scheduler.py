@@ -152,14 +152,6 @@ def run_once(dry_run: bool = False, skip_scan: bool = False) -> dict:
         status["outcomes_measured"] = n
         _log(f"         {n} outcome rows updated")
 
-        # Step 2b: Research hypothesis validation
-        try:
-            from research_features import update_hypothesis_stats
-            update_hypothesis_stats()
-            _log("         Research hypothesis stats updated")
-        except Exception as _re:
-            _log(f"         Research update skipped: {_re}")
-
         # Step 3: Learning cycle
         _log("Step 3/3: Running learning cycle …")
         result = _run_learning(dry_run=dry_run)

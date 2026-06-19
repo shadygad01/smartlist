@@ -447,11 +447,6 @@ def init_db(db_path: str = DB_PATH):
     # executescript() does an implicit COMMIT, so _migrate_schema runs
     # outside that transaction — each ALTER TABLE commits independently (correct).
     _migrate_schema(conn)
-    try:
-        from research_features import init_research_schema
-        init_research_schema(conn)
-    except Exception:
-        pass
     conn.close()
 
 

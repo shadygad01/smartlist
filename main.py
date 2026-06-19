@@ -911,13 +911,6 @@ def analyze(symbol):
         # ── Snapshot Features — لا يُغيّر منطق الدخول ───────────────────────
         _snap = _snap_features(df, cur, eq, lo, hi) if (_snap_features and cur < eq) else {}
 
-        # ── Research Features — research-only, never affects scoring ─────────
-        try:
-            from research_features import run_research_scoring
-            _res = run_research_scoring(df)
-        except Exception:
-            _res = {}
-
         return {
             "ok":True,"price":round(cur,2),"last_dt":last_dt,
             "is_fresh":is_fresh,"price_src":src,
@@ -971,7 +964,6 @@ def analyze(symbol):
             "regime_multiplier": round(_regime_mult, 3),
             "factor_exp_score": round(_factor_exp_score, 2),
             **_snap,
-            **_res,
         }
 
         # Pattern Intelligence 2.0 telemetry (research only — never affects result)

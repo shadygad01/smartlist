@@ -481,6 +481,18 @@ def run_learning_cycle(
         proposed = _run_optimization(db_path, config_dir, lab_improvements)
         if proposed:
             cycle_result["optimized"] = True
+            # Incremental alpha check (Constitution §RANKING AND SCORING PROTECTION RULE):
+            # block promotion if optimization shows no measurable improvement
+            m_before = float(proposed.get("metric_before") or 0)
+            m_after  = float(proposed.get("metric_after")  or 0)
+            if m_after <= m_before:
+                cycle_result["verdict"] = "SYSTEM_REGRESSION_BLOCKED"
+                cycle_result["alpha_check"] = {
+                    "metric_before": m_before,
+                    "metric_after":  m_after,
+                    "reason": "metric_after <= metric_before; no incremental alpha demonstrated",
+                }
+                return cycle_result
         else:
             cycle_result["verdict"] = "OPTIMIZATION_FAILED"
             return cycle_result

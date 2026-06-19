@@ -168,6 +168,13 @@ def promote(
         print(f"  5. Improvement size:  {artifacts.get('improvement_size', '(not specified)')}")
         print(f"  6. Behavior change:   {artifacts.get('behavior_change', '(not specified)')}")
         print("  ── END FINAL AUDIT ──\n")
+        # Hard gate: validated promotions must identify which r1-r8 factor they improve
+        if validation_run_id is not None and not _target_factor:
+            raise ValueError(
+                "PROMOTION REQUIREMENT (Constitution §PROMOTION REQUIREMENT): "
+                "target_factor is mandatory for validated promotions. "
+                "Specify which r1-r8 factor (r1_price..r8_demand) this change improves."
+            )
         # System-level expectancy check — warn on regression; block unless override=True
         try:
             with open("backtest_report.json") as _f:

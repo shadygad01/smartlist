@@ -16,6 +16,8 @@ Usage:
     python rule_discovery.py --dry-run         # print summary, no files
     python rule_discovery.py --db=custom.db    # custom DB path
 """
+# Constitution §AUTOMATIC ARCHIVING RULE — Research only; no path to production without r1-r8 mapping
+RESEARCH_ONLY_LAB = True
 
 from __future__ import annotations
 

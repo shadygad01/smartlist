@@ -16,6 +16,8 @@ Pattern Recognition Engine — v2
   atr_ratio  → مرتفع = إشارة (تقلب متزايد)    AUC=0.614
   vol_trend  → منخفض = إشارة (الحجم يخف)      AUC=0.592
 """
+# Constitution §AUTOMATIC ARCHIVING RULE — Research only; no path to production without r1-r8 mapping
+RESEARCH_ONLY_LAB = True
 
 import numpy as np
 import pandas as pd

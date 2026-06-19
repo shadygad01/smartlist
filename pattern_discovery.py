@@ -7,6 +7,9 @@ Pattern Discovery Engine — EGX Research Platform
 الأنماط تُكتشف بـ K-Means على مجموعة من المتغيرات الرقمية
 وتُقيَّم بناءً على MFE و BQ Score الفعليين.
 """
+# Constitution §AUTOMATIC ARCHIVING RULE — Research only; no path to production without r1-r8 mapping
+RESEARCH_ONLY_LAB = True
+
 import sqlite3
 import json
 from typing import Optional

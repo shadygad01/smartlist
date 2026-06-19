@@ -6,6 +6,8 @@ policy-gradient update on r1-r8 indicator weights + pattern_score + context.
 Saves historical weight snapshots and performance history to smc_rl_weights.json.
 Output: reports/smc_rl_report_{date}.html
 """
+# Constitution §AUTOMATIC ARCHIVING RULE — Research only; no path to production without r1-r8 mapping
+RESEARCH_ONLY_LAB = True
 
 import json
 import math

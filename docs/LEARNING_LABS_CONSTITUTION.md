@@ -1,39 +1,70 @@
-SMARTLIST LEARNING LABS CONSTITUTION
+# SMARTLIST LEARNING LABS CONSTITUTION
+## SUPREME ARCHITECTURAL AUTHORITY
 
-This document is the highest-priority architectural authority for all Learning Labs, Research Systems, Discovery Engines, Knowledge Assets and Promotion Pipelines.
+This document is the highest-priority architectural authority for:
 
-=================================================
-THE BACKBONE
+- Learning Labs
+- Research Labs
+- Discovery Engines
+- Knowledge Assets
+- Promotion Pipelines
+- Pattern Intelligence
+- Learning Engine
+- NotebookLM Intake
+- Research Automation
 
-The SmartList backbone is:
+If any implementation conflicts with this document:
 
-r1
-r2
-r3
-r4
-r5
-r6
-r7
-r8
+STOP → CORRECT → CONTINUE ONLY AFTER COMPLIANCE
+
+---
+
+# AUTHORITY
+
+This constitution overrides implementation, discovery, research, dashboard and optimization preferences.
+
+The constitution is the source of truth.
+
+---
+
+# THE BACKBONE
+
+The SmartList production backbone is:
+
+- r1
+- r2
+- r3
+- r4
+- r5
+- r6
+- r7
+- r8
+
+These factors are the foundation of SmartList.
 
 The purpose of all labs is to improve this backbone.
 
-=================================================
-PRIMARY MISSION
+The purpose of the labs is NOT to replace the backbone.
 
-The Learning Labs exist to continuously improve:
+The purpose of the labs is NOT to compete with the backbone.
 
-r1-r8
+---
 
-The Learning Labs do NOT exist to create:
+# PRIMARY MISSION
 
-r9
-r10
-r11
-or unlimited new factors.
+The Learning Labs exist to continuously improve r1-r8.
 
-=================================================
-MANDATORY QUESTION
+The Learning Labs do NOT exist to:
+
+- create endless new factors
+- maximize discoveries
+- maximize hypotheses
+- build research collections
+- increase factor count
+
+---
+
+# MANDATORY QUESTION
 
 Before accepting any discovery ask:
 
@@ -41,10 +72,11 @@ Which existing factor does this improve?
 
 If no answer exists:
 
-Reject the discovery.
+REJECT the discovery.
 
-=================================================
-ALLOWED OUTCOMES
+---
+
+# ALLOWED OUTCOMES
 
 Every successful discovery must become one of:
 
@@ -54,32 +86,28 @@ Every successful discovery must become one of:
 4. Weight Optimization
 5. Interaction Enhancement
 
-=================================================
-FORBIDDEN OUTCOMES
+---
 
-Do not optimize for:
+# FORBIDDEN OUTCOMES
 
-* factor count
-* discovery count
-* asset count
+The Learning Labs must NOT optimize for:
 
-Creating new factors is a last resort.
+- new factors
+- more factors
+- discovery count
+- hypothesis count
+- asset count
+- report count
 
-=================================================
-PROMOTION REQUIREMENT
+Creating r9 is considered failure unless overwhelming evidence proves that no existing factor can absorb the discovery.
 
-Every promoted discovery must clearly identify:
+New factors are a last resort.
 
-* target factor
-* expected improvement
-* supporting evidence
+Not a goal.
 
-If no target factor exists:
+---
 
-promotion forbidden.
-
-=================================================
-DISCOVERY REINTERPRETATION RULE
+# DISCOVERY REINTERPRETATION RULE
 
 Whenever a discovery appears:
 
@@ -87,43 +115,248 @@ DO NOT ask:
 
 Can this become r9?
 
+Instead ask:
+
+- Can this improve r1?
+- Can this improve r2?
+- Can this improve r3?
+- Can this improve r4?
+- Can this improve r5?
+- Can this improve r6?
+- Can this improve r7?
+- Can this improve r8?
+
+Only after exhausting all possibilities may a new factor be considered.
+
+---
+
+# KNOWLEDGE ASSET REQUIREMENT
+
+Every active asset must contain:
+
+- Target Factor
+- Expected Improvement
+- Evidence
+- Validation Status
+- Promotion Path
+- Production Impact
+
+If Target Factor is empty:
+
+Archive asset.
+
+---
+
+# PROMOTION REQUIREMENT
+
+Every promoted discovery must clearly identify:
+
+1. Which factor it improves
+2. Which factor it replaces
+3. Which interaction it strengthens
+
+If none apply:
+
+Promotion is forbidden.
+
+---
+
+# PRODUCTION IMPACT RULE
+
+The purpose of improving r1-r8 is NOT factor optimization.
+
+The purpose is production improvement.
+
+Every proposal must demonstrate measurable impact on at least one of:
+
+- Ranking Quality
+- Signal Quality
+- Confidence Quality
+- Expectancy
+- MFE40
+- Peak Return
+- Drawdown Control
+
+Every proposal must answer:
+
+1. Which production metric improves?
+2. By how much?
+3. Against what baseline?
+4. On what sample size?
+5. Is the improvement statistically significant?
+
+Factor improvement alone is insufficient.
+
+Production improvement is mandatory.
+
+---
+
+# RANKING AND SCORING PROTECTION RULE
+
+The Ranking Engine, Scoring Engine and Confidence Engine are protected production assets.
+
+No Learning Lab may directly modify:
+
+- Ranking Logic
+- Ranking Weights
+- Scoring Logic
+- Confidence Logic
+- Production Gates
+- Production Thresholds
+
+without completing:
+
+1. Historical Validation
+2. Shadow Validation
+3. Incremental Alpha Validation
+4. Production Impact Validation
+
+Labs may Discover, Validate and Propose.
+
+Labs may NOT Deploy directly.
+
+---
+
+# PROMOTION PIPELINE
+
+Discovery
+→ Validation
+→ Improvement Proposal
+→ Shadow Production
+→ Promotion Candidate
+→ Production
+
+---
+
+# AUTOMATIC ARCHIVING RULE
+
+Archive any asset that:
+
+- cannot improve r1-r8
+- cannot improve measurement quality
+- cannot improve weighting
+- cannot improve interactions
+- cannot improve production decisions
+
+Interesting observations are not active assets.
+
+Interesting observations are not promotable assets.
+
+---
+
+# LAB SUCCESS METRIC
+
+Success is NOT measured by:
+
+- discoveries made
+- hypotheses generated
+- assets created
+- reports produced
+
+Success IS measured by:
+
+- Ranking Quality Improvement
+- Signal Quality Improvement
+- Confidence Quality Improvement
+- Expectancy Improvement
+- MFE40 Improvement
+
+through improvement of r1-r8.
+
+---
+
+# SELF-CORRECTION RULE
+
+Before every implementation cycle perform a Drift Audit.
+
 Ask:
 
-Can this improve r1?
+- Has the system started optimizing for discoveries instead of backbone improvement?
+- Has the system started collecting observations instead of improving r1-r8?
+- Has the system started creating candidate factors instead of improving existing factors?
+- Has the system started generating reports instead of improving production performance?
 
-Can this improve r2?
+If YES:
 
-Can this improve r3?
+STOP
 
-Can this improve r4?
+Correct immediately.
 
-Can this improve r5?
+---
 
-Can this improve r6?
+# R1-R8 EVOLUTION RULE
 
-Can this improve r7?
+The Learning Labs are an Evolution Engine.
 
-Can this improve r8?
+The objective is continuous evolution of r1-r8 through:
 
-=================================================
-SUCCESS METRIC
+- refinement
+- replacement
+- optimization
+- interaction enhancement
+- measurement improvement
 
-Success is measured by:
+---
 
-Improvement of r1-r8
+# SYSTEM LEVEL VALIDATION RULE
 
-NOT by:
+Improving an individual factor is insufficient.
 
-* discoveries
-* reports
-* hypotheses
-* assets
+Every proposed improvement must demonstrate:
 
-=================================================
-FINAL PRINCIPLE
+1. Factor-Level Improvement
+
+AND
+
+2. System-Level Improvement
+
+Examples of System-Level Improvement:
+
+- Better Ranking Quality
+- Better Signal Quality
+- Better Confidence Quality
+- Better Expectancy
+- Better MFE40
+- Lower False Positives
+- Better Decision Quality
+
+A proposal that improves a single factor but degrades overall system performance must not be promoted.
+
+Local optimization is not sufficient.
+
+System optimization is mandatory.
+
+---
+
+# FINAL AUDIT
+
+Before committing any change answer:
+
+1. Which factor improved?
+2. What improvement was achieved?
+3. What evidence supports it?
+4. What production metric improved?
+5. How much did it improve?
+6. What production behavior changes?
+
+If any answer is unclear:
+
+Do not promote.
+Do not deploy.
+Continue research.
+
+---
+
+# FINAL PRINCIPLE
+
+The Learning Labs are not a Discovery Engine.
+
+The Learning Labs are not a Reporting Engine.
+
+The Learning Labs are not a Statistics Engine.
 
 The Learning Labs are an Evolution Engine.
 
 Their sole purpose is:
 
-Making r1-r8 better over time.
+Making SmartList production performance better through continuous evolution of r1-r8.

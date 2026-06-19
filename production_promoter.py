@@ -191,6 +191,37 @@ def promote(
                     "PROMOTION REQUIREMENT (§PRODUCTION IMPACT RULE): "
                     "production_metric is mandatory. Which production metric improves?"
                 )
+            # §FINAL AUDIT Q5 + Q6: mandatory for validated promotions
+            if not artifacts.get("improvement_size"):
+                raise ValueError(
+                    "FINAL AUDIT (Constitution §FINAL AUDIT Q5): "
+                    "improvement_size is mandatory. Quantify improvement size "
+                    "(e.g. '+3% expectancy OOS, optimization #42')."
+                )
+            if not artifacts.get("behavior_change"):
+                raise ValueError(
+                    "FINAL AUDIT (Constitution §FINAL AUDIT Q6): "
+                    "behavior_change is mandatory. Describe system behavior change "
+                    "(e.g. 'r3_liquidity weight: 0.18→0.22')."
+                )
+            # §RANKING AND SCORING PROTECTION RULE: all 4 validation evidences required
+            _missing_validations = [
+                v for v in (
+                    "historical_validation",
+                    "shadow_validation",
+                    "incremental_alpha_validation",
+                    "production_impact_validation",
+                )
+                if not artifacts.get(v)
+            ]
+            if _missing_validations:
+                raise ValueError(
+                    f"RANKING AND SCORING PROTECTION RULE "
+                    f"(Constitution §RANKING AND SCORING PROTECTION RULE): "
+                    f"Promotion blocked — missing validation evidence: {_missing_validations}. "
+                    f"All 4 required: historical_validation, shadow_validation, "
+                    f"incremental_alpha_validation, production_impact_validation."
+                )
         # System-level expectancy check — warn on regression; block unless override=True
         try:
             with open("backtest_report.json") as _f:

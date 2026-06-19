@@ -178,14 +178,17 @@ def _merge_recommendations(memory_recs: list, new_recs: list) -> list:
                 if s not in er["supporting"]:
                     er["supporting"].append(s)
         else:
+            nr.setdefault("target_factor",    "unknown")
+            nr.setdefault("improvement_type", "refinement")
+            # Constitution: reject any rec that cannot map to an r1-r8 backbone factor
+            if nr["target_factor"] == "unknown":
+                continue
             nr["status"] = "Proposed"
             nr["first_seen"] = TODAY
             nr["last_seen"] = TODAY
             nr["actual_delta_ret"] = None
             nr["actual_delta_mfe"] = None
             nr["prediction_accuracy"] = None
-            nr.setdefault("target_factor",    "unknown")
-            nr.setdefault("improvement_type", "refinement")
             existing[rid] = nr
 
     # Cross-module agreement: mark recs confirmed by ≥2 modules
@@ -839,10 +842,10 @@ def compute_gx_score(src: dict, all_recs: list, perf: dict,
     """
     GX Learning Score (0-100):
       25% Research Coherence   — cross-module agreement
-      25% Performance Quality  — backtest metrics
+      25% Signal Quality       — expectancy + MFE40 production metrics
       20% OOS Robustness       — walk-forward survival + OOS stability
       15% System Health        — adaptive health score
-      15% Knowledge Retention  — memory depth + history
+      15% Backbone Progress    — period-over-period expectancy + MFE40 delta
     """
 
     # ── Research Coherence ─────────────────────────────────────
@@ -877,18 +880,25 @@ def compute_gx_score(src: dict, all_recs: list, perf: dict,
     # ── System Health ──────────────────────────────────────────
     health = adp.get("health_score", 50)
 
-    # ── Knowledge Retention ────────────────────────────────────
-    n_runs = memory.get("total_runs", 0)
-    n_hist = len(memory.get("performance_history", []))
-    retention = min(100, n_runs * 8 + n_hist * 3 + (20 if n_runs == 0 else 0))
+    # ── Backbone Progress (replaces Knowledge Retention — forbidden metric) ────
+    _ph = memory.get("performance_history", [])
+    if len(_ph) >= 2:
+        _exp_now   = _ph[-1].get("expectancy", 0) or 0
+        _exp_prev  = _ph[-2].get("expectancy", 0) or 0
+        _mfe_now   = _ph[-1].get("r20d_mfe",   0) or 0
+        _mfe_prev  = _ph[-2].get("r20d_mfe",   0) or 0
+        backbone_progress = min(100, max(0, 50 + (_exp_now - _exp_prev) * 500
+                                             + (_mfe_now - _mfe_prev) * 200))
+    else:
+        backbone_progress = 50  # neutral on first run; no prior period to compare
 
     # ── Composite ──────────────────────────────────────────────
     gx = round(
-        coherence   * 0.25 +
-        perf_score  * 0.25 +
-        oos_score   * 0.20 +
-        health      * 0.15 +
-        retention   * 0.15
+        coherence          * 0.25 +
+        perf_score         * 0.25 +
+        oos_score          * 0.20 +
+        health             * 0.15 +
+        backbone_progress  * 0.15
     )
 
     # Trend: use history if available, else infer from performance vs r20d baseline
@@ -911,12 +921,12 @@ def compute_gx_score(src: dict, all_recs: list, perf: dict,
     return {
         "gx_score":         gx,
         "trend":            trend,
-        "coherence":        coherence,
-        "perf_score":       perf_score,
-        "oos_score":        oos_score,
-        "health":           health,
-        "retention":        retention,
-        "n_multi_module":   n_multi,
+        "coherence":          coherence,
+        "perf_score":         perf_score,
+        "oos_score":          oos_score,
+        "health":             health,
+        "backbone_progress":  backbone_progress,
+        "n_multi_module":     n_multi,
         "n_total_recs":     n_total,
         "wf_survival_pct":  round(survival * 100),
     }
@@ -1428,11 +1438,11 @@ def build_html(gx: dict, stats: dict, perf: dict, perf_trends: dict,
 
     # ── Score Breakdown KPIs ──────────────────────────────────
     score_kpis = _kpi_row([
-        ("Coherence",    f"{gx['coherence']}",      _score_color(gx['coherence'])),
-        ("Performance",  f"{gx['perf_score']}",     _score_color(gx['perf_score'])),
-        ("OOS Robust",   f"{gx['oos_score']}",      _score_color(gx['oos_score'])),
-        ("Health",       f"{gx['health']}",         _score_color(gx['health'])),
-        ("Retention",    f"{gx['retention']}",      _score_color(gx['retention'])),
+        ("Coherence",         f"{gx['coherence']}",         _score_color(gx['coherence'])),
+        ("Signal Quality",   f"{gx['perf_score']}",        _score_color(gx['perf_score'])),
+        ("OOS Robust",        f"{gx['oos_score']}",         _score_color(gx['oos_score'])),
+        ("Health",            f"{gx['health']}",            _score_color(gx['health'])),
+        ("Backbone Progress", f"{gx['backbone_progress']}", _score_color(gx['backbone_progress'])),
     ])
 
     score_detail = f"""
@@ -1840,6 +1850,23 @@ def run():
     # 2. Load / init memory
     memory = load_memory()
     is_first_run = memory.get("total_runs", 0) == 0
+
+    # SELF-CORRECTION RULE (Constitution) — Drift Audit before every cycle
+    _mem_recs = memory.get("recommendations", [])
+    _n_recs   = len(_mem_recs)
+    _drift    = []
+    if _n_recs > 5:
+        _n_unknown = sum(1 for r in _mem_recs if r.get("target_factor", "unknown") == "unknown")
+        _n_no_delta = sum(1 for r in _mem_recs if not (r.get("expected_delta_ret") or 0))
+        if _n_unknown > _n_recs * 0.30:
+            _drift.append(f"{_n_unknown}/{_n_recs} recs unmapped to r1-r8 — optimizing for discoveries?")
+        if _n_no_delta > _n_recs * 0.50:
+            _drift.append(f"{_n_no_delta}/{_n_recs} recs have no production delta — collecting observations?")
+    if _drift:
+        print("\n  !! DRIFT AUDIT WARNING (Constitution: Self-Correction Rule) !!")
+        for _w in _drift:
+            print(f"     {_w}")
+        print("  !! STOP — correct before continuing — see docs/LEARNING_LABS_CONSTITUTION.md !!\n")
 
     # 3. Extract recommendations from all sources
     new_recs = _extract_recommendations(src)

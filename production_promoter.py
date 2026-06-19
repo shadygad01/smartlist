@@ -115,6 +115,7 @@ def promote(
     triggered_by: str = "auto",
     db_path: str = "egx_research.db",
     config_dir: str = CONFIG_DIR,
+    override: bool = False,
 ) -> int:
     """
     Atomically write config changes to config/*.json files.
@@ -147,6 +148,43 @@ def promote(
                 raise ValueError(
                     f"Cannot promote: validation run {validation_run_id} has verdict '{verdict}'."
                 )
+
+        # ── Constitution: Final Audit (advisory warnings + system-level gate) ──
+        _target_factor     = artifacts.get("target_factor")
+        _production_metric = artifacts.get("production_metric")
+        _validations_done  = artifacts.get("validations_completed") or []
+        if not _target_factor:
+            print("  CONSTITUTION WARNING: target_factor missing — which r1-r8 factor improves?")
+        if not _production_metric:
+            print("  CONSTITUTION WARNING: production_metric missing — which metric improves?")
+        if not _validations_done:
+            print("  CONSTITUTION WARNING: validations_completed empty — "
+                  "Historical + Shadow + Incremental Alpha + Production Impact required")
+        print("\n  ── FINAL AUDIT (Constitution) ──")
+        print(f"  1. Factor improved:   {_target_factor or '(not specified)'}")
+        print(f"  2. Improvement:       {artifacts.get('expected_improvement', '(not specified)')}")
+        print(f"  3. Evidence:          {artifacts.get('evidence_summary', '(not specified)')}")
+        print(f"  4. Production metric: {_production_metric or '(not specified)'}")
+        print(f"  5. Improvement size:  {artifacts.get('improvement_size', '(not specified)')}")
+        print(f"  6. Behavior change:   {artifacts.get('behavior_change', '(not specified)')}")
+        print("  ── END FINAL AUDIT ──\n")
+        # System-level expectancy check — warn on regression; block unless override=True
+        try:
+            with open("backtest_report.json") as _f:
+                _bt = json.load(_f)
+            _cur_exp = (_bt.get("overall_stats") or {}).get("expectancy_pct") or 0
+            _prop_exp = artifacts.get("proposed_expectancy")
+            if _prop_exp is not None and float(_prop_exp) < float(_cur_exp) and not override:
+                raise ValueError(
+                    f"System-level regression: proposed expectancy {_prop_exp:.2f}% "
+                    f"< current {_cur_exp:.2f}%. "
+                    f"Constitution SYSTEM LEVEL VALIDATION RULE requires system improvement. "
+                    f"Pass override=True to force."
+                )
+        except ValueError:
+            raise
+        except Exception:
+            pass  # backtest_report.json absent or malformed — check skipped
 
         # Capture snapshot of current config before overwriting
         current = get_current_config(config_dir)

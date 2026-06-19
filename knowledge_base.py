@@ -50,8 +50,12 @@ _FINDING_KEYS = (
     "fib_15pct", "fib_30pct", "fib_50pct", "fib_100pct",
     "tail_contribution", "top10pct_contribution",
     "multi_bagger_pct", "sample_n",
-    "verdict",           # 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'TAIL_DRIVER'
-    "suggested_weight",  # optimizer blend target; None until computed
+    "verdict",              # 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'TAIL_DRIVER'
+    "suggested_weight",     # optimizer blend target; None until computed
+    "expected_improvement", # quantified claim e.g. "+3% expectancy" (Constitution: Knowledge Asset Requirement)
+    "validation_status",    # 'pending' | 'validated' | 'rejected'
+    "production_impact",    # which production metric improves and by how much
+    "promotion_path",       # next step in Discovery→Validation→Production pipeline
     "recorded_at", "source",
 )
 

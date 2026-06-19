@@ -81,7 +81,7 @@ def _extract_recommendations(src: dict) -> list:
     # ── Adaptive Learning ─────────────────────────────────────
     adp = src.get("adaptive") or {}
     for imp in adp.get("all_improvements", []):
-        recs.append({
+        rec = {
             "id":               f"adp_{imp.get('id', 'X')}",
             "source":           "adaptive",
             "name":             imp.get("name", ""),
@@ -92,51 +92,60 @@ def _extract_recommendations(src: dict) -> list:
             "wf_consistent":    imp.get("wf_consistent", False),
             "overfitted":       imp.get("overfitted", True),
             "supporting":       ["adaptive"],
-        })
+        }
+        rec["target_factor"]    = _map_rec_to_rfactor(rec)
+        rec["improvement_type"] = _classify_improvement_type(rec)
+        recs.append(rec)
 
     # ── Logic Analyzer ────────────────────────────────────────
     log = src.get("logic") or {}
-    for i, rec in enumerate(log.get("summary_recommendations", [])):
-        impact_str = rec.get("impact", "0%")
+    for i, lrec in enumerate(log.get("summary_recommendations", [])):
+        impact_str = lrec.get("impact", "0%")
         delta = 0.0
         try:
             delta = float(impact_str.strip().split("%")[0].replace("+", "")) / 100
         except Exception:
             pass
-        recs.append({
+        rec = {
             "id":               f"log_{i+1:02d}",
             "source":           "logic",
-            "name":             f"{rec.get('label','')}: {rec.get('param','')}",
-            "description":      rec.get("proposed", ""),
+            "name":             f"{lrec.get('label','')}: {lrec.get('param','')}",
+            "description":      lrec.get("proposed", ""),
             "expected_delta_ret": delta,
             "expected_delta_mfe": 0.0,
             "confidence":       0.65,
             "wf_consistent":    None,
             "overfitted":       None,
             "supporting":       ["logic"],
-        })
+        }
+        rec["target_factor"]    = _map_rec_to_rfactor(rec)
+        rec["improvement_type"] = _classify_improvement_type(rec)
+        recs.append(rec)
 
     # ── Weight Optimizer ──────────────────────────────────────
     opt = src.get("optimizer") or {}
-    for i, rec in enumerate(opt.get("top_recommendations", [])):
-        recs.append({
+    for i, orec in enumerate(opt.get("top_recommendations", [])):
+        rec = {
             "id":               f"opt_{i+1:02d}",
             "source":           "optimizer",
-            "name":             rec.get("change", rec.get("indicator", "")),
-            "description":      f"{rec.get('type','')}: {rec.get('change','')}",
-            "expected_delta_ret": rec.get("delta_ret", 0.0),
-            "expected_delta_mfe": rec.get("delta_mfe", 0.0),
-            "confidence":       rec.get("confidence", 0.5),
+            "name":             orec.get("change", orec.get("indicator", "")),
+            "description":      f"{orec.get('type','')}: {orec.get('change','')}",
+            "expected_delta_ret": orec.get("delta_ret", 0.0),
+            "expected_delta_mfe": orec.get("delta_mfe", 0.0),
+            "confidence":       orec.get("confidence", 0.5),
             "wf_consistent":    None,
             "overfitted":       None,
             "supporting":       ["optimizer"],
-        })
+        }
+        rec["target_factor"]    = _map_rec_to_rfactor(rec)
+        rec["improvement_type"] = "weight_optimization"
+        recs.append(rec)
 
     # ── System Audit ──────────────────────────────────────────
     aud = src.get("audit") or {}
     for fd in aud.get("filter_damage", []):
         if fd.get("diff", 0) < -0.01 and fd.get("p_value", 1) < 0.25:
-            recs.append({
+            rec = {
                 "id":               f"aud_{fd.get('filter','X').replace(' ','_')}",
                 "source":           "audit",
                 "name":             f"Review filter: {fd.get('filter','')}",
@@ -147,7 +156,10 @@ def _extract_recommendations(src: dict) -> list:
                 "wf_consistent":    None,
                 "overfitted":       None,
                 "supporting":       ["audit"],
-            })
+            }
+            rec["target_factor"]    = _map_rec_to_rfactor(rec)
+            rec["improvement_type"] = _classify_improvement_type(rec)
+            recs.append(rec)
 
     return recs
 
@@ -166,6 +178,11 @@ def _merge_recommendations(memory_recs: list, new_recs: list) -> list:
                 if s not in er["supporting"]:
                     er["supporting"].append(s)
         else:
+            nr.setdefault("target_factor",    "unknown")
+            nr.setdefault("improvement_type", "refinement")
+            # Constitution: reject any rec that cannot map to an r1-r8 backbone factor
+            if nr["target_factor"] == "unknown":
+                continue
             nr["status"] = "Proposed"
             nr["first_seen"] = TODAY
             nr["last_seen"] = TODAY
@@ -359,6 +376,313 @@ MODULE_META = {
     "research":   {"label": "Research Report",    "level": 3, "base_score": 62},
 }
 
+# ═══════════════════════════════════════════════════════════════
+# R1-R8 EVOLUTION ENGINE — THE BACKBONE
+# ═══════════════════════════════════════════════════════════════
+
+R1_R8_MAP = {
+    "r1": {
+        "name": "Price Zone",    "col": "r1_price",    "max_pts": 30,
+        "sub_signals": ["price_depth", "buy_zone", "discount_zone", "price zone", "r1_price"],
+        "improvement_types": ["refinement", "measurement", "weight_optimization"],
+    },
+    "r2": {
+        "name": "Order Block",   "col": "r2_ob",       "max_pts": 10,
+        "sub_signals": ["order_block_present", "ob_zone", "order block", "bearish ob", "r2_ob"],
+        "improvement_types": ["refinement", "replacement", "measurement", "weight_optimization"],
+    },
+    "r3": {
+        "name": "Liquidity",     "col": "r3_liquidity","max_pts": 20,
+        "sub_signals": ["sweep_detected", "wick_rejection", "equal_lows", "sweep", "liquidity", "r3_liquidity", "stop hunt"],
+        "improvement_types": ["refinement", "measurement", "interaction", "weight_optimization"],
+    },
+    "r4": {
+        "name": "HTF Structure", "col": "r4_htf",      "max_pts": 10,
+        "sub_signals": ["htf_hh", "htf_hl", "htf_higher_high", "htf_hh_and_hl", "htf", "higher high", "higher low", "ma200", "ma50", "r4_htf"],
+        "improvement_types": ["refinement", "measurement", "weight_optimization"],
+    },
+    "r5": {
+        "name": "AVWAP",         "col": "r5_avwap",    "max_pts": 8,
+        "sub_signals": ["avwap", "anchored vwap", "vwap", "r5_avwap"],
+        "improvement_types": ["refinement", "measurement", "weight_optimization"],
+    },
+    "r6": {
+        "name": "MACD Momentum", "col": "r6_macd",     "max_pts": 4,
+        "sub_signals": ["macd", "r6_macd", "macd_below", "histogram"],
+        "improvement_types": ["refinement", "replacement", "weight_optimization"],
+    },
+    "r7": {
+        "name": "Divergence",    "col": "r7_div",      "max_pts": 3,
+        "sub_signals": ["rsi_div", "macd_div", "divergence", "r7_div", "bullish divergence"],
+        "improvement_types": ["refinement", "measurement", "weight_optimization"],
+    },
+    "r8": {
+        "name": "Demand Zone",   "col": "r8_demand",   "max_pts": 15,
+        "sub_signals": ["sv_hit", "hvn_hit", "stopping_volume", "hvn", "demand zone", "r8_demand", "volume profile"],
+        "improvement_types": ["refinement", "interaction", "measurement", "weight_optimization"],
+    },
+}
+
+R1_R8_COLS = {meta["col"]: rk for rk, meta in R1_R8_MAP.items()}
+
+SUBFACTOR_TO_RFACTOR = {
+    "wick_rejection":    "r3", "equal_lows":     "r3", "sweep_detected": "r3",
+    "order_block_present": "r2",
+    "stopping_volume":   "r8", "hvn_hit":        "r8", "sv_hit":        "r8",
+    "htf_higher_high":   "r4", "htf_hh_and_hl":  "r4", "htf_hh":       "r4", "htf_hl": "r4",
+    "macd_div":          "r7", "rsi_div":         "r7",
+}
+
+
+def _map_rec_to_rfactor(rec: dict) -> str:
+    """Determine which r-factor (r1-r8) this recommendation targets."""
+    text = (str(rec.get("name", "")) + " " + str(rec.get("description", ""))).lower()
+
+    # Direct column key match
+    for col, rk in R1_R8_COLS.items():
+        if col in text:
+            return rk
+
+    # Sub-signal routing
+    for sub, rk in SUBFACTOR_TO_RFACTOR.items():
+        if sub.replace("_", " ") in text or sub in text:
+            return rk
+
+    # Keyword patterns per factor
+    if any(k in text for k in ["price zone", "discount zone", "buy zone", "price_depth"]):
+        return "r1"
+    if any(k in text for k in ["order block", "ob zone", "bearish candle", "impulse"]):
+        return "r2"
+    if any(k in text for k in ["sweep", "wick", "equal low", "stop hunt", "liquidity"]):
+        return "r3"
+    if any(k in text for k in ["htf", "higher high", "higher low", "ma200", "ma50", "structure"]):
+        return "r4"
+    if any(k in text for k in ["avwap", "vwap", "anchored"]):
+        return "r5"
+    if any(k in text for k in ["macd", "momentum", "histogram"]) and "divergence" not in text:
+        return "r6"
+    if any(k in text for k in ["divergence", "rsi div"]):
+        return "r7"
+    if any(k in text for k in ["demand zone", "stopping volume", "hvn", "volume profile", "institutional"]):
+        return "r8"
+
+    return "unknown"
+
+
+def _classify_improvement_type(rec: dict) -> str:
+    """Classify what type of r-factor improvement this rec represents."""
+    text = (str(rec.get("name", "")) + " " + str(rec.get("description", ""))).lower()
+    src  = rec.get("source", "")
+
+    if src == "optimizer" or any(k in text for k in ["weight", "reweight", "increase weight", "decrease weight"]):
+        return "weight_optimization"
+    if any(k in text for k in ["replace", "alternative", "instead of", "substitute"]):
+        return "replacement"
+    if any(k in text for k in ["measure", "detect", "calculation", "formula", "threshold"]):
+        return "measurement"
+    if any(k in text for k in ["interaction", "combination", "when combined", "conjunction"]):
+        return "interaction"
+    return "refinement"
+
+
+# ═══════════════════════════════════════════════════════════════
+# R1-R8 EVOLUTION STATE
+# ═══════════════════════════════════════════════════════════════
+
+def compute_rfactor_evolution(all_recs: list, src: dict) -> dict:
+    """Compute the evolution state of each r-factor against the backbone."""
+    try:
+        with open("config/weights.json") as f:
+            current_weights = json.load(f)
+    except Exception:
+        current_weights = {}
+
+    kb_factors = {}
+    try:
+        with open("knowledge_base.json") as f:
+            kb = json.load(f)
+        kb_factors = kb.get("factor_findings", {})
+    except Exception:
+        pass
+
+    state = {}
+    for rk, meta in R1_R8_MAP.items():
+        col        = meta["col"]
+        cur_weight = current_weights.get(col, meta["max_pts"])
+        kb_finding = kb_factors.get(col)
+
+        if kb_finding:
+            kb_verdict  = kb_finding.get("verdict")
+            kb_sug_wt   = kb_finding.get("suggested_weight")
+            kb_wr       = kb_finding.get("win_rate")
+            kb_exp      = kb_finding.get("expectancy")
+            kb_sample_n = kb_finding.get("sample_n")
+            evidence    = ("strong" if kb_verdict in ("POSITIVE", "TAIL_DRIVER")
+                           else "negative" if kb_verdict == "NEGATIVE"
+                           else "weak")
+        else:
+            kb_verdict = kb_sug_wt = kb_wr = kb_exp = kb_sample_n = None
+            evidence   = "none"
+
+        factor_recs  = [r for r in all_recs if r.get("target_factor") == rk]
+        n_validated  = sum(1 for r in factor_recs if r.get("status") == "Validated")
+        n_proposed   = sum(1 for r in factor_recs if r.get("status") == "Proposed")
+        n_by_type    = {}
+        for r in factor_recs:
+            t = r.get("improvement_type", "refinement")
+            n_by_type[t] = n_by_type.get(t, 0) + 1
+
+        # Evolution score: 0-100 for this factor
+        score = 0
+        if kb_finding:               score += 25   # measured
+        if evidence == "strong":     score += 20   # positive evidence
+        elif evidence == "negative": score += 5    # at least measured
+        if kb_sample_n and kb_sample_n >= 50: score += 15  # sufficient sample
+        if n_validated > 0:          score += min(25, n_validated * 12)
+        if kb_sug_wt is not None:
+            ratio = (min(cur_weight, kb_sug_wt) / max(cur_weight, kb_sug_wt, 0.01))
+            score += int(ratio * 15)
+
+        state[rk] = {
+            "name":             meta["name"],
+            "col":              col,
+            "max_pts":          meta["max_pts"],
+            "current_weight":   cur_weight,
+            "suggested_weight": kb_sug_wt,
+            "kb_verdict":       kb_verdict,
+            "kb_win_rate":      kb_wr,
+            "kb_expectancy":    kb_exp,
+            "kb_sample_n":      kb_sample_n,
+            "evidence":         evidence,
+            "n_recs":           len(factor_recs),
+            "n_validated":      n_validated,
+            "n_proposed":       n_proposed,
+            "n_by_type":        n_by_type,
+            "evolution_score":  min(100, score),
+            "needs_work":       score < 40,
+            "priority":         "HIGH" if score < 25 else "MEDIUM" if score < 60 else "LOW",
+        }
+
+    return state
+
+
+def compute_evolution_score(rfactor_state: dict) -> dict:
+    """R1-R8 Evolution Score replacing abstract GX Score."""
+    scores = [v["evolution_score"] for v in rfactor_state.values()]
+    avg    = sum(scores) / len(scores) if scores else 0
+
+    evidenced     = sum(1 for v in rfactor_state.values() if v["evidence"] != "none")
+    validated     = sum(1 for v in rfactor_state.values() if v["n_validated"] > 0)
+    needs_work    = [k for k, v in rfactor_state.items() if v["needs_work"]]
+    strongest     = sorted(rfactor_state, key=lambda k: rfactor_state[k]["evolution_score"], reverse=True)[:3]
+
+    if avg >= 70:   trend = "Evolving Well"
+    elif avg >= 45: trend = "Partial Coverage"
+    else:           trend = "Early Stage"
+
+    return {
+        "evolution_score":    round(avg),
+        "trend":              trend,
+        "factors_evidenced":  evidenced,
+        "factors_validated":  validated,
+        "needs_work":         needs_work,
+        "strongest":          strongest,
+        "factor_scores":      {k: v["evolution_score"] for k, v in rfactor_state.items()},
+    }
+
+
+def _rfactor_evolution_card(rfactor_state: dict, evo: dict) -> str:
+    """HTML card: R1-R8 Evolution Engine Dashboard — primary backbone section."""
+    color = _score_color(evo["evolution_score"])
+
+    rows = ""
+    for rk, v in rfactor_state.items():
+        sc         = v["evolution_score"]
+        col        = _score_color(sc)
+        verdict    = v["kb_verdict"] or "—"
+        vdict_col  = ("#6aa84f" if verdict in ("POSITIVE", "TAIL_DRIVER")
+                      else "#cc4444" if verdict == "NEGATIVE"
+                      else "#d6a740")
+        priority   = v["priority"]
+        pri_col    = "#cc4444" if priority == "HIGH" else "#d6a740" if priority == "MEDIUM" else "#6aa84f"
+        wt_cur     = v["current_weight"]
+        wt_sug     = v["suggested_weight"]
+        wt_str     = (f"{wt_cur:.0f} → <span style='color:#6aa84f;'>{wt_sug:.1f}</span>"
+                      if wt_sug is not None else f"{wt_cur:.0f}")
+        wr_str     = f"{v['kb_win_rate']*100:.0f}%" if v["kb_win_rate"] is not None else "—"
+        exp_str    = f"{v['kb_expectancy']*100:.1f}%" if v["kb_expectancy"] is not None else "—"
+        n_recs     = v["n_recs"]
+        n_val      = v["n_validated"]
+        evidence   = v["evidence"]
+        ev_col     = ("#6aa84f" if evidence == "strong"
+                      else "#d6a740" if evidence == "weak"
+                      else "#cc4444" if evidence == "negative"
+                      else "#555")
+        bar = (f'<div style="background:#1e2533;border-radius:3px;height:6px;width:100%;">'
+               f'<div style="background:{col};width:{sc}%;height:6px;border-radius:3px;"></div></div>')
+        rows += f"""
+        <tr>
+          <td style="color:#5b8dee;font-size:13px;font-weight:700;white-space:nowrap;">{rk.upper()}</td>
+          <td style="color:#e8eaf0;font-size:12px;">{v['name']}</td>
+          <td style="min-width:80px;"><div style="color:{col};font-size:11px;text-align:right;">{sc}/100</div>{bar}</td>
+          <td style="color:{vdict_col};font-size:11px;text-align:center;">{verdict}</td>
+          <td style="color:#aab;font-size:11px;text-align:right;">{wt_str}</td>
+          <td style="color:#aab;font-size:11px;text-align:center;">{wr_str}</td>
+          <td style="color:#aab;font-size:11px;text-align:center;">{exp_str}</td>
+          <td style="color:{ev_col};font-size:11px;text-align:center;">{evidence}</td>
+          <td style="color:#aab;font-size:11px;text-align:center;">{n_recs} ({n_val} ✓)</td>
+          <td><span style="background:{pri_col}22;color:{pri_col};padding:2px 7px;border-radius:8px;font-size:10px;">{priority}</span></td>
+        </tr>"""
+
+    summary_kpis = _kpi_row([
+        ("Evolution Score",   f"{evo['evolution_score']}",  color),
+        ("Factors Measured",  f"{evo['factors_evidenced']}/8", _score_color(evo['factors_evidenced'] * 12)),
+        ("Factors Improved",  f"{evo['factors_validated']}/8", _score_color(evo['factors_validated'] * 12)),
+        ("Need Work",         str(len(evo['needs_work'])),   "#cc4444" if evo['needs_work'] else "#6aa84f"),
+    ])
+
+    work_items = ""
+    for rk in evo["needs_work"]:
+        v = rfactor_state[rk]
+        work_items += (f"<li style='margin-bottom:6px;'>"
+                       f"<strong style='color:#5b8dee;'>{rk.upper()} {v['name']}</strong> — "
+                       f"evidence: <span style='color:#d6a740;'>{v['evidence']}</span>, "
+                       f"score: {v['evolution_score']}/100, "
+                       f"recs: {v['n_recs']}, validated: {v['n_validated']}</li>")
+    if not work_items:
+        work_items = "<li style='color:#6aa84f;'>All factors have adequate evidence coverage.</li>"
+
+    return f"""
+    {summary_kpis}
+    <div style="margin-top:8px;color:#8899aa;font-size:12px;">
+      Trend: <strong style="color:{color};">{evo['trend']}</strong>
+      &nbsp;|&nbsp; Strongest: {', '.join(v.upper() for v in evo['strongest'])}
+    </div>
+    <div style="overflow-x:auto;margin-top:16px;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="border-bottom:1px solid #1e2d40;">
+        <th style="color:#5b8dee;padding:6px 4px;text-align:left;">Factor</th>
+        <th style="color:#5b8dee;padding:6px 4px;text-align:left;">Name</th>
+        <th style="color:#5b8dee;padding:6px 4px;min-width:90px;">Evolution</th>
+        <th style="color:#5b8dee;padding:6px 4px;">Verdict</th>
+        <th style="color:#5b8dee;padding:6px 4px;text-align:right;">Weight (cur→sug)</th>
+        <th style="color:#5b8dee;padding:6px 4px;">Win Rate</th>
+        <th style="color:#5b8dee;padding:6px 4px;">Expectancy</th>
+        <th style="color:#5b8dee;padding:6px 4px;">Evidence</th>
+        <th style="color:#5b8dee;padding:6px 4px;">Improvements</th>
+        <th style="color:#5b8dee;padding:6px 4px;">Priority</th>
+      </tr></thead>
+      <tbody>{rows}</tbody>
+    </table></div>
+    <div style="margin-top:16px;">
+      <div style="color:#d6a740;font-size:11px;letter-spacing:1px;margin-bottom:8px;">FACTORS NEEDING IMPROVEMENT</div>
+      <ul style="color:#aab;font-size:12px;padding-left:18px;line-height:1.7;">{work_items}</ul>
+    </div>
+    <div style="margin-top:10px;color:#555;font-size:11px;">
+      Constitution Rule: Every active asset must answer "Which factor does this improve?" &nbsp;·&nbsp;
+      New factors are a last resort &nbsp;·&nbsp; Success = better r1-r8 performance.
+    </div>"""
+
 
 def compute_module_contributions(src: dict, all_recs: list) -> list:
     """Score each module's research contribution."""
@@ -518,10 +842,10 @@ def compute_gx_score(src: dict, all_recs: list, perf: dict,
     """
     GX Learning Score (0-100):
       25% Research Coherence   — cross-module agreement
-      25% Performance Quality  — backtest metrics
+      25% Signal Quality       — expectancy + MFE40 production metrics
       20% OOS Robustness       — walk-forward survival + OOS stability
       15% System Health        — adaptive health score
-      15% Knowledge Retention  — memory depth + history
+      15% Backbone Progress    — period-over-period expectancy + MFE40 delta
     """
 
     # ── Research Coherence ─────────────────────────────────────
@@ -556,18 +880,25 @@ def compute_gx_score(src: dict, all_recs: list, perf: dict,
     # ── System Health ──────────────────────────────────────────
     health = adp.get("health_score", 50)
 
-    # ── Knowledge Retention ────────────────────────────────────
-    n_runs = memory.get("total_runs", 0)
-    n_hist = len(memory.get("performance_history", []))
-    retention = min(100, n_runs * 8 + n_hist * 3 + (20 if n_runs == 0 else 0))
+    # ── Backbone Progress (replaces Knowledge Retention — forbidden metric) ────
+    _ph = memory.get("performance_history", [])
+    if len(_ph) >= 2:
+        _exp_now   = _ph[-1].get("expectancy", 0) or 0
+        _exp_prev  = _ph[-2].get("expectancy", 0) or 0
+        _mfe_now   = _ph[-1].get("r20d_mfe",   0) or 0
+        _mfe_prev  = _ph[-2].get("r20d_mfe",   0) or 0
+        backbone_progress = min(100, max(0, 50 + (_exp_now - _exp_prev) * 500
+                                             + (_mfe_now - _mfe_prev) * 200))
+    else:
+        backbone_progress = 50  # neutral on first run; no prior period to compare
 
     # ── Composite ──────────────────────────────────────────────
     gx = round(
-        coherence   * 0.25 +
-        perf_score  * 0.25 +
-        oos_score   * 0.20 +
-        health      * 0.15 +
-        retention   * 0.15
+        coherence          * 0.25 +
+        perf_score         * 0.25 +
+        oos_score          * 0.20 +
+        health             * 0.15 +
+        backbone_progress  * 0.15
     )
 
     # Trend: use history if available, else infer from performance vs r20d baseline
@@ -590,12 +921,12 @@ def compute_gx_score(src: dict, all_recs: list, perf: dict,
     return {
         "gx_score":         gx,
         "trend":            trend,
-        "coherence":        coherence,
-        "perf_score":       perf_score,
-        "oos_score":        oos_score,
-        "health":           health,
-        "retention":        retention,
-        "n_multi_module":   n_multi,
+        "coherence":          coherence,
+        "perf_score":         perf_score,
+        "oos_score":          oos_score,
+        "health":             health,
+        "backbone_progress":  backbone_progress,
+        "n_multi_module":     n_multi,
         "n_total_recs":     n_total,
         "wf_survival_pct":  round(survival * 100),
     }
@@ -739,8 +1070,8 @@ def _build_context_intelligence(db_path: str = "egx_research.db") -> dict:
 
     SCORE_COLS = ["r1_price", "r2_ob", "r3_liquidity", "r4_htf",
                   "r5_avwap", "r6_macd", "r7_div", "r8_demand"]
-    SCORE_MAX  = {"r1_price": 30, "r2_ob": 10, "r3_liquidity": 10, "r4_htf": 20,
-                  "r5_avwap": 10, "r6_macd": 10, "r7_div": 5, "r8_demand": 5}
+    SCORE_MAX  = {"r1_price": 30, "r2_ob": 10, "r3_liquidity": 20, "r4_htf": 10,
+                  "r5_avwap": 8,  "r6_macd": 4,  "r7_div": 3,  "r8_demand": 15}
     WIN_THRESH  =  0.07
     LOSS_THRESH =  0.0
 
@@ -1060,37 +1391,46 @@ def _build_context_intelligence(db_path: str = "egx_research.db") -> dict:
 
 def build_html(gx: dict, stats: dict, perf: dict, perf_trends: dict,
                all_recs: list, edges: list, mods: list,
-               overfitting: list, src: dict, memory: dict) -> str:
+               overfitting: list, src: dict, memory: dict,
+               rfactor_state: dict = None, evo: dict = None) -> str:
 
     score   = gx["gx_score"]
     trend   = gx["trend"]
     n_runs  = memory.get("total_runs", 1)
+    rfactor_state = rfactor_state or {}
+    evo           = evo or {"evolution_score": 0, "trend": "—", "factors_evidenced": 0,
+                            "factors_validated": 0, "needs_work": [], "strongest": []}
 
     trend_color = "#6aa84f" if trend == "Improving" else "#cc4444" if trend == "Degrading" else "#d6a740"
     trend_icon  = "↑" if trend == "Improving" else "↓" if trend == "Degrading" else "→"
+    evo_color   = _score_color(evo["evolution_score"])
 
     # ── Hero ──────────────────────────────────────────────────
     hero = f"""
     <div style="background:linear-gradient(135deg,#0a1628 0%,#0d1f3c 50%,#0a1628 100%);
                 border:1px solid #1e3050;border-radius:12px;padding:30px;
                 margin-bottom:24px;display:flex;align-items:center;gap:30px;flex-wrap:wrap;">
-      {_score_circle(score)}
+      {_score_circle(evo["evolution_score"], "R1-R8 EVOLUTION SCORE")}
       <div style="flex:1;min-width:220px;">
-        <div style="color:#5b8dee;font-size:11px;letter-spacing:2px;margin-bottom:4px;">GX LEARNING INTELLIGENCE LAYER</div>
-        <h1 style="color:#e8eaf0;margin:0 0 8px;font-size:28px;">System Learning Report</h1>
+        <div style="color:#5b8dee;font-size:11px;letter-spacing:2px;margin-bottom:4px;">R1-R8 EVOLUTION ENGINE — SMARTLIST BACKBONE</div>
+        <h1 style="color:#e8eaf0;margin:0 0 8px;font-size:28px;">R1-R8 Evolution Report</h1>
         <div style="color:#aab;font-size:13px;">Generated: {TODAY} &nbsp;|&nbsp; Run #{n_runs}</div>
         <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
           <span style="background:#0d1420;border:1px solid #1e3050;border-radius:20px;
+                       padding:6px 14px;color:{evo_color};font-size:13px;">
+            → Evolution: <strong>{evo['trend']}</strong>
+          </span>
+          <span style="background:#0d1420;border:1px solid #1e3050;border-radius:20px;
+                       padding:6px 14px;color:#aab;font-size:13px;">
+            {evo['factors_evidenced']}/8 Factors Measured
+          </span>
+          <span style="background:#0d1420;border:1px solid #1e3050;border-radius:20px;
+                       padding:6px 14px;color:#aab;font-size:13px;">
+            {evo['factors_validated']}/8 Factors Improved
+          </span>
+          <span style="background:#0d1420;border:1px solid #1e3050;border-radius:20px;
                        padding:6px 14px;color:{trend_color};font-size:13px;">
-            {trend_icon} Learning Trend: <strong>{trend}</strong>
-          </span>
-          <span style="background:#0d1420;border:1px solid #1e3050;border-radius:20px;
-                       padding:6px 14px;color:#aab;font-size:13px;">
-            {stats['n_total']} Recommendations Tracked
-          </span>
-          <span style="background:#0d1420;border:1px solid #1e3050;border-radius:20px;
-                       padding:6px 14px;color:#aab;font-size:13px;">
-            {stats['n_multi']} Cross-Validated
+            {trend_icon} GX: <strong>{score}</strong>
           </span>
         </div>
       </div>
@@ -1098,11 +1438,11 @@ def build_html(gx: dict, stats: dict, perf: dict, perf_trends: dict,
 
     # ── Score Breakdown KPIs ──────────────────────────────────
     score_kpis = _kpi_row([
-        ("Coherence",    f"{gx['coherence']}",      _score_color(gx['coherence'])),
-        ("Performance",  f"{gx['perf_score']}",     _score_color(gx['perf_score'])),
-        ("OOS Robust",   f"{gx['oos_score']}",      _score_color(gx['oos_score'])),
-        ("Health",       f"{gx['health']}",         _score_color(gx['health'])),
-        ("Retention",    f"{gx['retention']}",      _score_color(gx['retention'])),
+        ("Coherence",         f"{gx['coherence']}",         _score_color(gx['coherence'])),
+        ("Signal Quality",   f"{gx['perf_score']}",        _score_color(gx['perf_score'])),
+        ("OOS Robust",        f"{gx['oos_score']}",         _score_color(gx['oos_score'])),
+        ("Health",            f"{gx['health']}",            _score_color(gx['health'])),
+        ("Backbone Progress", f"{gx['backbone_progress']}", _score_color(gx['backbone_progress'])),
     ])
 
     score_detail = f"""
@@ -1181,14 +1521,20 @@ def build_html(gx: dict, stats: dict, perf: dict, perf_trends: dict,
         dr    = r.get("expected_delta_ret", 0)
         supp  = ", ".join(r.get("supporting", []))
         name  = r.get("name", "")[:55]
+        tf    = r.get("target_factor", "?")
+        it    = r.get("improvement_type", "?")
+        tf_col = "#5b8dee" if tf != "unknown" and tf != "?" else "#555"
         rec_rows += f"""
         <tr>
           <td style="color:#e8eaf0;font-size:12px;">{name}</td>
           <td style="color:#aab;font-size:11px;">{r.get('source','')}</td>
+          <td><span style="background:{tf_col}22;color:{tf_col};padding:2px 7px;border-radius:8px;
+                           font-size:10px;font-weight:700;">{tf.upper()}</span></td>
+          <td style="color:#8899aa;font-size:10px;">{it}</td>
           <td><span style="background:{sc}22;color:{sc};padding:2px 8px;border-radius:10px;
                            font-size:11px;">{r.get('status','?')}</span></td>
           <td style="color:{'#6aa84f' if multi else '#888'};font-size:12px;text-align:center;">
-            {'★ ' if multi else ''}{supp[:30]}</td>
+            {'★ ' if multi else ''}{supp[:25]}</td>
           <td style="color:#aab;font-size:12px;text-align:center;">{conf*100:.0f}%</td>
           <td style="color:{wf_c};font-size:12px;text-align:center;">{wf_t}</td>
           <td style="color:#6aa84f;font-size:12px;text-align:right;">{dr*100:+.2f}%</td>
@@ -1201,6 +1547,8 @@ def build_html(gx: dict, stats: dict, perf: dict, perf_trends: dict,
         <tr style="border-bottom:1px solid #1e2d40;">
           <th style="color:#5b8dee;padding:8px 6px;text-align:left;">Recommendation</th>
           <th style="color:#5b8dee;padding:8px 6px;">Source</th>
+          <th style="color:#5b8dee;padding:8px 6px;">Target Factor</th>
+          <th style="color:#5b8dee;padding:8px 6px;">Type</th>
           <th style="color:#5b8dee;padding:8px 6px;">Status</th>
           <th style="color:#5b8dee;padding:8px 6px;">Supporting Modules</th>
           <th style="color:#5b8dee;padding:8px 6px;">Confidence</th>
@@ -1456,10 +1804,11 @@ def build_html(gx: dict, stats: dict, perf: dict, perf_trends: dict,
 <body>
   <div style="max-width:1100px;margin:0 auto;">
     {hero}
-    {_card("① GX Score Breakdown", score_detail, "#5b8dee")}
+    {_card("⓪ R1-R8 Evolution Engine — Backbone Status", _rfactor_evolution_card(rfactor_state, evo), "#5b8dee")}
+    {_card("① GX Score Breakdown (Research Ecosystem Health)", score_detail, "#5b8dee")}
     {_card("② Performance Metrics — Ground Truth (Backtest)", perf_body, "#6aa84f")}
     {_card("③ Research Effectiveness", res_body, "#d6a740")}
-    {_card("④ Recommendation Tracker (Top 30)", rec_table, "#6c8ebf")}
+    {_card("④ Recommendation Tracker — R1-R8 Mapped (Top 30)", rec_table, "#6c8ebf")}
     {_card("⑤ Edge Evolution — Top 10 by Expectancy", edge_table, "#82d46a")}
     {_card("⑥ Module Contribution Analysis", mod_bars, "#5b8dee")}
     {_card("⑦ Overfitting Risk Assessment", ov_header + ov_rows, "#d6a740")}
@@ -1502,6 +1851,23 @@ def run():
     memory = load_memory()
     is_first_run = memory.get("total_runs", 0) == 0
 
+    # SELF-CORRECTION RULE (Constitution) — Drift Audit before every cycle
+    _mem_recs = memory.get("recommendations", [])
+    _n_recs   = len(_mem_recs)
+    _drift    = []
+    if _n_recs > 5:
+        _n_unknown = sum(1 for r in _mem_recs if r.get("target_factor", "unknown") == "unknown")
+        _n_no_delta = sum(1 for r in _mem_recs if not (r.get("expected_delta_ret") or 0))
+        if _n_unknown > _n_recs * 0.30:
+            _drift.append(f"{_n_unknown}/{_n_recs} recs unmapped to r1-r8 — optimizing for discoveries?")
+        if _n_no_delta > _n_recs * 0.50:
+            _drift.append(f"{_n_no_delta}/{_n_recs} recs have no production delta — collecting observations?")
+    if _drift:
+        print("\n  !! DRIFT AUDIT WARNING (Constitution: Self-Correction Rule) !!")
+        for _w in _drift:
+            print(f"     {_w}")
+        print("  !! STOP — correct before continuing — see docs/LEARNING_LABS_CONSTITUTION.md !!\n")
+
     # 3. Extract recommendations from all sources
     new_recs = _extract_recommendations(src)
     print(f"  Extracted {len(new_recs)} raw recommendations")
@@ -1528,15 +1894,21 @@ def run():
     n_warn = sum(1 for f in overfitting if f["status"] == "WARNING")
     print(f"  Overfitting checks: {len(overfitting)} total, {n_warn} warnings")
 
-    # 9. GX Score
+    # 9. GX Score (legacy research ecosystem health)
     gx = compute_gx_score(src, all_recs, perf, memory, overfitting)
-    print(f"\n  ┌─────────────────────────────────┐")
-    print(f"  │  GX Learning Score: {gx['gx_score']:3d}/100       │")
-    print(f"  │  Trend: {gx['trend']:<26}│")
-    print(f"  │  Coherence:   {gx['coherence']:3d}  Perf: {gx['perf_score']:3d}   │")
-    print(f"  │  OOS Robust:  {gx['oos_score']:3d}  Health: {gx['health']:3d} │")
-    print(f"  │  Retention:   {gx['retention']:3d}               │")
-    print(f"  └─────────────────────────────────┘")
+
+    # 9b. R1-R8 Evolution Score (primary backbone metric)
+    rfactor_state = compute_rfactor_evolution(all_recs, src)
+    evo           = compute_evolution_score(rfactor_state)
+    print(f"\n  ┌─────────────────────────────────────────┐")
+    print(f"  │  R1-R8 EVOLUTION SCORE: {evo['evolution_score']:3d}/100          │")
+    print(f"  │  Trend: {evo['trend']:<34}│")
+    print(f"  │  Factors Measured:  {evo['factors_evidenced']}/8                  │")
+    print(f"  │  Factors Validated: {evo['factors_validated']}/8                  │")
+    if evo['needs_work']:
+        print(f"  │  Needs Work: {', '.join(v.upper() for v in evo['needs_work']):<29}│")
+    print(f"  │  GX Score (ecosystem): {gx['gx_score']:3d}/100          │")
+    print(f"  └─────────────────────────────────────────┘")
 
     # 10. Research stats
     stats = compute_research_stats(all_recs)
@@ -1561,7 +1933,8 @@ def run():
 
     # 12. Generate HTML
     html = build_html(gx, stats, perf, perf_trends, all_recs,
-                      edges_with_stability, mods, overfitting, src, memory)
+                      edges_with_stability, mods, overfitting, src, memory,
+                      rfactor_state=rfactor_state, evo=evo)
     os.makedirs("reports", exist_ok=True)
     with open(REPORT_OUT, "w", encoding="utf-8") as f:
         f.write(html)

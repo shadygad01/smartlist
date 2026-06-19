@@ -10,14 +10,36 @@ from typing import Optional
 
 KB_FILE = "knowledge_base.json"
 
+# ── R1-R8 backbone — the only valid top-level factor names ─────────────────────
+R1_R8_FACTORS = {"r1_price", "r2_ob", "r3_liquidity", "r4_htf",
+                 "r5_avwap", "r6_macd", "r7_div", "r8_demand"}
+
+# Sub-signals route to their parent r-factor; they are NOT independent factors
+SUBFACTOR_PARENT = {
+    "wick_rejection":      "r3_liquidity",
+    "equal_lows":          "r3_liquidity",
+    "sweep_detected":      "r3_liquidity",
+    "order_block_present": "r2_ob",
+    "stopping_volume":     "r8_demand",
+    "hvn_hit":             "r8_demand",
+    "sv_hit":              "r8_demand",
+    "htf_higher_high":     "r4_htf",
+    "htf_hh_and_hl":       "r4_htf",
+    "htf_hh":              "r4_htf",
+    "htf_hl":              "r4_htf",
+    "rsi_div":             "r7_div",
+    "macd_div":            "r7_div",
+}
+
 # ── Schema ─────────────────────────────────────────────────────────────────────
 
 _DEFAULT: dict = {
-    "schema_version": 1,
+    "schema_version": 2,
     "created_at": datetime.now().isoformat(),
-    "factor_findings": {},   # factor_name -> FindingRecord
-    "regime_findings": {},   # regime_label -> FindingRecord
-    "parameter_findings": {},# param_name -> FindingRecord
+    "factor_findings": {},    # r-factor col name -> FindingRecord (r1-r8 ONLY)
+    "regime_findings": {},    # regime_label -> FindingRecord
+    "parameter_findings": {}, # param_name -> FindingRecord
+    "archived_findings": {},  # non-r1-r8 findings moved here; includes routes_to field
     "cycle_log": [],
 }
 
@@ -28,8 +50,12 @@ _FINDING_KEYS = (
     "fib_15pct", "fib_30pct", "fib_50pct", "fib_100pct",
     "tail_contribution", "top10pct_contribution",
     "multi_bagger_pct", "sample_n",
-    "verdict",           # 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'TAIL_DRIVER'
-    "suggested_weight",  # optimizer blend target; None until computed
+    "verdict",              # 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'TAIL_DRIVER'
+    "suggested_weight",     # optimizer blend target; None until computed
+    "expected_improvement", # quantified claim e.g. "+3% expectancy" (Constitution: Knowledge Asset Requirement)
+    "validation_status",    # 'pending' | 'validated' | 'rejected'
+    "production_impact",    # which production metric improves and by how much
+    "promotion_path",       # next step in Discovery→Validation→Production pipeline
     "recorded_at", "source",
 )
 
@@ -62,11 +88,55 @@ class KnowledgeBase:
     # ── Write ──────────────────────────────────────────────────────────────────
 
     def record_factor(self, factor: str, metrics: dict, source: str = "factor_lab") -> None:
+        """Record a factor finding. Only r1-r8 column names are valid backbone factors.
+        Sub-signals are auto-archived with a routes_to pointer to their parent r-factor.
+        """
         entry = {k: metrics.get(k) for k in _FINDING_KEYS}
         entry["factor"] = factor
         entry["recorded_at"] = datetime.now().isoformat()
         entry["source"] = source
-        self._data["factor_findings"][factor] = entry
+
+        if factor in R1_R8_FACTORS:
+            self._data["factor_findings"][factor] = entry
+        elif factor in SUBFACTOR_PARENT:
+            parent = SUBFACTOR_PARENT[factor]
+            entry["routes_to"] = parent
+            entry["archive_reason"] = f"Sub-signal of {parent}; findings should improve {parent} directly"
+            self._data.setdefault("archived_findings", {})[factor] = entry
+            import logging
+            logging.warning(
+                f"knowledge_base: '{factor}' is a sub-signal of {parent}. "
+                f"Archived — findings must improve {parent}, not create a new factor."
+            )
+        else:
+            entry["routes_to"] = None
+            entry["archive_reason"] = "Not an r1-r8 backbone factor; cannot be promoted"
+            self._data.setdefault("archived_findings", {})[factor] = entry
+            import logging
+            logging.warning(
+                f"knowledge_base: '{factor}' is not in r1-r8. "
+                f"Archived — per Constitution, new factors are a last resort."
+            )
+
+        self._save()
+
+    def record_subfactor_for_parent(self, subfactor: str, parent_rfactor: str,
+                                     metrics: dict, improvement_type: str,
+                                     source: str = "factor_lab") -> None:
+        """Record a sub-signal finding routed explicitly to its parent r-factor."""
+        entry = {k: metrics.get(k) for k in _FINDING_KEYS}
+        entry["factor"]           = parent_rfactor
+        entry["subfactor_source"] = subfactor
+        entry["improvement_type"] = improvement_type
+        entry["recorded_at"]      = datetime.now().isoformat()
+        entry["source"]           = source
+        parent_col                = SUBFACTOR_PARENT.get(subfactor, parent_rfactor)
+        if parent_col not in R1_R8_FACTORS:
+            raise ValueError(f"'{parent_rfactor}' is not a valid r1-r8 factor")
+        # Merge: update parent's finding only if this sub-factor improves metrics
+        existing = self._data["factor_findings"].get(parent_col, {})
+        if not existing or (entry.get("expectancy") or 0) > (existing.get("expectancy") or 0):
+            self._data["factor_findings"][parent_col] = entry
         self._save()
 
     def record_regime(self, regime: str, metrics: dict, source: str = "regime_lab") -> None:

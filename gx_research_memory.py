@@ -39,6 +39,9 @@ INDICATOR_LABELS = {
     "multi":        "Multi-indicator",
 }
 
+# "Promoted" here is a RESEARCH MILESTONE (finding reached end of research pipeline),
+# NOT a constitutional production promotion. Constitutional promotions happen exclusively
+# via production_promoter.promote() after all §PROMOTION REQUIREMENT gates are cleared.
 STATUS_ORDER   = ["Open", "Investigating", "Awaiting Validation", "Validated", "Rejected", "Promoted"]
 PRIORITY_RANK  = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
 EVIDENCE_RANK  = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}

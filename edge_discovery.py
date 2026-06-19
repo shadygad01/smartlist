@@ -14,6 +14,8 @@ Edge Discovery Engine
   - لا lookahead: كل المتغيرات من وقت الإشارة
   - حد أدنى MIN_N = 6 إشارة لكل قاعدة
 """
+# Constitution §AUTOMATIC ARCHIVING RULE — Research only; no path to production without r1-r8 mapping
+RESEARCH_ONLY_LAB = True
 
 import math
 import sys

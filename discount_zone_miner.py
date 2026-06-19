@@ -19,6 +19,8 @@ Writes:
 Usage:
   python discount_zone_miner.py
 """
+# Constitution §AUTOMATIC ARCHIVING RULE — Research only; no path to production without r1-r8 mapping
+RESEARCH_ONLY_LAB = True
 
 import json
 import math

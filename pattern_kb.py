@@ -14,6 +14,8 @@ Architecture:
   log_telemetry()          — per-signal pattern metadata logging
   generate_report()        — ranked pattern research output
 """
+# Constitution §AUTOMATIC ARCHIVING RULE — Research only; no path to production without r1-r8 mapping
+RESEARCH_ONLY_LAB = True
 
 import sqlite3
 import json

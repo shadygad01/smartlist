@@ -391,11 +391,43 @@ def _run_optimization(db_path: str, config_dir: str,
             print(f"[continuous_learning] WARNING: KB blend failed: {exc}")
             print(_tb.format_exc())
 
+        # Compute §PROMOTION REQUIREMENT fields (required by production_promoter hard gates)
+        m_before = float(opt_run.metric_before or 0)
+        m_after  = float(opt_run.metric_after  or 0)
+        impr_pct = (m_after - m_before) * 100
+        impr_str = f"{impr_pct:+.2f}%"
+
+        # Identify r1-r8 factor with largest weight delta for target_factor
+        target_factor = "system_weights"
+        try:
+            cfg_path = os.path.join(config_dir, "weights.json")
+            if os.path.exists(cfg_path):
+                with open(cfg_path) as _cf:
+                    current_cfg = json.load(_cf)
+                max_delta = 0.0
+                for fk, new_w in weights.items():
+                    old_w = float(current_cfg.get(fk, new_w))
+                    delta = abs(float(new_w) - old_w)
+                    if delta > max_delta:
+                        max_delta = delta
+                        target_factor = fk
+        except Exception:
+            pass
+
         return {
-            "weights": weights,
-            "optimization_run_id": opt_run.id,
-            "metric_before": opt_run.metric_before,
-            "metric_after": opt_run.metric_after,
+            "weights":              weights,
+            "optimization_run_id":  opt_run.id,
+            "metric_before":        opt_run.metric_before,
+            "metric_after":         opt_run.metric_after,
+            # §PROMOTION REQUIREMENT: constitutional fields for production gate
+            "target_factor":        target_factor,
+            "expected_improvement": f"{impr_str} expectancy (OOS)",
+            "evidence_summary":     (
+                f"Optimization #{opt_run.id}: "
+                f"expectancy {m_before:.4f}→{m_after:.4f} "
+                f"(largest delta: {target_factor})"
+            ),
+            "production_metric":    "Expectancy (OOS)",
         }
     except Exception:
         return None
@@ -481,6 +513,18 @@ def run_learning_cycle(
         proposed = _run_optimization(db_path, config_dir, lab_improvements)
         if proposed:
             cycle_result["optimized"] = True
+            # Incremental alpha check (Constitution §RANKING AND SCORING PROTECTION RULE):
+            # block promotion if optimization shows no measurable improvement
+            m_before = float(proposed.get("metric_before") or 0)
+            m_after  = float(proposed.get("metric_after")  or 0)
+            if m_after <= m_before:
+                cycle_result["verdict"] = "SYSTEM_REGRESSION_BLOCKED"
+                cycle_result["alpha_check"] = {
+                    "metric_before": m_before,
+                    "metric_after":  m_after,
+                    "reason": "metric_after <= metric_before; no incremental alpha demonstrated",
+                }
+                return cycle_result
         else:
             cycle_result["verdict"] = "OPTIMIZATION_FAILED"
             return cycle_result

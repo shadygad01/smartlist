@@ -15,19 +15,13 @@ This document is the highest-priority architectural authority for:
 
 If any implementation conflicts with this document:
 
-**STOP → CORRECT → CONTINUE ONLY AFTER COMPLIANCE**
+STOP → CORRECT → CONTINUE ONLY AFTER COMPLIANCE
 
 ---
 
 # AUTHORITY
 
-This constitution overrides:
-
-- implementation preferences
-- discovery preferences
-- research preferences
-- dashboard preferences
-- optimization preferences
+This constitution overrides implementation, discovery, research, dashboard and optimization preferences.
 
 The constitution is the source of truth.
 
@@ -58,9 +52,7 @@ The purpose of the labs is NOT to compete with the backbone.
 
 # PRIMARY MISSION
 
-The Learning Labs exist to continuously improve:
-
-**r1-r8**
+The Learning Labs exist to continuously improve r1-r8.
 
 The Learning Labs do NOT exist to:
 
@@ -76,7 +68,7 @@ The Learning Labs do NOT exist to:
 
 Before accepting any discovery ask:
 
-> Which existing factor does this improve?
+Which existing factor does this improve?
 
 If no answer exists:
 
@@ -88,43 +80,11 @@ REJECT the discovery.
 
 Every successful discovery must become one of:
 
-## 1. Factor Refinement
-
-Example:
-
-r8_v1 → r8_v2
-
-## 2. Factor Replacement
-
-Example:
-
-r4_old → r4_new
-
-## 3. Measurement Improvement
-
-Examples:
-
-- Improve liquidity measurement inside r3
-- Improve demand measurement inside r8
-- Improve structure measurement inside r4
-
-## 4. Weight Optimization
-
-Examples:
-
-- Improve factor weighting
-- Improve scoring contribution
-- Improve confidence contribution
-
-## 5. Interaction Enhancement
-
-Examples:
-
-r3 + r8
-
-outperforms
-
-r3 alone or r8 alone
+1. Factor Refinement
+2. Factor Replacement
+3. Measurement Improvement
+4. Weight Optimization
+5. Interaction Enhancement
 
 ---
 
@@ -153,7 +113,7 @@ Whenever a discovery appears:
 
 DO NOT ask:
 
-> Can this become r9?
+Can this become r9?
 
 Instead ask:
 
@@ -251,31 +211,19 @@ without completing:
 3. Incremental Alpha Validation
 4. Production Impact Validation
 
-Labs may:
+Labs may Discover, Validate and Propose.
 
-- Discover
-- Validate
-- Propose
-
-Labs may NOT:
-
-- Deploy directly
-- Modify production directly
+Labs may NOT Deploy directly.
 
 ---
 
 # PROMOTION PIPELINE
 
 Discovery
-
 → Validation
-
 → Improvement Proposal
-
 → Shadow Production
-
 → Promotion Candidate
-
 → Production
 
 ---
@@ -313,9 +261,7 @@ Success IS measured by:
 - Expectancy Improvement
 - MFE40 Improvement
 
-through improvement of:
-
-r1-r8
+through improvement of r1-r8.
 
 ---
 
@@ -342,24 +288,43 @@ Correct immediately.
 
 The Learning Labs are an Evolution Engine.
 
-The objective is continuous evolution of:
-
-- r1
-- r2
-- r3
-- r4
-- r5
-- r6
-- r7
-- r8
-
-through:
+The objective is continuous evolution of r1-r8 through:
 
 - refinement
 - replacement
 - optimization
 - interaction enhancement
 - measurement improvement
+
+---
+
+# SYSTEM LEVEL VALIDATION RULE
+
+Improving an individual factor is insufficient.
+
+Every proposed improvement must demonstrate:
+
+1. Factor-Level Improvement
+
+AND
+
+2. System-Level Improvement
+
+Examples of System-Level Improvement:
+
+- Better Ranking Quality
+- Better Signal Quality
+- Better Confidence Quality
+- Better Expectancy
+- Better MFE40
+- Lower False Positives
+- Better Decision Quality
+
+A proposal that improves a single factor but degrades overall system performance must not be promoted.
+
+Local optimization is not sufficient.
+
+System optimization is mandatory.
 
 ---
 
@@ -377,9 +342,7 @@ Before committing any change answer:
 If any answer is unclear:
 
 Do not promote.
-
 Do not deploy.
-
 Continue research.
 
 ---

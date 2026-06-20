@@ -340,40 +340,59 @@ def r5_low_protection(lows: list, closes: list, lookback: int = 20) -> tuple[flo
 
 # ─── R6: Recovery Engine ─────────────────────────────────────────────────────
 
+def _find_pivot_lows(lows: np.ndarray, context: int = 3) -> list:
+    """
+    Find confirmed pivot lows: bars where lows[i] is the minimum within
+    a context-bar window on each side. Returns list of (index, value) pairs.
+    Only looks at lows[:-context] so pivots are confirmed (right-side bars exist).
+    """
+    pivots = []
+    n = len(lows)
+    for i in range(context, n - context):
+        left_min  = lows[i - context:i].min()
+        right_min = lows[i + 1:i + context + 1].min()
+        if lows[i] <= left_min and lows[i] <= right_min:
+            pivots.append((i, float(lows[i])))
+    return pivots
+
+
 def _detect_choch(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray) -> bool:
     """
-    Internal CHOCH detection: Change of Character.
-    Condition: prior swing was bearish (lower high), but most recent close
-    broke above that prior swing high — character changed from bearish to bullish.
-    Requires at least 10 bars.
+    CHOCH: close broke above a prior swing high that was itself above the median
+    of the recent high range. Guards against trivial fires inside consolidation.
     """
     if len(highs) < 10:
         return False
-    # Prior swing high = max of bars [-10:-3]
     prior_swing_high = highs[-10:-3].max()
-    # Current close broke above prior swing high
-    return bool(closes[-1] > prior_swing_high)
+    recent_high_median = float(np.median(highs[-10:]))
+    # Only meaningful if the broken high was at least at the median level
+    return bool(closes[-1] > prior_swing_high and prior_swing_high >= recent_high_median)
 
 
 def _detect_bos(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray) -> bool:
     """
-    Internal BOS detection: Break of Structure.
-    Condition: current close broke above the most recent significant high
-    (max of prior 5 bars excluding last 2), confirming bullish structure break.
-    Requires at least 7 bars.
+    BOS: close broke above recent structure high; guard requires that structure
+    high is at least 2 bars old and represents a genuine range boundary.
     """
     if len(highs) < 7:
         return False
     prior_structure_high = highs[-7:-2].max()
-    return bool(closes[-1] > prior_structure_high)
+    range_size = highs[-7:-2].max() - lows[-7:-2].min()
+    # BOS only meaningful if the prior structure had some range (not a flat line)
+    return bool(closes[-1] > prior_structure_high and range_size > 0)
 
 
 def r6_recovery(highs: list, lows: list, closes: list,
                  choch_present: bool = None, bos_present: bool = None) -> tuple[float, bool, float]:
     """
     Returns (recovery_score 0-100, higher_low, recovery_pct).
-    CHOCH/BOS are supporting signals only — not mandatory.
-    If choch_present/bos_present are None, they are computed internally from price data.
+
+    Repairs applied:
+      R1: higher_low uses structural pivot lows (3-bar context), not 3-bar vs 7-bar min
+      R2: recovery_pct uses adaptive lookback (20/40/60 bars) to find true cycle low
+      R3: CHOCH/BOS guarded against trivial fires in sideways consolidation
+      R4: recovery_pct scores continuously from 0% (no 3% hard gate)
+      R5: higher_low gives continuous partial credit (0/25/45) not binary 0/45
     """
     if len(lows) < 6:
         return 0.0, False, 0.0
@@ -381,30 +400,53 @@ def r6_recovery(highs: list, lows: list, closes: list,
     lows_arr   = np.array(lows, dtype=float)
     highs_arr  = np.array(highs, dtype=float)
     closes_arr = np.array(closes, dtype=float)
+    close      = closes_arr[-1]
 
-    # Compute CHOCH/BOS internally if not supplied by caller
+    # CHOCH/BOS internally if not supplied
     if choch_present is None:
         choch_present = _detect_choch(highs_arr, lows_arr, closes_arr)
     if bos_present is None:
         bos_present = _detect_bos(highs_arr, lows_arr, closes_arr)
 
-    # Higher low: last pivot low > previous pivot low
-    recent_low = lows_arr[-3:].min()
-    prior_low  = lows_arr[-10:-3].min() if len(lows_arr) >= 10 else lows_arr[:-3].min()
-    higher_low = recent_low > prior_low * 0.99
+    # ── Higher-low: structural pivot comparison ──────────────────────────────
+    pivots = _find_pivot_lows(lows_arr, context=3)
+    if len(pivots) >= 2:
+        pivot_prev = pivots[-2][1]
+        pivot_last = pivots[-1][1]
+        margin = (pivot_last / pivot_prev - 1.0) if pivot_prev > 0 else 0.0
+        if margin >= 0.01:
+            hl_score = 45.0   # confirmed higher low (>1% above prior pivot)
+        elif margin >= -0.01:
+            hl_score = 25.0   # testing prior low / neutral
+        else:
+            hl_score = 0.0    # confirmed lower low
+        higher_low = margin >= -0.01   # include neutral as "not lower low"
+    else:
+        # Fallback when insufficient pivot history: use slope of last 10 lows
+        if len(lows_arr) >= 6:
+            segment = lows_arr[-10:] if len(lows_arr) >= 10 else lows_arr
+            slope   = np.polyfit(range(len(segment)), segment, 1)[0]
+            slope_pct = slope / close if close > 0 else 0.0
+            hl_score   = max(0.0, min(25.0, slope_pct / 0.002 * 25.0))
+            higher_low = slope_pct >= 0.0
+        else:
+            hl_score   = 0.0
+            higher_low = False
 
-    # Recovery leg: how much has price recovered from the period low
-    period_low = lows_arr[-20:].min() if len(lows_arr) >= 20 else lows_arr.min()
-    recovery_pct = (closes_arr[-1] - period_low) / period_low if period_low > 0 else 0
-    recovery_pct = max(0, min(recovery_pct, 0.30))  # cap at 30%
+    # ── Recovery pct: adaptive lookback ─────────────────────────────────────
+    n = len(lows_arr)
+    period_low = lows_arr[-20:].min() if n >= 20 else lows_arr.min()
+    for lb in (40, 60):
+        if n >= lb:
+            period_low = min(period_low, lows_arr[-lb:].min())
+    recovery_pct = (close - period_low) / period_low if period_low > 0 else 0.0
+    recovery_pct = max(0.0, min(recovery_pct, 0.30))
 
-    score = 0.0
-    if higher_low:
-        score += 45.0
-    # Recovery leg score (up to 35 pts, sweet spot 3-15%)
-    if recovery_pct >= 0.03:
-        score += min(recovery_pct / 0.15, 1.0) * 35
-    # Supporting signals — bonus only, not mandatory
+    # ── Score assembly ───────────────────────────────────────────────────────
+    # hl_score: 0 / 25 / 45
+    # recovery component: continuous from 0, up to 35 pts at 15%
+    rec_score = min(recovery_pct / 0.15, 1.0) * 35
+    score = hl_score + rec_score
     if choch_present:
         score = min(score + 10, 100)
     if bos_present:

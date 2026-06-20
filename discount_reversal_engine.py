@@ -208,65 +208,95 @@ def r4_base_formation(highs: list, lows: list, closes: list, volumes: list,
                        atr_period: int = 14) -> tuple[float, float, float, int]:
     """
     Returns (base_score 0-100, range_compression, atr_compression, base_duration).
-    Uses last N candles to measure consolidation quality.
+    Adaptive lookback: tests 20/40/60 bars, selects window with strongest compression.
+    Continuous scoring: soft decay instead of binary cliff at zero.
+    Duration anchored to detected base region mid-price, not current close.
     """
     if len(closes) < 10:
         return 0.0, 0.0, 0.0, 0
 
     closes_arr = np.array(closes, dtype=float)
-    highs_arr = np.array(highs, dtype=float)
-    lows_arr = np.array(lows, dtype=float)
+    highs_arr  = np.array(highs,  dtype=float)
+    lows_arr   = np.array(lows,   dtype=float)
+    n = len(closes_arr)
 
-    # Range compression: recent range vs prior range
-    lookback = min(20, len(closes_arr))
-    half = lookback // 2
-
-    recent_highs = highs_arr[-half:]
-    recent_lows = lows_arr[-half:]
-    prior_highs = highs_arr[-lookback:-half]
-    prior_lows = lows_arr[-lookback:-half]
-
-    recent_range = (recent_highs.max() - recent_lows.min()) / closes_arr[-1]
-    prior_range = (prior_highs.max() - prior_lows.min()) / closes_arr[-half - 1] if len(prior_highs) > 0 else recent_range
-
-    range_compression = 1 - (recent_range / prior_range) if prior_range > 0 else 0
-    range_compression = max(0, min(range_compression, 1))
-
-    # ATR compression: current ATR vs prior ATR
-    def compute_atr(h, l, c, period=14):
+    def compute_atr_slice(h, l, c):
+        if len(c) < 2:
+            return 0.0
         tr = np.maximum(h[1:] - l[1:],
-             np.maximum(abs(h[1:] - c[:-1]), abs(l[1:] - c[:-1])))
-        if len(tr) < period:
-            return tr.mean() if len(tr) > 0 else 0
-        return tr[-period:].mean()
+             np.maximum(np.abs(h[1:] - c[:-1]), np.abs(l[1:] - c[:-1])))
+        return float(tr.mean()) if len(tr) > 0 else 0.0
 
-    if len(closes_arr) >= 20:
-        recent_atr = compute_atr(highs_arr[-14:], lows_arr[-14:], closes_arr[-14:])
-        prior_atr  = compute_atr(highs_arr[-28:-14], lows_arr[-28:-14], closes_arr[-28:-14])
-        atr_compression = 1 - (recent_atr / prior_atr) if prior_atr > 0 else 0
-        atr_compression = max(0, min(atr_compression, 1))
-    else:
-        atr_compression = range_compression  # fallback
+    def _window_compression(lb):
+        """Compute range_compression and atr_compression for a given lookback."""
+        if n < lb:
+            return None, None, None
+        half = lb // 2
+        h_all = highs_arr[-lb:]
+        l_all = lows_arr[-lb:]
+        c_all = closes_arr[-lb:]
 
-    # Base duration: count candles in tight range (within 5% band)
-    base_high = closes_arr[-1] * 1.05
-    base_low  = closes_arr[-1] * 0.95
+        recent_range = (h_all[-half:].max() - l_all[-half:].min()) / c_all[-1] if c_all[-1] > 0 else 0
+        prior_ref    = c_all[half - 1] if c_all[half - 1] > 0 else c_all[-1]
+        prior_range  = (h_all[:half].max()  - l_all[:half].min())  / prior_ref
+
+        # Continuous: positive = compression, capped; negative allowed up to -0.5 then floors to 0
+        ratio = recent_range / prior_range if prior_range > 0 else 1.0
+        # Soft mapping: ratio<=0.5 → 1.0, ratio=1.0 → 0.0, ratio=1.5 → −0.5 clamped to 0
+        rc = max(0.0, min(1.0, 1.0 - ratio + 0.0))
+        # Ramp: give partial credit when ratio slightly >1 (expansion ≤20%)
+        if ratio > 1.0:
+            rc = max(0.0, 1.0 - (ratio - 1.0) / 0.20) * 0.20  # decays 0.20→0 over 20% expansion
+        else:
+            rc = 1.0 - ratio  # 0→1 as ratio drops 1→0
+
+        # ATR compression within same window
+        if lb >= 16:
+            atr_half = lb // 2
+            recent_atr = compute_atr_slice(highs_arr[-atr_half:],   lows_arr[-atr_half:],   closes_arr[-atr_half:])
+            prior_atr  = compute_atr_slice(highs_arr[-lb:-atr_half], lows_arr[-lb:-atr_half], closes_arr[-lb:-atr_half])
+            atr_ratio  = recent_atr / prior_atr if prior_atr > 0 else 1.0
+            if atr_ratio > 1.0:
+                ac = max(0.0, 1.0 - (atr_ratio - 1.0) / 0.20) * 0.20
+            else:
+                ac = 1.0 - atr_ratio
+        else:
+            ac = rc
+
+        # Base mid-price of prior (older) half — anchors duration band
+        base_mid = (h_all[:half].max() + l_all[:half].min()) / 2.0
+
+        return rc, ac, base_mid
+
+    # Test lookbacks 20, 40, 60; select strongest combined compression signal
+    best_rc, best_ac, best_mid, best_lb = 0.0, 0.0, closes_arr[-1], 20
+    for lb in (20, 40, 60):
+        rc, ac, base_mid = _window_compression(lb)
+        if rc is None:
+            continue
+        combined = rc * 0.55 + ac * 0.45
+        best_combined = best_rc * 0.55 + best_ac * 0.45
+        if combined > best_combined:
+            best_rc, best_ac, best_mid, best_lb = rc, ac, base_mid, lb
+
+    # Duration: count consecutive bars from end within ±7% of detected base mid
+    band_hi = best_mid * 1.07
+    band_lo = best_mid * 0.93
     duration = 0
-    for i in range(len(closes_arr) - 1, -1, -1):
-        if lows_arr[i] >= base_low and highs_arr[i] <= base_high:
+    for i in range(n - 1, -1, -1):
+        if lows_arr[i] >= band_lo and highs_arr[i] <= band_hi:
             duration += 1
         else:
             break
 
-    # Score components (30% most important station)
-    range_comp_score = range_compression * 40   # up to 40 pts
-    atr_comp_score   = atr_compression * 35     # up to 35 pts
-    duration_score   = min(duration / 15, 1.0) * 25  # up to 25 pts; sweet spot ~15 days
+    range_comp_score = best_rc * 40
+    atr_comp_score   = best_ac * 35
+    duration_score   = min(duration / 15, 1.0) * 25
 
     base_score = range_comp_score + atr_comp_score + duration_score
 
-    return (round(base_score, 2), round(range_compression, 4),
-            round(atr_compression, 4), duration)
+    return (round(base_score, 2), round(best_rc, 4),
+            round(best_ac, 4), duration)
 
 
 # ─── R5: Low Protection Engine ───────────────────────────────────────────────

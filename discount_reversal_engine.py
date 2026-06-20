@@ -130,23 +130,30 @@ def r1_discount_context(close: float, eq: float, discount_bottom: float,
 
 # ─── R2: Discount Quality Engine ─────────────────────────────────────────────
 
-def r2_discount_quality(close: float, eq: float, discount_bottom: float,
-                         premium_top: float) -> tuple[float, float, float, float]:
+def r2_discount_quality(close: float, eq: float, true_lo: float,
+                         true_hi: float) -> tuple[float, float, float, float]:
     """
     Returns (quality_score 0-100, dist_to_bottom, dist_to_eq, discount_depth).
+
+    Uses true LuxAlgo geometry:
+      true_lo = swing low (0th pct of range) — actual discount bottom
+      true_hi = swing high (100th pct of range) — actual premium top
+      eq      = midpoint (50th pct) — EQ level
     """
-    if eq <= 0 or discount_bottom <= 0 or premium_top <= discount_bottom:
+    if eq <= 0 or true_lo <= 0 or true_hi <= true_lo:
         return 0.0, 0.0, 0.0, 0.0
 
-    dist_to_bottom = (close - discount_bottom) / close if close > 0 else 0
-    dist_to_eq = (eq - close) / close if close > 0 else 0
-    discount_depth = (eq - discount_bottom) / eq if eq > 0 else 0
+    # True geometric distances using actual range boundaries
+    dist_to_bottom = (close - true_lo) / close if close > 0 else 0   # 0 at lo, positive above
+    dist_to_eq     = (eq - close) / close if close > 0 else 0         # upside remaining to EQ
+    discount_depth = (eq - true_lo) / eq if eq > 0 else 0             # full depth: lo to eq / eq
 
-    # Score: reward being close to bottom, having deep discount zone
-    # Closer to bottom = higher quality; deeper discount zone = better opportunity
-    proximity_score = max(0, 1 - dist_to_bottom / 0.30) * 50   # up to 50 pts
-    depth_score = min(discount_depth / 0.20, 1.0) * 30          # up to 30 pts
-    upside_score = min(dist_to_eq / 0.10, 1.0) * 20             # up to 20 pts
+    # proximity: 50 pts at true_lo, 0 pts at 30% above true_lo
+    proximity_score = max(0, min(50, (1 - dist_to_bottom / 0.30) * 50))
+    # depth: 30 pts when discount zone is ≥20% deep (eq vs lo)
+    depth_score     = min(discount_depth / 0.20, 1.0) * 30
+    # upside: 20 pts when ≥10% upside remains to EQ
+    upside_score    = min(max(dist_to_eq, 0) / 0.10, 1.0) * 20
 
     quality = proximity_score + depth_score + upside_score
 
@@ -576,8 +583,10 @@ class DiscountReversalEngine:
         if r1_state in ('premium', 'extended'):
             return None  # Hard reject
 
-        # R2
-        r2_score, dist_bot, dist_eq, depth = r2_discount_quality(close, eq, discount_bottom, premium_top)
+        # R2 — true LuxAlgo geometry: lo=min(lows), hi=max(highs)
+        true_lo = min(lows) if lows else close * 0.80
+        true_hi = max(highs) if highs else close * 1.20
+        r2_score, dist_bot, dist_eq, depth = r2_discount_quality(close, eq, true_lo, true_hi)
 
         # R3
         r3_days, r3_score = r3_discount_residency(closes, eq)

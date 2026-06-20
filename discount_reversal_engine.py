@@ -156,27 +156,43 @@ def r2_discount_quality(close: float, eq: float, discount_bottom: float,
 
 # ─── R3: Discount Residency Engine ───────────────────────────────────────────
 
-def r3_discount_residency(days_in_discount: int) -> tuple[int, float]:
+def r3_count_days_in_discount(closes: list, eq: float) -> int:
     """
-    Returns (days, residency_score 0-100).
+    Count consecutive bars from the most recent bar backwards where close < eq.
+    Stops at the first bar where close >= eq.
+    """
+    if not closes or eq <= 0:
+        return 0
+    count = 0
+    for c in reversed(closes):
+        if c < eq:
+            count += 1
+        else:
+            break
+    return count
+
+
+def r3_discount_residency(closes: list, eq: float) -> tuple[int, float]:
+    """
+    Returns (days_in_discount, residency_score 0-100).
+    days_in_discount: actual count of consecutive bars below EQ ending at current bar.
     Sweet spot: 5-30 days. Too short = not established. Too long = stale.
     """
-    if days_in_discount <= 0:
+    days = r3_count_days_in_discount(closes, eq)
+    if days <= 0:
         return 0, 0.0
-    if days_in_discount < 3:
-        score = days_in_discount / 3 * 40
-    elif days_in_discount <= 30:
-        # Peak at 10-20 days
-        if days_in_discount <= 20:
-            score = 40 + (days_in_discount - 3) / 17 * 60
-        else:
-            score = 100.0
-    elif days_in_discount <= 60:
-        score = 100 - (days_in_discount - 30) / 30 * 30  # decay to 70
+    if days < 3:
+        score = days / 3 * 40
+    elif days <= 20:
+        score = 40 + (days - 3) / 17 * 60
+    elif days <= 30:
+        score = 100.0
+    elif days <= 60:
+        score = 100 - (days - 30) / 30 * 30  # decay to 70
     else:
-        score = max(0, 70 - (days_in_discount - 60) / 40 * 70)
+        score = max(0, 70 - (days - 60) / 40 * 70)
 
-    return days_in_discount, round(score, 2)
+    return days, round(score, 2)
 
 
 # ─── R4: Base Formation Engine (MOST IMPORTANT) ───────────────────────────────
@@ -287,25 +303,60 @@ def r5_low_protection(lows: list, closes: list, lookback: int = 20) -> tuple[flo
 
 # ─── R6: Recovery Engine ─────────────────────────────────────────────────────
 
+def _detect_choch(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray) -> bool:
+    """
+    Internal CHOCH detection: Change of Character.
+    Condition: prior swing was bearish (lower high), but most recent close
+    broke above that prior swing high — character changed from bearish to bullish.
+    Requires at least 10 bars.
+    """
+    if len(highs) < 10:
+        return False
+    # Prior swing high = max of bars [-10:-3]
+    prior_swing_high = highs[-10:-3].max()
+    # Current close broke above prior swing high
+    return bool(closes[-1] > prior_swing_high)
+
+
+def _detect_bos(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray) -> bool:
+    """
+    Internal BOS detection: Break of Structure.
+    Condition: current close broke above the most recent significant high
+    (max of prior 5 bars excluding last 2), confirming bullish structure break.
+    Requires at least 7 bars.
+    """
+    if len(highs) < 7:
+        return False
+    prior_structure_high = highs[-7:-2].max()
+    return bool(closes[-1] > prior_structure_high)
+
+
 def r6_recovery(highs: list, lows: list, closes: list,
-                 choch_present: bool = False, bos_present: bool = False) -> tuple[float, bool, float]:
+                 choch_present: bool = None, bos_present: bool = None) -> tuple[float, bool, float]:
     """
     Returns (recovery_score 0-100, higher_low, recovery_pct).
     CHOCH/BOS are supporting signals only — not mandatory.
+    If choch_present/bos_present are None, they are computed internally from price data.
     """
     if len(lows) < 6:
         return 0.0, False, 0.0
 
-    lows_arr = np.array(lows, dtype=float)
-    highs_arr = np.array(highs, dtype=float)
+    lows_arr   = np.array(lows, dtype=float)
+    highs_arr  = np.array(highs, dtype=float)
     closes_arr = np.array(closes, dtype=float)
+
+    # Compute CHOCH/BOS internally if not supplied by caller
+    if choch_present is None:
+        choch_present = _detect_choch(highs_arr, lows_arr, closes_arr)
+    if bos_present is None:
+        bos_present = _detect_bos(highs_arr, lows_arr, closes_arr)
 
     # Higher low: last pivot low > previous pivot low
     recent_low = lows_arr[-3:].min()
     prior_low  = lows_arr[-10:-3].min() if len(lows_arr) >= 10 else lows_arr[:-3].min()
     higher_low = recent_low > prior_low * 0.99
 
-    # Recovery leg: how much has price recovered from the low
+    # Recovery leg: how much has price recovered from the period low
     period_low = lows_arr[-20:].min() if len(lows_arr) >= 20 else lows_arr.min()
     recovery_pct = (closes_arr[-1] - period_low) / period_low if period_low > 0 else 0
     recovery_pct = max(0, min(recovery_pct, 0.30))  # cap at 30%
@@ -316,7 +367,7 @@ def r6_recovery(highs: list, lows: list, closes: list,
     # Recovery leg score (up to 35 pts, sweet spot 3-15%)
     if recovery_pct >= 0.03:
         score += min(recovery_pct / 0.15, 1.0) * 35
-    # Supporting signals (NOT mandatory — bonus only)
+    # Supporting signals — bonus only, not mandatory
     if choch_present:
         score = min(score + 10, 100)
     if bos_present:
@@ -327,39 +378,54 @@ def r6_recovery(highs: list, lows: list, closes: list,
 
 # ─── R7: MACD Phase Engine ───────────────────────────────────────────────────
 
-def r7_macd_phase(macd_val: float, macd_hist: float, macd_signal_val: float = 0.0) -> float:
+def r7_macd_phase(macd_val: float, macd_hist: float,
+                   macd_signal_val: float = 0.0, price: float = 0.0) -> float:
     """
     Returns macd_score 0-100.
     Preferred: MACD below zero. Acceptable: near zero. Reject: strongly extended above zero.
-    Acts as constitutional filter — strongly negative MACD is ideal (early phase).
-    """
-    # Ideal: macd_val < 0 (below zero line)
-    # Acceptable: -0.5 to +0.5 normalized
-    # Reject: macd_val strongly positive
 
-    # Normalize by using macd_hist sign and magnitude
+    Normalization: MACD values are in price units. Normalize by dividing by price (as %)
+    so thresholds are symbol-agnostic.
+    near_zero band: abs(macd_val_pct) < 0.005 (±0.5% of price)
+    """
     if macd_val is None:
         return 50.0
 
-    if macd_val < 0:
-        # Below zero — most preferred
-        if macd_hist < 0 and abs(macd_hist) < abs(macd_val) * 0.5:
-            # Histogram shrinking negative → bullish divergence forming
+    # Normalize to % of price so thresholds are symbol-agnostic
+    if price and price > 0:
+        macd_pct = macd_val / price
+        hist_pct = macd_hist / price if macd_hist else 0.0
+    else:
+        # Fallback: use raw values with ±0.5 as near-zero band estimate
+        macd_pct = macd_val
+        hist_pct = macd_hist if macd_hist else 0.0
+
+    NEAR_ZERO = 0.005  # ±0.5% of price
+
+    if macd_pct < -NEAR_ZERO:
+        # Below zero — most preferred early phase
+        if hist_pct < 0 and abs(hist_pct) < abs(macd_pct) * 0.5:
+            # Histogram shrinking (less negative) → bullish curl forming
             score = 90.0
-        elif macd_hist >= 0:
-            # MACD below zero but histogram positive → curling up
+        elif hist_pct >= 0:
+            # MACD below zero, histogram already positive → curling up
             score = 85.0
         else:
+            # MACD below zero, histogram still falling
             score = 75.0
-    elif macd_val < abs(macd_val) * 0.20:
-        # Near zero
-        score = 60.0 if macd_hist >= 0 else 50.0
+    elif abs(macd_pct) <= NEAR_ZERO:
+        # Near zero — acceptable, not ideal
+        if hist_pct >= 0:
+            score = 65.0  # crossing up through zero
+        else:
+            score = 55.0  # crossing down through zero
     else:
-        # Above zero — penalize based on extension
-        # Reject strongly extended
-        score = max(0, 40 - macd_val * 10)
+        # Above zero — penalize proportional to extension
+        # Linear decay: 0% extension → 45, 3% extension → 0
+        extension = macd_pct - NEAR_ZERO
+        score = max(0.0, 45.0 - (extension / 0.03) * 45.0)
 
-    return round(min(100, max(0, score)), 2)
+    return round(min(100.0, max(0.0, score)), 2)
 
 
 # ─── R8: Volume Behaviour Engine ─────────────────────────────────────────────
@@ -367,31 +433,71 @@ def r7_macd_phase(macd_val: float, macd_hist: float, macd_signal_val: float = 0.
 def r8_volume_behaviour(volumes: list, lookback: int = 20) -> tuple[float, bool, bool]:
     """
     Returns (volume_score 0-100, vol_dry_up, vol_expansion).
-    Dry-up during consolidation + expansion on recovery = best setup.
-    Neutral volume acceptable.
+    Continuous scoring across three components:
+      - Dry-Up Strength   (0-40 pts): how far below historical avg recent volume is
+      - Expansion Strength (0-40 pts): how far above historical avg the latest bar is
+      - Trend Component    (0-20 pts): recent vs prior window ratio (improving direction)
+    Neutral volume scores ~50. Dry-up scores 60-80. Expansion after dry-up scores 80-100.
     """
     if len(volumes) < 5:
         return 50.0, False, False
 
     vols = np.array(volumes, dtype=float)
-    avg_vol = vols[-lookback:].mean() if len(vols) >= lookback else vols.mean()
+    hist_avg  = vols[-lookback:].mean() if len(vols) >= lookback else vols.mean()
+    if hist_avg <= 0:
+        return 50.0, False, False
 
-    recent_vol = vols[-5:].mean()
-    prior_vol  = vols[-15:-5].mean() if len(vols) >= 15 else avg_vol
+    recent_5  = vols[-5:].mean()
+    prior_10  = vols[-15:-5].mean() if len(vols) >= 15 else hist_avg
+    last_bar  = float(vols[-1])
 
-    # Dry-up: recent volume < 70% of average
-    vol_dry_up = recent_vol < avg_vol * 0.70
+    # --- Dry-Up Strength (0-40 pts) ---
+    # ratio < 1.0 means drying up; ratio > 1.0 means above average
+    dry_ratio = recent_5 / hist_avg          # 1.0 = neutral, 0.0 = zero volume
+    # Score: 40 pts at ratio=0, 20 pts at ratio=0.70, 0 pts at ratio=1.0+
+    dry_score = max(0.0, min(40.0, (1.0 - dry_ratio) * 40.0 / 0.30))
+    # Clamp: no dry-up credit if ratio >= 1.0
+    dry_score = 0.0 if dry_ratio >= 1.0 else dry_score
+    vol_dry_up = dry_ratio < 0.70
 
-    # Expansion: last 3 bars above average
-    vol_expansion = vols[-1] > avg_vol * 1.5 or vols[-3:].mean() > avg_vol * 1.3
+    # --- Expansion Strength (0-40 pts) ---
+    # Expansion on last bar relative to historical avg
+    exp_ratio = last_bar / hist_avg           # 1.0 = neutral, 2.0 = double avg
+    # Score: 0 pts at ratio=1.0, 40 pts at ratio=2.5+
+    exp_score = max(0.0, min(40.0, (exp_ratio - 1.0) * 40.0 / 1.5))
+    vol_expansion = exp_ratio >= 1.5
 
-    score = 50.0  # neutral baseline
+    # --- Trend Component (0-20 pts) ---
+    # recent_5 vs prior_10: is volume improving in the right direction?
+    # For dry-up phase: recent < prior = constructive (drying up = good)
+    # For expansion phase: recent > prior = constructive (expanding = good)
+    trend_ratio = recent_5 / prior_10 if prior_10 > 0 else 1.0
     if vol_dry_up:
-        score = 80.0  # dry-up during base = constructive
-    if vol_expansion and not vol_dry_up:
-        score = 75.0  # expansion on recovery
-    if vol_dry_up and len(vols) >= 2 and vols[-1] > avg_vol:
-        score = 90.0  # dry-up followed by expansion = ideal
+        # Drying up: lower recent than prior = better (ratio < 1 is good)
+        trend_score = max(0.0, min(20.0, (1.0 - trend_ratio) * 20.0 / 0.5))
+    else:
+        # Expanding: higher recent than prior = better (ratio > 1 is good)
+        trend_score = max(0.0, min(20.0, (trend_ratio - 1.0) * 20.0 / 0.5))
+
+    # Combine: neutral baseline is 50
+    # Pure neutral (no dry-up, no expansion): dry=0, exp=0, trend~0 → raw=0
+    # Map raw [0,100] to output [50,100] when signal present; [0,50] when adverse
+    raw_score = dry_score + exp_score + trend_score  # 0-100
+
+    if not vol_dry_up and not vol_expansion:
+        # Neutral volume: score near 50
+        score = 45.0 + trend_score * 0.25
+    elif vol_dry_up and vol_expansion:
+        # Dry-up then expansion on last bar = ideal setup
+        score = 70.0 + dry_score * 0.30 + trend_score * 0.20
+        score = min(100.0, score)
+    elif vol_dry_up:
+        score = 50.0 + dry_score * 0.75 + trend_score * 0.25
+        score = min(90.0, score)
+    else:
+        # Expansion only (no prior dry-up)
+        score = 40.0 + exp_score * 0.75 + trend_score * 0.25
+        score = min(85.0, score)
 
     return round(score, 2), bool(vol_dry_up), bool(vol_expansion)
 
@@ -474,7 +580,7 @@ class DiscountReversalEngine:
         r2_score, dist_bot, dist_eq, depth = r2_discount_quality(close, eq, discount_bottom, premium_top)
 
         # R3
-        r3_days, r3_score = r3_discount_residency(days_in_discount)
+        r3_days, r3_score = r3_discount_residency(closes, eq)
 
         # R4
         r4_score, range_comp, atr_comp, base_dur = r4_base_formation(highs, lows, closes, volumes)
@@ -483,12 +589,10 @@ class DiscountReversalEngine:
         r5_score, no_new_low, failed_bd = r5_low_protection(lows, closes)
 
         # R6
-        choch = bool(price_data.get('snap_choch', pd.Series([0])).iloc[-1]) if 'snap_choch' in price_data.columns else False
-        bos   = bool(price_data.get('snap_bos', pd.Series([0])).iloc[-1]) if 'snap_bos' in price_data.columns else False
-        r6_score, higher_low, recovery_pct = r6_recovery(highs, lows, closes, choch, bos)
+        r6_score, higher_low, recovery_pct = r6_recovery(highs, lows, closes)
 
         # R7
-        r7_score = r7_macd_phase(macd_val, macd_hist)
+        r7_score = r7_macd_phase(macd_val, macd_hist, price=close)
 
         # R8
         r8_score, vol_dry, vol_exp = (r8_volume_behaviour(volumes) if volumes

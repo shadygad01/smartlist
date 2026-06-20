@@ -468,64 +468,121 @@ def r6_recovery(highs: list, lows: list, closes: list,
 # ─── R7: MACD Phase Engine ───────────────────────────────────────────────────
 
 def _compute_macd(closes: list, fast: int = 12, slow: int = 26,
-                  signal: int = 9) -> tuple[float, float]:
-    """Compute MACD line and histogram from a list of closing prices."""
+                  signal: int = 9, with_context: bool = False):
+    """Compute MACD line and histogram from a list of closing prices.
+
+    Default return: (macd_val, macd_hist) — backward compatible.
+    with_context=True returns a dict adding 5-bar slope context needed by the
+    repaired r7_macd_phase to detect *direction* (curl-up) rather than just level:
+      macd_slope = macd_val - macd[-6]      (change vs 5 bars ago)
+      hist_slope = hist     - hist[-6]
+      macd_range = max(|macd| over last 26 bars)  (for magnitude-of-recovery)
+    """
     s = pd.Series(closes, dtype=float)
     ema_fast   = s.ewm(span=fast,   adjust=False).mean()
     ema_slow   = s.ewm(span=slow,   adjust=False).mean()
     macd_line  = ema_fast - ema_slow
     signal_line = macd_line.ewm(span=signal, adjust=False).mean()
-    return float(macd_line.iloc[-1]), float((macd_line - signal_line).iloc[-1])
+    hist_line  = macd_line - signal_line
+    macd_val   = float(macd_line.iloc[-1])
+    macd_hist  = float(hist_line.iloc[-1])
+    if not with_context:
+        return macd_val, macd_hist
+
+    n = len(macd_line)
+    macd_slope = macd_val - float(macd_line.iloc[-6]) if n >= 6 else 0.0
+    hist_slope = macd_hist - float(hist_line.iloc[-6]) if n >= 6 else 0.0
+    window = macd_line.iloc[-26:] if n >= 26 else macd_line
+    macd_range = float(window.abs().max())
+    return {
+        'macd_val': macd_val, 'macd_hist': macd_hist,
+        'macd_slope': macd_slope, 'hist_slope': hist_slope,
+        'macd_range': macd_range,
+    }
 
 
 def r7_macd_phase(macd_val: float, macd_hist: float,
-                   macd_signal_val: float = 0.0, price: float = 0.0) -> float:
+                   macd_signal_val: float = 0.0, price: float = 0.0,
+                   macd_slope: float = None, hist_slope: float = None,
+                   macd_range: float = None) -> float:
     """
-    Returns macd_score 0-100.
-    Preferred: MACD below zero. Acceptable: near zero. Reject: strongly extended above zero.
+    Returns macd_score 0-100. Fully continuous, no binary cliffs.
 
-    Normalization: MACD values are in price units. Normalize by dividing by price (as %)
-    so thresholds are symbol-agnostic.
-    near_zero band: abs(macd_val_pct) < 0.005 (±0.5% of price)
+    Concept being measured: an early bullish MACD reversal forming from a
+    discounted base — MACD curling up (ideally still below / near zero), with
+    the histogram improving, and momentum NOT yet overextended above zero.
+
+    Repairs (audit 2026-06, branch claude/amazing-shannon-7b0je3):
+      D1 binary cliffs   -> continuous logistic/linear blends, no constant branches
+      D2 branch dominance-> single continuous surface, no dominant 90-branch
+      D3 magnitude-blind -> deep-negative falling MACD is penalised, not rewarded
+      D4 direction-blind -> hist_slope / macd_slope drive a "curl" reward
+      D5 wrong mae sign  -> rewarding stocks still crashing is removed
+
+    All inputs are price units; normalised by price to % so thresholds are
+    symbol-agnostic. Slope inputs are the change vs 5 bars ago (see _compute_macd
+    with_context=True). When slope context is absent the function degrades
+    gracefully to a level-only continuous score.
     """
     if macd_val is None:
         return 50.0
 
-    # Normalize to % of price so thresholds are symbol-agnostic
-    if price and price > 0:
-        macd_pct = macd_val / price
-        hist_pct = macd_hist / price if macd_hist else 0.0
+    p = price if (price and price > 0) else None
+
+    def pct(x):
+        return (x / p) if (p and x is not None) else (x if x is not None else 0.0)
+
+    macd_pct = pct(macd_val)
+    hist_pct = pct(macd_hist)
+    mslope_pct = pct(macd_slope) if macd_slope is not None else None
+    hslope_pct = pct(hist_slope) if hist_slope is not None else None
+    range_pct  = pct(macd_range) if macd_range is not None else None
+
+    def clamp(v, lo=0.0, hi=100.0):
+        return max(lo, min(hi, v))
+
+    # ── 1. Location term (continuous): where MACD sits relative to zero ───────
+    #   Ideal location is just below / at zero (early reversal off a base).
+    #   Far below zero (still deep) and far above zero (overextended) both decay.
+    #   Gaussian-style bump centred slightly below zero (-0.3%), width ~2.5%.
+    centre = -0.003
+    width  = 0.025
+    location = 100.0 * np.exp(-((macd_pct - centre) ** 2) / (2 * width ** 2))
+
+    # ── 2. Curl term (continuous): is momentum improving? ────────────────────
+    #   Reward histogram turning up (hist_slope > 0) and MACD slope turning up.
+    #   This is the core "curling up below zero" signal. Continuous via tanh.
+    if hslope_pct is not None or mslope_pct is not None:
+        hs = hslope_pct if hslope_pct is not None else 0.0
+        ms = mslope_pct if mslope_pct is not None else 0.0
+        # 0.4% per-5-bar improvement ~ saturates. Blend hist (lead) over macd.
+        curl_raw = np.tanh((hs * 0.7 + ms * 0.3) / 0.004)  # -1..+1
     else:
-        # Fallback: use raw values with ±0.5 as near-zero band estimate
-        macd_pct = macd_val
-        hist_pct = macd_hist if macd_hist else 0.0
+        # Fallback: use histogram *level* relative to macd magnitude as proxy
+        denom = abs(macd_pct) + 1e-9
+        curl_raw = np.tanh((hist_pct / denom))
+    curl = 50.0 + 50.0 * curl_raw  # 0..100, 50 = flat
 
-    NEAR_ZERO = 0.005  # ±0.5% of price
-
-    if macd_pct < -NEAR_ZERO:
-        # Below zero — most preferred early phase
-        if hist_pct < 0 and abs(hist_pct) < abs(macd_pct) * 0.5:
-            # Histogram shrinking (less negative) → bullish curl forming
-            score = 90.0
-        elif hist_pct >= 0:
-            # MACD below zero, histogram already positive → curling up
-            score = 85.0
-        else:
-            # MACD below zero, histogram still falling
-            score = 75.0
-    elif abs(macd_pct) <= NEAR_ZERO:
-        # Near zero — acceptable, not ideal
-        if hist_pct >= 0:
-            score = 65.0  # crossing up through zero
-        else:
-            score = 55.0  # crossing down through zero
+    # ── 3. Recovery magnitude (continuous): how far off the recent low? ───────
+    #   If MACD has risen meaningfully from its recent (negative) extreme while
+    #   still being in a constructive location, that is a genuine recovery.
+    if range_pct and range_pct > 1e-9 and mslope_pct is not None:
+        recovery = clamp(50.0 + 50.0 * np.tanh((mslope_pct / range_pct) / 0.5))
     else:
-        # Above zero — penalize proportional to extension
-        # Linear decay: 0% extension → 45, 3% extension → 0
-        extension = macd_pct - NEAR_ZERO
-        score = max(0.0, 45.0 - (extension / 0.03) * 45.0)
+        recovery = 50.0
 
-    return round(min(100.0, max(0.0, score)), 2)
+    # ── 4. Overextension penalty (continuous): MACD far above zero is late ────
+    #   Smoothly remove credit as MACD pushes above ~+1% of price.
+    if macd_pct <= 0:
+        overext = 1.0
+    else:
+        overext = clamp(1.0 - (macd_pct / 0.03), 0.0, 1.0)  # 1 at 0%, 0 at +3%
+
+    # ── Blend: location anchors, curl + recovery shape, overext gates late ────
+    base = 0.45 * location + 0.35 * curl + 0.20 * recovery
+    score = base * (0.25 + 0.75 * overext)  # never fully zero unless very extended
+
+    return round(clamp(score), 2)
 
 
 # ─── R8: Volume Behaviour Engine ─────────────────────────────────────────────
@@ -700,10 +757,19 @@ class DiscountReversalEngine:
         # R6
         r6_score, higher_low, recovery_pct = r6_recovery(highs, lows, closes)
 
-        # R7 — compute MACD from OHLCV closes if caller passed zeros (common path)
+        # R7 — compute MACD (with slope context) from OHLCV closes if caller
+        # passed zeros (common path). Slope context enables curl-up detection.
+        macd_ctx = None
         if (macd_val == 0.0 and macd_hist == 0.0) and len(closes) >= 26:
-            macd_val, macd_hist = _compute_macd(closes)
-        r7_score = r7_macd_phase(macd_val, macd_hist, price=close)
+            macd_ctx = _compute_macd(closes, with_context=True)
+            macd_val, macd_hist = macd_ctx['macd_val'], macd_ctx['macd_hist']
+        if macd_ctx is not None:
+            r7_score = r7_macd_phase(macd_val, macd_hist, price=close,
+                                     macd_slope=macd_ctx['macd_slope'],
+                                     hist_slope=macd_ctx['hist_slope'],
+                                     macd_range=macd_ctx['macd_range'])
+        else:
+            r7_score = r7_macd_phase(macd_val, macd_hist, price=close)
 
         # R8
         r8_score, vol_dry, vol_exp = (r8_volume_behaviour(volumes) if volumes

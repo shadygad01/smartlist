@@ -1903,6 +1903,33 @@ def monitor_reinforcement(current_prices, results):
             send_telegram_zone3_reinforcement(symbol, entry_price, round(cur, 2), avg_price)
 
 
+def _get_position_bq(symbol: str, db_path: str = "egx_research.db") -> dict | None:
+    """Return latest bq_score and action flag for an open position symbol."""
+    try:
+        import sqlite3 as _sqlite3
+        conn = _sqlite3.connect(db_path)
+        row = conn.execute(
+            """SELECT bq.bq_score, bq.classification
+               FROM signals s JOIN bottom_quality bq ON s.id = bq.signal_id
+               WHERE s.symbol = ? AND bq.bq_score IS NOT NULL
+               ORDER BY s.signal_date DESC LIMIT 1""",
+            (symbol,),
+        ).fetchone()
+        conn.close()
+        if row:
+            bq = row[0]
+            if bq < 40:
+                action = "⚠️ REVIEW EXIT"
+            elif bq < 60:
+                action = "📊 MONITOR"
+            else:
+                action = "✅ QUALITY"
+            return {"bq_score": bq, "action": action, "classification": row[1]}
+    except Exception:
+        pass
+    return None
+
+
 def send_telegram_alerts(results):
     """
     Send a Telegram message for every stock with score >= 35.
@@ -1960,10 +1987,13 @@ def send_telegram_alerts(results):
                 else:
                     cur_str = "—"
                 score_tag = f"  |  Entry Score {pos['entry_score']}" if pos.get('entry_score') else ""
+                bq_data = _get_position_bq(sym)
+                bq_tag = f"\n   BQ      *{bq_data['bq_score']:.0f}/100*  {bq_data['action']}" if bq_data else ""
                 msg += f"\n📌 *{sym}*  {NAMES.get(sym, sym)}"
                 msg += f"\n   Entry   {entry:.2f} EGP"
                 msg += f"\n   Now     {cur_str}"
                 msg += f"\n   Target  *{tgt:.2f} EGP*{score_tag}"
+                msg += bq_tag
                 if pos.get("reinforced") and pos.get("reinforcement_price"):
                     msg += f"\n   Re-buy  {pos['reinforcement_price']:.2f} EGP"
                     msg += f"\n   Avg     *{pos['avg_price']:.2f} EGP*"
@@ -2013,10 +2043,13 @@ def send_telegram_alerts(results):
             else:
                 cur_str = "—"
             score_tag = f"  |  Entry Score {pos['entry_score']}" if pos.get('entry_score') else ""
+            bq_data = _get_position_bq(sym)
             lines.append(f"📌 *{sym}*  {NAMES.get(sym, sym)}")
             lines.append(f"   Entry   {entry:.2f} EGP")
             lines.append(f"   Now     {cur_str}")
             lines.append(f"   Target  *{tgt:.2f} EGP*{score_tag}")
+            if bq_data:
+                lines.append(f"   BQ      *{bq_data['bq_score']:.0f}/100*  {bq_data['action']}")
             if pos.get("reinforced") and pos.get("reinforcement_price"):
                 lines.append(f"   Re-buy  {pos['reinforcement_price']:.2f} EGP")
                 lines.append(f"   Avg     *{pos['avg_price']:.2f} EGP*")

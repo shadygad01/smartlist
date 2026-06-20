@@ -47,15 +47,9 @@ POSITIONS_FILE = "open_positions.json"
 # CONFIG
 # =========================================
 
-STOCKS = [
-    "COMI.CA", "TMGH.CA", "ETEL.CA", "EGAL.CA",
-    "EAST.CA", "ABUK.CA", "ORAS.CA", "EFIH.CA",
-    "ADIB.CA", "FWRY.CA", "EMFD.CA", "PHDC.CA",
-    "ORHD.CA", "EFID.CA", "HRHO.CA", "JUFO.CA",
-    "BTFH.CA", "RAYA.CA", "GBCO.CA", "HELI.CA",
-    "ARCC.CA", "MCQE.CA", "ORWE.CA", "ISPH.CA",
-    "RMDA.CA", "OIH.CA",  "CCAP.CA",
-]
+# Constitutional universe — single source of truth is config/scanner_config.py.
+from config.scanner_config import get_constitutional_universe
+STOCKS = get_constitutional_universe()
 
 # =========================================
 # WHITELIST - Price Gate Threshold >= 15

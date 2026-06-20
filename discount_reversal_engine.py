@@ -12,15 +12,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# EGX30 universe — only these symbols are eligible
-EGX30_SYMBOLS = {
-    'COMI.CA', 'EKHW.CA', 'HRHO.CA', 'EGCH.CA', 'ESRS.CA',
-    'PHDC.CA', 'SWDY.CA', 'TMGH.CA', 'AMER.CA', 'EFIC.CA',
-    'FWRY.CA', 'GBCO.CA', 'ALCN.CA', 'ORWE.CA', 'ABUK.CA',
-    'ARCC.CA', 'EAST.CA', 'EFID.CA', 'JUFO.CA', 'MNHD.CA',
-    'OCDI.CA', 'ORHD.CA', 'ISPH.CA', 'HELI.CA', 'ACGC.CA',
-    'AURS.CA', 'MOIL.CA', 'SPMD.CA', 'AMOC.CA', 'AUTO.CA',
-}
+# Constitutional universe — single source of truth is config/scanner_config.py.
+# Imported (not hardcoded) so the engine can never drift from the approved STOCKS.
+from config.scanner_config import get_constitutional_universe
+
+EGX30_SYMBOLS = set(get_constitutional_universe())
 
 DB_SCHEMA_DISCOUNT = """
 CREATE TABLE IF NOT EXISTS discount_signals (
@@ -754,8 +750,18 @@ class DiscountReversalEngine:
         # R5
         r5_score, no_new_low, failed_bd = r5_low_protection(lows, closes)
 
-        # R6
-        r6_score, higher_low, recovery_pct = r6_recovery(highs, lows, closes)
+        # R6 — also surface CHOCH/BOS structure flags for persistence.
+        # r6_recovery computes these internally; recompute the same booleans here
+        # from identical arrays so they can be stored (fixes prior NameError where
+        # `choch`/`bos` were referenced in the result dict but never defined).
+        _h_arr = np.array(highs, dtype=float)
+        _l_arr = np.array(lows, dtype=float)
+        _c_arr = np.array(closes, dtype=float)
+        choch = _detect_choch(_h_arr, _l_arr, _c_arr) if len(closes) >= 10 else False
+        bos = _detect_bos(_h_arr, _l_arr, _c_arr) if len(closes) >= 7 else False
+        r6_score, higher_low, recovery_pct = r6_recovery(highs, lows, closes,
+                                                         choch_present=choch,
+                                                         bos_present=bos)
 
         # R7 — compute MACD (with slope context) from OHLCV closes if caller
         # passed zeros (common path). Slope context enables curl-up detection.

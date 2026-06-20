@@ -13,6 +13,16 @@ STOCKS = [
     "RMDA.CA", "OIH.CA",  "CCAP.CA",
 ]
 
+def get_constitutional_universe() -> list:
+    """Single source of truth for the approved trading universe.
+
+    Returns the 27 EGX symbols defined in STOCKS. All modules MUST import this
+    function instead of hardcoding their own universe lists/sets. Return value is
+    a fresh copy so callers cannot mutate the canonical list.
+    """
+    return list(STOCKS)
+
+
 # Price gate threshold >= 15 (vs default 16)
 WHITELIST = [
     "FWRY.CA", "EAST.CA", "ETEL.CA", "EMFD.CA",

@@ -2452,6 +2452,139 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
     if changes:
         send_change_alert(changes)
 
+    # Discount Reversal Engine — daily scan
+    try:
+        _dre_result = run_discount_scan(results=results)
+        if _dre_result:
+            print(f"  [DiscountReversal] {len(_dre_result)} signals persisted "
+                  f"(top: {_dre_result[0]['symbol']} score={_dre_result[0]['final_score']:.1f})")
+    except Exception as _dre_err:
+        print(f"  [DiscountReversal] skipped: {_dre_err}")
+
+
+def run_discount_scan(results: dict = None) -> list:
+    """
+    Run the Discount Reversal Engine against today's signals.
+    Reads live signal data from `results` (output of analyze()) or falls back
+    to the signals table.  For each EGX30 symbol with price data available,
+    calls engine.scan_symbol() and persists to discount_signals.
+    Returns list of signal dicts sorted by final_score DESC.
+    """
+    from discount_reversal_engine import DiscountReversalEngine, EGX30_SYMBOLS
+
+    engine = DiscountReversalEngine(db_path="egx_research.db")
+    today_str = today_cairo().strftime("%Y-%m-%d")
+    persisted = []
+
+    # Build candidate list from live results dict (keyed by symbol)
+    candidates = {}
+    if results:
+        for sym, r in results.items():
+            if not r.get("ok") or sym not in EGX30_SYMBOLS:
+                continue
+            candidates[sym] = r
+
+    # Fallback: read today's rows from signals table
+    if not candidates:
+        import sqlite3 as _sq
+        conn = _sq.connect("egx_research.db")
+        rows = conn.execute(
+            "SELECT symbol, price, eq, buy_hi, sell_lo, macd_val, macd_hist, snap_consol_len "
+            "FROM signals WHERE signal_date=? AND eq IS NOT NULL",
+            (today_str,)
+        ).fetchall()
+        conn.close()
+        for row in rows:
+            sym = row[0]
+            if sym in EGX30_SYMBOLS:
+                candidates[sym] = {
+                    "price": row[1], "eq": row[2], "buy_hi": row[3],
+                    "sell_lo": row[4], "macd_val": row[5], "macd_hist": row[6],
+                    "snap_consol_len": row[7],
+                }
+
+    for sym, r in candidates.items():
+        try:
+            # Download OHLCV price history
+            df_raw = download_data(sym, 60)
+            if df_raw.empty or len(df_raw) < 10:
+                continue
+
+            # Normalise columns to lowercase
+            df_price = df_raw.rename(columns={
+                "Open": "open", "High": "high", "Low": "low",
+                "Close": "close", "Volume": "volume"
+            }).reset_index()
+            df_price = df_price.rename(columns={df_price.columns[0]: "date"})
+
+            # Resolve price zone boundaries
+            eq_val      = r.get("eq") or 0.0
+            buy_hi_val  = r.get("buy_hi") or 0.0
+            sell_lo_val = r.get("sell_lo") or 0.0
+            if eq_val <= 0:
+                # derive from swings if not in results
+                try:
+                    hi_v, lo_v, eq_v, bhi, slo = swings(df_raw)
+                    eq_val = eq_v; buy_hi_val = bhi; sell_lo_val = slo
+                except Exception:
+                    continue
+
+            discount_bottom = buy_hi_val if buy_hi_val > 0 else eq_val * 0.90
+            premium_top     = sell_lo_val if sell_lo_val > 0 else eq_val * 1.10
+            macd_v  = r.get("macd_val") or 0.0
+            macd_h  = r.get("macd_hist") or r.get("macd_signal") or 0.0
+            days_disc = int(r.get("snap_consol_len") or 0)
+
+            sig = engine.scan_symbol(
+                symbol=sym,
+                price_data=df_price,
+                eq=eq_val,
+                discount_bottom=discount_bottom,
+                premium_top=premium_top,
+                macd_val=macd_v,
+                macd_hist=macd_h,
+                days_in_discount=days_disc,
+            )
+            if sig:
+                engine.persist_signal(sig)
+                persisted.append(sig)
+        except Exception as _e:
+            logger.debug(f"[DiscountReversal] {sym}: {_e}")
+
+    persisted.sort(key=lambda x: x.get("final_score", 0), reverse=True)
+    return persisted
+
+
+def integrate_with_existing_signal(signal_row: dict, price_history, engine) -> dict:
+    """
+    Wire a single signal row (from signals table) into the DiscountReversalEngine.
+    signal_row: dict with keys matching signals table columns.
+    price_history: pd.DataFrame [date, open, high, low, close, volume]
+    engine: DiscountReversalEngine instance
+    Returns persisted signal dict or None.
+    """
+    from discount_reversal_engine import EGX30_SYMBOLS
+    sym = signal_row.get("symbol", "")
+    if sym not in EGX30_SYMBOLS:
+        return None
+
+    eq_val  = signal_row.get("eq") or 0.0
+    bhi     = signal_row.get("buy_hi") or eq_val * 0.90
+    slo     = signal_row.get("sell_lo") or eq_val * 1.10
+    sig = engine.scan_symbol(
+        symbol=sym,
+        price_data=price_history,
+        eq=eq_val,
+        discount_bottom=bhi,
+        premium_top=slo,
+        macd_val=signal_row.get("macd_val") or 0.0,
+        macd_hist=signal_row.get("macd_hist") or 0.0,
+        days_in_discount=int(signal_row.get("snap_consol_len") or 0),
+    )
+    if sig:
+        engine.persist_signal(sig)
+    return sig
+
 
 def _ensure_backfill():
     """يشغّل الباكتست التاريخي مرة واحدة فقط لو السجل فاضي أو صغير."""

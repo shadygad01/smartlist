@@ -467,6 +467,17 @@ def r6_recovery(highs: list, lows: list, closes: list,
 
 # ─── R7: MACD Phase Engine ───────────────────────────────────────────────────
 
+def _compute_macd(closes: list, fast: int = 12, slow: int = 26,
+                  signal: int = 9) -> tuple[float, float]:
+    """Compute MACD line and histogram from a list of closing prices."""
+    s = pd.Series(closes, dtype=float)
+    ema_fast   = s.ewm(span=fast,   adjust=False).mean()
+    ema_slow   = s.ewm(span=slow,   adjust=False).mean()
+    macd_line  = ema_fast - ema_slow
+    signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+    return float(macd_line.iloc[-1]), float((macd_line - signal_line).iloc[-1])
+
+
 def r7_macd_phase(macd_val: float, macd_hist: float,
                    macd_signal_val: float = 0.0, price: float = 0.0) -> float:
     """
@@ -689,7 +700,9 @@ class DiscountReversalEngine:
         # R6
         r6_score, higher_low, recovery_pct = r6_recovery(highs, lows, closes)
 
-        # R7
+        # R7 — compute MACD from OHLCV closes if caller passed zeros (common path)
+        if (macd_val == 0.0 and macd_hist == 0.0) and len(closes) >= 26:
+            macd_val, macd_hist = _compute_macd(closes)
         r7_score = r7_macd_phase(macd_val, macd_hist, price=close)
 
         # R8

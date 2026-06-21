@@ -10,13 +10,20 @@ from __future__ import annotations
 import re
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 BASE = Path(__file__).parent.parent
 
 _ADVISOR_DB = BASE / "portfolio_advisor.db"
 _KB_DB      = BASE / "research" / "knowledge" / "knowledge_base.db"
+_POOL_DB    = BASE / "candidate_pool.db"
+
+# EGX: Sun-Thu 10:00-15:30, UTC+2 (no DST in Egypt)
+_CAIRO_TZ = timezone(timedelta(hours=2))
+_CAIRO_OPEN  = (10, 0)
+_CAIRO_CLOSE = (15, 30)
+_TRADING_DAYS = {0, 1, 2, 3, 6}  # Mon=0 Sun=6; EGX: Sun-Thu
 
 
 def _db(path: Path) -> sqlite3.Connection | None:
@@ -37,9 +44,40 @@ def _clean_reason(text: str) -> str:
     return text.strip()
 
 
+def _market_status() -> str:
+    now_cairo = datetime.now(_CAIRO_TZ)
+    dow = now_cairo.weekday()  # Mon=0, Sun=6
+    h, m = now_cairo.hour, now_cairo.minute
+    mins = h * 60 + m
+    if dow not in _TRADING_DAYS:
+        return "CLOSED (Weekend)"
+    open_mins  = _CAIRO_OPEN[0]  * 60 + _CAIRO_OPEN[1]
+    close_mins = _CAIRO_CLOSE[0] * 60 + _CAIRO_CLOSE[1]
+    if mins < open_mins:
+        return f"PRE-MARKET (opens {_CAIRO_OPEN[0]:02d}:{_CAIRO_OPEN[1]:02d})"
+    if mins > close_mins:
+        return "CLOSED (After Hours)"
+    return "OPEN"
+
+
+def _confidence_stars(total_events: int, avg_return: float, win_rate: float) -> str:
+    """DEVELOPING / CONFIRMED / STRONG / ELITE based on track record."""
+    score = 0
+    score += min(total_events, 4)
+    if avg_return >= 30:  score += 3
+    elif avg_return >= 10: score += 2
+    elif avg_return >= 0:  score += 1
+    if win_rate >= 0.8:  score += 2
+    elif win_rate >= 0.6: score += 1
+    if score >= 8:   return "ELITE"
+    if score >= 5:   return "STRONG"
+    if score >= 3:   return "CONFIRMED"
+    return "DEVELOPING"
+
+
 @dataclass
 class PresentationSnapshot:
-    # Health (from advisor — informational only)
+    # Health (from advisor — informational only, shown in System Diagnostics)
     health_stars:     str = "★☆☆☆☆"
     health_label:     str = "Unknown"
     health_narrative: str = ""
@@ -55,6 +93,17 @@ class PresentationSnapshot:
     # Analytics & leaderboards
     analytics:    dict = field(default_factory=dict)
     leaderboards: dict = field(default_factory=dict)
+
+    # Constitutional leaders (enriched per-ticker analytics)
+    constitutional_leaders: list[dict] = field(default_factory=list)
+
+    # Approaching constitutional entry (R2 50-59.9, score >= 35)
+    approaching_entries: list[dict] = field(default_factory=list)
+
+    # Runtime metadata
+    universe_size:  int = 0
+    market_status:  str = ""
+    last_scan_ts:   str = ""
 
     # Research & knowledge
     research_insights:   list[dict] = field(default_factory=list)
@@ -81,7 +130,10 @@ class PresentationSnapshot:
 
 
 def build_presentation_snapshot() -> PresentationSnapshot:
-    snap = PresentationSnapshot(generated_at=datetime.now().isoformat())
+    snap = PresentationSnapshot(
+        generated_at=datetime.now().isoformat(),
+        market_status=_market_status(),
+    )
 
     # ── 0. Constitutional Opportunity Timeline ────────────────────────────────
     try:
@@ -103,6 +155,33 @@ def build_presentation_snapshot() -> PresentationSnapshot:
         snap.analytics        = an
         snap.leaderboards     = lb
 
+        # Build constitutional leaders from analytics + timeline
+        leaders = []
+        for ticker, a in an.items():
+            ticker_events = [e for e in tl if e["ticker"] == ticker]
+            wins = sum(1 for e in ticker_events if e["return_pct"] > 0)
+            win_rate = wins / len(ticker_events) if ticker_events else 0.0
+            current_price = ticker_events[-1]["current_price"] if ticker_events else 0.0
+            peak_ret = max((e["peak_return_pct"] for e in ticker_events), default=0.0)
+            current_ret = ticker_events[-1]["return_pct"] if ticker_events else 0.0
+            sector = ticker_events[0]["sector"] if ticker_events else ""
+            confidence = _confidence_stars(a["total_events"], a["avg_return_pct"], win_rate)
+            leaders.append(dict(
+                ticker=ticker,
+                sector=sector,
+                total_events=a["total_events"],
+                avg_return_pct=a["avg_return_pct"],
+                best_return_pct=a["best_return_pct"],
+                current_price=current_price,
+                current_ret=current_ret,
+                peak_ret=peak_ret,
+                win_rate=win_rate,
+                confidence=confidence,
+            ))
+        snap.constitutional_leaders = sorted(
+            leaders, key=lambda x: (-x["total_events"], -x["avg_return_pct"])
+        )
+
         # Legacy aliases
         snap.constitutional_buys = snap.first_buys
         snap.total_buys          = len(snap.first_buys)
@@ -111,7 +190,49 @@ def build_presentation_snapshot() -> PresentationSnapshot:
     except Exception:
         pass
 
-    # ── 1. Portfolio Advisor (health narrative only) ──────────────────────────
+    # ── 1. Approaching Constitutional Entry (candidate_pool) ──────────────────
+    pool = _db(_POOL_DB)
+    if pool:
+        try:
+            latest_ts = pool.execute(
+                "SELECT MAX(snapshot_ts) FROM candidate_pool"
+            ).fetchone()[0]
+            snap.last_scan_ts = latest_ts or ""
+            universe_cnt = pool.execute(
+                "SELECT COUNT(DISTINCT ticker) FROM candidate_pool WHERE snapshot_ts=?",
+                (latest_ts,)
+            ).fetchone()[0]
+            snap.universe_size = universe_cnt or 0
+
+            # Best R2 per ticker in latest snapshot, approaching range
+            rows = pool.execute("""
+                SELECT ticker, MAX(r2_score) as r2_score, MAX(final_score) as max_score,
+                       entry_price, current_price, sector
+                FROM candidate_pool
+                WHERE snapshot_ts=?
+                  AND r2_score BETWEEN 50.0 AND 59.9
+                GROUP BY ticker
+                HAVING max_score >= 35
+                ORDER BY r2_score DESC
+                LIMIT 15
+            """, (latest_ts,)).fetchall()
+            snap.approaching_entries = [
+                dict(
+                    ticker=r["ticker"],
+                    r2_score=r["r2_score"],
+                    final_score=r["max_score"],
+                    entry_price=r["entry_price"],
+                    current_price=r["current_price"],
+                    sector=r["sector"] or "",
+                    distance_to_constitutional=round(60.0 - r["r2_score"], 1),
+                )
+                for r in rows
+            ]
+        except Exception:
+            pass
+        pool.close()
+
+    # ── 2. Portfolio Advisor (health narrative only — shown in System Diagnostics)
     advisor = _db(_ADVISOR_DB)
     if advisor:
         try:
@@ -126,7 +247,7 @@ def build_presentation_snapshot() -> PresentationSnapshot:
             pass
         advisor.close()
 
-    # ── 2. Knowledge Base ─────────────────────────────────────────────────────
+    # ── 3. Knowledge Base ─────────────────────────────────────────────────────
     kb = _db(_KB_DB)
     if kb:
         try:

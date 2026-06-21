@@ -1201,8 +1201,8 @@ def _target_box_html(symbol, r, positions):
     )
 
 def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
-    # V2 runtime — email rendered by email_v2.py from PresentationSnapshot only
-    from email_v2 import build_email
+    # V2 runtime — email rendered by egx_email.py from PresentationSnapshot only
+    from egx_email import build_email
     from presentation.presentation_snapshot import build_presentation_snapshot
 
     # Still run analyze() to keep results for change detection / real-time alerts
@@ -1754,8 +1754,8 @@ def _get_position_bq(symbol: str, db_path: str = "egx_research.db") -> dict | No
 
 
 def send_telegram_alerts(results):
-    """Constitutional Morning Brief V2 — delegates to telegram_v2.py."""
-    from telegram_v2 import send_morning_brief
+    """Constitutional Morning Brief V2 — delegates to telegram.py."""
+    from telegram import send_morning_brief
     from presentation.presentation_snapshot import build_presentation_snapshot
     date_str = now_cairo().strftime("%d %b %Y")
     snap = build_presentation_snapshot()

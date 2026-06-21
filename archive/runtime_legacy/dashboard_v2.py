@@ -335,14 +335,8 @@ def build_dashboard() -> str:
 <div style="text-align:center;font-size:11px;color:{DIM};padding:16px 0;margin-top:8px;
      border-top:1px solid {BOR};">
   EGX Constitutional Opportunity Intelligence Platform &nbsp;·&nbsp;
-  Append-Only · Immutable Events · No Portfolio Dependency
-  <br>
-  <span style="font-family:monospace;font-size:10px;color:{DIM};opacity:0.7">
-    dashboard.py v5 &nbsp;·&nbsp;
-    generated {datetime.now(timezone(timedelta(hours=2))).strftime('%Y-%m-%d %H:%M Cairo')} &nbsp;·&nbsp;
-    branch main &nbsp;·&nbsp;
-    commit $COMMIT_MARKER$
-  </span>
+  Append-Only · Immutable Events · No Portfolio Dependency &nbsp;·&nbsp;
+  {datetime.now().strftime('%d %b %Y %H:%M')}
 </div>
 </div>
 </body>
@@ -350,17 +344,9 @@ def build_dashboard() -> str:
 
 
 if __name__ == "__main__":
-    import subprocess
-    try:
-        commit = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL
-        ).decode().strip()
-    except Exception:
-        commit = "unknown"
     out  = Path(__file__).parent / "dashboard.html"
-    html = build_dashboard().replace("$COMMIT_MARKER$", commit)
+    html = build_dashboard()
     out.write_text(html, encoding="utf-8")
     sha  = hashlib.sha256(html.encode()).hexdigest()
     print(f"[Dashboard V5] Saved → dashboard.html ({len(html)//1024} KB)")
     print(f"[Dashboard V5] SHA256: {sha}")
-    print(f"[Dashboard V5] Commit: {commit}")

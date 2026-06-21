@@ -2339,8 +2339,9 @@ def _section_current_portfolio(snap) -> str:
         ret = p.get("return_pct", 0) or 0
         ret_col = G if ret >= 0 else R
         ret_str = f'+{ret:.1f}%' if ret >= 0 else f'{ret:.1f}%'
-        r2 = p.get("r2_score", 0) or 0
-        r2_col = G if r2 >= 65 else (A if r2 >= 45 else R)
+        eq = p.get("r2_score", 0) or 0
+        eq_col = G if eq >= 65 else (A if eq >= 45 else R)
+        eq_str = f"{eq:.0f}" if eq else "—"
         rows += (
             f'<tr style="border-bottom:1px solid {BOR}">'
             f'<td style="padding:7px 12px;color:{FG};font-weight:600;font-size:0.88em">{p.get("ticker","")}</td>'
@@ -2348,7 +2349,7 @@ def _section_current_portfolio(snap) -> str:
             f'<td style="padding:7px 12px;font-size:0.85em;color:{FG}">{p.get("entry_price",0):.2f} EGP</td>'
             f'<td style="padding:7px 12px;font-size:0.85em;color:{FG}">{p.get("current_price",0):.2f} EGP</td>'
             f'<td style="padding:7px 12px;font-weight:700;color:{ret_col}">{ret_str}</td>'
-            f'<td style="padding:7px 12px;color:{r2_col};font-size:0.82em">{r2:.0f}</td>'
+            f'<td style="padding:7px 12px;color:{eq_col};font-size:0.82em">{eq_str}</td>'
             f'</tr>'
         )
     if not rows:
@@ -2365,7 +2366,7 @@ def _section_current_portfolio(snap) -> str:
       <th style="padding:5px 12px;color:{DIM};text-align:left">Entry</th>
       <th style="padding:5px 12px;color:{DIM};text-align:left">Current</th>
       <th style="padding:5px 12px;color:{DIM};text-align:left">Return</th>
-      <th style="padding:5px 12px;color:{DIM};text-align:left">R2</th>
+      <th style="padding:5px 12px;color:{DIM};text-align:left">Entry Quality</th>
     </tr>
     {rows}
   </table>

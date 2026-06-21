@@ -1306,7 +1306,8 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
         ret = p.get("return_pct", 0) or 0
         ret_col = "#155724" if ret >= 0 else "#721c24"
         ret_str = f'+{ret:.1f}%' if ret >= 0 else f'{ret:.1f}%'
-        r2 = p.get("r2_score", 0) or 0
+        entry_quality = p.get("r2_score", 0) or 0
+        quality_str = f"{entry_quality:.0f}" if entry_quality else "—"
         pos_rows += f"""
 <tr style="border-bottom:1px solid #e8f0f8;">
   <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:#1a3a5c;">{p.get("ticker","")}</td>
@@ -1314,7 +1315,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
   <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#444;">{p.get("entry_price",0):.2f} EGP</td>
   <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#444;">{p.get("current_price",0):.2f} EGP</td>
   <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:{ret_col};">{ret_str}</td>
-  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#666;">{r2:.0f}</td>
+  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#666;">{quality_str}</td>
 </tr>"""
     if not pos_rows:
         pos_rows = '<tr><td colspan=6 style="padding:12px;color:#888;">No positions held.</td></tr>'
@@ -1328,7 +1329,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Entry</th>
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Current</th>
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Return</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">R2</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Entry Quality</th>
   </tr>
   {pos_rows}
 </table>"""
@@ -1835,31 +1836,15 @@ def send_alert_for_high_score(stock, score, result):
             try:
                 pct = (float(result["target"]) - float(result["price"])) / float(result["price"]) * 100
                 upside = f" (+{pct:.1f}%)"
-            except:
+            except Exception:
                 pass
-            
-            pat = result.get("pattern", {})
-            pi_line = ""
-            if pat and pat.get("ok"):
-                _ev = pat['effective_score'] / 20
-                _el = "Excellent" if _ev >= 3 else "Strong" if _ev >= 2 else "Moderate" if _ev >= 1 else "Weak"
-                pi_line = (
-                    f"\n   🧠 Pattern    *{pat['pattern_score']:.0f}/100*  |  Effective *{_ev:.1f}/5* ({_el})"
-                    f"\n      Win Rate   *{pat['win_rate']*100:.0f}%*  |  Avg Gain *+{pat['avg_gain']:.1f}%*"
-                    f"  ({pat['similar_count']} cases)"
-                )
 
-            raw_alert = result.get("raw_score", score)
-            adj_tag = f"  _(raw {raw_alert})_" if raw_alert != score else ""
-            ctx_alert = f"\n   {result['ctx_label']}" if result.get("ctx_label") else ""
             msg = (
                 f"{TG_REALTIME_HEADER}\n"
                 f"{emoji} *{NAMES.get(stock, stock)}*  `{stock}`\n\n"
-                f"   Signal     *{signal}*\n"
-                f"   Signal Quality  *{score}/100*{adj_tag}{ctx_alert}\n"
+                f"   Decision   *Constitutional BUY*\n"
                 f"   Price      *{result['price']} EGP*\n"
-                f"   Target     *{round(float(result['target']), 2)} EGP*{upside}"
-                f"{pi_line}\n"
+                f"   Target     *{round(float(result['target']), 2)} EGP*{upside}\n"
                 f"{TG_SECTION_SEP}━━\n"
                 f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}"
             )
@@ -2487,49 +2472,7 @@ def send_change_email(changed_stocks):
         hdr_bg    = "#b45309" if is_whitelist else "#1d4ed8"
         hdr_label = f"⭐ {stock} — WHITELIST" if is_whitelist else f"📈 {stock}"
 
-        pat = item.get("pattern", {})
-        if pat and pat.get("ok"):
-            _pev = pat.get("effective_score", 0) / 20
-            _pel = "Excellent" if _pev >= 3 else "Strong" if _pev >= 2 else "Moderate" if _pev >= 1 else "Weak"
-            border_col = "#f59e0b" if pat.get("low_reliability") else "#7ee787"
-            warn_row   = (
-                f'<tr><td colspan="4" style="padding-top:8px;">'
-                f'<p style="color:#f59e0b;font-size:10px;margin:0;">⚠️ Low reliability — '
-                f'This stock rarely forms a real bottom ({pat["win_rate"]*100:.0f}% win rate)</p>'
-                f'</td></tr>'
-            ) if pat.get("low_reliability") else ""
-            pat_row = (
-                f'<tr><td style="padding:12px 16px 0;">'
-                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-                f' style="background:#0d1117;border-radius:10px;border-left:4px solid {border_col};">'
-                f'<tr><td style="padding:12px 15px;">'
-                f'<p style="color:#94a3b8;font-size:10px;text-transform:uppercase;'
-                f'letter-spacing:1px;margin:0 0 10px 0;">🧠 Pattern Intelligence</p>'
-                f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
-                f'<tr>'
-                f'<td style="vertical-align:top;">'
-                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Pattern</p>'
-                f'<p style="color:#7ee787;font-size:22px;font-weight:bold;margin:0;">'
-                f'{pat["pattern_score"]:.0f}</p>'
-                f'</td>'
-                f'<td style="text-align:right;vertical-align:top;">'
-                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Win Rate</p>'
-                f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0;">'
-                f'{pat["win_rate"]*100:.0f}%</p>'
-                f'</td>'
-                f'<td style="text-align:right;vertical-align:top;">'
-                f'<p style="color:#94a3b8;font-size:10px;margin:0 0 2px 0;">Effective</p>'
-                f'<p style="color:#f8fafc;font-size:14px;font-weight:bold;margin:0 0 1px 0;">{_pev:.1f}/5</p>'
-                f'<p style="color:#94a3b8;font-size:10px;margin:0;">{_pel}</p>'
-                f'</td>'
-                f'</tr>'
-                + warn_row +
-                f'</table>'
-                f'</td></tr></table>'
-                f'</td></tr>'
-            )
-        else:
-            pat_row = ""
+        pat_row = ""  # Pattern analysis removed — constitutional portfolio presentation only
 
         if z3_lo is not None:
             dv_row = (
@@ -2593,37 +2536,12 @@ def send_change_email(changed_stocks):
             f'</tr></table>'
             f'</td></tr>'
 
-            # ── ranking metrics block ──
+            # ── buy alert context ──
             f'<tr><td style="padding:12px 16px 0;">'
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0d1117;border-radius:10px;">'
             f'<tr><td style="padding:12px 15px;">'
-            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
-            f'<tr>'
-            f'<td style="text-align:center;padding:6px 8px;background:#131929;border-radius:6px;">'
-            f'<div style="color:#f8fafc;font-size:20px;font-weight:800;">{blended}</div>'
-            f'<div style="color:#5b8dee;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;margin-top:2px;">Rank Score</div>'
-            f'</td>'
-            f'<td width="8">&nbsp;</td>'
-            f'<td style="text-align:center;padding:6px 8px;background:#131929;border-radius:6px;">'
-            f'<div style="color:#60a5fa;font-size:16px;font-weight:700;">{fexp:.1f}</div>'
-            f'<div style="color:#5b8dee;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;margin-top:2px;">Expectancy</div>'
-            f'</td>'
-            f'<td width="8">&nbsp;</td>'
-            f'<td style="text-align:center;padding:6px 8px;background:#131929;border-radius:6px;">'
-            f'<div style="color:#94a3b8;font-size:16px;font-weight:700;">{score:.0f}</div>'
-            f'<div style="color:#5b8dee;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;margin-top:2px;">SMC</div>'
-            f'</td>'
-            f'</tr></table>'
-            f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-            f' style="margin-top:10px;background:#1e2641;border-radius:20px;overflow:hidden;">'
-            f'<tr>'
-            f'<td width="{bar_w}%" style="background:{bar_gradient};height:6px;border-radius:20px;font-size:1px;">&nbsp;</td>'
-            f'<td style="height:6px;font-size:1px;">&nbsp;</td>'
-            f'</tr></table>'
-            f'<div style="margin-top:8px;padding:6px 10px;background:#0a0f1e;border-radius:6px;">'
-            f'<span style="color:#6b7280;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;">Decision Driver &nbsp;</span>'
-            f'<span style="color:#9ca3af;font-size:11px;">Discount gate passed. Factor expectancy ranking drove entry.</span>'
-            f'</div>'
+            f'<div style="color:#22c55e;font-size:14px;font-weight:700;margin-bottom:6px;">⚡ Constitutional Buy Alert</div>'
+            f'<div style="color:#94a3b8;font-size:11px;">Stock entered constitutional buy zone — portfolio management action required.</div>'
             f'</td></tr></table>'
             f'</td></tr>'
 
@@ -2715,7 +2633,7 @@ def send_change_email(changed_stocks):
         '<tr><td style="background:#141928;border-radius:0 0 16px 16px;'
         'padding:14px;text-align:center;">'
         '<p style="color:#374151;font-size:11px;margin:0;letter-spacing:0.5px;">'
-        'EGX SMC Scanner &copy; 2026</p>'
+        'EGX Constitutional Investment Platform &copy; 2026</p>'
         '</td></tr>'
 
         '</table>'
@@ -2778,7 +2696,7 @@ def send_change_alert(changed_stocks):
         lines.append(f"{'─'*25}")
         lines.append(f"📈 *{NAMES.get(stock, stock)}*  `{stock}`{wl_tag}")
         lines.append(f"   {item['from']}  →  *{item['to']}*")
-        lines.append(f"   Signal Quality  *{item['score']:.0f}/100*{adj_tag}{ctx_line}")
+        lines.append(f"   Constitutional BUY — entered buy zone{ctx_line}")
         lines.append(f"   Price      *{price} EGP*")
         lines.append(f"   Target     *{target} EGP*{upside}\n")
 
@@ -2806,7 +2724,7 @@ def send_change_alert(changed_stocks):
 
 if __name__ == "__main__":
     print(f"\n{'='*60}")
-    print(f"EGX SMC Scanner — GitHub Actions Mode")
+    print(f"EGX Constitutional Investment Platform — GitHub Actions Mode")
     print(f"Start Time: {fmt_cairo()}")
     print(f"{'='*60}\n")
     

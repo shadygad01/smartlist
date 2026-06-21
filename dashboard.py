@@ -1954,7 +1954,7 @@ def _section_top_ranked() -> str:
 
     if not ranked:
         return f"""<div class="section" style="border-left:4px solid {B}">
-  {_section_header("TOP RANKED OPPORTUNITIES", "🏆")}
+  {_section_header("RANKED OPPORTUNITIES", "🏆")}
   <div style="color:{DIM};font-size:0.85em;padding:12px 0">No BUY signals in current scan.</div>
 </div>"""
 
@@ -2018,7 +2018,7 @@ def _section_top_ranked() -> str:
   <td style="padding:9px 12px;text-align:center;width:42px">{delta_h}</td>
 </tr>"""
         if cur_rank == 5 and len(ranked) > 5:
-            rows += f"""<tr><td colspan="7" style="padding:5px 12px;background:{BG2};font-size:0.75em;color:{DIM};font-weight:700;letter-spacing:0.5px;text-transform:uppercase">B-TIER — Watchlist (#6–#10)</td></tr>"""
+            rows += f"""<tr><td colspan="7" style="padding:5px 12px;background:{BG2};font-size:0.75em;color:{DIM};font-weight:700;letter-spacing:0.5px;text-transform:uppercase">Monitored Opportunities (#6–#10)</td></tr>"""
 
     # Largest movers section
     movers_html = ""
@@ -2046,7 +2046,7 @@ def _section_top_ranked() -> str:
 </div>"""
 
     return f"""<div class="section" style="border-left:4px solid {B}">
-  {_section_header("TOP RANKED OPPORTUNITIES", "🏆")}
+  {_section_header("RANKED OPPORTUNITIES", "🏆")}
   <div style="font-size:0.78em;color:{DIM};margin-bottom:10px">
     Formula: <code style="color:{B}">0.60 × factor_exp_score + 0.40 × SMC score</code> &nbsp;·&nbsp;
     Sorted by production ranking key &nbsp;·&nbsp; {today_str}

@@ -2242,7 +2242,7 @@ def send_alert_for_high_score(stock, score, result):
                 f"━━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"{emoji} *{NAMES.get(stock, stock)}*  `{stock}`\n\n"
                 f"   Signal     *{signal}*\n"
-                f"   SMC Score  *{score}/100*{adj_tag}{ctx_alert}\n"
+                f"   Signal Quality  *{score}/100*{adj_tag}{ctx_alert}\n"
                 f"   Price      *{result['price']} EGP*\n"
                 f"   Target     *{round(float(result['target']), 2)} EGP*{upside}"
                 f"{pi_line}\n"
@@ -3165,7 +3165,7 @@ def send_change_alert(changed_stocks):
         lines.append(f"{'─'*25}")
         lines.append(f"📈 *{NAMES.get(stock, stock)}*  `{stock}`{wl_tag}")
         lines.append(f"   {item['from']}  →  *{item['to']}*")
-        lines.append(f"   SMC Score  *{item['score']:.0f}/100*{adj_tag}{ctx_line}")
+        lines.append(f"   Signal Quality  *{item['score']:.0f}/100*{adj_tag}{ctx_line}")
         lines.append(f"   Price      *{price} EGP*")
         lines.append(f"   Target     *{target} EGP*{upside}\n")
 

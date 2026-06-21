@@ -11,6 +11,7 @@ import sqlite3
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+import json
 from presentation.presentation_snapshot import PresentationSnapshot, build_presentation_snapshot
 
 BASE = Path(__file__).parent
@@ -433,12 +434,173 @@ def _s_diagnostics(snap):
 </div>"""
 
 
+def _s_universe_status(snap) -> str:
+    """UNIVERSE STATUS — all 27 canonical tickers, ONE row each, NO exceptions."""
+    try:
+        from config.scanner_config import get_constitutional_universe
+        universe = get_constitutional_universe()
+    except Exception:
+        return ""
+
+    # Build lookup maps
+    timeline_by_ticker = {}
+    for e in snap.timeline:
+        t = e["ticker"]
+        if t not in timeline_by_ticker:
+            timeline_by_ticker[t] = e  # first event = oldest; we want latest
+    # Override with latest event per ticker
+    for e in reversed(snap.timeline):
+        timeline_by_ticker[e["ticker"]] = e
+
+    approaching_by_ticker = {e["ticker"]: e for e in snap.approaching_entries}
+
+    # candidate_pool — all tickers in latest snapshot
+    pool_data = {}
+    try:
+        import sqlite3 as _sl
+        pool = _sl.connect(str(BASE / "candidate_pool.db"))
+        pool.row_factory = _sl.Row
+        latest_ts = pool.execute("SELECT MAX(snapshot_ts) FROM candidate_pool").fetchone()[0]
+        for row in pool.execute(
+            "SELECT ticker, r2_score, final_score, current_price, entry_price FROM candidate_pool WHERE snapshot_ts=?",
+            (latest_ts,)
+        ).fetchall():
+            pool_data[row["ticker"]] = dict(row)
+        pool.close()
+    except Exception:
+        pass
+
+    # signal_history fallback prices
+    sh_prices = {}
+    try:
+        sh = json.load(open(str(BASE / "signal_history.json")))
+        for t, sigs in sh.items():
+            if sigs:
+                sh_prices[t] = sigs[-1].get("price", "?")
+    except Exception:
+        pass
+
+    # Count constitutional events per ticker (for memory stars)
+    event_count = {}
+    for e in snap.timeline:
+        event_count[e["ticker"]] = event_count.get(e["ticker"], 0) + 1
+
+    rows_html = ""
+    covered = 0
+
+    STATUS_ORDER = {"PREMIUM": 0, "ACTIVE": 1, "APPROACHING": 2, "UNDER REVIEW": 3,
+                    "NEVER QUALIFIED": 4, "NO POOL DATA": 5, "NO DATA": 6}
+
+    for ticker in sorted(universe):
+        if ticker in timeline_by_ticker:
+            e = timeline_by_ticker[ticker]
+            ret = e["return_pct"]
+            price = e["current_price"]
+            entry = e["entry_price"]
+            if ret >= 50:
+                status, sc, action = "PREMIUM", G, "HOLD — TARGET HIT"
+            elif ret >= 0:
+                status, sc, action = "ACTIVE", B, "HOLD"
+            else:
+                status, sc, action = "UNDER REVIEW", A, "MONITOR"
+            ret_str = f'<span class="{"pos" if ret>=0 else "neg"}">{ret:+.1f}%</span>'
+            dist_str = "—"
+            reason = f'{e["event_type"].replace("_"," ")} · {e["event_date"]}'
+            n_events = event_count.get(ticker, 0)
+            mem = "★" * min(n_events, 5) if n_events >= 2 else "—"
+            last_update = e.get("event_date", "—")
+        elif ticker in approaching_by_ticker:
+            e = approaching_by_ticker[ticker]
+            price = e["current_price"]
+            entry = e["entry_price"]
+            dist = e["distance_to_constitutional"]
+            status, sc, action = "APPROACHING", A, f"WATCH — {dist:.1f} pts"
+            ret_str = "—"
+            dist_str = f'<span class="neu">–{dist:.1f} pts</span>'
+            reason = f'R2 {e["r2_score"]:.1f} · score {e["final_score"]:.1f}'
+            mem = "—"
+            last_update = snap.last_scan_ts[:10] if snap.last_scan_ts else "—"
+        elif ticker in pool_data:
+            p = pool_data[ticker]
+            price = p["current_price"]
+            entry = p.get("entry_price", price)
+            r2, score = p["r2_score"], p["final_score"]
+            if r2 >= 60 and score < 35:
+                status, sc, action = "NEVER QUALIFIED", DIM, f"Score {score:.0f} < 35"
+                reason = f'R2 {r2:.1f} ✓ but Score {score:.1f} < 35'
+            elif r2 < 60 and score >= 35:
+                status, sc, action = "NEVER QUALIFIED", DIM, f"R2 {r2:.1f} < 60"
+                reason = f'R2 {r2:.1f} < 60 · Score {score:.1f} ✓'
+            else:
+                status, sc, action = "NEVER QUALIFIED", DIM, f"R2 {r2:.1f} Score {score:.1f}"
+                reason = f'R2 {r2:.1f} < 60 · Score {score:.1f} < 35'
+            ret_str = "—"
+            dist_str = f'<span style="color:{DIM};">–{max(0,60-r2):.1f} pts</span>'
+            mem = "—"
+            last_update = snap.last_scan_ts[:10] if snap.last_scan_ts else "—"
+        elif ticker in sh_prices:
+            price = sh_prices[ticker]
+            entry = "—"
+            status, sc, action = "NO POOL DATA", DIM, "Not in latest scan"
+            reason = "Not scored in latest candidate snapshot"
+            ret_str = "—"; dist_str = "—"; mem = "—"
+            last_update = "—"
+        else:
+            price = "—"; entry = "—"
+            status, sc, action = "NO DATA", DIM, "—"
+            reason = "No data in any source"
+            ret_str = "—"; dist_str = "—"; mem = "—"
+            last_update = "—"
+
+        covered += 1
+        price_str = f"{price:.2f}" if isinstance(price, float) else str(price)
+        entry_str = f"{entry:.2f}" if isinstance(entry, float) else str(entry)
+        rows_html += (
+            f'<tr>'
+            f'<td style="font-weight:700;color:{W};">{ticker}</td>'
+            f'<td>{price_str}</td>'
+            f'<td><span class="badge" style="background:{sc}22;color:{sc};font-size:10px;">{status}</span></td>'
+            f'<td style="color:{DIM};">{entry_str}</td>'
+            f'<td>{dist_str}</td>'
+            f'<td style="font-size:11px;color:{DIM};">{reason}</td>'
+            f'<td style="color:{A};">{mem}</td>'
+            f'<td style="font-size:11px;">{action}</td>'
+            f'<td style="font-size:10px;color:{DIM};">{last_update}</td>'
+            f'</tr>'
+        )
+
+    total = len(universe)
+    constitutional_count = len(timeline_by_ticker)
+    approaching_count = len([t for t in universe if t in approaching_by_ticker])
+    never_count = total - constitutional_count - approaching_count
+
+    return f"""
+<div class="card">
+  <div class="section-title">&#127757; UNIVERSE STATUS &nbsp;
+    <span style="color:{G};font-weight:700;">{covered}/{total}</span>
+    &nbsp;&middot;&nbsp; <span style="color:{B};">{constitutional_count} Constitutional</span>
+    &nbsp;&middot;&nbsp; <span style="color:{A};">{approaching_count} Approaching</span>
+    &nbsp;&middot;&nbsp; <span style="color:{DIM};">{never_count} Never Qualified / No Data</span>
+  </div>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr>
+      <th>Ticker</th><th>Current</th><th>Status</th><th>Entry Zone</th>
+      <th>Distance</th><th>Reason</th><th>Memory</th><th>Action</th><th>Last Update</th>
+    </tr></thead>
+    <tbody>{rows_html}</tbody>
+  </table>
+  </div>
+</div>"""
+
+
 def build_dashboard() -> str:
     snap = build_presentation_snapshot()
     dna  = _load_stock_dna()
     body = (
         _s_stats(snap) +
         _s_waiting_for(snap) +
+        _s_universe_status(snap) +
         _s_market_map(snap, dna) +
         _s_stock_dna(snap, dna) +
         _s_timeline(snap) +

@@ -252,12 +252,13 @@ def build_universe_snapshot() -> list[dict]:
         r2    = _first_not_none(p.get("r2_score"), r.get("r2_score"), c.get("r2_score"))
         score = _first_not_none(p.get("final_score"), r.get("final_score"), c.get("final_score"))
 
-        # Current price
+        # Current price — signal_history beats stale egx_research
+        # Priority: candidate_pool (scanner-computed) > signal_history (today) > timeline > egx_research (stale)
         current_price = (
             p.get("current_price")
-            or r.get("current_price")
-            or t.get("current_price")
             or sh.get("price")
+            or t.get("current_price")
+            or r.get("current_price")
         )
 
         # Entry price

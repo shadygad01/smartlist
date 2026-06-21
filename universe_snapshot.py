@@ -163,7 +163,7 @@ def _derive_status(ticker: str, r2: float | None, score: float | None,
         return "APPROACHING"
     if r2 is not None:
         return "BELOW_THRESHOLD"
-    return "NO_DATA"
+    return "NO_HISTORY"
 
 
 def _derive_waiting_for(r2: float | None, score: float | None) -> str:
@@ -252,7 +252,7 @@ def build_universe_snapshot() -> list[dict]:
         last_price_update = t.get("event_date") or last_scan or ""
 
         # Source
-        source = p.get("source") if p else (r.get("source") if r else "constitutional_registry" if c else "NO_DATA")
+        source = p.get("source") if p else (r.get("source") if r else "constitutional_registry" if c else "NO_HISTORY")
 
         status     = _derive_status(ticker, r2, score, in_timeline, return_pct)
         reason     = _derive_waiting_for(r2, score) if not in_timeline else ""

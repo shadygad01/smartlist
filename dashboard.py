@@ -83,13 +83,15 @@ function updateClock(){
 setInterval(updateClock,1000);
 updateClock();
 function triggerScan(){
-  window.open('https://github.com/shadygad01/smartlist/actions/workflows/daily_scan.yml','_blank');
+  var confirmed=confirm('Open GitHub Actions to manually trigger the EGX Daily Scan?\n\nClick "Run workflow" on the page that opens.');
+  if(confirmed) window.open('https://github.com/shadygad01/smartlist/actions/workflows/daily_scan.yml','_blank');
 }
 function checkUpdates(){
-  fetch('version.json').then(r=>r.json()).then(d=>{
-    alert('Version: '+d.version+'\nCommit: '+d.commit+'\nGenerated: '+d.generated_at);
+  fetch('version.json?_='+Date.now()).then(r=>r.json()).then(d=>{
+    var msg='Dashboard Version: '+d.version+'\nCommit: '+d.commit+'\nGenerated: '+d.generated_at+'\nUniverse: '+d.universe_count+'/27 tickers';
+    alert(msg);
   }).catch(()=>{
-    alert('Current dashboard commit: $COMMIT_MARKER$\nRefresh page to check for updates.');
+    alert('Built at commit: $COMMIT_MARKER$\n\nCould not fetch version.json — check GitHub Pages deployment.');
   });
 }
 function refreshDash(){

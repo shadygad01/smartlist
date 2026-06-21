@@ -37,19 +37,24 @@ def _load_pool() -> dict[str, dict]:
             return {}
         rows = conn.execute(
             """SELECT ticker, r2_score, final_score, entry_price, current_price, snapshot_ts
-               FROM candidate_pool WHERE snapshot_ts=?""",
+               FROM candidate_pool WHERE snapshot_ts=? AND entry_price > 0
+               ORDER BY ticker,
+                 ABS(r2_score - 60) ASC,
+                 r2_score DESC""",
             (latest_ts,)
         ).fetchall()
         result = {}
         for r in rows:
-            result[r["ticker"]] = {
-                "r2_score":      r["r2_score"],
-                "final_score":   r["final_score"],
-                "entry_price":   r["entry_price"],
-                "current_price": r["current_price"],
-                "last_scan":     (r["snapshot_ts"] or "")[:10],
-                "source":        "candidate_pool",
-            }
+            # First row per ticker = zone where price is closest to entry (most relevant)
+            if r["ticker"] not in result:
+                result[r["ticker"]] = {
+                    "r2_score":      r["r2_score"],
+                    "final_score":   r["final_score"],
+                    "entry_price":   r["entry_price"],
+                    "current_price": r["current_price"],
+                    "last_scan":     (r["snapshot_ts"] or "")[:10],
+                    "source":        "candidate_pool",
+                }
         return result
     finally:
         conn.close()
@@ -174,20 +179,28 @@ def _derive_status(ticker: str, r2: float | None, score: float | None,
 
 
 def _derive_waiting_for(r2: float | None, score: float | None,
-                        has_scan_history: bool = False) -> str:
+                        has_scan_history: bool = False,
+                        status: str = "") -> str:
     if r2 is None or r2 == 0:
         if has_scan_history:
             return "R1=0 — Price Zone not met (score=0)"
         return "No scan data available"
-    if r2 >= 50 and r2 < 55:
-        return f"Waiting for Demand Confirmation (R2 {r2:.0f}/60)"
-    elif r2 >= 55 and r2 < 58:
-        return f"Waiting for Order Block Touch (R2 {r2:.0f}/60)"
-    elif r2 >= 58 and r2 < 60:
-        return f"Waiting for Constitutional Trigger (R2 {r2:.0f}/60)"
-    else:
-        sc_str = f" Score {score:.0f}" if score is not None else ""
-        return f"Below Threshold (R2 {r2:.0f}{sc_str})"
+    sc = score or 0.0
+    if r2 >= 60 and sc >= 35:
+        if status in ("PREMIUM", "ACTIVE"):
+            return "READY FOR RE-ACCUMULATION"
+        return "READY NOW — R2≥60, Score≥35"
+    if r2 >= 60 and sc < 35:
+        return f"Waiting for Score ≥35 (Score {sc:.1f}/35)"
+    if r2 >= 58:
+        return f"Waiting for Constitutional Trigger (R2 {r2:.1f}/60)"
+    if r2 >= 55:
+        return f"Waiting for Order Block Touch (R2 {r2:.1f}/60)"
+    if r2 >= 50:
+        if sc >= 35:
+            return f"Waiting for Demand Confirmation (R2 {r2:.1f}/60)"
+        return f"Waiting for Score ≥35 and Demand Confirmation (R2 {r2:.1f}/60, Score {sc:.1f}/35)"
+    return f"Below Threshold — Needs R2≥50 (R2 {r2:.1f}/60)"
 
 
 def _derive_action(status: str, return_pct: float | None) -> str:
@@ -273,7 +286,7 @@ def build_universe_snapshot() -> list[dict]:
         source = p.get("source") if p else (r.get("source") if r else "constitutional_registry" if c else ("signal_history" if has_scan_history else "NO_HISTORY"))
 
         status     = _derive_status(ticker, r2, score, in_timeline, return_pct, has_scan_history)
-        reason     = _derive_waiting_for(r2, score, has_scan_history) if not in_timeline else ""
+        reason     = _derive_waiting_for(r2, score, has_scan_history, status)
         action     = _derive_action(status, return_pct)
         memory     = 1 if in_timeline else 0
 

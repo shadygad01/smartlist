@@ -1,20 +1,27 @@
 """
-EGX Constitutional Opportunity Intelligence Platform — Telegram V5
-Section order: Header → New Today → Re-Accumulation → Best Opportunities →
-               Approaching Entry → Full Timeline → System Diagnostics (LAST)
-Every BUY shows: Ticker / Type / Entry Zone / Current / Return % / Signal Date
+EGX Constitutional Command Center — Telegram V6
+Morning brief: action-only, max 3 per section, 24h debounce.
 """
 from __future__ import annotations
 
+import json
 import os
-import requests
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+from pathlib import Path
+
+try:
+    import requests as _requests
+    _HAS_REQUESTS = True
+except ImportError:
+    _HAS_REQUESTS = False
 
 from presentation.presentation_snapshot import PresentationSnapshot, build_presentation_snapshot
 
-TG_HEADER = "🏛 *EGX Constitutional Opportunity Intelligence Platform*"
-SEP       = "━━━━━━━━━━━━━━━━━━━━━"
-MAX_CHARS = 4000
+BASE          = Path(__file__).parent
+_DEBOUNCE_F   = BASE / "telegram_debounce.json"
+SEP           = "━━━━━━━━━━━━━━━━━━━━━"
+MAX_CHARS     = 4000
+_CAIRO_TZ     = timezone(timedelta(hours=2))
 
 
 def _sign(r: float) -> str:
@@ -29,111 +36,74 @@ def _opp_line(e: dict) -> str:
     etype = "🟢 FIRST BUY" if e["event_type"] == "FIRST_BUY" else "🔵 RE-ACCUM"
     return (
         f"   {etype}  *{e['ticker']}*"
-        f"  Entry={e['entry_price']:.2f} EGP"
+        f"  Entry={e['entry_price']:.2f}"
         f"  Now={e['current_price']:.2f}"
-        f"  Ret={_sign(e['return_pct'])}{e['return_pct']:.1f}%"
-        f"  [{e['event_date']}]"
+        f"  {_sign(e['return_pct'])}{e['return_pct']:.1f}%"
     )
+
+def _load_debounce() -> dict:
+    if not _DEBOUNCE_F.exists():
+        return {}
+    try:
+        return json.loads(_DEBOUNCE_F.read_text())
+    except Exception:
+        return {}
+
+def _save_debounce(data: dict) -> None:
+    _DEBOUNCE_F.write_text(json.dumps(data, indent=2))
+
+def _debounce_ok(ticker: str, db: dict) -> bool:
+    """Return True if ticker has NOT been sent in last 24h."""
+    if ticker not in db:
+        return True
+    last = datetime.fromisoformat(db[ticker])
+    now  = datetime.now(_CAIRO_TZ)
+    return (now - last).total_seconds() > 86400
+
+def _mark_sent(ticker: str, db: dict) -> None:
+    db[ticker] = datetime.now(_CAIRO_TZ).isoformat()
 
 
 def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
-    lines = [TG_HEADER, f"*{date_str}*", SEP]
+    cairo_t = datetime.now(_CAIRO_TZ).strftime("%H:%M")
+    micon   = _market_icon(snap.market_status)
+    scan_s  = snap.last_scan_ts[:16].replace("T", " ") if snap.last_scan_ts else "--"
 
-    # ── Runtime Header ────────────────────────────────────────────────────────
-    from datetime import timezone, timedelta
-    cairo_tz = timezone(timedelta(hours=2))
-    cairo_t  = datetime.now(cairo_tz).strftime("%H:%M")
-    micon    = _market_icon(snap.market_status)
-    scan_s   = snap.last_scan_ts[:16].replace("T"," ") if snap.last_scan_ts else "—"
+    lines = [
+        "🏛 *EGX Constitutional Command Center*",
+        f"*{date_str}* | {cairo_t} Cairo | {micon} {snap.market_status}",
+        "",
+    ]
 
-    lines.append(f"{micon} *EGX {snap.market_status}*   {date_str}   {cairo_t} Cairo")
-    lines.append(f"   Last Scan: {scan_s}   Universe: {snap.universe_size} tickers")
-    lines.append(
-        f"   *{snap.total_events}* Total Events"
-        f"  ·  🟢 First BUY: *{len(snap.first_buys)}*"
-        f"  ·  🔵 Re-Accumulation: *{len(snap.re_accumulations)}*"
-    )
-    if snap.approaching_entries:
-        lines.append(f"   🔍 Approaching Entry: {len(snap.approaching_entries)} tickers")
-    lines.append("")
-
-    # ── New Today ─────────────────────────────────────────────────────────────
+    # New today (all — these are rare events)
     if snap.new_events_today:
-        lines.append(SEP)
-        lines.append(f"⚡ *New Constitutional Events Today ({len(snap.new_events_today)})*")
-        lines.append("")
+        lines.append(f"⚡ *NEW TODAY ({len(snap.new_events_today)})*")
         for e in snap.new_events_today:
             lines.append(_opp_line(e))
         lines.append("")
 
-    # ── Re-Accumulation ───────────────────────────────────────────────────────
-    re_events = sorted(
-        [e for e in snap.timeline if e["event_type"] == "RE_ACCUMULATION"],
-        key=lambda e: -e["return_pct"]
-    )
-    if re_events:
-        lines.append(SEP)
-        lines.append(f"🔵 *Re-Accumulation Events ({len(re_events)})*")
-        lines.append("")
-        for e in re_events:
-            lines.append(_opp_line(e))
-        lines.append("")
-
-    # ── Best Opportunities ────────────────────────────────────────────────────
-    best = sorted(snap.timeline, key=lambda e: -e["return_pct"])[:10]
-    if best:
-        lines.append(SEP)
-        lines.append("🏆 *Best Opportunities (Top 10 by Return)*")
-        lines.append("")
-        for e in best:
-            lines.append(_opp_line(e))
-        lines.append("")
-
-    # ── Approaching Entry ─────────────────────────────────────────────────────
+    # Approaching — top 3 by distance asc
     if snap.approaching_entries:
-        lines.append(SEP)
-        lines.append(f"🔍 *Approaching Constitutional Entry ({len(snap.approaching_entries)})*")
-        lines.append("")
-        for e in snap.approaching_entries[:12]:
+        top3 = sorted(snap.approaching_entries, key=lambda e: e["distance_to_constitutional"])[:3]
+        lines.append(f"🔍 *APPROACHING ({len(snap.approaching_entries)} total — top 3)*")
+        for e in top3:
             dist = e["distance_to_constitutional"]
-            pct  = dist / 60.0 * 100
             urg  = "🔥" if dist <= 0.3 else ("⚠️" if dist <= 1.0 else "📍")
             lines.append(
-                f"   {urg} *{e['ticker']}*"
-                f"  Distance: –{dist:.1f} pts ({pct:.1f}%)"
-                f"  Entry Zone: {e['entry_price']:.2f} EGP"
+                f"   {urg} *{e['ticker']}*  –{dist:.1f} pts  Zone {e['entry_price']:.2f} EGP"
             )
         lines.append("")
 
-    # ── Full Timeline ─────────────────────────────────────────────────────────
-    lines.append(SEP)
-    lines.append(f"📋 *Constitutional Opportunity Timeline ({snap.total_events} events)*")
-    lines.append("")
-    for e in snap.timeline:
-        lines.append(_opp_line(e))
-    lines.append("")
+    # Active — top 3 by return desc
+    if snap.timeline:
+        top3 = sorted(snap.timeline, key=lambda e: -e["return_pct"])[:3]
+        lines.append(f"📊 *ACTIVE ({snap.total_events} total — top 3 by return)*")
+        for e in top3:
+            lines.append(_opp_line(e))
+        lines.append("")
 
-    # ── System Diagnostics (LAST) ─────────────────────────────────────────────
     lines.append(SEP)
-    lines.append("🔧 *System Diagnostics*")
-    lines.append("")
-
-    kb_ok    = snap.knowledge_count > 0
-    res_ok   = len(snap.research_insights) > 0
-    tl_ok    = snap.total_events == 42
-    gen_s    = snap.generated_at[:19].replace("T"," ") if snap.generated_at else "—"
-
-    lines.append(f"   Dashboard   {'✓ PASS' if True else '✗ FAIL'}   {gen_s}")
-    lines.append(f"   Email       {'✓ PASS' if True else '✗ FAIL'}   {gen_s}")
-    lines.append(f"   Telegram    ✓ PASS   {gen_s}")
-    lines.append(f"   Knowledge   {'✓ PASS' if kb_ok else '✗ FAIL'}   {snap.knowledge_count} verified findings")
-    lines.append(f"   Research    {'✓ PASS' if res_ok else '✗ FAIL'}   {len(snap.research_insights)} insights")
-    lines.append("")
-    lines.append(f"   Timeline: {snap.total_events} events · First BUY: {len(snap.first_buys)} · Re-Accum: {len(snap.re_accumulations)}")
-    lines.append(f"   {snap.health_stars} {snap.health_label} _(advisor — informational only)_")
-    lines.append("")
-    lines.append(SEP)
-    lines.append(f"⏰ {datetime.now().strftime('%H:%M  |  %d %b %Y')}")
+    lines.append(f"⏰ {scan_s} | Last Scan")
 
     return "\n".join(lines)
 
@@ -155,23 +125,67 @@ def send_morning_brief(date_str: str, snap: PresentationSnapshot | None = None) 
     token   = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
-        print("Telegram V5: TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not set — skipping.")
+        print("Telegram V6: TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not set — skipping.")
         return
-
     if snap is None:
         snap = build_presentation_snapshot()
-
     full_msg = build_morning_brief(snap, date_str)
-    for chunk in _chunk(full_msg):
+    _send_chunks(full_msg, token, chat_id)
+
+
+def send_alert(event: dict, snap: PresentationSnapshot | None = None) -> None:
+    """Send a single constitutional event alert with 24h debounce."""
+    token   = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        print("Telegram V6: credentials not set — skipping alert.")
+        return
+
+    ticker = event.get("ticker", "")
+    db     = _load_debounce()
+    if not _debounce_ok(ticker, db):
+        print(f"Telegram V6: {ticker} debounced (sent < 24h ago).")
+        return
+
+    etype  = event.get("event_type", "")
+    entry  = float(event.get("entry_price", 0))
+    cur    = float(event.get("current_price", 0))
+    ret    = float(event.get("return_pct", 0))
+    date_s = event.get("event_date", "")
+    type_l = "🟢 FIRST BUY" if etype == "FIRST_BUY" else "🔵 RE-ACCUMULATION"
+    cairo_t = datetime.now(_CAIRO_TZ).strftime("%H:%M Cairo")
+
+    msg = (
+        f"⚡ *CONSTITUTIONAL ALERT*\n"
+        f"{type_l}  *{ticker}*\n"
+        f"━━━━━━━━━━━━━━━━━━━━━\n"
+        f"   Entry Zone: {entry:.2f} EGP\n"
+        f"   Current:    {cur:.2f}\n"
+        f"   Return:     {_sign(ret)}{ret:.1f}%\n"
+        f"   Date:       {date_s}\n"
+        f"━━━━━━━━━━━━━━━━━━━━━\n"
+        f"Dashboard: https://shadygad01.github.io/smartlist/\n"
+        f"⏰ {cairo_t}"
+    )
+    _send_chunks(msg, token, chat_id)
+    _mark_sent(ticker, db)
+    _save_debounce(db)
+
+
+def _send_chunks(text: str, token: str, chat_id: str) -> None:
+    if not _HAS_REQUESTS:
+        print("Telegram V6: requests not installed — cannot send.")
+        return
+    for chunk in _chunk(text):
         try:
-            resp = requests.post(
+            resp = _requests.post(
                 f"https://api.telegram.org/bot{token}/sendMessage",
                 json={"chat_id": chat_id, "text": chunk, "parse_mode": "Markdown"},
                 timeout=10,
             )
             if resp.status_code == 200:
-                print(f"Telegram V5: chunk sent ({len(chunk)} chars)")
+                print(f"Telegram V6: chunk sent ({len(chunk)} chars)")
             else:
-                print(f"Telegram V5: error {resp.status_code} — {resp.text[:200]}")
+                print(f"Telegram V6: error {resp.status_code} — {resp.text[:200]}")
         except Exception as e:
-            print(f"Telegram V5: exception — {e}")
+            print(f"Telegram V6: exception — {e}")

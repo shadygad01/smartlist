@@ -3,948 +3,1230 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>EGX Constitutional Opportunity Intelligence Platform</title>
+<title>EGX Constitutional Command Center</title>
 <style>
-body{margin:0;padding:0;background:#0b0c1a;font-family:'Segoe UI',Arial,sans-serif;color:#d0d4e8;}
-.wrap{max-width:1100px;margin:0 auto;padding:24px 16px;}
-.card{background:#10112a;border:1px solid #252645;border-radius:10px;padding:20px;margin-bottom:18px;}
+*{box-sizing:border-box;}
+body{margin:0;padding:0;background:#0b0c1a;font-family:'Segoe UI',system-ui,Arial,sans-serif;color:#d0d4e8;overflow-x:hidden;}
+.sticky-header{position:sticky;top:0;z-index:100;background:#10112a;border-bottom:2px solid #252645;padding:14px 20px;}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px;}
+.card{background:#10112a;border:1px solid #252645;border-radius:10px;padding:20px;margin-bottom:18px;overflow:hidden;}
 .section-title{font-size:13px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
   color:#8b8fa8;margin-bottom:14px;border-bottom:1px solid #252645;padding-bottom:8px;}
-.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;}
-table{width:100%;border-collapse:collapse;font-size:13px;}
-th{text-align:left;padding:8px 10px;color:#8b8fa8;font-size:11px;font-weight:700;
-  letter-spacing:0.4px;text-transform:uppercase;border-bottom:1px solid #252645;}
-td{padding:8px 10px;border-bottom:1px solid #252645;color:#d0d4e8;vertical-align:middle;}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap;}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:480px;}
+th{text-align:left;padding:9px 10px;color:#8b8fa8;font-size:11px;font-weight:700;
+  letter-spacing:0.4px;text-transform:uppercase;border-bottom:1px solid #252645;white-space:nowrap;}
+td{padding:10px 10px;border-bottom:1px solid #252645;color:#d0d4e8;vertical-align:middle;}
 tr:last-child td{border-bottom:none;}
 .pos{color:#4caf50;font-weight:700;} .neg{color:#f44336;font-weight:700;} .neu{color:#f0b840;font-weight:700;}
-.stat{background:#181930;border:1px solid #252645;border-radius:8px;padding:12px 16px;text-align:center;}
-.stat-val{font-size:22px;font-weight:700;}
+.stat{background:#181930;border:1px solid #252645;border-radius:8px;padding:10px 14px;text-align:center;}
+.stat-val{font-size:20px;font-weight:700;}
 .stat-lbl{font-size:10px;color:#8b8fa8;text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;}
-.grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
+details summary{cursor:pointer;user-select:none;list-style:none;}
+details summary::-webkit-details-marker{display:none;}
+.dna-card{background:#181930;border:1px solid #252645;border-radius:8px;padding:14px;margin-bottom:10px;}
+.dna-meta{font-size:11px;color:#8b8fa8;margin-top:6px;}
+@media(max-width:700px){
+  .grid6{grid-template-columns:repeat(3,1fr);}
+  .sticky-header{padding:10px 12px;}
+  td,th{padding:8px 6px;font-size:12px;}
+}
+@media(max-width:420px){
+  .grid6{grid-template-columns:repeat(2,1fr);}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
 
-<div style="background:#10112a;border:1px solid #252645;border-radius:12px;padding:24px;margin-bottom:18px;">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+<div class="sticky-header">
+  <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
     <div>
-      <div style="font-size:10px;color:#8b8fa8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px;">
-        EGX Constitutional Opportunity Intelligence Platform
-      </div>
-      <div style="font-size:24px;font-weight:700;color:#ffffff;">Constitutional Opportunity Timeline</div>
-      <div style="margin-top:8px;">
-        
-        <span style="color:#8b8fa8;font-weight:700;font-size:13px;">⬤ EGX CLOSED (After Hours)</span>
-      </div>
+      <span style="font-size:16px;font-weight:700;color:#ffffff;">&#127963; EGX Constitutional Command Center</span>
+      
     </div>
-    <div style="text-align:right;">
-      <div style="font-size:15px;font-weight:600;color:#ffffff;">Sunday, 21 June 2026</div>
-      <div style="font-size:20px;font-weight:700;color:#50d8d0;margin-top:4px;">16:50 Cairo</div>
-      <div style="font-size:11px;color:#8b8fa8;margin-top:6px;">Last Scan: <span style="color:#d0d4e8;">2026-06-21 04:00</span></div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:#8b8fa8;" id="cairo-date">Sunday, 21 June 2026</div>
+        <div style="font-size:14px;font-weight:700;color:#50d8d0;" id="cairo-clock">18:03 Cairo</div>
+      </div>
+      <span class="badge" style="background:#8b8fa822;color:#8b8fa8;">&#11044; EGX CLOSED (After Hours)</span>
     </div>
   </div>
+  <div style="max-width:1100px;margin:6px auto 0;font-size:11px;color:#8b8fa8;">
+    Last Scan: <span style="color:#d0d4e8;">2026-06-21 04:00</span>
+    &nbsp;&middot;&nbsp; Generated: <span style="color:#d0d4e8;">2026-06-21 16:03</span>
+    &nbsp;&middot;&nbsp; Data As Of: <span style="color:#d0d4e8;">2026-06-21 04:00</span>
+  </div>
+</div>
+<div class="wrap">
+
+<div class="card" style="padding:16px;">
   <div class="grid6">
     <div class="stat"><div class="stat-val" style="color:#ffffff;">42</div><div class="stat-lbl">Total Events</div></div>
     <div class="stat"><div class="stat-val" style="color:#50d8d0;">19</div><div class="stat-lbl">First BUY</div></div>
     <div class="stat"><div class="stat-val" style="color:#9c6fff;">23</div><div class="stat-lbl">Re-Accumulation</div></div>
-    <div class="stat"><div class="stat-val" style="color:#f0b840;">15</div><div class="stat-lbl">Approaching Entry</div></div>
+    <div class="stat"><div class="stat-val" style="color:#f0b840;">15</div><div class="stat-lbl">Approaching</div></div>
     <div class="stat"><div class="stat-val" style="color:#4caf50;">9</div><div class="stat-lbl">Premium Now</div></div>
     <div class="stat"><div class="stat-val" style="color:#d0d4e8;">24</div><div class="stat-lbl">Universe</div></div>
   </div>
 </div>
-<div class="card">
-  <div class="section-title" style="color:#9c6fff;">🔵 Re-Accumulation Events (23)</div>
-  <table><tr><th>Ticker</th><th>Type</th><th>Entry Zone</th><th>Current</th><th>Return %</th><th>Signal Date</th><th>Status</th></tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">HELI.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">3.08 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">6.40</td>
-  <td class="pos">+107.7%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-14</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">HELI.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">3.17 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">6.40</td>
-  <td class="pos">+102.2%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-25</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORHD.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.55 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">37.39</td>
-  <td class="pos">+52.3%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-16</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORHD.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.62 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">37.39</td>
-  <td class="pos">+51.9%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-29</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORHD.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.79 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">37.39</td>
-  <td class="pos">+50.8%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-02</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">EMFD.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">9.34 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">12.50</td>
-  <td class="pos">+33.8%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-02-22</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ARCC.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">44.52 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">56.11</td>
-  <td class="pos">+26.0%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-08</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">JUFO.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">25.64 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">30.80</td>
-  <td class="pos">+20.1%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-14</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">JUFO.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">25.65 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">30.80</td>
-  <td class="pos">+20.1%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-16</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ISPH.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">10.22 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">12.07</td>
-  <td class="pos">+18.1%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-17</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">GBCO.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.60 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">28.33</td>
-  <td class="pos">+15.2%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-19</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORWE.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">20.57 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">23.18</td>
-  <td class="pos">+12.7%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-29</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">GBCO.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">25.52 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">28.33</td>
-  <td class="pos">+11.0%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-05-21</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORWE.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">21.04 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">23.18</td>
-  <td class="pos">+10.2%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-02-22</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">FWRY.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">17.18 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">18.89</td>
-  <td class="pos">+9.9%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-24</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ISPH.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">11.08 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">12.07</td>
-  <td class="pos">+8.9%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-01</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">FWRY.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">17.37 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">18.89</td>
-  <td class="pos">+8.8%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-12</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">HRHO.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">26.40 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">27.90</td>
-  <td class="pos">+5.7%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-02</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">HRHO.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">27.01 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">27.90</td>
-  <td class="pos">+3.3%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-05-18</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ETEL.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">90.16 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">93.00</td>
-  <td class="pos">+3.1%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-06-11</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">EAST.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">38.56 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">39.00</td>
-  <td class="pos">+1.1%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-02-19</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">BTFH.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">2.99 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">2.99</td>
-  <td class="neu">+0.0%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-06-16</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">BTFH.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">3.00 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">2.99</td>
-  <td class="neg">-0.3%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-02-25</td>
-  <td><span style="color:#f44336;font-weight:700;font-size:11px;">⬤ REVIEW</span></td>
-</tr></table>
-</div>
-<div class="card">
-  <div class="section-title" style="color:#4caf50;">🏆 Best Opportunities (Top 10 by Return)</div>
-  <table><tr><th>Ticker</th><th>Type</th><th>Entry Zone</th><th>Current</th><th>Return %</th><th>Signal Date</th><th>Status</th></tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">HELI.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">3.08 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">6.40</td>
-  <td class="pos">+107.7%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-14</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">HELI.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">3.17 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">6.40</td>
-  <td class="pos">+102.2%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-25</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">HELI.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">3.31 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">6.40</td>
-  <td class="pos">+93.6%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">PHDC.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">8.60 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">15.80</td>
-  <td class="pos">+83.7%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-15</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORHD.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">22.90 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">37.39</td>
-  <td class="pos">+63.3%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-18</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">RMDA.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">3.28 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">5.09</td>
-  <td class="pos">+55.1%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORHD.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.55 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">37.39</td>
-  <td class="pos">+52.3%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-16</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORHD.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.62 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">37.39</td>
-  <td class="pos">+51.9%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-29</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORHD.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.79 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">37.39</td>
-  <td class="pos">+50.8%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-02</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">COMI.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">95.80 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">133.40</td>
-  <td class="pos">+39.2%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr></table>
-</div>
 <div class="card" style="border-color:#f0b84044;">
-  <div class="section-title" style="color:#f0b840;">🔍 Approaching Constitutional Entry (15 tickers)</div>
-  <div style="font-size:11px;color:#8b8fa8;margin-bottom:10px;">
-    Constitutional threshold: R2 ≥ 60 · Score ≥ 35 · Distance = pts remaining to unlock
-  </div>
-  <table>
-    <tr><th>Ticker</th><th>Sector</th><th>Current R2</th><th>Distance to Entry</th><th>Entry Zone</th><th>Current Price</th></tr>
-    
+  <div class="section-title" style="color:#f0b840;">&#128269; What Am I Waiting For (15 approaching)</div>
+  <div class="tbl-wrap">
+    <table>
+      <tr><th>Ticker</th><th>Sector</th><th>Entry Zone</th><th>Current</th><th>Distance</th></tr>
+      
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">EGAL.CA</td>
-  <td style="color:#8b8fa8;">Banking</td>
-  <td style="color:#ffffff;font-weight:700;">59.9</td>
-  <td style="color:#4caf50;font-weight:700;">–0.1 pts (0.2%)</td>
-  <td style="color:#d0d4e8;">224.07 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">Banking</td>
+  <td style="color:#ffffff;font-weight:700;">224.07 EGP</td>
   <td style="color:#d0d4e8;">299.00</td>
+  <td style="color:#4caf50;font-weight:700;">&#8211;0.1 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">ETEL.CA</td>
-  <td style="color:#8b8fa8;">Telecom</td>
-  <td style="color:#ffffff;font-weight:700;">59.9</td>
-  <td style="color:#4caf50;font-weight:700;">–0.1 pts (0.2%)</td>
-  <td style="color:#d0d4e8;">92.56 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">Telecom</td>
+  <td style="color:#ffffff;font-weight:700;">92.56 EGP</td>
   <td style="color:#d0d4e8;">93.00</td>
+  <td style="color:#4caf50;font-weight:700;">&#8211;0.1 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">EAST.CA</td>
-  <td style="color:#8b8fa8;">Industrial</td>
-  <td style="color:#ffffff;font-weight:700;">59.9</td>
-  <td style="color:#4caf50;font-weight:700;">–0.1 pts (0.2%)</td>
-  <td style="color:#d0d4e8;">39.48 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+  <td style="color:#ffffff;font-weight:700;">39.48 EGP</td>
   <td style="color:#d0d4e8;">39.00</td>
+  <td style="color:#4caf50;font-weight:700;">&#8211;0.1 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">FWRY.CA</td>
-  <td style="color:#8b8fa8;">FinTech</td>
-  <td style="color:#ffffff;font-weight:700;">59.8</td>
-  <td style="color:#4caf50;font-weight:700;">–0.2 pts (0.3%)</td>
-  <td style="color:#d0d4e8;">18.00 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">FinTech</td>
+  <td style="color:#ffffff;font-weight:700;">18.00 EGP</td>
   <td style="color:#d0d4e8;">18.89</td>
+  <td style="color:#4caf50;font-weight:700;">&#8211;0.2 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">JUFO.CA</td>
-  <td style="color:#8b8fa8;">Industrial</td>
-  <td style="color:#ffffff;font-weight:700;">59.8</td>
-  <td style="color:#4caf50;font-weight:700;">–0.2 pts (0.3%)</td>
-  <td style="color:#d0d4e8;">26.23 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+  <td style="color:#ffffff;font-weight:700;">26.23 EGP</td>
   <td style="color:#d0d4e8;">30.80</td>
+  <td style="color:#4caf50;font-weight:700;">&#8211;0.2 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">HRHO.CA</td>
-  <td style="color:#8b8fa8;">Industrial</td>
-  <td style="color:#ffffff;font-weight:700;">59.7</td>
-  <td style="color:#4caf50;font-weight:700;">–0.3 pts (0.5%)</td>
-  <td style="color:#d0d4e8;">27.27 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+  <td style="color:#ffffff;font-weight:700;">27.27 EGP</td>
   <td style="color:#d0d4e8;">27.90</td>
+  <td style="color:#4caf50;font-weight:700;">&#8211;0.3 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">EMFD.CA</td>
-  <td style="color:#8b8fa8;">Real Estate</td>
-  <td style="color:#ffffff;font-weight:700;">59.7</td>
-  <td style="color:#4caf50;font-weight:700;">–0.3 pts (0.5%)</td>
-  <td style="color:#d0d4e8;">9.10 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+  <td style="color:#ffffff;font-weight:700;">9.10 EGP</td>
   <td style="color:#d0d4e8;">12.50</td>
+  <td style="color:#4caf50;font-weight:700;">&#8211;0.3 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">ARCC.CA</td>
-  <td style="color:#8b8fa8;">Industrial</td>
-  <td style="color:#ffffff;font-weight:700;">59.6</td>
-  <td style="color:#f0b840;font-weight:700;">–0.4 pts (0.7%)</td>
-  <td style="color:#d0d4e8;">43.52 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+  <td style="color:#ffffff;font-weight:700;">43.52 EGP</td>
   <td style="color:#d0d4e8;">56.11</td>
+  <td style="color:#f0b840;font-weight:700;">&#8211;0.4 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">COMI.CA</td>
-  <td style="color:#8b8fa8;">Banking</td>
-  <td style="color:#ffffff;font-weight:700;">59.5</td>
-  <td style="color:#f0b840;font-weight:700;">–0.5 pts (0.8%)</td>
-  <td style="color:#d0d4e8;">114.16 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">Banking</td>
+  <td style="color:#ffffff;font-weight:700;">114.16 EGP</td>
   <td style="color:#d0d4e8;">133.40</td>
+  <td style="color:#f0b840;font-weight:700;">&#8211;0.5 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">GBCO.CA</td>
-  <td style="color:#8b8fa8;">Telecom</td>
-  <td style="color:#ffffff;font-weight:700;">59.4</td>
-  <td style="color:#f0b840;font-weight:700;">–0.6 pts (1.0%)</td>
-  <td style="color:#d0d4e8;">27.34 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">Telecom</td>
+  <td style="color:#ffffff;font-weight:700;">27.34 EGP</td>
   <td style="color:#d0d4e8;">28.33</td>
+  <td style="color:#f0b840;font-weight:700;">&#8211;0.6 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">MCQE.CA</td>
-  <td style="color:#8b8fa8;">Healthcare</td>
-  <td style="color:#ffffff;font-weight:700;">59.4</td>
-  <td style="color:#f0b840;font-weight:700;">–0.6 pts (1.0%)</td>
-  <td style="color:#d0d4e8;">178.81 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">Healthcare</td>
+  <td style="color:#ffffff;font-weight:700;">178.81 EGP</td>
   <td style="color:#d0d4e8;">176.75</td>
+  <td style="color:#f0b840;font-weight:700;">&#8211;0.6 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">PHDC.CA</td>
-  <td style="color:#8b8fa8;">Real Estate</td>
-  <td style="color:#ffffff;font-weight:700;">59.3</td>
-  <td style="color:#f0b840;font-weight:700;">–0.7 pts (1.2%)</td>
-  <td style="color:#d0d4e8;">8.88 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+  <td style="color:#ffffff;font-weight:700;">8.88 EGP</td>
   <td style="color:#d0d4e8;">15.80</td>
+  <td style="color:#f0b840;font-weight:700;">&#8211;0.7 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">EFIH.CA</td>
-  <td style="color:#8b8fa8;">FinTech</td>
-  <td style="color:#ffffff;font-weight:700;">59.0</td>
-  <td style="color:#f0b840;font-weight:700;">–1.0 pts (1.7%)</td>
-  <td style="color:#d0d4e8;">19.95 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">FinTech</td>
+  <td style="color:#ffffff;font-weight:700;">19.95 EGP</td>
   <td style="color:#d0d4e8;">21.00</td>
+  <td style="color:#f0b840;font-weight:700;">&#8211;1.0 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">BTFH.CA</td>
-  <td style="color:#8b8fa8;">FinTech</td>
-  <td style="color:#ffffff;font-weight:700;">59.0</td>
-  <td style="color:#f0b840;font-weight:700;">–1.0 pts (1.7%)</td>
-  <td style="color:#d0d4e8;">3.06 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">FinTech</td>
+  <td style="color:#ffffff;font-weight:700;">3.06 EGP</td>
   <td style="color:#d0d4e8;">2.99</td>
+  <td style="color:#f0b840;font-weight:700;">&#8211;1.0 pts to constitutional</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORHD.CA</td>
-  <td style="color:#8b8fa8;">Real Estate</td>
-  <td style="color:#ffffff;font-weight:700;">58.9</td>
-  <td style="color:#8b8fa8;font-weight:700;">–1.1 pts (1.8%)</td>
-  <td style="color:#d0d4e8;">25.10 EGP</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+  <td style="color:#ffffff;font-weight:700;">25.10 EGP</td>
   <td style="color:#d0d4e8;">37.39</td>
+  <td style="color:#8b8fa8;font-weight:700;">&#8211;1.1 pts to constitutional</td>
 </tr>
-  </table>
+    </table>
+  </div>
 </div>
 <div class="card">
-  <div class="section-title">📋 Constitutional Opportunity Timeline — 42 Events
-    <span style="font-size:10px;color:#8b8fa8;font-weight:400;margin-left:8px;">Append-only · Immutable · No R2 degradation</span>
-  </div>
-  <table><tr><th>Ticker</th><th>Type</th><th>Entry Zone</th><th>Current</th><th>Return %</th><th>Signal Date</th><th>Status</th></tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">COMI.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">95.80 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">133.40</td>
-  <td class="pos">+39.2%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">EAST.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">34.67 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">39.00</td>
-  <td class="pos">+12.5%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
+  <div class="section-title">&#128506; Market Map (19 tickers)</div>
+  <div class="tbl-wrap">
+    <table>
+      <tr><th>Ticker</th><th>Status</th><th>Entry</th><th>Current</th><th>Return %</th><th>Action</th><th>Memory</th></tr>
+      
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">HELI.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">3.31 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">6.40</td>
-  <td class="pos">+93.6%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
+  <td><span class="badge" style="background:#4caf5022;color:#4caf50;">PREMIUM NOW</span></td>
+  <td style="color:#ffffff;font-weight:700;">3.17 EGP</td>
+  <td style="color:#d0d4e8;">6.40</td>
+  <td class="pos">+102.2%</td>
+  <td><span style="color:#4caf50;font-weight:700;">HOLD &mdash; TARGET HIT</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;&#9733;&#9733;&#9733;&#9733;</td>
 </tr>
 <tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">HRHO.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.80 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">27.90</td>
-  <td class="pos">+12.5%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">JUFO.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.83 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">30.80</td>
-  <td class="pos">+24.1%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
+  <td style="font-weight:700;color:#50d8d0;font-size:14px;">PHDC.CA</td>
+  <td><span class="badge" style="background:#4caf5022;color:#4caf50;">PREMIUM NOW</span></td>
+  <td style="color:#ffffff;font-weight:700;">8.60 EGP</td>
+  <td style="color:#d0d4e8;">15.80</td>
+  <td class="pos">+83.7%</td>
+  <td><span style="color:#4caf50;font-weight:700;">HOLD &mdash; TARGET HIT</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">RMDA.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">3.28 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">5.09</td>
+  <td><span class="badge" style="background:#4caf5022;color:#4caf50;">PREMIUM NOW</span></td>
+  <td style="color:#ffffff;font-weight:700;">3.28 EGP</td>
+  <td style="color:#d0d4e8;">5.09</td>
   <td class="pos">+55.1%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ISPH.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">10.64 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">12.07</td>
-  <td class="pos">+13.4%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-13</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">HELI.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">3.08 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">6.40</td>
-  <td class="pos">+107.7%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-14</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">JUFO.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">25.64 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">30.80</td>
-  <td class="pos">+20.1%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-14</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
+  <td><span style="color:#4caf50;font-weight:700;">HOLD &mdash; TARGET HIT</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORHD.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">22.90 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">37.39</td>
-  <td class="pos">+63.3%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-18</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
+  <td><span class="badge" style="background:#4caf5022;color:#4caf50;">PREMIUM NOW</span></td>
+  <td style="color:#ffffff;font-weight:700;">24.62 EGP</td>
+  <td style="color:#d0d4e8;">37.39</td>
+  <td class="pos">+51.9%</td>
+  <td><span style="color:#4caf50;font-weight:700;">HOLD &mdash; TARGET HIT</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;&#9733;&#9733;&#9733;&#9733;</td>
 </tr>
 <tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORWE.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">20.55 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">23.18</td>
-  <td class="pos">+12.8%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-18</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">BTFH.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">3.04 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">2.99</td>
-  <td class="neg">-1.6%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-21</td>
-  <td><span style="color:#f44336;font-weight:700;font-size:11px;">⬤ REVIEW</span></td>
+  <td style="font-weight:700;color:#50d8d0;font-size:14px;">COMI.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">95.80 EGP</td>
+  <td style="color:#d0d4e8;">133.40</td>
+  <td class="pos">+39.2%</td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">EMFD.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">9.10 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">12.50</td>
-  <td class="pos">+37.4%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-25</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">HELI.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">3.17 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">6.40</td>
-  <td class="pos">+102.2%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-01-25</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">9.34 EGP</td>
+  <td style="color:#d0d4e8;">12.50</td>
+  <td class="pos">+33.8%</td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;&#9733;&#9733;</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">ARCC.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">42.67 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">56.11</td>
-  <td class="pos">+31.5%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-02-04</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">EAST.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">38.56 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">39.00</td>
-  <td class="pos">+1.1%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-02-19</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">EMFD.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">9.34 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">12.50</td>
-  <td class="pos">+33.8%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-02-22</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORWE.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">21.04 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">23.18</td>
-  <td class="pos">+10.2%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-02-22</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">BTFH.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">3.00 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">2.99</td>
-  <td class="neg">-0.3%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-02-25</td>
-  <td><span style="color:#f44336;font-weight:700;font-size:11px;">⬤ REVIEW</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">GBCO.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">27.44 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">28.33</td>
-  <td class="pos">+3.2%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-01</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ISPH.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">11.08 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">12.07</td>
-  <td class="pos">+8.9%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-01</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">HRHO.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">26.40 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">27.90</td>
-  <td class="pos">+5.7%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-02</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORHD.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.79 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">37.39</td>
-  <td class="pos">+50.8%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-02</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">FWRY.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">17.34 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">18.89</td>
-  <td class="pos">+8.9%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-03</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">44.52 EGP</td>
+  <td style="color:#d0d4e8;">56.11</td>
+  <td class="pos">+26.0%</td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;&#9733;&#9733;</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">TMGH.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">78.75 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">95.60</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">78.75 EGP</td>
+  <td style="color:#d0d4e8;">95.60</td>
   <td class="pos">+21.4%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-04</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ARCC.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">44.52 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">56.11</td>
-  <td class="pos">+26.0%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-08</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">FWRY.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">17.37 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">18.89</td>
-  <td class="pos">+8.8%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-12</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">PHDC.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">8.60 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">15.80</td>
-  <td class="pos">+83.7%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-15</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">JUFO.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">25.65 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">30.80</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">25.65 EGP</td>
+  <td style="color:#d0d4e8;">30.80</td>
   <td class="pos">+20.1%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-16</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORHD.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.55 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">37.39</td>
-  <td class="pos">+52.3%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-16</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;&#9733;&#9733;&#9733;&#9733;</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">ISPH.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">10.22 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">12.07</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">10.22 EGP</td>
+  <td style="color:#d0d4e8;">12.07</td>
   <td class="pos">+18.1%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-17</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">GBCO.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.60 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">28.33</td>
-  <td class="pos">+15.2%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-19</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">FWRY.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">17.18 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">18.89</td>
-  <td class="pos">+9.9%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-24</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">EFIH.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">18.70 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">21.00</td>
-  <td class="pos">+12.3%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-29</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORHD.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.62 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">37.39</td>
-  <td class="pos">+51.9%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-29</td>
-  <td><span style="color:#4caf50;font-weight:700;font-size:11px;">⬤ PREMIUM</span></td>
-</tr>
-<tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORWE.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">20.57 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">23.18</td>
-  <td class="pos">+12.7%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-29</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;&#9733;&#9733;&#9733;&#9733;</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">EFID.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">24.50 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">28.39</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">24.50 EGP</td>
+  <td style="color:#d0d4e8;">28.39</td>
   <td class="pos">+15.9%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-30</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;</td>
 </tr>
 <tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ETEL.CA</td>
-  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;font-size:10px;">FIRST BUY</span></td>
-  <td style="color:#ffffff;font-weight:700;">77.77 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">93.00</td>
-  <td class="pos">+19.6%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-03-30</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
+  <td style="font-weight:700;color:#50d8d0;font-size:14px;">ORWE.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">20.57 EGP</td>
+  <td style="color:#d0d4e8;">23.18</td>
+  <td class="pos">+12.7%</td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;&#9733;&#9733;&#9733;&#9733;</td>
 </tr>
 <tr>
-  <td style="font-weight:700;color:#50d8d0;font-size:14px;">HRHO.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">27.01 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">27.90</td>
-  <td class="pos">+3.3%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-05-18</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
+  <td style="font-weight:700;color:#50d8d0;font-size:14px;">EFIH.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">18.70 EGP</td>
+  <td style="color:#d0d4e8;">21.00</td>
+  <td class="pos">+12.3%</td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">GBCO.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">25.52 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">28.33</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">25.52 EGP</td>
+  <td style="color:#d0d4e8;">28.33</td>
   <td class="pos">+11.0%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-05-21</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;&#9733;&#9733;&#9733;&#9733;</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:14px;">FWRY.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">17.18 EGP</td>
+  <td style="color:#d0d4e8;">18.89</td>
+  <td class="pos">+9.9%</td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;&#9733;&#9733;&#9733;&#9733;</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:14px;">HRHO.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">27.01 EGP</td>
+  <td style="color:#d0d4e8;">27.90</td>
+  <td class="pos">+3.3%</td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;&#9733;&#9733;&#9733;&#9733;</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">ETEL.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">90.16 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">93.00</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">90.16 EGP</td>
+  <td style="color:#d0d4e8;">93.00</td>
   <td class="pos">+3.1%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-06-11</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;&#9733;&#9733;</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:14px;">EAST.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">38.56 EGP</td>
+  <td style="color:#d0d4e8;">39.00</td>
+  <td class="pos">+1.1%</td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;&#9733;&#9733;</td>
 </tr>
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:14px;">BTFH.CA</td>
-  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;font-size:10px;">RE-ACCUM</span></td>
-  <td style="color:#ffffff;font-weight:700;">2.99 <span style="font-size:10px;color:#8b8fa8;">EGP</span></td>
-  <td style="color:#d0d4e8;font-weight:600;">2.99</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">ACTIVE</span></td>
+  <td style="color:#ffffff;font-weight:700;">2.99 EGP</td>
+  <td style="color:#d0d4e8;">2.99</td>
   <td class="neu">+0.0%</td>
-  <td style="color:#8b8fa8;font-size:11px;">2026-06-16</td>
-  <td><span style="color:#f0b840;font-weight:700;font-size:11px;">⬤ ACTIVE</span></td>
-</tr></table>
-</div>
-<div class="card">
-  <div class="section-title">🔧 System Diagnostics</div>
-  <div class="grid2">
-    <div>
-      <div style="font-size:11px;color:#8b8fa8;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Runtime Status</div>
-      <table style="font-size:12px;">
-<tr>
-  <td style="color:#8b8fa8;font-size:12px;padding:8px 0;">Dashboard</td>
-  <td style="padding:8px 8px;"><span class="badge" style="background:#4caf5022;color:#4caf50;">✓ PASS</span></td>
-  <td style="color:#4caf50;font-size:12px;padding:8px 0;">dashboard.html · 4796d5a35c80c74b…</td>
+  <td><span style="color:#50d8d0;">HOLD</span></td>
+  <td style="color:#f0b840;font-size:13px;">&#9733;&#9733;&#9733;&#9733;&#9733;</td>
 </tr>
-<tr>
-  <td style="color:#8b8fa8;font-size:12px;padding:8px 0;">Email</td>
-  <td style="padding:8px 8px;"><span class="badge" style="background:#4caf5022;color:#4caf50;">✓ PASS</span></td>
-  <td style="color:#4caf50;font-size:12px;padding:8px 0;">email.html · 0659ef7f65bf860e…</td>
-</tr>
-<tr>
-  <td style="color:#8b8fa8;font-size:12px;padding:8px 0;">Telegram</td>
-  <td style="padding:8px 8px;"><span class="badge" style="background:#4caf5022;color:#4caf50;">✓ PASS</span></td>
-  <td style="color:#4caf50;font-size:12px;padding:8px 0;">runtime ready</td>
-</tr>
-<tr>
-  <td style="color:#8b8fa8;font-size:12px;padding:8px 0;">Knowledge Base</td>
-  <td style="padding:8px 8px;"><span class="badge" style="background:#4caf5022;color:#4caf50;">✓ PASS</span></td>
-  <td style="color:#4caf50;font-size:12px;padding:8px 0;">8 verified findings</td>
-</tr>
-<tr>
-  <td style="color:#8b8fa8;font-size:12px;padding:8px 0;">Research</td>
-  <td style="padding:8px 8px;"><span class="badge" style="background:#4caf5022;color:#4caf50;">✓ PASS</span></td>
-  <td style="color:#4caf50;font-size:12px;padding:8px 0;">5 insights loaded</td>
-</tr></table>
-    </div>
-    <div>
-      <div style="font-size:11px;color:#8b8fa8;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Live Data</div>
-      <table style="font-size:12px;">
-<tr>
-  <td style="color:#8b8fa8;font-size:12px;padding:6px 0;">Timeline Events</td>
-  <td style="color:#4caf50;font-size:12px;font-weight:600;padding:6px 8px;">42 (19 First BUY · 23 Re-Accum)</td>
-</tr>
-<tr>
-  <td style="color:#8b8fa8;font-size:12px;padding:6px 0;">Universe</td>
-  <td style="color:#d0d4e8;font-size:12px;font-weight:600;padding:6px 8px;">24 tickers</td>
-</tr>
-<tr>
-  <td style="color:#8b8fa8;font-size:12px;padding:6px 0;">Approaching Entry</td>
-  <td style="color:#f0b840;font-size:12px;font-weight:600;padding:6px 8px;">15 tickers</td>
-</tr>
-<tr>
-  <td style="color:#8b8fa8;font-size:12px;padding:6px 0;">Last Scan</td>
-  <td style="color:#8b8fa8;font-size:12px;font-weight:600;padding:6px 8px;">2026-06-21 04:00:56</td>
-</tr>
-<tr>
-  <td style="color:#8b8fa8;font-size:12px;padding:6px 0;">Generated At</td>
-  <td style="color:#8b8fa8;font-size:12px;font-weight:600;padding:6px 8px;">2026-06-21 14:50:34</td>
-</tr>
-<tr>
-  <td style="color:#8b8fa8;font-size:12px;padding:6px 0;">Market Status</td>
-  <td style="color:#8b8fa8;font-size:12px;font-weight:600;padding:6px 8px;">CLOSED (After Hours)</td>
-</tr>
-<tr>
-  <td style="color:#8b8fa8;font-size:12px;padding:6px 0;">Portfolio Advisor</td>
-  <td style="color:#8b8fa8;font-size:12px;font-weight:600;padding:6px 8px;">★★☆☆☆ Needs Attention (informational only)</td>
-</tr></table>
-    </div>
+    </table>
   </div>
 </div>
-<div style="text-align:center;font-size:11px;color:#8b8fa8;padding:16px 0;margin-top:8px;
-     border-top:1px solid #252645;">
-  EGX Constitutional Opportunity Intelligence Platform &nbsp;·&nbsp;
-  Append-Only · Immutable Events · No Portfolio Dependency &nbsp;·&nbsp;
-  21 Jun 2026 14:50
+<div class="card">
+  <details>
+    <summary>
+      <div class="section-title" style="margin-bottom:0;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+        <span>&#129516; Stock DNA (19 tickers)</span>
+        <span style="font-size:11px;color:#8b8fa8;">&#9660; expand</span>
+      </div>
+    </summary>
+    <div style="margin-top:12px;">
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">ARCC.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Industrial</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-02-04 @ 42.67 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 43.59 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 56.11
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +28.8%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 42.67 &ndash; 44.52 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 2 (1 BUY &middot; 1 Re-Accum)
+  </div>
+  <div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-03-08 @ 44.52 EGP &rarr; <span class="pos">+26.0%</span></div>
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">BTFH.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">FinTech</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-01-21 @ 3.04 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 3.01 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 2.99
+    &nbsp;&middot;&nbsp; <span class="neg">Avg Return: -0.7%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 2.99 &ndash; 3.04 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 3 (1 BUY &middot; 2 Re-Accum)
+  </div>
+  <div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-02-25 @ 3.00 EGP &rarr; <span class="neg">-0.3%</span></div><div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-06-16 @ 2.99 EGP &rarr; <span class="neu">+0.0%</span></div>
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">COMI.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Banking</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-01-04 @ 95.80 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 95.80 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 133.40
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +39.2%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 95.80 &ndash; 95.80 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 1 (1 BUY &middot; 0 Re-Accum)
+  </div>
+  
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">EAST.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Industrial</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-01-04 @ 34.67 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 36.61 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 39.00
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +6.8%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 34.67 &ndash; 38.56 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 2 (1 BUY &middot; 1 Re-Accum)
+  </div>
+  <div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-02-19 @ 38.56 EGP &rarr; <span class="pos">+1.1%</span></div>
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">EFID.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Industrial</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-03-30 @ 24.50 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 24.50 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 28.39
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +15.9%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 24.50 &ndash; 24.50 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 1 (1 BUY &middot; 0 Re-Accum)
+  </div>
+  
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">EFIH.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">FinTech</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-03-29 @ 18.70 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 18.70 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 21.00
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +12.3%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 18.70 &ndash; 18.70 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 1 (1 BUY &middot; 0 Re-Accum)
+  </div>
+  
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">EMFD.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Real Estate</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-01-25 @ 9.10 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 9.22 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 12.50
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +35.6%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 9.10 &ndash; 9.34 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 2 (1 BUY &middot; 1 Re-Accum)
+  </div>
+  <div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-02-22 @ 9.34 EGP &rarr; <span class="pos">+33.8%</span></div>
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">ETEL.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Telecom</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-03-30 @ 77.77 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 83.97 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 93.00
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +11.4%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 77.77 &ndash; 90.16 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 2 (1 BUY &middot; 1 Re-Accum)
+  </div>
+  <div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-06-11 @ 90.16 EGP &rarr; <span class="pos">+3.1%</span></div>
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">FWRY.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">FinTech</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-03-03 @ 17.34 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 17.30 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 18.89
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +9.2%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 17.18 &ndash; 17.37 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 3 (1 BUY &middot; 2 Re-Accum)
+  </div>
+  <div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-03-12 @ 17.37 EGP &rarr; <span class="pos">+8.8%</span></div><div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-03-24 @ 17.18 EGP &rarr; <span class="pos">+9.9%</span></div>
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">GBCO.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Telecom</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-03-01 @ 27.44 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 25.85 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 28.33
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +9.8%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 24.60 &ndash; 27.44 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 3 (1 BUY &middot; 2 Re-Accum)
+  </div>
+  <div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-03-19 @ 24.60 EGP &rarr; <span class="pos">+15.2%</span></div><div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-05-21 @ 25.52 EGP &rarr; <span class="pos">+11.0%</span></div>
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">HELI.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Real Estate</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-01-04 @ 3.31 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 3.18 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 6.40
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +101.1%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 3.08 &ndash; 3.31 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 3 (1 BUY &middot; 2 Re-Accum)
+  </div>
+  <div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-01-14 @ 3.08 EGP &rarr; <span class="pos">+107.7%</span></div><div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-01-25 @ 3.17 EGP &rarr; <span class="pos">+102.2%</span></div>
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">HRHO.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Industrial</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-01-04 @ 24.80 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 26.07 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 27.90
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +7.2%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 24.80 &ndash; 27.01 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 3 (1 BUY &middot; 2 Re-Accum)
+  </div>
+  <div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-03-02 @ 26.40 EGP &rarr; <span class="pos">+5.7%</span></div><div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-05-18 @ 27.01 EGP &rarr; <span class="pos">+3.3%</span></div>
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">ISPH.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Healthcare</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-01-13 @ 10.64 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 10.65 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 12.07
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +13.5%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 10.22 &ndash; 11.08 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 3 (1 BUY &middot; 2 Re-Accum)
+  </div>
+  <div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-03-01 @ 11.08 EGP &rarr; <span class="pos">+8.9%</span></div><div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-03-17 @ 10.22 EGP &rarr; <span class="pos">+18.1%</span></div>
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">JUFO.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Industrial</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-01-04 @ 24.83 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 25.37 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 30.80
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +21.4%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 24.83 &ndash; 25.65 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 3 (1 BUY &middot; 2 Re-Accum)
+  </div>
+  <div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-01-14 @ 25.64 EGP &rarr; <span class="pos">+20.1%</span></div><div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-03-16 @ 25.65 EGP &rarr; <span class="pos">+20.1%</span></div>
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">ORHD.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Real Estate</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-01-18 @ 22.90 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 24.21 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 37.39
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +54.6%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 22.90 &ndash; 24.79 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 4 (1 BUY &middot; 3 Re-Accum)
+  </div>
+  <div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-03-02 @ 24.79 EGP &rarr; <span class="pos">+50.8%</span></div><div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-03-16 @ 24.55 EGP &rarr; <span class="pos">+52.3%</span></div><div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-03-29 @ 24.62 EGP &rarr; <span class="pos">+51.9%</span></div>
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">ORWE.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Industrial</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-01-18 @ 20.55 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 20.72 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 23.18
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +11.9%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 20.55 &ndash; 21.04 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 3 (1 BUY &middot; 2 Re-Accum)
+  </div>
+  <div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-02-22 @ 21.04 EGP &rarr; <span class="pos">+10.2%</span></div><div style="font-size:12px;color:#8b8fa8;margin-top:3px;">Re-Accumulation 2026-03-29 @ 20.57 EGP &rarr; <span class="pos">+12.7%</span></div>
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">PHDC.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Real Estate</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-03-15 @ 8.60 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 8.60 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 15.80
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +83.7%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 8.60 &ndash; 8.60 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 1 (1 BUY &middot; 0 Re-Accum)
+  </div>
+  
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">RMDA.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Healthcare</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-01-04 @ 3.28 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 3.28 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 5.09
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +55.1%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 3.28 &ndash; 3.28 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 1 (1 BUY &middot; 0 Re-Accum)
+  </div>
+  
+</div>
+<div class="dna-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <span style="font-size:15px;font-weight:700;color:#50d8d0;">TMGH.CA</span>
+      &nbsp;<span class="badge" style="background:#8b8fa822;color:#8b8fa8;font-size:10px;">DEVELOPING</span>
+    </div>
+    <div style="font-size:12px;color:#8b8fa8;">Real Estate</div>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">First BUY:</span> 2026-03-04 @ 78.75 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Avg Entry:</span> 78.75 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Current:</span> 95.60
+    &nbsp;&middot;&nbsp; <span class="pos">Avg Return: +21.4%</span>
+  </div>
+  <div class="dna-meta">
+    <span style="color:#d0d4e8;">Buy Zone:</span> 78.75 &ndash; 78.75 EGP
+    &nbsp;&middot;&nbsp; <span style="color:#d0d4e8;">Events:</span> 1 (1 BUY &middot; 0 Re-Accum)
+  </div>
+  
+</div></div>
+  </details>
+</div>
+<div class="card">
+  <details>
+    <summary>
+      <div class="section-title" style="margin-bottom:0;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+        <span>&#128203; Full Timeline (42 events)</span>
+        <span style="font-size:11px;color:#8b8fa8;">&#9660; expand</span>
+      </div>
+    </summary>
+    <div style="margin-top:12px;" class="tbl-wrap">
+      <table>
+        <tr><th>Ticker</th><th>Type</th><th>Entry Zone</th><th>Current</th><th>Return %</th><th>Signal Date</th><th>Sector</th></tr>
+        
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">COMI.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">95.80 EGP</td>
+  <td style="color:#d0d4e8;">133.40</td>
+  <td class="pos">+39.2%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
+  <td style="color:#8b8fa8;font-size:11px;">Banking</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">EAST.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">34.67 EGP</td>
+  <td style="color:#d0d4e8;">39.00</td>
+  <td class="pos">+12.5%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">HELI.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">3.31 EGP</td>
+  <td style="color:#d0d4e8;">6.40</td>
+  <td class="pos">+93.6%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">HRHO.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">24.80 EGP</td>
+  <td style="color:#d0d4e8;">27.90</td>
+  <td class="pos">+12.5%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">JUFO.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">24.83 EGP</td>
+  <td style="color:#d0d4e8;">30.80</td>
+  <td class="pos">+24.1%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">RMDA.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">3.28 EGP</td>
+  <td style="color:#d0d4e8;">5.09</td>
+  <td class="pos">+55.1%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-04</td>
+  <td style="color:#8b8fa8;font-size:11px;">Healthcare</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ISPH.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">10.64 EGP</td>
+  <td style="color:#d0d4e8;">12.07</td>
+  <td class="pos">+13.4%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-13</td>
+  <td style="color:#8b8fa8;font-size:11px;">Healthcare</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">HELI.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">3.08 EGP</td>
+  <td style="color:#d0d4e8;">6.40</td>
+  <td class="pos">+107.7%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-14</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">JUFO.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">25.64 EGP</td>
+  <td style="color:#d0d4e8;">30.80</td>
+  <td class="pos">+20.1%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-14</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ORHD.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">22.90 EGP</td>
+  <td style="color:#d0d4e8;">37.39</td>
+  <td class="pos">+63.3%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-18</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ORWE.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">20.55 EGP</td>
+  <td style="color:#d0d4e8;">23.18</td>
+  <td class="pos">+12.8%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-18</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">BTFH.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">3.04 EGP</td>
+  <td style="color:#d0d4e8;">2.99</td>
+  <td class="neg">-1.6%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-21</td>
+  <td style="color:#8b8fa8;font-size:11px;">FinTech</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">EMFD.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">9.10 EGP</td>
+  <td style="color:#d0d4e8;">12.50</td>
+  <td class="pos">+37.4%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-25</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">HELI.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">3.17 EGP</td>
+  <td style="color:#d0d4e8;">6.40</td>
+  <td class="pos">+102.2%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-01-25</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ARCC.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">42.67 EGP</td>
+  <td style="color:#d0d4e8;">56.11</td>
+  <td class="pos">+31.5%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-02-04</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">EAST.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">38.56 EGP</td>
+  <td style="color:#d0d4e8;">39.00</td>
+  <td class="pos">+1.1%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-02-19</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">EMFD.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">9.34 EGP</td>
+  <td style="color:#d0d4e8;">12.50</td>
+  <td class="pos">+33.8%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-02-22</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ORWE.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">21.04 EGP</td>
+  <td style="color:#d0d4e8;">23.18</td>
+  <td class="pos">+10.2%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-02-22</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">BTFH.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">3.00 EGP</td>
+  <td style="color:#d0d4e8;">2.99</td>
+  <td class="neg">-0.3%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-02-25</td>
+  <td style="color:#8b8fa8;font-size:11px;">FinTech</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">GBCO.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">27.44 EGP</td>
+  <td style="color:#d0d4e8;">28.33</td>
+  <td class="pos">+3.2%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-01</td>
+  <td style="color:#8b8fa8;font-size:11px;">Telecom</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ISPH.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">11.08 EGP</td>
+  <td style="color:#d0d4e8;">12.07</td>
+  <td class="pos">+8.9%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-01</td>
+  <td style="color:#8b8fa8;font-size:11px;">Healthcare</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">HRHO.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">26.40 EGP</td>
+  <td style="color:#d0d4e8;">27.90</td>
+  <td class="pos">+5.7%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-02</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ORHD.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">24.79 EGP</td>
+  <td style="color:#d0d4e8;">37.39</td>
+  <td class="pos">+50.8%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-02</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">FWRY.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">17.34 EGP</td>
+  <td style="color:#d0d4e8;">18.89</td>
+  <td class="pos">+8.9%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-03</td>
+  <td style="color:#8b8fa8;font-size:11px;">FinTech</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">TMGH.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">78.75 EGP</td>
+  <td style="color:#d0d4e8;">95.60</td>
+  <td class="pos">+21.4%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-04</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ARCC.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">44.52 EGP</td>
+  <td style="color:#d0d4e8;">56.11</td>
+  <td class="pos">+26.0%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-08</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">FWRY.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">17.37 EGP</td>
+  <td style="color:#d0d4e8;">18.89</td>
+  <td class="pos">+8.8%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-12</td>
+  <td style="color:#8b8fa8;font-size:11px;">FinTech</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">PHDC.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">8.60 EGP</td>
+  <td style="color:#d0d4e8;">15.80</td>
+  <td class="pos">+83.7%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-15</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">JUFO.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">25.65 EGP</td>
+  <td style="color:#d0d4e8;">30.80</td>
+  <td class="pos">+20.1%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-16</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ORHD.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">24.55 EGP</td>
+  <td style="color:#d0d4e8;">37.39</td>
+  <td class="pos">+52.3%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-16</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ISPH.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">10.22 EGP</td>
+  <td style="color:#d0d4e8;">12.07</td>
+  <td class="pos">+18.1%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-17</td>
+  <td style="color:#8b8fa8;font-size:11px;">Healthcare</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">GBCO.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">24.60 EGP</td>
+  <td style="color:#d0d4e8;">28.33</td>
+  <td class="pos">+15.2%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-19</td>
+  <td style="color:#8b8fa8;font-size:11px;">Telecom</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">FWRY.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">17.18 EGP</td>
+  <td style="color:#d0d4e8;">18.89</td>
+  <td class="pos">+9.9%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-24</td>
+  <td style="color:#8b8fa8;font-size:11px;">FinTech</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">EFIH.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">18.70 EGP</td>
+  <td style="color:#d0d4e8;">21.00</td>
+  <td class="pos">+12.3%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-29</td>
+  <td style="color:#8b8fa8;font-size:11px;">FinTech</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ORHD.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">24.62 EGP</td>
+  <td style="color:#d0d4e8;">37.39</td>
+  <td class="pos">+51.9%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-29</td>
+  <td style="color:#8b8fa8;font-size:11px;">Real Estate</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ORWE.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">20.57 EGP</td>
+  <td style="color:#d0d4e8;">23.18</td>
+  <td class="pos">+12.7%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-29</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">EFID.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">24.50 EGP</td>
+  <td style="color:#d0d4e8;">28.39</td>
+  <td class="pos">+15.9%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-30</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ETEL.CA</td>
+  <td><span class="badge" style="background:#50d8d022;color:#50d8d0;">FIRST BUY</span></td>
+  <td style="color:#ffffff;font-weight:700;">77.77 EGP</td>
+  <td style="color:#d0d4e8;">93.00</td>
+  <td class="pos">+19.6%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-03-30</td>
+  <td style="color:#8b8fa8;font-size:11px;">Telecom</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">HRHO.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">27.01 EGP</td>
+  <td style="color:#d0d4e8;">27.90</td>
+  <td class="pos">+3.3%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-05-18</td>
+  <td style="color:#8b8fa8;font-size:11px;">Industrial</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">GBCO.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">25.52 EGP</td>
+  <td style="color:#d0d4e8;">28.33</td>
+  <td class="pos">+11.0%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-05-21</td>
+  <td style="color:#8b8fa8;font-size:11px;">Telecom</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">ETEL.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">90.16 EGP</td>
+  <td style="color:#d0d4e8;">93.00</td>
+  <td class="pos">+3.1%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-06-11</td>
+  <td style="color:#8b8fa8;font-size:11px;">Telecom</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#50d8d0;font-size:13px;">BTFH.CA</td>
+  <td><span class="badge" style="background:#9c6fff22;color:#9c6fff;">RE-ACCUM</span></td>
+  <td style="color:#ffffff;font-weight:700;">2.99 EGP</td>
+  <td style="color:#d0d4e8;">2.99</td>
+  <td class="neu">+0.0%</td>
+  <td style="color:#8b8fa8;font-size:11px;">2026-06-16</td>
+  <td style="color:#8b8fa8;font-size:11px;">FinTech</td>
+</tr>
+      </table>
+    </div>
+  </details>
+</div>
+<div class="card">
+  <details>
+    <summary>
+      <div class="section-title" style="margin-bottom:0;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+        <span>&#128295; System Diagnostics</span>
+        <span style="font-size:11px;color:#8b8fa8;">&#9660; expand</span>
+      </div>
+    </summary>
+    <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <div style="font-size:11px;color:#8b8fa8;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Runtime Status</div>
+        <table style="font-size:12px;min-width:auto;">
+<tr>
+  <td style="color:#8b8fa8;font-size:12px;padding:7px 0;">Dashboard</td>
+  <td style="padding:7px 8px;"><span class="badge" style="background:#4caf5022;color:#4caf50;">&#10003; PASS</span></td>
+  <td style="color:#4caf50;font-size:12px;padding:7px 0;">dashboard.html · af6d6eea4f7e...</td>
+</tr>
+<tr>
+  <td style="color:#8b8fa8;font-size:12px;padding:7px 0;">Email</td>
+  <td style="padding:7px 8px;"><span class="badge" style="background:#4caf5022;color:#4caf50;">&#10003; PASS</span></td>
+  <td style="color:#4caf50;font-size:12px;padding:7px 0;">email.html · 0659ef7f65bf...</td>
+</tr>
+<tr>
+  <td style="color:#8b8fa8;font-size:12px;padding:7px 0;">Telegram</td>
+  <td style="padding:7px 8px;"><span class="badge" style="background:#4caf5022;color:#4caf50;">&#10003; PASS</span></td>
+  <td style="color:#4caf50;font-size:12px;padding:7px 0;">runtime ready</td>
+</tr>
+<tr>
+  <td style="color:#8b8fa8;font-size:12px;padding:7px 0;">Knowledge Base</td>
+  <td style="padding:7px 8px;"><span class="badge" style="background:#4caf5022;color:#4caf50;">&#10003; PASS</span></td>
+  <td style="color:#4caf50;font-size:12px;padding:7px 0;">8 verified findings</td>
+</tr>
+<tr>
+  <td style="color:#8b8fa8;font-size:12px;padding:7px 0;">Research</td>
+  <td style="padding:7px 8px;"><span class="badge" style="background:#4caf5022;color:#4caf50;">&#10003; PASS</span></td>
+  <td style="color:#4caf50;font-size:12px;padding:7px 0;">5 insights loaded</td>
+</tr>
+<tr>
+  <td style="color:#8b8fa8;font-size:12px;padding:7px 0;">Stock DNA DB</td>
+  <td style="padding:7px 8px;"><span class="badge" style="background:#4caf5022;color:#4caf50;">&#10003; PASS</span></td>
+  <td style="color:#4caf50;font-size:12px;padding:7px 0;">stock_dna.db present</td>
+</tr></table>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#8b8fa8;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Live Data</div>
+        <table style="font-size:12px;min-width:auto;"><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Timeline Events</td><td style="color:#4caf50;font-size:12px;font-weight:600;padding:5px 8px;">42 (19 First BUY &middot; 23 Re-Accum)</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Universe</td><td style="color:#d0d4e8;font-size:12px;font-weight:600;padding:5px 8px;">24 tickers</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Approaching</td><td style="color:#f0b840;font-size:12px;font-weight:600;padding:5px 8px;">15 tickers</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Last Scan</td><td style="color:#8b8fa8;font-size:12px;font-weight:600;padding:5px 8px;">2026-06-21 04:00:56</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Generated At</td><td style="color:#8b8fa8;font-size:12px;font-weight:600;padding:5px 8px;">2026-06-21 16:03:24</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Market Status</td><td style="color:#8b8fa8;font-size:12px;font-weight:600;padding:5px 8px;">CLOSED (After Hours)</td></tr></table>
+      </div>
+    </div>
+  </details>
+</div>
+<div style="text-align:center;font-size:11px;color:#8b8fa8;padding:16px 0;margin-top:8px;border-top:1px solid #252645;">
+  EGX Constitutional Command Center &nbsp;&middot;&nbsp; Append-Only &middot; Immutable Events &middot; No Portfolio Dependency
+  <br><span style="font-family:monospace;font-size:10px;color:#8b8fa8;opacity:0.7">
+  dashboard.py v6 &nbsp;&middot;&nbsp; generated 2026-06-21 18:03 Cairo &nbsp;&middot;&nbsp; commit 1daf4d9
+  </span>
 </div>
 </div>
+
+<script>
+function updateClock(){
+  var now=new Date();
+  var cairo=new Date(now.toLocaleString('en-US',{timeZone:'Africa/Cairo'}));
+  var hh=String(cairo.getHours()).padStart(2,'0');
+  var mm=String(cairo.getMinutes()).padStart(2,'0');
+  var ss=String(cairo.getSeconds()).padStart(2,'0');
+  var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var dayStr=days[cairo.getDay()]+', '+cairo.getDate()+' '+months[cairo.getMonth()]+' '+cairo.getFullYear();
+  var el=document.getElementById('cairo-clock');
+  if(el) el.textContent=hh+':'+mm+':'+ss+' Cairo';
+  var dl=document.getElementById('cairo-date');
+  if(dl) dl.textContent=dayStr;
+}
+setInterval(updateClock,1000);
+updateClock();
+</script>
+
 </body>
 </html>

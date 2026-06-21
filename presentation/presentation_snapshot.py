@@ -208,12 +208,15 @@ def build_presentation_snapshot() -> PresentationSnapshot:
             snap.universe_size = universe_cnt or 0
 
             # Best R2 per ticker in latest snapshot, approaching range
+            # Only include tickers where price is AT or BELOW the entry zone
+            # (i.e., the discount condition is met — only R2 gate remains)
             rows = pool.execute("""
                 SELECT ticker, MAX(r2_score) as r2_score, MAX(final_score) as max_score,
                        entry_price, current_price, sector
                 FROM candidate_pool
                 WHERE snapshot_ts=?
                   AND r2_score BETWEEN 50.0 AND 59.9
+                  AND current_price <= entry_price
                 GROUP BY ticker
                 HAVING max_score >= 35
                 ORDER BY r2_score DESC
@@ -228,6 +231,9 @@ def build_presentation_snapshot() -> PresentationSnapshot:
                     current_price=r["current_price"],
                     sector=r["sector"] or "",
                     distance_to_constitutional=round(60.0 - r["r2_score"], 1),
+                    need_move_pct=round(
+                        (r["entry_price"] - r["current_price"]) / r["entry_price"] * 100, 1
+                    ) if r["entry_price"] else 0.0,
                 )
                 for r in rows
             ]

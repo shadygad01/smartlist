@@ -170,32 +170,37 @@ def _s_stats(snap):
 
 
 def _s_waiting_for(snap):
-    entries = sorted(snap.approaching_entries, key=lambda e: e["distance_to_constitutional"])
+    # Only tickers where price <= entry_price (discount met, waiting for R2 gate)
+    entries = sorted(
+        [e for e in snap.approaching_entries if e.get("current_price", 0) <= e.get("entry_price", 0)],
+        key=lambda e: e["distance_to_constitutional"]
+    )
     if not entries:
         return f"""
 <div class="card" style="border-color:{A}44;">
   <div class="section-title" style="color:{A};">&#128269; What Am I Waiting For</div>
-  <div style="color:{DIM};font-size:13px;">No tickers approaching constitutional entry right now.</div>
+  <div style="color:{DIM};font-size:13px;">No tickers in the discount zone approaching constitutional entry right now.</div>
 </div>"""
     rows = ""
     for e in entries:
         dist = e["distance_to_constitutional"]
+        need_move = e.get("need_move_pct", 0.0)
         urg_c = G if dist <= 0.3 else (A if dist <= 1.0 else DIM)
-        waiting = f"&#8211;{dist:.1f} pts to constitutional"
         rows += f"""
 <tr>
   <td style="font-weight:700;color:{B};font-size:14px;">{e['ticker']}</td>
   <td style="color:{DIM};font-size:11px;">{e.get('sector','')}</td>
   <td style="color:{W};font-weight:700;">{e['entry_price']:.2f} EGP</td>
   <td style="color:{FG};">{e['current_price']:.2f}</td>
-  <td style="color:{urg_c};font-weight:700;">{waiting}</td>
+  <td style="color:{A};">+{need_move:.1f}% in zone</td>
+  <td style="color:{urg_c};font-weight:700;">R2 {60.0 - dist:.1f} / 60 &mdash; {dist:.1f} pts to gate</td>
 </tr>"""
     return f"""
 <div class="card" style="border-color:{A}44;">
-  <div class="section-title" style="color:{A};">&#128269; What Am I Waiting For ({len(entries)} approaching)</div>
+  <div class="section-title" style="color:{A};">&#128269; What Am I Waiting For ({len(entries)} in discount zone, near gate)</div>
   <div class="tbl-wrap">
     <table>
-      <tr><th>Ticker</th><th>Sector</th><th>Entry Zone</th><th>Current</th><th>Distance</th></tr>
+      <tr><th>Ticker</th><th>Sector</th><th>Entry Zone</th><th>Current</th><th>Price Position</th><th>R2 Gate</th></tr>
       {rows}
     </table>
   </div>

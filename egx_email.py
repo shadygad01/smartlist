@@ -140,27 +140,55 @@ def _all_active(snap):
 
 
 def _watch_list(snap):
-    if not snap.approaching_entries:
+    # Use universe_snapshot for APPROACHING tickers (unified data source)
+    approaching = [r for r in (snap.universe_snapshot or []) if r.get("status") == "APPROACHING"]
+    # Fallback to approaching_entries if universe_snapshot not populated
+    if not approaching and snap.approaching_entries:
+        rows = ""
+        for e in snap.approaching_entries:
+            dist = e["distance_to_constitutional"]
+            urg  = _GREEN if dist <= 0.3 else (_AMBER if dist <= 1.0 else _MUTED)
+            waiting = f"&#8211;{dist:.1f} pts to constitutional"
+            rows += (
+                f'<tr style="border-bottom:1px solid #e8f0f8;">'
+                f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:{_NAVY};">{e["ticker"]}</td>'
+                f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;color:{_MUTED};">{e.get("sector","")}</td>'
+                f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">{e["current_price"]:.2f}</td>'
+                f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">{e["entry_price"]:.2f} EGP</td>'
+                f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;color:{urg};font-weight:700;">{waiting}</td>'
+                f'</tr>'
+            )
+        return (
+            _section_title(f"&#128269; Watch List ({len(snap.approaching_entries)} approaching)") +
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+            f' style="border:1px solid #e8d5a0;border-collapse:collapse;background:#fffcf0;">'
+            f'{_th("Ticker","Sector","Current","Entry Zone","Waiting For")}'
+            f'{rows}</table>'
+        )
+    if not approaching:
         return ""
     rows = ""
-    for e in snap.approaching_entries:
-        dist = e["distance_to_constitutional"]
-        urg  = _GREEN if dist <= 0.3 else (_AMBER if dist <= 1.0 else _MUTED)
-        waiting = f"&#8211;{dist:.1f} pts to constitutional"
+    for e in sorted(approaching, key=lambda x: -(x.get("r2_score") or 0)):
+        cur   = e.get("current_price") or 0.0
+        ez    = e.get("entry_zone") or 0.0
+        r2    = e.get("r2_score") or 0.0
+        dist  = round(60.0 - r2, 1)
+        urg   = _GREEN if dist <= 0.3 else (_AMBER if dist <= 1.0 else _MUTED)
+        waiting = e.get("reason") or f"&#8211;{dist:.1f} pts to constitutional"
         rows += (
             f'<tr style="border-bottom:1px solid #e8f0f8;">'
             f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:{_NAVY};">{e["ticker"]}</td>'
-            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;color:{_MUTED};">{e.get("sector","")}</td>'
-            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">{e["current_price"]:.2f}</td>'
-            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">{e["entry_price"]:.2f} EGP</td>'
+            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;color:{_MUTED};">R2={r2:.0f}</td>'
+            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">{cur:.2f}</td>'
+            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">{ez:.2f} EGP</td>'
             f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;color:{urg};font-weight:700;">{waiting}</td>'
             f'</tr>'
         )
     return (
-        _section_title(f"&#128269; Watch List ({len(snap.approaching_entries)} approaching)") +
+        _section_title(f"&#128269; Watch List ({len(approaching)} approaching)") +
         f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
         f' style="border:1px solid #e8d5a0;border-collapse:collapse;background:#fffcf0;">'
-        f'{_th("Ticker","Sector","Current","Entry Zone","Waiting For")}'
+        f'{_th("Ticker","R2","Current","Entry Zone","Waiting For")}'
         f'{rows}</table>'
     )
 

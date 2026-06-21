@@ -433,12 +433,87 @@ def _s_diagnostics(snap):
 </div>"""
 
 
+def _s_universe_status(snap) -> str:
+    rows_data = snap.universe_snapshot
+    if not rows_data:
+        return ""
+    total = len(rows_data)
+
+    def _status_badge(status):
+        color_map = {
+            "PREMIUM":         G,
+            "ACTIVE":          B,
+            "UNDER_REVIEW":    A,
+            "APPROACHING":     P,
+            "BELOW_THRESHOLD": DIM,
+            "NO_DATA":         DIM,
+        }
+        c = color_map.get(status, DIM)
+        return f'<span class="badge" style="background:{c}22;color:{c};">{status.replace("_"," ")}</span>'
+
+    def _mem_stars(memory):
+        return "&#9733;" if memory else ""
+
+    rows_html = ""
+    for r in sorted(rows_data, key=lambda x: (
+        {"PREMIUM": 0, "ACTIVE": 1, "UNDER_REVIEW": 2, "APPROACHING": 3,
+         "BELOW_THRESHOLD": 4, "NO_DATA": 5}.get(x["status"], 9)
+    )):
+        cur  = f'{r["current_price"]:.2f}' if r.get("current_price") else "—"
+        ez   = f'{r["entry_zone"]:.2f}' if r.get("entry_zone") else "—"
+        dist = f'{r["distance"]:+.1f}%' if r.get("distance") is not None else "—"
+        ret  = r.get("return_pct")
+        ret_html = (
+            f'<span class="{_rc(ret)}">{_sign(ret)}{ret:.1f}%</span>'
+            if ret is not None else "—"
+        )
+        reason  = r.get("reason") or ""
+        action  = r.get("action") or "—"
+        mem     = _mem_stars(r.get("memory", 0))
+        upd     = (r.get("last_price_update") or "")[:10]
+        rows_html += f"""
+<tr>
+  <td style="font-weight:700;color:{B};font-size:13px;">{r['ticker']}</td>
+  <td style="color:{FG};">{cur}</td>
+  <td>{_status_badge(r['status'])}</td>
+  <td style="color:{W};font-weight:600;">{ez}</td>
+  <td>{ret_html}</td>
+  <td style="color:{DIM};font-size:11px;max-width:200px;">{reason}</td>
+  <td style="color:{A};font-size:13px;">{mem}</td>
+  <td style="color:{FG};font-size:12px;">{action}</td>
+  <td style="color:{DIM};font-size:11px;">{upd}</td>
+</tr>"""
+
+    return f"""
+<div class="card">
+  <details>
+    <summary>
+      <div class="section-title" style="margin-bottom:0;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+        <span>&#127758; Universe Status ({total} / 27)</span>
+        <span style="font-size:11px;color:{DIM};">&#9660; expand</span>
+      </div>
+    </summary>
+    <div style="margin-top:12px;" class="tbl-wrap">
+      <table>
+        <tr>
+          <th>Ticker</th><th>Current</th><th>Status</th><th>Entry Zone</th>
+          <th>Return %</th><th>Reason / Waiting For</th><th>Mem</th>
+          <th>Action</th><th>Last Update</th>
+        </tr>
+        {rows_html}
+      </table>
+    </div>
+  </details>
+</div>"""
+
+
 def build_dashboard() -> str:
     snap = build_presentation_snapshot()
     dna  = _load_stock_dna()
     body = (
         _s_stats(snap) +
         _s_waiting_for(snap) +
+        _s_universe_status(snap) +
         _s_market_map(snap, dna) +
         _s_stock_dna(snap, dna) +
         _s_timeline(snap) +
@@ -471,7 +546,9 @@ def build_dashboard() -> str:
 
 if __name__ == "__main__":
     import subprocess
+    from universe_snapshot import build_universe_snapshot
     from stock_dna_engine import build_stock_dna
+    build_universe_snapshot()
     build_stock_dna()
     try:
         commit = subprocess.check_output(["git","rev-parse","--short","HEAD"],stderr=subprocess.DEVNULL).decode().strip()

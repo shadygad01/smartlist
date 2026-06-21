@@ -208,6 +208,17 @@ def build_dow_banner(dj):
 # W_PRICE, W_OB, W_LIQ, W_HTF, W_AVWAP, W_MACD, W_DIV, W_DZ
 # imported from signal_engine (loaded from config/weights.json)
 
+# ── Constitutional Cleanup Feature Flags ──────────────────────────────────────
+# Certified LEGACY SAFE by forensic audit 2026-06-21.
+# All flags default False = legacy disabled. Set True to re-enable temporarily.
+# These flags control ONLY email/Telegram display — no effect on constitutional
+# pipeline (candidate_pool.db, buy_registry, universe_snapshot, timeline, DNA).
+ENABLE_STOCK_MULT      = False   # stock_mult / STOCK_QUALITY / compute_expectancy
+ENABLE_CTX_MULT        = False   # CTX_RAMADAN_MULT / CTX_CBE_MULT / regime mult
+ENABLE_PATTERN_ENGINE  = False   # analyze_entry_patterns / learned_weights
+ENABLE_EXPECTANCY      = False   # ranking_engine.compute_expectancy()
+ENABLE_LEGACY_RANKING  = False   # factor_expectancy_score display field
+
 # ── Stock Quality Tiers ────────────────────────────────────────────────────────
 # ⚠️ تنبيه منهجي (مراجعة مستقلة 2026-06):
 # التصنيفات مشتقة من متوسط عوائد "أحداث قيعان محلية" تاريخية، وليست من
@@ -744,36 +755,36 @@ def analyze(symbol):
         # Gate logic uses raw `total`. Signal label + display use `score`.
         ctx_mult   = 1.0
         ctx_labels = []
-        if is_ramadan():
-            ctx_mult  *= CTX_RAMADAN_MULT
-            ctx_labels.append("📿 Ramadan −30%")
-        if is_cbe_window():
-            ctx_mult  *= CTX_CBE_MULT
-            ctx_labels.append("🏦 CBE Window +30%")
+        if ENABLE_CTX_MULT:
+            if is_ramadan():
+                ctx_mult  *= CTX_RAMADAN_MULT
+                ctx_labels.append("📿 Ramadan −30%")
+            if is_cbe_window():
+                ctx_mult  *= CTX_CBE_MULT
+                ctx_labels.append("🏦 CBE Window +30%")
         # ranking_engine is the authority; falls back to STOCK_QUALITY when sample_n < 30
         _factor_exp_score = 0.0
-        try:
-            import ranking_engine as _re
-            _exp = _re.compute_expectancy(symbol)
-            if _exp.sample_n >= 30:
-                stock_mult = _re._expectancy_to_mult(_exp.expectancy)
-                _tier_lbl  = f"📊 E={_exp.expectancy*100:.1f}% n={_exp.sample_n}"
-            else:
+        if ENABLE_STOCK_MULT:
+            try:
+                import ranking_engine as _re
+                _exp = _re.compute_expectancy(symbol) if ENABLE_EXPECTANCY else None
+                if _exp is not None and _exp.sample_n >= 30:
+                    stock_mult = _re._expectancy_to_mult(_exp.expectancy)
+                    _tier_lbl  = f"📊 E={_exp.expectancy*100:.1f}% n={_exp.sample_n}"
+                else:
+                    stock_mult = STOCK_QUALITY.get(symbol, 1.0)
+                    _tier_lbl  = {1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,"")
+                if ENABLE_LEGACY_RANKING and cur < eq:
+                    _factor_exp_score = _re.factor_expectancy_score({
+                        "r2_ob": r2, "r3_liquidity": r3, "r4_htf": r4,
+                        "r5_avwap": r5, "r6_macd": r6, "r7_div": r7, "r8_demand": r8,
+                        "sv_hit": bool(sv_result[0]) if sv_result else False,
+                        "hvn_hit": bool(hvn_result[0]) if hvn_result else False,
+                    })
+            except Exception:
                 stock_mult = STOCK_QUALITY.get(symbol, 1.0)
                 _tier_lbl  = {1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,"")
-            # Challenger: factor-level expectancy score (r2–r8, validated +19% top-quartile WR)
-            # Guard: _sg (and sv_result/hvn_result) only exist in discount-zone branch (cur < eq)
-            if cur < eq:
-                _factor_exp_score = _re.factor_expectancy_score({
-                    "r2_ob": r2, "r3_liquidity": r3, "r4_htf": r4,
-                    "r5_avwap": r5, "r6_macd": r6, "r7_div": r7, "r8_demand": r8,
-                    "sv_hit": bool(sv_result[0]) if sv_result else False,
-                    "hvn_hit": bool(hvn_result[0]) if hvn_result else False,
-                })
-        except Exception:
-            stock_mult = STOCK_QUALITY.get(symbol, 1.0)
-            _tier_lbl  = {1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,"")
-        ctx_labels.append(_tier_lbl)
+            ctx_labels.append(_tier_lbl)
 
         # ── Regime Filter — multiplied into ctx_mult when bear regime detected ──
         # Enabled via gates_config.json "regime_filter_enabled": true
@@ -781,10 +792,8 @@ def analyze(symbol):
         # gate logic directly — reduces adj_score so borderline signals fall below gate.
         _regime_state = ""
         _regime_mult  = 1.0
-        if _REGIME_FILTER_ENABLED and cur < eq:
-            # _sg is available here since we're inside `if _REGIME_FILTER_ENABLED and cur < eq`
+        if ENABLE_CTX_MULT and _REGIME_FILTER_ENABLED and cur < eq:
             _sg_trend = (_sg.get("egx30_trend", "") or "")
-            # _sg is the score_signal() dict (only available in discount-zone branch)
             if _sg_trend in ("DOWN", "DOWNTREND", "bearish", "Bearish", "downtrend"):
                 _regime_mult   = _REGIME_DOWN_MULT
                 _regime_state  = "bear"
@@ -792,7 +801,7 @@ def analyze(symbol):
                 ctx_labels.append(f"📉 Bear Regime {_REGIME_DOWN_MULT:.0%}")
             else:
                 _regime_state = "bull" if _sg_trend else "neutral"
-        elif _REGIME_FILTER_ENABLED and cur >= eq:
+        elif ENABLE_CTX_MULT and _REGIME_FILTER_ENABLED and cur >= eq:
             _regime_state = "neutral"
 
         ctx_label  = " · ".join(x for x in ctx_labels if x)
@@ -846,16 +855,13 @@ def analyze(symbol):
                                            _sv=sv_result, _hvn=hvn_result)
 
         # ── Pattern Recognition + Historical Backtesting ──────────────────────
-        # يشتغل فقط لو السعر في Discount Zone (أقل من EQ)
-        if cur >= eq:
-            pattern_data = {"ok": False, "reason": "premium",
-                            "label": "Price in Premium Zone — pattern analysis inactive"}
+        if not ENABLE_PATTERN_ENGINE or cur >= eq:
+            pattern_data = {"ok": False, "reason": "disabled" if not ENABLE_PATTERN_ENGINE else "premium",
+                            "label": "Pattern analysis disabled" if not ENABLE_PATTERN_ENGINE else "Price in Premium Zone — pattern analysis inactive"}
         else:
-            # استخدام 500 يوم (~2 سنة) للحصول على عينة تاريخية أكبر وأدق
-            # fallback للـ df الأصلي (110 يوم) لو 500 رجع فاضي أو قليل
             df_long = download_data(symbol, 500)
             if df_long.empty or len(df_long) < 30:
-                df_long = df   # df الأصلي مضمون شغال لكل الأسهم بما فيهم ORAS
+                df_long = df
             pattern_data = analyze_entry_patterns(df_long, symbol=symbol)
 
         try:

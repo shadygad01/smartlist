@@ -1,112 +1,298 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>EGX Constitutional Investment Platform</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',system-ui,sans-serif;background:#0b0c1a;color:#d0d4e8;padding:0}
-    .header{background:linear-gradient(135deg,#0a1628,#141e40);border-bottom:2px solid #50d8d0;
-             padding:20px 28px;display:flex;align-items:center;justify-content:space-between}
-    .header h1{font-size:1.2em;color:#fff;font-weight:700;letter-spacing:0.04em}
-    .header .meta{font-size:0.78em;color:#8b8fa8}
-    .nav{display:flex;gap:10px;padding:10px 28px;background:#0e0f23;border-bottom:1px solid #252645;
-          font-size:0.78em;align-items:center;flex-wrap:wrap}
-    .nav a{color:#50d8d0;text-decoration:none;padding:4px 9px;border-radius:4px;
-            border:1px solid #252645;transition:background 0.2s;white-space:nowrap}
-    .nav a:hover{background:#181930}
-    .nav .active{background:#181930;border-color:#50d8d0}
-    .container{max-width:1080px;margin:24px auto;padding:0 16px}
-    .footer{text-align:center;color:#8b8fa8;font-size:0.75em;padding:24px 0 36px;
-             border-top:1px solid #252645;margin-top:12px}
-    table th{font-weight:600}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EGX Constitutional Investment Platform</title>
+<style>
+body{margin:0;padding:0;background:#0b0c1a;font-family:'Segoe UI',Arial,sans-serif;color:#d0d4e8;}
+.wrap{max-width:1100px;margin:0 auto;padding:24px 16px;}
+.card{background:#10112a;border:1px solid #252645;border-radius:10px;padding:20px;margin-bottom:18px;}
+.section-title{font-size:13px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
+  color:#8b8fa8;margin-bottom:14px;border-bottom:1px solid #252645;padding-bottom:8px;}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;}
+.chip{display:inline-block;padding:4px 12px;border-radius:14px;font-size:12px;
+  background:#181930;border:1px solid #252645;color:#d0d4e8;margin:3px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:8px 10px;color:#8b8fa8;font-size:11px;font-weight:700;
+  letter-spacing:0.4px;text-transform:uppercase;border-bottom:1px solid #252645;}
+td{padding:8px 10px;border-bottom:1px solid #252645;color:#d0d4e8;}
+tr:last-child td{border-bottom:none;}
+.pos{color:#4caf50;font-weight:700;} .neg{color:#f44336;font-weight:700;} .neu{color:#f0b840;}
+.bar-bg{background:#181930;border-radius:4px;height:8px;overflow:hidden;margin-top:4px;}
+.bar-fill{height:8px;border-radius:4px;}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+.metric-cell{background:#181930;border:1px solid #252645;border-radius:8px;padding:14px;}
+.metric-val{font-size:22px;font-weight:700;margin-bottom:4px;}
+.metric-lbl{font-size:11px;color:#8b8fa8;text-transform:uppercase;letter-spacing:0.4px;}
+</style>
 </head>
 <body>
+<div class="wrap">
 
-<div class="header">
-  <div>
-    <h1>⚡ EGX Constitutional Investment Platform</h1>
-    <div class="meta">Research-Driven · Constitutionally Governed · 27-Symbol Universe · Live State</div>
-  </div>
-  <div class="meta" style="text-align:right">
-    <div style="color:#d0d4e8">2026-06-21 12:06:46</div>
-    <div>Cairo Time</div>
-  </div>
-</div>
-
-<div class="nav">
-  <span style="color:#8b8fa8;font-size:0.85em">GO TO:</span>
-  <a href="#header" class="active" style="border-color:#50d8d0;color:#50d8d0">⚖️ Health</a>
-  <a href="#today">📋 Today</a>
-  <a href="#portfolio">📂 Portfolio</a>
-  <a href="#health">⚖️ Metrics</a>
-  <a href="#research">🔬 Research</a>
-  <a href="#system">🔧 System</a>
-  <a href="heatmap.html" style="border-color:#4caf50;color:#4caf50">📈 Heatmap</a>
-</div>
-
-<div class="container">
-<div id="header">
-<div style="background:linear-gradient(135deg,#10112a,#181930);border:2px solid #50d8d0;border-radius:10px;padding:20px 24px;margin-bottom:18px">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+<div style="background:#10112a;border:1px solid #252645;border-radius:10px;padding:24px;margin-bottom:18px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
     <div>
-      <div style="font-size:1.6em;font-weight:700;color:#f44336">★★☆☆☆ Needs Attention</div>
-      <div style="color:#8b8fa8;font-size:0.85em;margin-top:4px">Industrial exposure is significantly above the preferred level (40.0%). Future additions should naturally reduce concentration.
+      <div style="font-size:11px;color:#8b8fa8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">
+        EGX Constitutional Investment Platform
+      </div>
+      <div style="font-size:22px;font-weight:700;color:#f44336;">★★☆☆☆ Needs Attention</div>
+      <div style="font-size:13px;color:#8b8fa8;margin-top:6px;">Industrial exposure is significantly above the preferred level (40.0%). Future additions should naturally reduce concentration.
 Maximum pairwise correlation is moderate (0.671). Within acceptable range.</div>
     </div>
-    <div style="text-align:right">
-      <div style="color:#d0d4e8;font-size:0.9em;font-weight:600">15 positions held</div>
-      <div style="margin-top:6px"><span style="background:#f44336;color:#fff;padding:2px 9px;border-radius:4px;font-size:0.8em;font-weight:600;margin-right:6px">⚠ Sector Concentrated</span><span style="background:#f44336;color:#fff;padding:2px 9px;border-radius:4px;font-size:0.8em;font-weight:600;margin-right:6px">Capacity 115%</span><span style="background:#f0b840;color:#fff;padding:2px 9px;border-radius:4px;font-size:0.8em;font-weight:600">Corr 0.67</span></div>
+    <div style="text-align:right;font-size:12px;color:#8b8fa8;">
+      <div>Sunday, 21 June 2026</div>
+      <div style="margin-top:4px;">15 positions held<span style="color:#f44336;margin-left:12px;">⚠ Capacity 115%</span><span style="color:#f44336;margin-left:12px;">⚠ Sector cap exceeded</span></div>
     </div>
   </div>
-</div></div><div id="today">
-<div style="background:#10112a;border:1px solid #252645;border-radius:10px;padding:20px 24px;margin-bottom:18px">
-  <div style="color:#50d8d0;font-size:1em;font-weight:700;letter-spacing:0.05em;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid #252645">📋 TODAY</div>
-  <div style="color:#50d8d0;font-size:0.8em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:12px 0 6px">High Conviction Buys</div>
-  <table style="width:100%;border-collapse:collapse;font-size:0.88em"><tr style="border-bottom:1px solid #252645"><th style="padding:5px 12px;color:#8b8fa8;text-align:left">Ticker</th><th style="padding:5px 12px;color:#8b8fa8;text-align:left">Sector</th><th style="padding:5px 12px;color:#8b8fa8;text-align:left">Decision</th><th style="padding:5px 12px;color:#8b8fa8;text-align:left">Quality</th><th style="padding:5px 12px;color:#8b8fa8;text-align:left">Reason</th></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600">ABUK.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.83em">Industrial</td><td style="padding:7px 12px;color:#4caf50;font-size:0.83em">Add when capacity opens</td><td style="padding:7px 12px;font-size:0.83em;color:#d0d4e8">—</td><td style="padding:7px 12px;font-size:0.8em;color:#8b8fa8">R2=75.1. Excellent entry quality (R2=75.1). Blocked: Industrial at 25% cap.</td></tr></table>
-  <div style="color:#50d8d0;font-size:0.8em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 6px">Future Priorities</div>
-  <div style="margin-bottom:12px"><span style="background:#0b0c1a;border:1px solid #50d8d0;color:#50d8d0;padding:4px 12px;border-radius:4px;font-size:0.85em;font-weight:600;margin-right:8px;margin-bottom:6px;display:inline-block">⏳ ABUK.CA</span></div>
-  <div style="color:#50d8d0;font-size:0.8em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 6px">Watch List (8)</div>
-  <div><span style="background:#181930;border:1px solid #252645;color:#d0d4e8;padding:4px 10px;border-radius:4px;font-size:0.83em;margin-right:6px;margin-bottom:6px;display:inline-block">👁 ETEL.CA</span><span style="background:#181930;border:1px solid #252645;color:#d0d4e8;padding:4px 10px;border-radius:4px;font-size:0.83em;margin-right:6px;margin-bottom:6px;display:inline-block">👁 MCQE.CA</span><span style="background:#181930;border:1px solid #252645;color:#d0d4e8;padding:4px 10px;border-radius:4px;font-size:0.83em;margin-right:6px;margin-bottom:6px;display:inline-block">👁 EGAL.CA</span><span style="background:#181930;border:1px solid #252645;color:#d0d4e8;padding:4px 10px;border-radius:4px;font-size:0.83em;margin-right:6px;margin-bottom:6px;display:inline-block">👁 OIH.CA</span><span style="background:#181930;border:1px solid #252645;color:#d0d4e8;padding:4px 10px;border-radius:4px;font-size:0.83em;margin-right:6px;margin-bottom:6px;display:inline-block">👁 EFIH.CA</span><span style="background:#181930;border:1px solid #252645;color:#d0d4e8;padding:4px 10px;border-radius:4px;font-size:0.83em;margin-right:6px;margin-bottom:6px;display:inline-block">👁 FWRY.CA</span><span style="background:#181930;border:1px solid #252645;color:#d0d4e8;padding:4px 10px;border-radius:4px;font-size:0.83em;margin-right:6px;margin-bottom:6px;display:inline-block">👁 COMI.CA</span><span style="background:#181930;border:1px solid #252645;color:#d0d4e8;padding:4px 10px;border-radius:4px;font-size:0.83em;margin-right:6px;margin-bottom:6px;display:inline-block">👁 CCAP.CA</span></div>
-</div></div><div id="portfolio">
-<div style="background:#10112a;border:1px solid #252645;border-radius:10px;padding:20px 24px;margin-bottom:18px">
-  <div style="color:#50d8d0;font-size:1em;font-weight:700;letter-spacing:0.05em;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid #252645">📂 CURRENT PORTFOLIO</div>
-  <div style="overflow-x:auto">
-  <table style="width:100%;border-collapse:collapse;font-size:0.88em">
-    <tr style="border-bottom:1px solid #252645">
-      <th style="padding:5px 12px;color:#8b8fa8;text-align:left">Ticker</th>
-      <th style="padding:5px 12px;color:#8b8fa8;text-align:left">Sector</th>
-      <th style="padding:5px 12px;color:#8b8fa8;text-align:left">Entry</th>
-      <th style="padding:5px 12px;color:#8b8fa8;text-align:left">Current</th>
-      <th style="padding:5px 12px;color:#8b8fa8;text-align:left">Return</th>
-      <th style="padding:5px 12px;color:#8b8fa8;text-align:left">Entry Quality</th>
-    </tr>
-    <tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">HELI.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Real Estate</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">3.28 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">6.40 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+95.3%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">48</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">PHDC.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Real Estate</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">8.88 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">15.80 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+77.9%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">52</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">ORHD.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Real Estate</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">24.65 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">37.39 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+51.7%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">63</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">EMFD.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Real Estate</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">9.09 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">12.50 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+37.5%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">51</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">ARCC.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Industrial</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">44.55 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">56.11 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+26.0%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">50</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">RMDA.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Healthcare</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">4.05 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">5.09 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+25.8%</td><td style="padding:7px 12px;color:#f44336;font-size:0.82em">40</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">JUFO.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Industrial</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">27.21 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">30.80 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+13.2%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">50</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">TMGH.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Real Estate</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">85.23 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">95.60 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+12.2%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">48</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">ORWE.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Industrial</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">21.22 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">23.18 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+9.2%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">49</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">GBCO.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Telecom</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">26.50 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">28.33 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+6.9%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">59</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">ISPH.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Healthcare</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">11.45 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">12.07 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+5.4%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">50</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">EAST.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Industrial</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">37.15 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">39.00 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+5.0%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">50</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">EFID.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Industrial</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">27.23 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">28.39 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+4.2%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">52</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">HRHO.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">Industrial</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">27.90 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">27.90 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+0.0%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">48</td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:7px 12px;color:#d0d4e8;font-weight:600;font-size:0.88em">BTFH.CA</td><td style="padding:7px 12px;color:#8b8fa8;font-size:0.82em">FinTech</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">2.99 EGP</td><td style="padding:7px 12px;font-size:0.85em;color:#d0d4e8">2.99 EGP</td><td style="padding:7px 12px;font-weight:700;color:#4caf50">+0.0%</td><td style="padding:7px 12px;color:#f0b840;font-size:0.82em">60</td></tr>
+</div>
+<div class="card">
+  <div class="section-title">🎯 Today's Opportunities</div>
+  <table>
+    <tr><th>Ticker</th><th>Sector</th><th>Decision</th><th>Reason</th></tr>
+    
+<tr>
+  <td style="font-weight:700;color:#50d8d0;">ABUK.CA</td>
+  <td style="color:#8b8fa8;">Industrial</td>
+  <td><span class="badge" style="background:#4caf5022;color:#4caf50;">
+    Add when capacity opens</span></td>
+  <td style="color:#8b8fa8;font-size:12px;">Excellent entry quality. Blocked: Industrial at 25% cap.</td>
+</tr>
   </table>
+</div>
+<div class="card">
+  <div class="section-title">⏳ Future Priorities</div>
+  <div style="font-size:12px;color:#8b8fa8;margin-bottom:10px;">
+    Buy when portfolio capacity opens. Currently blocked by sector concentration.
   </div>
-</div></div><div id="health">
-<div style="background:#10112a;border:1px solid #252645;border-radius:10px;padding:20px 24px;margin-bottom:18px">
-  <div style="color:#50d8d0;font-size:1em;font-weight:700;letter-spacing:0.05em;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid #252645">⚖️ PORTFOLIO HEALTH</div>
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px"><div style="flex:1;min-width:140px;background:#181930;border:1px solid #252645;border-radius:6px;padding:12px 14px;text-align:center"><div style="font-size:1.3em;font-weight:700;color:#f0b840">0.671</div><div style="color:#8b8fa8;font-size:0.75em;margin-top:4px">Max Correlation</div></div><div style="flex:1;min-width:140px;background:#181930;border:1px solid #252645;border-radius:6px;padding:12px 14px;text-align:center"><div style="font-size:1.3em;font-weight:700;color:#d0d4e8">7.7%</div><div style="color:#8b8fa8;font-size:0.75em;margin-top:4px">Position Weight</div></div><div style="flex:1;min-width:140px;background:#181930;border:1px solid #252645;border-radius:6px;padding:12px 14px;text-align:center"><div style="font-size:1.3em;font-weight:700;color:#f44336">115%</div><div style="color:#8b8fa8;font-size:0.75em;margin-top:4px">Capacity Used</div></div><div style="flex:1;min-width:140px;background:#181930;border:1px solid #252645;border-radius:6px;padding:12px 14px;text-align:center"><div style="font-size:1.3em;font-weight:700;color:#d0d4e8">15</div><div style="color:#8b8fa8;font-size:0.75em;margin-top:4px">Positions Held</div></div></div>
-  <div style="color:#50d8d0;font-size:0.8em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Sector Allocation</div>
-  <table style="width:100%;border-collapse:collapse"><tr style="border-bottom:1px solid #252645"><td style="padding:6px 12px;color:#d0d4e8;font-size:0.85em;width:160px">Industrial</td><td style="padding:6px 12px"><div style="display:flex;align-items:center;gap:8px"><div style="background:#0b0c1a;width:140px;height:8px;border-radius:4px;overflow:hidden"><div style="background:#f44336;width:100%;height:100%"></div></div><span style="color:#f44336;font-weight:700;font-size:0.85em">40.0%</span><span style="color:#f44336;font-size:0.75em"> ⚠ Cap</span></div></td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:6px 12px;color:#d0d4e8;font-size:0.85em;width:160px">Real Estate</td><td style="padding:6px 12px"><div style="display:flex;align-items:center;gap:8px"><div style="background:#0b0c1a;width:140px;height:8px;border-radius:4px;overflow:hidden"><div style="background:#f44336;width:99%;height:100%"></div></div><span style="color:#f44336;font-weight:700;font-size:0.85em">33.3%</span><span style="color:#f44336;font-size:0.75em"> ⚠ Cap</span></div></td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:6px 12px;color:#d0d4e8;font-size:0.85em;width:160px">Healthcare</td><td style="padding:6px 12px"><div style="display:flex;align-items:center;gap:8px"><div style="background:#0b0c1a;width:140px;height:8px;border-radius:4px;overflow:hidden"><div style="background:#4caf50;width:39%;height:100%"></div></div><span style="color:#4caf50;font-weight:700;font-size:0.85em">13.3%</span></div></td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:6px 12px;color:#d0d4e8;font-size:0.85em;width:160px">Telecom</td><td style="padding:6px 12px"><div style="display:flex;align-items:center;gap:8px"><div style="background:#0b0c1a;width:140px;height:8px;border-radius:4px;overflow:hidden"><div style="background:#4caf50;width:20%;height:100%"></div></div><span style="color:#4caf50;font-weight:700;font-size:0.85em">6.7%</span></div></td></tr><tr style="border-bottom:1px solid #252645"><td style="padding:6px 12px;color:#d0d4e8;font-size:0.85em;width:160px">FinTech</td><td style="padding:6px 12px"><div style="display:flex;align-items:center;gap:8px"><div style="background:#0b0c1a;width:140px;height:8px;border-radius:4px;overflow:hidden"><div style="background:#4caf50;width:20%;height:100%"></div></div><span style="color:#4caf50;font-weight:700;font-size:0.85em">6.7%</span></div></td></tr></table>
-</div></div><div id="research">
-<div style="background:#10112a;border:1px solid #252645;border-radius:10px;padding:20px 24px;margin-bottom:18px">
-  <div style="color:#50d8d0;font-size:1em;font-weight:700;letter-spacing:0.05em;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid #252645">🔬 RESEARCH</div>
-  <div style="margin-bottom:12px"><span style="color:#d0d4e8;font-size:0.85em;margin-right:16px">📚 8 findings</span><span style="color:#f0b840;font-size:0.85em">🔬 0 experiments running</span></div>
-  <div style="background:#181930;border:1px solid #252645;border-radius:6px;padding:10px 14px;margin-bottom:8px"><div style="color:#8b8fa8;font-size:0.8em;margin-bottom:4px">What is the predictive power of r8_demand?</div><div style="color:#d0d4e8;font-size:0.85em">r8_demand: verdict=NEGATIVE, win_rate=None, expectancy=None</div><div style="margin-top:4px"><span style="background:#f0b840;color:#fff;padding:1px 7px;border-radius:3px;font-size:0.72em;font-weight:600">MEDIUM</span><span style="color:#4caf50;font-size:0.72em;margin-left:8px">✓ VERIFIED</span></div></div><div style="background:#181930;border:1px solid #252645;border-radius:6px;padding:10px 14px;margin-bottom:8px"><div style="color:#8b8fa8;font-size:0.8em;margin-bottom:4px">What is the predictive power of r6_macd?</div><div style="color:#d0d4e8;font-size:0.85em">r6_macd: verdict=POSITIVE, win_rate=None, expectancy=None</div><div style="margin-top:4px"><span style="background:#f0b840;color:#fff;padding:1px 7px;border-radius:3px;font-size:0.72em;font-weight:600">MEDIUM</span><span style="color:#4caf50;font-size:0.72em;margin-left:8px">✓ VERIFIED</span></div></div><div style="background:#181930;border:1px solid #252645;border-radius:6px;padding:10px 14px;margin-bottom:8px"><div style="color:#8b8fa8;font-size:0.8em;margin-bottom:4px">What is the predictive power of r5_avwap?</div><div style="color:#d0d4e8;font-size:0.85em">r5_avwap: verdict=POSITIVE, win_rate=None, expectancy=None</div><div style="margin-top:4px"><span style="background:#f0b840;color:#fff;padding:1px 7px;border-radius:3px;font-size:0.72em;font-weight:600">MEDIUM</span><span style="color:#4caf50;font-size:0.72em;margin-left:8px">✓ VERIFIED</span></div></div><div style="background:#181930;border:1px solid #252645;border-radius:6px;padding:10px 14px;margin-bottom:8px"><div style="color:#8b8fa8;font-size:0.8em;margin-bottom:4px">What is the predictive power of r3_liquidity?</div><div style="color:#d0d4e8;font-size:0.85em">r3_liquidity: verdict=NEGATIVE, win_rate=None, expectancy=None</div><div style="margin-top:4px"><span style="background:#f0b840;color:#fff;padding:1px 7px;border-radius:3px;font-size:0.72em;font-weight:600">MEDIUM</span><span style="color:#4caf50;font-size:0.72em;margin-left:8px">✓ VERIFIED</span></div></div><div style="background:#181930;border:1px solid #252645;border-radius:6px;padding:10px 14px;margin-bottom:8px"><div style="color:#8b8fa8;font-size:0.8em;margin-bottom:4px">What is the predictive power of r1_price?</div><div style="color:#d0d4e8;font-size:0.85em">r1_price: verdict=NEGATIVE, win_rate=None, expectancy=None</div><div style="margin-top:4px"><span style="background:#f0b840;color:#fff;padding:1px 7px;border-radius:3px;font-size:0.72em;font-weight:600">MEDIUM</span><span style="color:#4caf50;font-size:0.72em;margin-left:8px">✓ VERIFIED</span></div></div>
-</div></div><div id="system">
-<div style="background:#10112a;border:1px solid #252645;border-radius:10px;padding:20px 24px;margin-bottom:18px">
-  <div style="color:#50d8d0;font-size:1em;font-weight:700;letter-spacing:0.05em;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid #252645">🔧 SYSTEM HEALTH</div>
-  <div style="background:#181930;border:1px solid #252645;border-radius:6px;padding:12px 16px;margin-bottom:10px"><div style="color:#8b8fa8;font-size:0.75em;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;font-weight:600">Status Timeline</div><table style="width:100%;border-collapse:collapse"><tr><td style="padding:5px 10px;color:#8b8fa8;font-size:0.82em;width:180px">Last Successful Scan</td><td style="padding:5px 10px;font-size:0.83em;color:#d0d4e8">2026-06-21 12:01</td><td style="padding:5px 10px;font-size:0.79em;color:#50d8d0">4m ago</td></tr><tr><td style="padding:5px 10px;color:#8b8fa8;font-size:0.82em;width:180px">Last Learning Cycle</td><td style="padding:5px 10px;font-size:0.83em;color:#d0d4e8">2026-06-18 03:13</td><td style="padding:5px 10px;font-size:0.79em;color:#50d8d0">3d ago</td></tr><tr><td style="padding:5px 10px;color:#8b8fa8;font-size:0.82em;width:180px">Last Promotion</td><td style="padding:5px 10px;font-size:0.83em;color:#d0d4e8">2026-06-19 06:54</td><td style="padding:5px 10px;font-size:0.79em;color:#50d8d0">2d ago</td></tr><tr><td style="padding:5px 10px;color:#8b8fa8;font-size:0.82em;width:180px">Last Rollback</td><td style="padding:5px 10px;font-size:0.83em;color:#d0d4e8">2026-06-15 18:00</td><td style="padding:5px 10px;font-size:0.79em;color:#50d8d0">5d ago</td></tr><tr><td style="padding:5px 10px;color:#8b8fa8;font-size:0.82em;width:180px">Dashboard Built</td><td style="padding:5px 10px;font-size:0.83em;color:#d0d4e8">2026-06-21 12:06</td><td style="padding:5px 10px;font-size:0.79em;color:#50d8d0">just now</td></tr><tr><td style="padding:5px 10px;color:#8b8fa8;font-size:0.82em;width:180px">Scheduler State</td><td style="padding:5px 10px;font-size:0.83em;color:#d0d4e8">runs=1 | errors=0</td><td style="padding:5px 10px;font-size:0.79em;color:#50d8d0"></td></tr></table></div>
-</div></div>
-<div class="footer">
-  EGX Constitutional Investment Platform · Built 2026-06-21 12:06:46 · Research-Driven · Constitutionally Governed
-  <a href="heatmap.html" style="color:#50d8d0;text-decoration:none">📈 Signal Heatmap</a>
+  <span class="chip"><span style="color:#50d8d0;font-weight:700;">ABUK.CA</span><span style="color:#8b8fa8;font-size:11px;margin-left:6px;">Industrial</span></span>
+</div>
+<div class="card">
+  <div class="section-title">📂 Current Portfolio (15 positions)</div>
+  <table>
+    <tr><th>Ticker</th><th>Sector</th><th>Entry</th><th>Current</th><th>Return</th></tr>
+    
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">HELI.CA</td>
+  <td style="color:#8b8fa8;">Real Estate</td>
+  <td style="color:#8b8fa8;">3.28 EGP</td>
+  <td style="color:#8b8fa8;">6.40 EGP</td>
+  <td class="pos">+95.3%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">PHDC.CA</td>
+  <td style="color:#8b8fa8;">Real Estate</td>
+  <td style="color:#8b8fa8;">8.88 EGP</td>
+  <td style="color:#8b8fa8;">15.80 EGP</td>
+  <td class="pos">+77.9%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">ORHD.CA</td>
+  <td style="color:#8b8fa8;">Real Estate</td>
+  <td style="color:#8b8fa8;">24.65 EGP</td>
+  <td style="color:#8b8fa8;">37.39 EGP</td>
+  <td class="pos">+51.7%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">EMFD.CA</td>
+  <td style="color:#8b8fa8;">Real Estate</td>
+  <td style="color:#8b8fa8;">9.09 EGP</td>
+  <td style="color:#8b8fa8;">12.50 EGP</td>
+  <td class="pos">+37.5%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">ARCC.CA</td>
+  <td style="color:#8b8fa8;">Industrial</td>
+  <td style="color:#8b8fa8;">44.55 EGP</td>
+  <td style="color:#8b8fa8;">56.11 EGP</td>
+  <td class="pos">+26.0%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">RMDA.CA</td>
+  <td style="color:#8b8fa8;">Healthcare</td>
+  <td style="color:#8b8fa8;">4.05 EGP</td>
+  <td style="color:#8b8fa8;">5.09 EGP</td>
+  <td class="pos">+25.8%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">JUFO.CA</td>
+  <td style="color:#8b8fa8;">Industrial</td>
+  <td style="color:#8b8fa8;">27.21 EGP</td>
+  <td style="color:#8b8fa8;">30.80 EGP</td>
+  <td class="pos">+13.2%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">TMGH.CA</td>
+  <td style="color:#8b8fa8;">Real Estate</td>
+  <td style="color:#8b8fa8;">85.23 EGP</td>
+  <td style="color:#8b8fa8;">95.60 EGP</td>
+  <td class="pos">+12.2%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">ORWE.CA</td>
+  <td style="color:#8b8fa8;">Industrial</td>
+  <td style="color:#8b8fa8;">21.22 EGP</td>
+  <td style="color:#8b8fa8;">23.18 EGP</td>
+  <td class="pos">+9.2%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">GBCO.CA</td>
+  <td style="color:#8b8fa8;">Telecom</td>
+  <td style="color:#8b8fa8;">26.50 EGP</td>
+  <td style="color:#8b8fa8;">28.33 EGP</td>
+  <td class="pos">+6.9%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">ISPH.CA</td>
+  <td style="color:#8b8fa8;">Healthcare</td>
+  <td style="color:#8b8fa8;">11.45 EGP</td>
+  <td style="color:#8b8fa8;">12.07 EGP</td>
+  <td class="pos">+5.4%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">EAST.CA</td>
+  <td style="color:#8b8fa8;">Industrial</td>
+  <td style="color:#8b8fa8;">37.15 EGP</td>
+  <td style="color:#8b8fa8;">39.00 EGP</td>
+  <td class="pos">+5.0%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">EFID.CA</td>
+  <td style="color:#8b8fa8;">Industrial</td>
+  <td style="color:#8b8fa8;">27.23 EGP</td>
+  <td style="color:#8b8fa8;">28.39 EGP</td>
+  <td class="pos">+4.2%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">HRHO.CA</td>
+  <td style="color:#8b8fa8;">Industrial</td>
+  <td style="color:#8b8fa8;">27.90 EGP</td>
+  <td style="color:#8b8fa8;">27.90 EGP</td>
+  <td class="neu">0.0%</td>
+</tr>
+<tr>
+  <td style="font-weight:700;color:#d0d4e8;">BTFH.CA</td>
+  <td style="color:#8b8fa8;">FinTech</td>
+  <td style="color:#8b8fa8;">2.99 EGP</td>
+  <td style="color:#8b8fa8;">2.99 EGP</td>
+  <td class="neu">0.0%</td>
+</tr>
+  </table>
+</div>
+<div class="card">
+  <div class="section-title">⚖️ Portfolio Health Metrics</div>
+  
+<div style="margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;">
+    <span style="color:#d0d4e8;">Industrial</span>
+    <span style="color:#f44336;font-weight:700;">40.0% ⚠</span>
+  </div>
+  <div class="bar-bg">
+    <div class="bar-fill" style="width:80%;background:#f44336;"></div>
+  </div>
+</div>
+<div style="margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;">
+    <span style="color:#d0d4e8;">Real Estate</span>
+    <span style="color:#f0b840;font-weight:700;">33.3% ⚠</span>
+  </div>
+  <div class="bar-bg">
+    <div class="bar-fill" style="width:67%;background:#f0b840;"></div>
+  </div>
+</div>
+<div style="margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;">
+    <span style="color:#d0d4e8;">Healthcare</span>
+    <span style="color:#4caf50;font-weight:700;">13.3%</span>
+  </div>
+  <div class="bar-bg">
+    <div class="bar-fill" style="width:27%;background:#4caf50;"></div>
+  </div>
+</div>
+<div style="margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;">
+    <span style="color:#d0d4e8;">Telecom</span>
+    <span style="color:#4caf50;font-weight:700;">6.7%</span>
+  </div>
+  <div class="bar-bg">
+    <div class="bar-fill" style="width:13%;background:#4caf50;"></div>
+  </div>
+</div>
+<div style="margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;">
+    <span style="color:#d0d4e8;">FinTech</span>
+    <span style="color:#4caf50;font-weight:700;">6.7%</span>
+  </div>
+  <div class="bar-bg">
+    <div class="bar-fill" style="width:13%;background:#4caf50;"></div>
+  </div>
+</div>
+  
+<div class="metric-grid" style="margin-top:16px;">
+  <div class="metric-cell">
+    <div class="metric-val" style="color:#f0b840;">0.67</div>
+    <div class="metric-lbl">Max Correlation</div>
+  </div>
+  <div class="metric-cell">
+    <div class="metric-val" style="color:#f44336;">115%</div>
+    <div class="metric-lbl">Capacity Used</div>
+  </div>
+  <div class="metric-cell">
+    <div class="metric-val" style="color:#f44336;">
+      Exceeded</div>
+    <div class="metric-lbl">Sector Cap</div>
+  </div>
 </div>
 </div>
-
+<div class="card">
+  <div class="section-title">👁 Watch List</div>
+  <div style="font-size:12px;color:#8b8fa8;margin-bottom:10px;">
+    Track for future portfolio additions.
+  </div>
+  <span class="chip">ETEL.CA</span><span class="chip">MCQE.CA</span><span class="chip">EGAL.CA</span><span class="chip">OIH.CA</span><span class="chip">EFIH.CA</span><span class="chip">FWRY.CA</span><span class="chip">COMI.CA</span><span class="chip">CCAP.CA</span>
+</div>
+<div class="card">
+  <div class="section-title">🔬 Research Insight (8 verified findings)</div>
+  <table>
+    <tr><th>Question</th><th>Conclusion</th><th>Confidence</th></tr>
+    
+<tr>
+  <td style="color:#8b8fa8;font-size:12px;">What is the predictive power of r8_demand?</td>
+  <td style="color:#d0d4e8;font-size:12px;">r8_demand: verdict=NEGATIVE, win_rate=None, expectancy=None</td>
+  <td><span class="badge" style="background:#f0b84022;color:#f0b840;">MEDIUM</span></td>
+</tr>
+<tr>
+  <td style="color:#8b8fa8;font-size:12px;">What is the predictive power of r6_macd?</td>
+  <td style="color:#d0d4e8;font-size:12px;">r6_macd: verdict=POSITIVE, win_rate=None, expectancy=None</td>
+  <td><span class="badge" style="background:#f0b84022;color:#f0b840;">MEDIUM</span></td>
+</tr>
+<tr>
+  <td style="color:#8b8fa8;font-size:12px;">What is the predictive power of r5_avwap?</td>
+  <td style="color:#d0d4e8;font-size:12px;">r5_avwap: verdict=POSITIVE, win_rate=None, expectancy=None</td>
+  <td><span class="badge" style="background:#f0b84022;color:#f0b840;">MEDIUM</span></td>
+</tr>
+<tr>
+  <td style="color:#8b8fa8;font-size:12px;">What is the predictive power of r3_liquidity?</td>
+  <td style="color:#d0d4e8;font-size:12px;">r3_liquidity: verdict=NEGATIVE, win_rate=None, expectancy=None</td>
+  <td><span class="badge" style="background:#f0b84022;color:#f0b840;">MEDIUM</span></td>
+</tr>
+<tr>
+  <td style="color:#8b8fa8;font-size:12px;">What is the predictive power of r1_price?</td>
+  <td style="color:#d0d4e8;font-size:12px;">r1_price: verdict=NEGATIVE, win_rate=None, expectancy=None</td>
+  <td><span class="badge" style="background:#f0b84022;color:#f0b840;">MEDIUM</span></td>
+</tr>
+  </table>
+</div>
+<div class="card">
+  <div class="section-title">🔧 System Health</div>
+  <div style="margin-bottom:6px;font-size:12px;"><span style="color:#8b8fa8;">Scheduler:</span> <span style="color:#4caf50;">—</span></div><div style="margin-bottom:6px;font-size:12px;"><span style="color:#8b8fa8;">Last Scan:</span> <span style="color:#4caf50;">—</span></div>
+</div>
+<div style="text-align:center;font-size:11px;color:#8b8fa8;padding:16px 0;margin-top:8px;
+     border-top:1px solid #252645;">
+  EGX Constitutional Investment Platform &nbsp;·&nbsp;
+  Research-Driven &nbsp;·&nbsp; Constitutionally Governed &nbsp;·&nbsp;
+  21 Jun 2026 09:34
+</div>
+</div>
 </body>
 </html>

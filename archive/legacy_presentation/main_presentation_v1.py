@@ -1201,36 +1201,6 @@ def _target_box_html(symbol, r, positions):
     )
 
 def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
-    # V2 runtime — email rendered by email_v2.py from PresentationSnapshot only
-    from email_v2 import build_email
-    from presentation.presentation_snapshot import build_presentation_snapshot
-
-    # Still run analyze() to keep results for change detection / real-time alerts
-    if _cached_results is not None:
-        results = _cached_results
-    else:
-        tv_prefetch_all_quotes(STOCKS)
-        results = {}
-        workers = min(8, len(STOCKS))
-        with ThreadPoolExecutor(max_workers=workers) as executor:
-            future_to_sym = {executor.submit(analyze, s): s for s in STOCKS}
-            for future in as_completed(future_to_sym):
-                sym = future_to_sym[future]
-                try:
-                    results[sym] = future.result()
-                except Exception as e:
-                    results[sym] = {"ok": False, "error": str(e)}
-        for sym, res in results.items():
-            if res.get("ok"):
-                print(f"  Done: {res.get('name', sym)}")
-
-    snap = build_presentation_snapshot()
-    html = build_email(snap)
-    return html, results
-
-
-def _build_report_v1(holiday_mode=False, last_trading=None, _cached_results=None):
-    """Preserved V1 — NOT called in production."""
     from presentation.portfolio_snapshot import build_portfolio_snapshot
     print("  Fetching Dow Jones status...")
     dj = get_dow_jones_status()
@@ -1754,16 +1724,7 @@ def _get_position_bq(symbol: str, db_path: str = "egx_research.db") -> dict | No
 
 
 def send_telegram_alerts(results):
-    """Constitutional Morning Brief V2 — delegates to telegram_v2.py."""
-    from telegram_v2 import send_morning_brief
-    from presentation.presentation_snapshot import build_presentation_snapshot
-    date_str = now_cairo().strftime("%d %b %Y")
-    snap = build_presentation_snapshot()
-    send_morning_brief(date_str, snap)
-
-
-def _send_telegram_alerts_v1(results):
-    """Preserved V1 — NOT called in production."""
+    """Constitutional Morning Brief — portfolio-first, max 15 seconds to read."""
     from presentation.portfolio_snapshot import build_portfolio_snapshot
     token   = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")

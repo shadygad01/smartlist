@@ -2459,13 +2459,6 @@ def _section_research_insights(snap) -> str:
 
 
 def build_dashboard() -> str:
-    # V2 runtime — delegates to dashboard_v2.py
-    from dashboard_v2 import build_dashboard as _build_v2
-    return _build_v2()
-
-
-def _build_dashboard_v1() -> str:
-    # Preserved for reference — NOT called in production
     from presentation.portfolio_snapshot import build_portfolio_snapshot
     snap    = build_portfolio_snapshot()
     now     = _now_cairo()

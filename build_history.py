@@ -19,15 +19,8 @@ except ImportError:
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
-STOCKS = [
-    'TMGH.CA', 'EMFD.CA', 'PHDC.CA', 'ORHD.CA', 'HELI.CA',
-    'EAST.CA', 'ABUK.CA', 'ORAS.CA', 'EFID.CA', 'HRHO.CA',
-    'JUFO.CA', 'ARCC.CA', 'ORWE.CA', 'CCAP.CA',
-    'MCQE.CA', 'ISPH.CA', 'RMDA.CA',
-    'FWRY.CA', 'EFIH.CA', 'RAYA.CA', 'BTFH.CA',
-    'COMI.CA', 'EGAL.CA', 'ADIB.CA',
-    'ETEL.CA', 'GBCO.CA', 'OIH.CA',
-]
+from config.scanner_config import get_constitutional_universe
+STOCKS = get_constitutional_universe()
 
 DAYS_BACK = 120
 

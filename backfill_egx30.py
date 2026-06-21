@@ -8,13 +8,8 @@ import time
 import sqlite3
 
 # ==================== EGX30 Symbols ====================
-EGX30_SYMBOLS = [
-    "COMI.CA", "TMGH.CA", "ETEL.CA", "EGAL.CA", "EAST.CA", "HRHO.CA",
-    "FWRY.CA", "ORAS.CA", "EFIH.CA", "ADIB.CA", "ABUK.CA", "PHDC.CA",
-    "RMDA.CA", "ORHD.CA", "EMFD.CA", "EFID.CA", "ISPH.CA", "BTFH.CA",
-    "ARCC.CA", "GBCO.CA", "JUFO.CA", "CCAP.CA", "RAYA.CA", "OIH.CA",
-    "ORWE.CA", "HELI.CA", "MCQE.CA", "VLMR.CA", "AMOC.CA", "EGCH.CA"
-]
+from config.scanner_config import get_constitutional_universe
+EGX30_SYMBOLS = get_constitutional_universe()
 
 def download_and_backfill():
     print("🚀 بدء تحميل بيانات EGX30 لآخر 5 سنين...")

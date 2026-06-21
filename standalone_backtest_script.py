@@ -10,13 +10,8 @@ from datetime import datetime, timedelta
 DATA_FILE_PATH = 'egypt_stocks_5yr_data_updated.csv'
 
 # List of all 27 stocks (ensure these match symbols in your CSV)
-STOCKS = [
-    "COMI.CA", "TMGH.CA", "ETEL.CA", "EGAL.CA", "EAST.CA", "ABUK.CA", 
-    "ORAS.CA", "EFIH.CA", "ADIB.CA", "FWRY.CA", "EMFD.CA", "PHDC.CA",
-    "ORHD.CA", "EFID.CA", "HRHO.CA", "JUFO.CA", "BTFH.CA", "RAYA.CA", 
-    "GBCO.CA", "HELI.CA", "ARCC.CA", "MCQE.CA", "ORWE.CA", "ISPH.CA", 
-    "RMDA.CA", "OIH.CA",  "CCAP.CA"
-]
+from config.scanner_config import get_constitutional_universe
+STOCKS = get_constitutional_universe()
 
 # Whitelist for specific Price Gate thresholds
 WHITELIST = ["FWRY.CA", "EAST.CA", "ETEL.CA", "EMFD.CA", "PHDC.CA", "HRHO.CA", "MCQE.CA", "OIH.CA", "GBCO.CA"]

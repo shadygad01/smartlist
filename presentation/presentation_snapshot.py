@@ -134,7 +134,7 @@ class PresentationSnapshot:
 
 def build_presentation_snapshot() -> PresentationSnapshot:
     snap = PresentationSnapshot(
-        generated_at=datetime.now().isoformat(),
+        generated_at=datetime.now(_CAIRO_TZ).isoformat(),
         market_status=_market_status(),
     )
 

@@ -489,7 +489,7 @@ def _s_universe_status(snap) -> str:
     covered = 0
 
     STATUS_ORDER = {"PREMIUM": 0, "ACTIVE": 1, "APPROACHING": 2, "UNDER REVIEW": 3,
-                    "NEVER QUALIFIED": 4, "NO POOL DATA": 5, "NO DATA": 6}
+                    "NEVER QUALIFIED": 4, "BELOW THRESHOLD": 5, "NO POOL DATA": 5, "NO DATA": 6}
 
     for ticker in sorted(universe):
         if ticker in timeline_by_ticker:
@@ -541,8 +541,29 @@ def _s_universe_status(snap) -> str:
         elif ticker in sh_prices:
             price = sh_prices[ticker]
             entry = "—"
-            status, sc, action = "NO POOL DATA", DIM, "Not in latest scan"
-            reason = "Not scored in latest candidate snapshot"
+            # Try to get best r2/score data from egx_research for a real reason
+            try:
+                import sqlite3 as _sl2
+                _rdb = _sl2.connect(str(BASE / "egx_research.db"))
+                _rdb.row_factory = _sl2.Row
+                _best = _rdb.execute(
+                    "SELECT raw_score, r2_ob FROM signals WHERE symbol=? ORDER BY signal_date DESC LIMIT 1",
+                    (ticker,)
+                ).fetchone()
+                _rdb.close()
+                if _best and _best["r2_ob"] == 0:
+                    _sc_val = _best["raw_score"]
+                    status, sc, action = "BELOW THRESHOLD", DIM, f"R2 not achieved (Score {_sc_val})"
+                    reason = f"R2 never reached 60 · best score {_sc_val} in research"
+                elif _best:
+                    status, sc, action = "BELOW THRESHOLD", DIM, f"R2 {_best['r2_ob']:.1f} Score {_best['raw_score']}"
+                    reason = f"R2 {_best['r2_ob']:.1f} < 60 · Score {_best['raw_score']}"
+                else:
+                    status, sc, action = "BELOW THRESHOLD", DIM, "No constitutional signal"
+                    reason = "Never produced a constitutional R2 signal"
+            except Exception:
+                status, sc, action = "BELOW THRESHOLD", DIM, "Not in latest scan"
+                reason = "Not scored in latest candidate snapshot"
             ret_str = "—"; dist_str = "—"; mem = "—"
             last_update = "—"
         else:

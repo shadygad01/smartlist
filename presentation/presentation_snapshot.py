@@ -110,6 +110,9 @@ class PresentationSnapshot:
     knowledge_count:     int = 0
     experiments_running: int = 0
 
+    # Universe Snapshot (all 27 tickers)
+    universe_snapshot: list[dict] = field(default_factory=list)
+
     # Meta
     generated_at: str = ""
 
@@ -246,6 +249,13 @@ def build_presentation_snapshot() -> PresentationSnapshot:
         except Exception:
             pass
         advisor.close()
+
+    # ── Universe Snapshot (all 27 tickers) ──────────────────────────────────────
+    try:
+        from universe_snapshot import load_universe_snapshot
+        snap.universe_snapshot = load_universe_snapshot()
+    except Exception:
+        snap.universe_snapshot = []
 
     # ── 3. Knowledge Base ─────────────────────────────────────────────────────
     kb = _db(_KB_DB)

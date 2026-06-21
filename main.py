@@ -1201,15 +1201,15 @@ def _target_box_html(symbol, r, positions):
     )
 
 def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
+    from presentation.portfolio_snapshot import build_portfolio_snapshot
     print("  Fetching Dow Jones status...")
     dj = get_dow_jones_status()
     dow_banner = build_dow_banner(dj)
-    positions = load_open_positions()
 
     if _cached_results is not None:
         results = _cached_results
     else:
-        tv_prefetch_all_quotes(STOCKS)   # one batch TV call instead of 26 serial calls
+        tv_prefetch_all_quotes(STOCKS)
         results = {}
         workers = min(8, len(STOCKS))
         with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -1218,378 +1218,190 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
                 s = future_to_sym[future]
                 results[s] = future.result()
                 print(f"  Done: {NAMES.get(s, s)}")
-        for s in STOCKS:               # save_history writes CSV — keep it sequential
+        for s in STOCKS:
             save_history(s, results[s])
 
-    # ── Sort stocks: BUY family → Wait → Skip, each group by score desc
-    BUY_FAMILY   = {"buy", "strong buy", "very strong buy", "institutional buy"}
-    WAIT_FAMILY  = {"wait"}
+    snap = build_portfolio_snapshot()
+    date_str = fmt_cairo("%A, %d %B %Y  ·  %H:%M")
 
-    def _sort_key(s):
-        sig = results[s].get("signal", "").lower()
-        fexp  = results[s].get("factor_exp_score", 0) or 0
-        score = results[s].get("score", 0) or 0
-        blended = 0.60 * fexp + 0.40 * score
-        if sig in BUY_FAMILY:
-            group = 0
-        elif sig in WAIT_FAMILY:
-            group = 1
-        else:
-            group = 2
-        return (group, -blended)
-
-    sorted_stocks = sorted(STOCKS, key=_sort_key)
-
-    # ── Rank change data from previous session ────────────────────────────────
-    _prev_ranks = load_rank_changes()
-
-    def _rank_delta_html(sym, current_rank):
-        prev = _prev_ranks.get(sym)
-        if prev is None or prev == current_rank:
-            return ""
-        delta = prev - current_rank  # positive = moved up
-        if delta > 0:
-            return f'<span style="color:#1a7340;font-size:11px;font-weight:700;">▲{delta}</span>'
-        return f'<span style="color:#b02a2a;font-size:11px;font-weight:700;">▼{abs(delta)}</span>'
-
-    # ── RANKED OPPORTUNITIES block ────────────────────────────────────────────
-    def _build_ranking_block():
-        rows_a = ""  # Premier: top 5 BUY
-        rows_b = ""  # Monitor: next 5 BUY
-        buy_rank = 0
-        for s in sorted_stocks:
-            r = results[s]
-            if not r.get("ok"): continue
-            sig_l = r.get("signal", "").lower()
-            if sig_l not in BUY_FAMILY: continue
-            buy_rank += 1
-            fexp    = r.get("factor_exp_score", 0) or 0
-            score   = r.get("score", 0) or 0
-            blended = 0.60 * fexp + 0.40 * score
-            delta_h = _rank_delta_html(s, buy_rank)
-            tier = "A" if buy_rank <= 5 else "B"
-            tier_col = "#0B5394" if tier == "A" else "#5b6c82"
-            row_bg = "#f0f7ff" if buy_rank % 2 == 1 else "#ffffff"
-            sig_badges = {
-                "institutional buy": ("#3a0078", "#ede0ff", "🟣"),
-                "very strong buy":   ("#155724", "#d4edda", "🟢"),
-                "strong buy":        ("#1a5c2a", "#d4edda", "🟢"),
-                "buy":               ("#145214", "#e8f5e9", "🟩"),
-            }
-            sc, sb, em = sig_badges.get(sig_l, ("#333", "#eee", ""))
-            row = f"""
-<tr style="background:{row_bg};border-bottom:1px solid #dde8f5;">
-  <td style="padding:11px 14px;font-family:Arial,sans-serif;width:36px;text-align:center;">
-    <div style="font-size:18px;font-weight:800;color:{tier_col};">#{buy_rank}</div>
-    <div style="font-size:10px;font-weight:700;color:{tier_col};letter-spacing:0.5px;">{TIER_PREMIER if tier == "A" else TIER_MONITOR}</div>
-  </td>
-  <td style="padding:11px 14px;font-family:Arial,sans-serif;">
-    <div style="font-size:15px;font-weight:700;color:#111;">{NAMES.get(s, s)}</div>
-    <div style="font-size:10px;color:#999;margin-top:1px;">{s}</div>
-  </td>
-  <td style="padding:11px 14px;font-family:Arial,sans-serif;">
-    <span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:{sb};color:{sc};border:1px solid {sc}20;">{em} {r.get("signal","")}</span>
-  </td>
-  <td align="right" style="padding:11px 14px;font-family:Arial,sans-serif;">
-    <div style="font-size:16px;font-weight:800;color:#1a3a5c;">{blended:.1f}</div>
-    <div style="font-size:10px;color:#999;">rank score</div>
-  </td>
-  <td align="right" style="padding:11px 14px;font-family:Arial,sans-serif;">
-    <div style="font-size:14px;font-weight:600;color:#0B5394;">{fexp:.1f}</div>
-    <div style="font-size:10px;color:#999;">expectancy</div>
-  </td>
-  <td align="right" style="padding:11px 14px;font-family:Arial,sans-serif;">
-    <div style="font-size:14px;font-weight:600;color:#444;">{score}</div>
-    <div style="font-size:10px;color:#999;">signal quality</div>
-  </td>
-  <td align="center" style="padding:11px 14px;font-family:Arial,sans-serif;width:40px;">{delta_h}</td>
-</tr>"""
-            if buy_rank <= 5:
-                rows_a += row
-            elif buy_rank <= 10:
-                rows_b += row
-            if buy_rank >= 10:
-                break
-        if not rows_a:
-            return ""
-        tier_b_block = f"""
-<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#5b6c82;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f7f9fc;border-top:1px solid #dde8f5;">Monitored Opportunities (#6–#10)</div>
-<table width="100%" cellpadding="0" cellspacing="0" border="0"><tbody>{rows_b}</tbody></table>""" if rows_b else ""
-        return f"""
-<div style="font-family:Arial,sans-serif;margin:20px 0;border:2px solid #1a3a5c;border-radius:8px;overflow:hidden;">
-  <div style="background:linear-gradient(135deg,#1a3a5c,#0B5394);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
-    <div>
-      <span style="color:#fff;font-size:15px;font-weight:800;letter-spacing:0.3px;">🏆 RANKED OPPORTUNITIES</span>
-      <span style="color:#8fb8d8;font-size:11px;margin-left:10px;">Ranked by Factor Expectancy + Signal Quality</span>
-    </div>
-    <span style="color:#8fb8d8;font-size:11px;">{fmt_cairo("%d %b %Y")}</span>
-  </div>
-  <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#0B5394;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f0f7ff;">Premier Opportunities (#1–#5)</div>
-  <table width="100%" cellpadding="0" cellspacing="0" border="0">
-    <thead>
-      <tr style="background:#e8f0f8;border-bottom:2px solid #c8daf5;">
-        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:center;">Rank</th>
-        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;">Stock</th>
-        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;">Signal</th>
-        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">Rank Score</th>
-        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">Expectancy</th>
-        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">{COL_SIGNAL_QUALITY}</th>
-        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:center;">Δ</th>
-      </tr>
-    </thead>
-    <tbody>{rows_a}</tbody>
-  </table>
-  {tier_b_block}
-</div>"""
-
-    _ranking_block = _build_ranking_block()
-
-    fresh_n=sum(1 for s in STOCKS if results[s].get("ok") and results[s].get("is_fresh"))
-    stale  =[NAMES.get(s,s) for s in STOCKS if results[s].get("ok") and not results[s].get("is_fresh")]
-    dq_c   ="#155724" if not stale else "#856404"
-    dq_bg  ="#d4edda" if not stale else "#fff3cd"
-    dq_msg =(f"All {fresh_n} stocks — data fully verified" if not stale else f"{fresh_n}/{len(STOCKS)} fresh")
-
-    parts=[]
-    holiday_banner=""
+    # ── Email header ──────────────────────────────────────────────────────────
+    holiday_banner = ""
     if holiday_mode and last_trading:
-        holiday_banner=f"""
+        holiday_banner = f"""
 <table width="100%" cellpadding="12" cellspacing="0" border="0" style="background:#fff3cd;border-bottom:3px solid #ffc107;">
   <tr><td style="font-family:Arial,sans-serif;font-size:14px;color:#856404;">
-    <b>🏖 EGX Holiday / Weekend Today ({today_cairo()})</b> — Report forced to absolute latest active trading session: <b>{last_trading}</b>
+    <b>🏖 EGX Holiday / Weekend Today ({today_cairo()})</b> — Report forced to latest trading session: <b>{last_trading}</b>
   </td></tr>
 </table>"""
 
-    # ── Open Positions section ────────────────────────────────────────────────
-    open_pos_rows = ""
-    open_pos_list = [(sym, p) for sym, p in positions.items() if p.get("status") == "open"]
-    open_pos_list.sort(key=lambda x: (
-        ((results[x[0]]["price"] - x[1]["entry_price"]) / x[1]["entry_price"])
-        if x[0] in results and results[x[0]].get("ok") else
-        ((x[1].get("current_price", x[1]["entry_price"]) - x[1]["entry_price"]) / x[1]["entry_price"])
-    ), reverse=True)
-    if open_pos_list:
-        for sym, p in open_pos_list:
-            entry   = p["entry_price"]
-            dyn_tgt = p["target"]
-            if sym in results and results[sym].get("ok"):
-                cur_price = results[sym]["price"]
-            elif "current_price" in p:
-                cur_price = p["current_price"]
-            else:
-                cur_price = "—"
-            pnl_pct = ((float(cur_price) - entry) / entry * 100) if cur_price != "—" else None
-            pnl_str = (f'+{pnl_pct:.1f}%' if pnl_pct and pnl_pct >= 0 else f'{pnl_pct:.1f}%') if pnl_pct is not None else "—"
-            pnl_col = "#155724" if (pnl_pct or 0) >= 0 else "#721c24"
-            entry_date = p.get("entry_date", "")[:10]
-            entry_score = p.get("entry_effective_score") or p.get("entry_pattern_score") or p.get("entry_score", 0)
-            reinforced = p.get("reinforced", False)
-            reinf_price = p.get("reinforcement_price")
-            avg_price   = p.get("avg_price")
-            if reinforced and reinf_price:
-                entry_cell = (
-                    f"{entry:.2f} EGP<br>"
-                    f"<span style='font-size:11px;color:#c0392b;'>🔄 Re-buy: {reinf_price:.2f} EGP</span><br>"
-                    f"<span style='font-size:11px;color:#7d3c98;font-weight:bold;'>Avg: {avg_price:.2f} EGP</span>"
-                )
-            else:
-                entry_cell = f"{entry:.2f} EGP"
-            open_pos_rows += f"""
-<tr style="border-bottom:1px solid #e8f0f8;">
-  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#1C4587;">{NAMES.get(sym, sym)}<br><span style="font-size:10px;color:#999;">{sym}</span></td>
-  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;">{entry_cell}</td>
-  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;color:{pnl_col};font-weight:bold;">{cur_price} EGP &nbsp;<span style="font-size:11px;">({pnl_str})</span></td>
-  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;">{dyn_tgt:.2f} EGP</td>
-  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;">{entry_date}</td>
-  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#4a4a4a;text-align:center;">{entry_score}</td>
-</tr>"""
-        open_positions_block = f"""
-<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;margin:20px 0 6px 0;letter-spacing:0.5px;">📊 Portfolio Positions — Constitutional Targets</div>
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #c8daf5;border-collapse:collapse;margin-bottom:20px;">
-  <tr style="background:#0B5394;">
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Stock</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Entry Price</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Current Price</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Dynamic Target</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Entry Date</th>
-    <th align="center" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">🧠 Pattern</th>
-  </tr>
-  {open_pos_rows}
-</table>"""
-    else:
-        open_positions_block = ""
-
-    parts.append(f"""
+    header = f"""
 {holiday_banner}
+{dow_banner}
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{EMAIL_HEADER_BG};">
   <tr><td style="padding:22px 28px;">
     <div style="font-family:Arial,sans-serif;color:{EMAIL_HEADER_FG};font-size:20px;font-weight:700;letter-spacing:0.3px;">{EMAIL_HEADER_TITLE}</div>
-    <div style="font-family:Arial,sans-serif;color:{EMAIL_HEADER_SUBTITLE};font-size:12px;margin-top:6px;letter-spacing:0.3px;">{fmt_cairo("%A, %d %B %Y  ·  %H:%M")} Cairo</div>
+    <div style="font-family:Arial,sans-serif;color:{EMAIL_HEADER_SUBTITLE};font-size:12px;margin-top:6px;letter-spacing:0.3px;">{date_str} Cairo</div>
   </td></tr>
-</table>
-{dow_banner}
-<table width="100%" cellpadding="10" cellspacing="0" border="0" style="background:{dq_bg};border-bottom:1px solid #ccc;">
-  <tr><td style="font-family:Arial,sans-serif;font-size:12px;color:{dq_c};">
-    <b>Data Status:</b> {dq_msg}
-  </td></tr>
-</table>
-{_ranking_block}
-{open_positions_block}""")
+</table>"""
 
-    SUMMARY_SIGNALS = {"buy", "strong buy", "very strong buy", "institutional buy", "wait"}
-    wr=""
-    for idx, s in enumerate(sorted_stocks):
-        r=results[s]
-        if not r["ok"]: continue
-        if r.get("signal","").lower() not in SUMMARY_SIGNALS: continue
-        _sig_l = r.get("signal","").lower()
-        if _sig_l in ("wait","skip"):
-            tc,tbg,tbr = "#721c24","#f8d7da","#f5c6cb"
-        else:
-            _,tc,tbg,tbr = sig_info(r["score"])
-        in_portfolio = s in positions and positions[s].get("status") == "open"
-        portfolio_badge = ' <span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:bold;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;">🔵 In Portfolio</span>' if in_portfolio else ""
-        raw_s = r.get("raw_score", r["score"])
-        raw_tag_s = f'<span style="font-size:10px;color:#aaa;margin-left:4px;">raw {raw_s}</span>' if raw_s != r["score"] else ""
-        ctx_tag_s = f'<span style="font-size:10px;color:#888;background:#f4f4f4;padding:1px 6px;border-radius:8px;margin-left:6px;">{r["ctx_label"]}</span>' if r.get("ctx_label") else ""
-        row_bg = "#fff" if idx % 2 == 0 else "#f9fafb"
-        wr+=f"""
-<tr style="background:{row_bg};border-bottom:1px solid #edf0f3;">
-  <td style="padding:12px 14px;font-family:Arial,sans-serif;">
-    <div style="font-size:14px;font-weight:600;color:#111;">{NAMES.get(s,s)}</div>
-    <div style="font-size:11px;color:#999;margin-top:2px;">{s} · {SECTORS.get(s,"")}</div>
-    <div style="margin-top:4px;">{fresh_badge(r["is_fresh"],r["last_dt"])}{portfolio_badge}</div>
-  </td>
-  <td align="right" style="padding:12px 14px;font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:#111;white-space:nowrap;">{r["price"]}<span style="font-size:11px;font-weight:400;color:#999;margin-left:3px;">EGP</span></td>
-  <td style="padding:12px 14px;">
-    <span style="font-family:Arial,sans-serif;display:inline-block;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:0.3px;background:{tbg};color:{tc};border:1px solid {tbr};">{r["signal"]}</span>
-  </td>
-  <td style="padding:12px 14px;">
-    {bar(r["score"])}{raw_tag_s}{ctx_tag_s}
-  </td>
-  <td style="padding:12px 14px;text-align:right;font-family:Arial,sans-serif;white-space:nowrap;">
-    {"<div style='font-size:14px;font-weight:700;color:#1a7340;'>" + f'{positions[s]["target"]:.2f}' + " <span style='font-size:11px;font-weight:400;color:#999;'>EGP</span></div><div style='font-size:10px;color:#0B5394;margin-top:2px;'>🎯 " + FIB_LABELS.get(positions[s].get("current_level",0),"") + "</div>" if s in positions and positions[s].get("status")=="open" else "<div style='font-size:14px;font-weight:700;color:#1a7340;'>" + str(r["target"]) + " <span style='font-size:11px;font-weight:400;color:#999;'>EGP</span></div>"}
-  </td>
-</tr>"""
+    def _sec_title(title):
+        return (f'<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:700;'
+                f'color:#1a3a5c;margin:20px 0 8px 0;letter-spacing:0.4px;'
+                f'border-left:4px solid #1a3a5c;padding-left:8px;">{title}</div>')
 
-    parts.append(f"""
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;border:1px solid #dde3ea;border-radius:6px;overflow:hidden;border-collapse:separate;">
-  <tr style="background:#1a3a5c;">
-    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Company</th>
-    <th align="right" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Price</th>
-    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Signal</th>
-    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">{COL_RANK_SCORE}</th>
-    <th align="right" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Target</th>
-  </tr>
-  {wr or '<tr><td colspan="5" style="padding:16px 14px;font-family:Arial,sans-serif;font-size:13px;color:#888;">No data available.</td></tr>'}
-</table>""")
-
-    for s in sorted_stocks:
-        r = results[s]
-        if not r["ok"]:
-            parts.append(f"""
-<table width="100%" cellpadding="12" cellspacing="0" border="0" style="margin:24px 0;border-top:3px solid #b02a2a;background:#fff5f5;border:1px solid #f5c6cb;">
+    # ── Executive Summary ─────────────────────────────────────────────────────
+    h_col = "#1a7340" if "★★★★" in snap.health_stars else ("#856404" if "★★★" in snap.health_stars else "#721c24")
+    exec_summary = f"""
+{_sec_title("📋 Executive Summary")}
+<table width="100%" cellpadding="12" cellspacing="0" border="0" style="background:#f8f9fb;border:1px solid #e0e6ef;border-radius:6px;">
   <tr><td style="font-family:Arial,sans-serif;">
-    <b style="color:#721c24;font-size:16px;">{NAMES.get(s,s)}</b> <span style="font-size:12px;color:#999;margin-left:8px;">{s}</span><br>
-    <span style="color:#721c24;font-size:13px;">Error: {_html.escape(r.get("error","unknown"))}</span>
-  </td></tr></table>"""); continue
+    <div style="font-size:18px;font-weight:700;color:{h_col};">{snap.health_stars} {snap.health_label}</div>
+    <div style="font-size:13px;color:#444;margin-top:6px;">{snap.health_narrative}</div>
+    <div style="margin-top:10px;font-size:12px;color:#666;">
+      <b>{snap.held_count}</b> positions held &nbsp;·&nbsp;
+      Capacity <b>{snap.capacity_used_pct:.0f}%</b> &nbsp;·&nbsp;
+      Max Correlation <b>{snap.max_correlation:.2f}</b> &nbsp;·&nbsp;
+      Sector Cap <b>{"OK" if snap.sector_cap_ok else "⚠ Exceeded"}</b>
+    </div>
+  </td></tr>
+</table>"""
 
-        _sig_l2 = r.get("signal","").lower()
-        if _sig_l2 in ("wait","skip"):
-            tc,tbg,tbr = "#721c24","#f8d7da","#f5c6cb"
-        else:
-            _,tc,tbg,tbr = sig_info(r["score"])
-        ind_rows=""
-        for i,(nm,sc,mx,lb) in enumerate(r["rows"]):
-            row_bg = "#fff" if i % 2 == 0 else "#f9fafb"
-            ind_rows+=f"""
-<tr style="background:{row_bg};border-bottom:1px solid #edf0f3;">
-  <td width="170" style="padding:9px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:600;color:#444;border-right:1px solid #eee;">{nm}</td>
-  <td width="70" style="padding:9px 12px;text-align:center;border-right:1px solid #eee;">{pill(sc,mx)}</td>
-  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:12px;color:#555;">{lb}</td>
+    # ── Today's Opportunities ─────────────────────────────────────────────────
+    opp_rows = ""
+    for r in snap.high_conviction_buys + snap.buy_with_awareness:
+        conf_col = "#155724" if r.get("confidence") == "HIGH" else "#856404"
+        opp_rows += f"""
+<tr style="border-bottom:1px solid #e8f0f8;">
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:#1a3a5c;">{r["ticker"]}</td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:12px;color:#666;">{r.get("sector","")}</td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:12px;color:{conf_col};font-weight:600;">{r.get("decision","")}</td>
+  <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:11px;color:#555;">{r.get("reason","")[:100]}</td>
 </tr>"""
+    if not opp_rows:
+        opp_rows = '<tr><td colspan=4 style="padding:12px;font-family:Arial,sans-serif;color:#888;font-size:13px;">No high conviction opportunities today.</td></tr>'
 
-        ez_html = build_ez_html(r)
-        parts.append(f"""
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:36px;border-top:3px solid #1a3a5c;">
-  <tr><td style="padding:14px 0 4px 0;">
-    <span style="font-family:Arial,sans-serif;font-size:20px;font-weight:700;color:#1a3a5c;">{NAMES.get(s,s)}</span>
-    <span style="font-family:Arial,sans-serif;font-size:12px;color:#bbb;margin-left:10px;font-weight:400;">{s}</span>
-    <span style="font-family:Arial,sans-serif;font-size:12px;color:#ccc;margin-left:4px;">· {SECTORS.get(s,"")}</span>
-    <span style="margin-left:10px;">{fresh_badge(r["is_fresh"],r["last_dt"])}</span>
-  </td></tr>
-</table>
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{tbg};border:1px solid {tbr};border-radius:6px;margin:8px 0;">
-  <tr>
-    <td style="padding:16px 20px;">
-      <div style="font-family:Arial,sans-serif;font-size:18px;font-weight:bold;color:{tc};letter-spacing:0.3px;">{r["signal"]}</div>
-      {"<div style='margin-top:4px;'><span style='font-family:Arial,sans-serif;font-size:11px;color:#666;background:#f0f0f0;padding:2px 8px;border-radius:10px;'>" + r["ctx_label"] + "</span></div>" if r.get("ctx_label") else ""}
-      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:12px;">
-        <tr>
-          <td style="text-align:center;padding:8px 10px;background:rgba(0,0,0,0.06);border-radius:6px;">
-            <div style="font-family:Arial,sans-serif;font-size:20px;font-weight:800;color:{tc};">{round(0.60*(r.get("factor_exp_score",0) or 0)+0.40*r["score"],1)}</div>
-            <div style="font-family:Arial,sans-serif;font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;">Rank Score</div>
-          </td>
-          <td width="8"></td>
-          <td style="text-align:center;padding:8px 10px;background:rgba(0,0,0,0.04);border-radius:6px;">
-            <div style="font-family:Arial,sans-serif;font-size:16px;font-weight:700;color:#0B5394;">{r.get("factor_exp_score",0) or 0}</div>
-            <div style="font-family:Arial,sans-serif;font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;">Expectancy</div>
-          </td>
-          <td width="8"></td>
-          <td style="text-align:center;padding:8px 10px;background:rgba(0,0,0,0.04);border-radius:6px;">
-            <div style="font-family:Arial,sans-serif;font-size:16px;font-weight:700;color:#444;">{r["score"]}</div>
-            <div style="font-family:Arial,sans-serif;font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;">SMC</div>
-          </td>
-        </tr>
-      </table>
-      <div style="margin-top:8px;">{bar(r["score"])}</div>
-      {"<div style='font-family:Arial,sans-serif;font-size:11px;color:#999;margin-top:4px;'>raw&nbsp;" + str(r.get("raw_score","")) + "</div>" if r.get("raw_score") and r["raw_score"] != r["score"] else ""}
-    </td>
-    <td align="right" style="padding:16px 20px;white-space:nowrap;vertical-align:top;">
-      <div style="font-family:Arial,sans-serif;font-size:26px;font-weight:bold;color:#111;">{r["price"]}</div>
-      <div style="font-family:Arial,sans-serif;font-size:12px;color:#888;margin-top:2px;">EGP</div>
-    </td>
+    opp_block = f"""
+{_sec_title("🎯 Today's Opportunities")}
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #c8daf5;border-collapse:collapse;">
+  <tr style="background:#1a3a5c;">
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Ticker</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Sector</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Decision</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Reason</th>
   </tr>
-</table>
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 10px 0;background:#f9fafb;border:1px solid #e8eaed;border-radius:6px;">
-  <tr><td style="padding:9px 14px;">
-    <span style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.8px;">Decision Driver &nbsp;</span>
-    <span style="font-family:Arial,sans-serif;font-size:12px;color:#444;">{"Discount gate passed. Factor expectancy ranking drove entry." if r["signal"] not in ("Wait","Skip") else ("In discount zone. Price gate failed — not yet in Deep Discount." if r["signal"]=="Wait" and r.get("r1",0)>0 else "In discount zone. Entry score or price gate not yet met." if r["signal"]=="Wait" else "Above equilibrium — premium zone. SMC setup inactive.")}</span>
-  </td></tr>
-</table>
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0;">
-  <tr>
-    <td width="130" style="padding:10px 16px;background:#d4edda;border:1px solid #c3e6cb;text-align:center;">
-      {_target_box_html(s, r, positions)}
-    </td>
-    <td width="12"></td>
-    <td style="padding:10px 14px;background:#f4f8ff;border:1px solid #d0e4f7;font-family:Arial,sans-serif;font-size:12px;color:#444;">
-      <b>EQ (0.50):</b> {r["eq"]} &nbsp;|&nbsp; <b>Buy Zone Top (0.15):</b> {r["buy_hi"]} &nbsp;|&nbsp; <b>Sell Zone Floor (0.85):</b> {r["sell_lo"]} &nbsp;|&nbsp; <b>AVWAP:</b> {r["avwap"]} &nbsp;|&nbsp; <b>AVWAP Lower:</b> {r["avwap_l"]}
-    </td>
-  </tr>
-</table>
-<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#888;margin:16px 0 6px 0;letter-spacing:1px;text-transform:uppercase;">{COL_FACTOR_CONTRIB}</div>
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e8eaed;border-collapse:collapse;border-radius:4px;overflow:hidden;">
-  <tr style="background:#f6f7f9;">
-    <th width="170" align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#777;font-weight:600;border-right:1px solid #eee;letter-spacing:0.4px;">Indicator</th>
-    <th width="70" align="center" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#777;font-weight:600;border-right:1px solid #eee;">Score</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#777;font-weight:600;">Reading</th>
-  </tr>
-  {ind_rows}
-</table>
-{ez_html}
-{build_pattern_html(r)}
-""")
+  {opp_rows}
+</table>"""
 
-    parts.append(f"""
+    # ── Future Priorities ─────────────────────────────────────────────────────
+    fp_items = " &nbsp;·&nbsp; ".join(f'<b>{t}</b>' for t in snap.future_priorities) or "None pending"
+    future_block = f"""
+{_sec_title("⏳ Future Priorities")}
+<table width="100%" cellpadding="10" cellspacing="0" border="0" style="background:#f0f7ff;border:1px solid #d0e4f7;border-radius:4px;">
+  <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#0B5394;">{fp_items}</td></tr>
+</table>"""
+
+    # ── Current Portfolio ─────────────────────────────────────────────────────
+    pos_rows = ""
+    for p in sorted(snap.held_positions, key=lambda x: x.get("return_pct", 0), reverse=True):
+        ret = p.get("return_pct", 0) or 0
+        ret_col = "#155724" if ret >= 0 else "#721c24"
+        ret_str = f'+{ret:.1f}%' if ret >= 0 else f'{ret:.1f}%'
+        r2 = p.get("r2_score", 0) or 0
+        pos_rows += f"""
+<tr style="border-bottom:1px solid #e8f0f8;">
+  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:#1a3a5c;">{p.get("ticker","")}</td>
+  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#666;">{p.get("sector","")}</td>
+  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#444;">{p.get("entry_price",0):.2f} EGP</td>
+  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#444;">{p.get("current_price",0):.2f} EGP</td>
+  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:{ret_col};">{ret_str}</td>
+  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#666;">{r2:.0f}</td>
+</tr>"""
+    if not pos_rows:
+        pos_rows = '<tr><td colspan=6 style="padding:12px;color:#888;">No positions held.</td></tr>'
+
+    portfolio_block = f"""
+{_sec_title("📂 Current Portfolio ({n} positions)".format(n=snap.held_count))}
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #c8daf5;border-collapse:collapse;">
+  <tr style="background:#0B5394;">
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Ticker</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Sector</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Entry</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Current</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Return</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">R2</th>
+  </tr>
+  {pos_rows}
+</table>"""
+
+    # ── Portfolio Health ──────────────────────────────────────────────────────
+    sector_rows_html = ""
+    for sector, pct in sorted(snap.sector_allocation.items(), key=lambda x: -x[1]):
+        cap_warn = " ⚠" if pct > 25 else ""
+        c = "#721c24" if pct > 25 else ("#856404" if pct > 20 else "#155724")
+        sector_rows_html += f'<tr><td style="font-family:Arial,sans-serif;font-size:12px;padding:5px 12px;color:#444;width:140px;">{sector}</td><td style="padding:5px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:{c};">{pct:.1f}%{cap_warn}</td></tr>'
+
+    health_block = f"""
+{_sec_title("⚖️ Portfolio Health")}
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e6ef;border-collapse:collapse;">
+  <tr style="background:#f8f9fb;"><td colspan=2 style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#5b6c82;text-transform:uppercase;letter-spacing:0.5px;">Sector Allocation</td></tr>
+  {sector_rows_html}
+  <tr style="background:#f8f9fb;border-top:1px solid #e0e6ef;">
+    <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#444;">Max Correlation</td>
+    <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;">{snap.max_correlation:.3f}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#444;">Capacity Used</td>
+    <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;">{snap.capacity_used_pct:.0f}%</td>
+  </tr>
+</table>"""
+
+    # ── Watch List ────────────────────────────────────────────────────────────
+    watch_str = " &nbsp;·&nbsp; ".join(f'<b>{t}</b>' for t in snap.watch_list) or "Empty"
+    watch_block = f"""
+{_sec_title("👁 Watch List")}
+<table width="100%" cellpadding="10" cellspacing="0" border="0" style="background:#f8f9fb;border:1px solid #e0e6ef;border-radius:4px;">
+  <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#333;">{watch_str}</td></tr>
+</table>"""
+
+    # ── Research Insight ──────────────────────────────────────────────────────
+    insight_html = ""
+    for ins in snap.research_insights[:3]:
+        insight_html += f"""
+<tr style="border-bottom:1px solid #e8f0f8;">
+  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#444;">{ins.get("question","")}</td>
+  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#333;">{ins.get("conclusion","")[:120]}</td>
+  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#888;">{ins.get("confidence","")}</td>
+</tr>"""
+    if not insight_html:
+        insight_html = '<tr><td colspan=3 style="padding:12px;color:#888;">No verified findings yet.</td></tr>'
+
+    research_block = f"""
+{_sec_title("🔬 Research Insight ({n} verified findings)".format(n=snap.knowledge_count))}
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #c8daf5;border-collapse:collapse;">
+  <tr style="background:#1a3a5c;">
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Question</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Conclusion</th>
+    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Confidence</th>
+  </tr>
+  {insight_html}
+</table>"""
+
+    # ── Footer ────────────────────────────────────────────────────────────────
+    footer = f"""
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:40px;border-top:1px solid #e8eaed;">
   <tr><td align="center" style="padding:16px;font-family:Arial,sans-serif;font-size:11px;color:#bbb;letter-spacing:0.4px;">
     {EMAIL_FOOTER_TEXT}
   </td></tr>
-</table>""")
+</table>"""
 
+    parts = [header, exec_summary, opp_block, future_block, portfolio_block, health_block, watch_block, research_block, footer]
     html = f"""<!DOCTYPE html><html><body style="margin:0;padding:20px;background:#eef2f7;"><table width="680" cellpadding="0" cellspacing="0" border="0" align="center" style="background:#ffffff;border:1px solid #d0d7e2;"><tr><td style="padding:0 24px 24px 24px;">{"".join(parts)}</td></tr></table></body></html>"""
     return html, results
+
+
+# ── Stub retained for import compatibility (no longer called by build_report) ─
+def _build_ranking_block_legacy():
+    pass
 
 # =========================================
 # EMAIL
@@ -1911,237 +1723,72 @@ def _get_position_bq(symbol: str, db_path: str = "egx_research.db") -> dict | No
 
 
 def send_telegram_alerts(results):
-    """
-    Send a Telegram message for every stock with score >= 35.
-    Requires TELEGRAM_TOKEN and TELEGRAM_CHAT_ID env vars.
-    """
+    """Constitutional Morning Brief — portfolio-first, max 15 seconds to read."""
+    from presentation.portfolio_snapshot import build_portfolio_snapshot
     token   = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
         print("Telegram: TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not set — skipping.")
         return
 
-    # Load open positions
-    positions = load_open_positions()
-
-    # Collect qualifying stocks sorted by score descending
-    # Skip مستبعدة — الجودة الخام تحت 35 ليست إشارة حتى لو المضاعفات رفعت الـ score
-    alerts = [
-        (s, results[s])
-        for s in STOCKS
-        if results[s].get("ok")
-        and results[s].get("signal") != "Skip"
-        and results[s].get("score", 0) >= (35 if s in WHITELIST else 40)
-    ]
-    alerts.sort(key=lambda x: 0.60 * (x[1].get("factor_exp_score", 0) or 0) + 0.40 * (x[1].get("score", 0) or 0), reverse=True)
-
-    if not alerts:
-        # Send a "nothing today" summary so you know the scan ran
-        msg = (
-            f"{TG_HEADER}\n"
-            f"*{now_cairo().strftime('%d %b %Y')}*\n"
-            f"{TG_SECTION_SEP}\n"
-            f"{NO_SETUPS_MESSAGE}"
-        )
-        open_pos = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
-        open_pos.sort(key=lambda x: (
-            ((results[x[0]]["price"] - x[1]["entry_price"]) / x[1]["entry_price"])
-            if x[0] in results and results[x[0]].get("ok") else
-            ((x[1].get("current_price", x[1]["entry_price"]) - x[1]["entry_price"]) / x[1]["entry_price"])
-        ), reverse=True)
-        if open_pos:
-            msg += f"\n\n{TG_SECTION_SEP}"
-            msg += f"\n{TG_POSITIONS_HEADER.format(n=len(open_pos))}\n"
-            for sym, pos in open_pos:
-                entry = pos["entry_price"]
-                tgt   = pos["target"]
-                if sym in results and results[sym].get("ok"):
-                    cur_price = results[sym].get("price", "—")
-                elif "current_price" in pos:
-                    cur_price = pos["current_price"]
-                else:
-                    cur_price = "—"
-                if cur_price != "—":
-                    pnl_pct = ((float(cur_price) - entry) / entry * 100)
-                    pnl_str = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
-                    cur_str = f"{cur_price} EGP  ({pnl_str})"
-                else:
-                    cur_str = "—"
-                score_tag = f"  |  Entry Score {pos['entry_score']}" if pos.get('entry_score') else ""
-                bq_data = _get_position_bq(sym)
-                bq_tag = f"\n   BQ      *{bq_data['bq_score']:.0f}/100*  {bq_data['action']}" if bq_data else ""
-                msg += f"\n📌 *{sym}*  {NAMES.get(sym, sym)}"
-                msg += f"\n   Entry   {entry:.2f} EGP"
-                msg += f"\n   Now     {cur_str}"
-                msg += f"\n   Target  *{tgt:.2f} EGP*{score_tag}"
-                msg += bq_tag
-                if pos.get("reinforced") and pos.get("reinforcement_price"):
-                    msg += f"\n   Re-buy  {pos['reinforcement_price']:.2f} EGP"
-                    msg += f"\n   Avg     *{pos['avg_price']:.2f} EGP*"
-                msg += "\n"
-            msg += TG_SECTION_SEP
-        try:
-            requests.post(
-                f"https://api.telegram.org/bot{token}/sendMessage",
-                json={"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"},
-                timeout=10,
-            )
-        except Exception as e:
-            print(f"Telegram error: {e}")
-        return
-
-    # Build one summary message with all qualifying stocks
+    snap = build_portfolio_snapshot()
     date_str = now_cairo().strftime("%d %b %Y")
-    lines = [
+
+    msg_lines = [
         TG_HEADER,
         f"*{date_str}*",
         TG_SECTION_SEP,
-        f"_{len(alerts)} constitutional setup(s) above monitoring threshold_\n",
     ]
 
-    # Add open positions section if any exist
-    open_positions_list = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
-    open_positions_list.sort(key=lambda x: (
-        ((results[x[0]]["price"] - x[1]["entry_price"]) / x[1]["entry_price"])
-        if x[0] in results and results[x[0]].get("ok") else
-        ((x[1].get("current_price", x[1]["entry_price"]) - x[1]["entry_price"]) / x[1]["entry_price"])
-    ), reverse=True)
-    if open_positions_list:
-        lines.append(TG_SECTION_SEP)
-        lines.append(TG_POSITIONS_HEADER.format(n=len(open_positions_list)) + "\n")
-        for sym, pos in open_positions_list:
-            entry = pos["entry_price"]
-            tgt   = pos["target"]
-            if sym in results and results[sym].get("ok"):
-                cur_price = results[sym].get("price", "—")
-            elif "current_price" in pos:
-                cur_price = pos["current_price"]
-            else:
-                cur_price = "—"
-            if cur_price != "—":
-                pnl_pct = ((float(cur_price) - entry) / entry * 100)
-                pnl_str = f"+{pnl_pct:.1f}%" if pnl_pct >= 0 else f"{pnl_pct:.1f}%"
-                cur_str = f"{cur_price} EGP  ({pnl_str})"
-            else:
-                cur_str = "—"
-            score_tag = f"  |  Entry Score {pos['entry_score']}" if pos.get('entry_score') else ""
-            bq_data = _get_position_bq(sym)
-            lines.append(f"📌 *{sym}*  {NAMES.get(sym, sym)}")
-            lines.append(f"   Entry   {entry:.2f} EGP")
-            lines.append(f"   Now     {cur_str}")
-            lines.append(f"   Target  *{tgt:.2f} EGP*{score_tag}")
-            if bq_data:
-                lines.append(f"   BQ      *{bq_data['bq_score']:.0f}/100*  {bq_data['action']}")
-            if pos.get("reinforced") and pos.get("reinforcement_price"):
-                lines.append(f"   Re-buy  {pos['reinforcement_price']:.2f} EGP")
-                lines.append(f"   Avg     *{pos['avg_price']:.2f} EGP*")
-            lines.append("")
-        lines.append(TG_SECTION_SEP + "\n")
+    # Portfolio Health
+    h_icon = "🟢" if "★★★★" in snap.health_stars else ("🟡" if "★★★" in snap.health_stars else "🔴")
+    msg_lines.append(f"{h_icon} Portfolio Health: *{snap.health_stars} {snap.health_label}*")
+    msg_lines.append(f"   {snap.held_count} positions · Capacity {snap.capacity_used_pct:.0f}% · Corr {snap.max_correlation:.2f}")
+    msg_lines.append("")
 
-    # ── EARLY BUY (Research) section — appended after main alerts ──────
-    early_buy_alerts = [
-        (s, results[s])
-        for s in STOCKS
-        if results[s].get("ok") and results[s].get("early_buy_research")
-    ]
-    early_buy_alerts.sort(key=lambda x: 0.60 * (x[1].get("factor_exp_score", 0) or 0) + 0.40 * (x[1].get("score", 0) or 0), reverse=True)
+    # Today's Opportunities
+    all_opps = snap.high_conviction_buys + snap.buy_with_awareness
+    if all_opps:
+        msg_lines.append(TG_SECTION_SEP)
+        msg_lines.append("🎯 *Today's Opportunities*\n")
+        for r in all_opps:
+            conf_icon = "🟢" if r.get("confidence") == "HIGH" else "🟡"
+            reason = (r.get("reason") or "")[:80]
+            msg_lines.append(f"{conf_icon} *{r['ticker']}*  {r.get('sector', '')}")
+            msg_lines.append(f"   {r.get('decision', '')}")
+            msg_lines.append(f"   _{reason}_")
+            msg_lines.append("")
 
-    SIGNAL_EMOJI = _SIGNAL_EMOJI   # from presentation_language — single source
-    BUY_FAMILY_UPPER = {"BUY", "STRONG BUY", "VERY STRONG BUY", "INSTITUTIONAL BUY"}
+    # Future Priorities
+    if snap.future_priorities:
+        fp_str = "  ·  ".join(f"*{t}*" for t in snap.future_priorities)
+        msg_lines.append(f"⏳ *Future Priority:* {fp_str}")
+        msg_lines.append("")
 
-    for s, r in alerts:
-        signal_upper = r.get("signal", "").upper()
-        emoji        = SIGNAL_EMOJI.get(signal_upper, "🔵")
-        fresh_flag   = "✅" if r.get("is_fresh") else "⚠️"
-        is_buy       = signal_upper in BUY_FAMILY_UPPER
+    # Watch List
+    if snap.watch_list:
+        msg_lines.append(TG_SECTION_SEP)
+        watch_str = "  ·  ".join(snap.watch_list)
+        msg_lines.append(f"👁 *Watch List:* {watch_str}")
+        msg_lines.append("")
 
-        in_portfolio = s in positions and positions[s].get("status") == "open"
-        portfolio_tag = "  🔵 _In Portfolio_" if in_portfolio else ""
+    # Research Insight
+    if snap.research_insights:
+        ins = snap.research_insights[0]
+        msg_lines.append(TG_SECTION_SEP)
+        conclusion = (ins.get("conclusion") or "")[:120]
+        question = (ins.get("question") or "")[:80]
+        msg_lines.append(f"🔬 *Research:* {conclusion}")
+        msg_lines.append(f"   _{question}_")
+        msg_lines.append("")
 
-        # Pattern Intelligence line
-        pat = r.get("pattern", {})
-        if pat and pat.get("ok"):
-            warn = "  ⚠️ _Low reliability_" if pat.get("low_reliability") else ""
-            _ev = pat['effective_score'] / 20
-            _el = "Excellent" if _ev >= 3 else "Strong" if _ev >= 2 else "Moderate" if _ev >= 1 else "Weak"
-            pi_line = (
-                f"   🧠 Pattern    *{pat['pattern_score']:.0f}/100*  |  Effective *{_ev:.1f}/5* ({_el}){warn}\n"
-                f"      Win Rate   *{pat['win_rate']*100:.0f}%*  |  Avg Gain *+{pat['avg_gain']:.1f}%*"
-                f"  ({pat['similar_count']} cases)\n"
-            )
-        else:
-            pi_line = ""
+    msg_lines.append(TG_SECTION_SEP)
+    msg_lines.append(f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}")
 
-        raw = r.get("raw_score", r["score"])
-        adj_tag = f"  _(raw {raw})_" if raw != r["score"] else ""
-        ctx_str = f"   {r['ctx_label']}\n" if r.get("ctx_label") else ""
+    full_msg = "\n".join(msg_lines)
 
-        if is_buy:
-            target_to_display = r["target"]
-            if in_portfolio:
-                target_to_display = positions[s]["target"]
-
-            upside = ""
-            try:
-                pct = (float(target_to_display) - float(r["price"])) / float(r["price"]) * 100
-                upside = f"  (+{pct:.1f}%)"
-            except Exception:
-                pass
-
-            if in_portfolio:
-                size_line = "   💼 _Monitoring open position — no new entry_\n"
-            else:
-                score_val = r.get("score", 0)
-                sizing = suggested_position_size(1, score_val)
-                size_line = f"   💼 Position Size  *{sizing['pct']:.1f}%* of portfolio  ({sizing['tier']})\n"
-
-            lines.append(
-                f"{'─'*25}\n"
-                f"{emoji} *{NAMES.get(s, s)}*  `{s}`{portfolio_tag}\n"
-                f"   Signal     *{r['signal']}*\n"
-                f"   Signal Quality  *{r['score']}/100*{adj_tag}\n"
-                f"{ctx_str}"
-                f"   Price      *{r['price']} EGP*\n"
-                f"   Target     *{round(float(target_to_display), 2)} EGP*{upside}\n"
-                f"{size_line}"
-                f"{pi_line}"
-                f"   Data       {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
-            )
-        else:
-            lines.append(
-                f"{'─'*25}\n"
-                f"{emoji} *{NAMES.get(s, s)}*  `{s}`{portfolio_tag}\n"
-                f"   Signal     {emoji} {r.get('signal', 'Wait')}\n"
-                f"   Signal Quality  *{r['score']}/100*{adj_tag}\n"
-                f"{ctx_str}"
-                f"   Price      *{r['price']} EGP*\n"
-                f"{pi_line}"
-                f"   Data       {fresh_flag} {'Fresh' if r.get('is_fresh') else 'Stale'}\n"
-            )
-
-    # ── Append EARLY BUY (Research) section ────────────────────────────
-    if early_buy_alerts:
-        lines.append(TG_SECTION_SEP)
-        lines.append(f"{TG_RESEARCH_HEADER}\n")
-        lines.append(f"_{len(early_buy_alerts)} signal(s) — partial discount, score ≥ 65, price gate pending_\n")
-        for s, r in early_buy_alerts:
-            raw = r.get("raw_score", r["score"])
-            lines.append(
-                f"{'─'*25}\n"
-                f"🔬 *{NAMES.get(s, s)}*  `{s}`\n"
-                f"   Raw Score   *{raw}/100*\n"
-                f"   Price       *{r['price']} EGP*\n"
-                f"   R1 Position {r.get('r1', 0):.0f}/{W_PRICE:.0f} — partial discount\n"
-                f"   _Research tracking only — no portfolio action_\n"
-            )
-        lines.append(TG_SECTION_SEP)
-
-    full_msg = "\n".join(lines)
-
-    # Telegram limit: 4096 chars per message — split if needed
     MAX = 4000
-    chunks = []
-    current = ""
+    chunks, current = [], ""
     for line in full_msg.split("\n"):
         if len(current) + len(line) + 1 > MAX:
             chunks.append(current)
@@ -2164,7 +1811,6 @@ def send_telegram_alerts(results):
                 print(f"Telegram: HTTP {resp.status_code} — {resp.text[:200]}")
         except Exception as e:
             print(f"Telegram error: {e}")
-
 
 # =========================================
 # ALERT FOR HIGH SCORE (REAL-TIME)

@@ -2240,28 +2240,236 @@ def _section_executive_summary() -> str:
 </div>"""
 
 
+def _section_portfolio_header(snap) -> str:
+    """HEADER — Portfolio Health badge, date, capacity status."""
+    h_col = G if "★★★★" in snap.health_stars else (A if "★★★" in snap.health_stars else R)
+    cap_ok = snap.capacity_used_pct <= 100
+    cap_col = R if not cap_ok else G
+    sector_ok = snap.sector_cap_ok
+    corr_col = R if snap.max_correlation > 0.7 else (A if snap.max_correlation > 0.5 else G)
+
+    flags = (
+        f'<span style="background:{G if sector_ok else R};color:#fff;padding:2px 9px;border-radius:4px;font-size:0.8em;font-weight:600;margin-right:6px">'
+        f'{"✓ Sector OK" if sector_ok else "⚠ Sector Concentrated"}</span>'
+        f'<span style="background:{cap_col};color:#fff;padding:2px 9px;border-radius:4px;font-size:0.8em;font-weight:600;margin-right:6px">'
+        f'Capacity {snap.capacity_used_pct:.0f}%</span>'
+        f'<span style="background:{corr_col};color:#fff;padding:2px 9px;border-radius:4px;font-size:0.8em;font-weight:600">'
+        f'Corr {snap.max_correlation:.2f}</span>'
+    )
+
+    return f"""
+<div style="background:linear-gradient(135deg,{BG1},{BG2});border:2px solid {B};border-radius:10px;padding:20px 24px;margin-bottom:18px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <div style="font-size:1.6em;font-weight:700;color:{h_col}">{snap.health_stars} {snap.health_label}</div>
+      <div style="color:{DIM};font-size:0.85em;margin-top:4px">{snap.health_narrative}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="color:{FG};font-size:0.9em;font-weight:600">{snap.held_count} positions held</div>
+      <div style="margin-top:6px">{flags}</div>
+    </div>
+  </div>
+</div>"""
+
+
+def _section_today(snap) -> str:
+    """TODAY — High Conviction Opportunities, Future Priorities, Watch List."""
+    # High Conviction
+    hcb_rows = ""
+    for r in snap.high_conviction_buys:
+        conf_col = G if r.get("confidence") == "HIGH" else (A if r.get("confidence") == "MEDIUM" else DIM)
+        stars = r.get("signal_quality_stars") or "—"
+        ret = r.get("current_return_pct")
+        ret_str = f'+{ret:.1f}%' if ret and ret >= 0 else (f'{ret:.1f}%' if ret is not None else "—")
+        hcb_rows += (
+            f'<tr style="border-bottom:1px solid {BOR}">'
+            f'<td style="padding:7px 12px;color:{FG};font-weight:600">{r["ticker"]}</td>'
+            f'<td style="padding:7px 12px;color:{DIM};font-size:0.83em">{r.get("sector","")}</td>'
+            f'<td style="padding:7px 12px;color:{conf_col};font-size:0.83em">{r.get("decision","")}</td>'
+            f'<td style="padding:7px 12px;font-size:0.83em;color:{FG}">{stars}</td>'
+            f'<td style="padding:7px 12px;font-size:0.8em;color:{DIM}">{r.get("reason","")[:80]}</td>'
+            f'</tr>'
+        )
+    if not hcb_rows:
+        hcb_rows = f'<tr><td colspan=5 style="padding:10px 12px;color:{DIM};font-size:0.85em">No high conviction buys today.</td></tr>'
+
+    hcb_block = (
+        f'<table style="width:100%;border-collapse:collapse;font-size:0.88em">'
+        f'<tr style="border-bottom:1px solid {BOR}">'
+        f'<th style="padding:5px 12px;color:{DIM};text-align:left">Ticker</th>'
+        f'<th style="padding:5px 12px;color:{DIM};text-align:left">Sector</th>'
+        f'<th style="padding:5px 12px;color:{DIM};text-align:left">Decision</th>'
+        f'<th style="padding:5px 12px;color:{DIM};text-align:left">Quality</th>'
+        f'<th style="padding:5px 12px;color:{DIM};text-align:left">Reason</th>'
+        f'</tr>{hcb_rows}</table>'
+    )
+
+    # Future Priorities
+    fp_items = "".join(
+        f'<span style="background:{BG0};border:1px solid {B};color:{B};padding:4px 12px;'
+        f'border-radius:4px;font-size:0.85em;font-weight:600;margin-right:8px;margin-bottom:6px;display:inline-block">'
+        f'⏳ {t}</span>'
+        for t in snap.future_priorities
+    ) or f'<span style="color:{DIM};font-size:0.85em">None pending</span>'
+
+    # Watch List
+    watch_items = "".join(
+        f'<span style="background:{BG2};border:1px solid {BOR};color:{FG};padding:4px 10px;'
+        f'border-radius:4px;font-size:0.83em;margin-right:6px;margin-bottom:6px;display:inline-block">'
+        f'👁 {t}</span>'
+        for t in snap.watch_list
+    ) or f'<span style="color:{DIM};font-size:0.85em">Empty</span>'
+
+    return f"""
+<div style="background:{BG1};border:1px solid {BOR};border-radius:10px;padding:20px 24px;margin-bottom:18px">
+  {_section_header("TODAY", "📋")}
+  <div style="color:{B};font-size:0.8em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:12px 0 6px">High Conviction Buys</div>
+  {hcb_block}
+  <div style="color:{B};font-size:0.8em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 6px">Future Priorities</div>
+  <div style="margin-bottom:12px">{fp_items}</div>
+  <div style="color:{B};font-size:0.8em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 6px">Watch List ({len(snap.watch_list)})</div>
+  <div>{watch_items}</div>
+</div>"""
+
+
+def _section_current_portfolio(snap) -> str:
+    """CURRENT PORTFOLIO — all held positions with return and sector."""
+    rows = ""
+    for p in sorted(snap.held_positions, key=lambda x: x.get("return_pct", 0), reverse=True):
+        ret = p.get("return_pct", 0) or 0
+        ret_col = G if ret >= 0 else R
+        ret_str = f'+{ret:.1f}%' if ret >= 0 else f'{ret:.1f}%'
+        r2 = p.get("r2_score", 0) or 0
+        r2_col = G if r2 >= 65 else (A if r2 >= 45 else R)
+        rows += (
+            f'<tr style="border-bottom:1px solid {BOR}">'
+            f'<td style="padding:7px 12px;color:{FG};font-weight:600;font-size:0.88em">{p.get("ticker","")}</td>'
+            f'<td style="padding:7px 12px;color:{DIM};font-size:0.82em">{p.get("sector","")}</td>'
+            f'<td style="padding:7px 12px;font-size:0.85em;color:{FG}">{p.get("entry_price",0):.2f} EGP</td>'
+            f'<td style="padding:7px 12px;font-size:0.85em;color:{FG}">{p.get("current_price",0):.2f} EGP</td>'
+            f'<td style="padding:7px 12px;font-weight:700;color:{ret_col}">{ret_str}</td>'
+            f'<td style="padding:7px 12px;color:{r2_col};font-size:0.82em">{r2:.0f}</td>'
+            f'</tr>'
+        )
+    if not rows:
+        rows = f'<tr><td colspan=6 style="padding:10px;color:{DIM}">No held positions</td></tr>'
+
+    return f"""
+<div style="background:{BG1};border:1px solid {BOR};border-radius:10px;padding:20px 24px;margin-bottom:18px">
+  {_section_header("CURRENT PORTFOLIO", "📂")}
+  <div style="overflow-x:auto">
+  <table style="width:100%;border-collapse:collapse;font-size:0.88em">
+    <tr style="border-bottom:1px solid {BOR}">
+      <th style="padding:5px 12px;color:{DIM};text-align:left">Ticker</th>
+      <th style="padding:5px 12px;color:{DIM};text-align:left">Sector</th>
+      <th style="padding:5px 12px;color:{DIM};text-align:left">Entry</th>
+      <th style="padding:5px 12px;color:{DIM};text-align:left">Current</th>
+      <th style="padding:5px 12px;color:{DIM};text-align:left">Return</th>
+      <th style="padding:5px 12px;color:{DIM};text-align:left">R2</th>
+    </tr>
+    {rows}
+  </table>
+  </div>
+</div>"""
+
+
+def _section_portfolio_health_metrics(snap) -> str:
+    """PORTFOLIO HEALTH — Sector balance, correlation, concentration."""
+    # Sector bars
+    sector_rows = ""
+    for sector, pct in sorted(snap.sector_allocation.items(), key=lambda x: -x[1]):
+        cap_exceeded = pct > 25
+        bar_col = R if cap_exceeded else (A if pct > 20 else G)
+        bar_w = min(100, int(pct * 3))
+        sector_rows += (
+            f'<tr style="border-bottom:1px solid {BOR}">'
+            f'<td style="padding:6px 12px;color:{FG};font-size:0.85em;width:160px">{sector}</td>'
+            f'<td style="padding:6px 12px">'
+            f'<div style="display:flex;align-items:center;gap:8px">'
+            f'<div style="background:{BG0};width:140px;height:8px;border-radius:4px;overflow:hidden">'
+            f'<div style="background:{bar_col};width:{bar_w}%;height:100%"></div></div>'
+            f'<span style="color:{bar_col};font-weight:700;font-size:0.85em">{pct:.1f}%</span>'
+            + (f'<span style="color:{R};font-size:0.75em"> ⚠ Cap</span>' if cap_exceeded else '')
+            + f'</div></td>'
+            f'</tr>'
+        )
+
+    corr_col = R if snap.max_correlation > 0.7 else (A if snap.max_correlation > 0.5 else G)
+    pos_w = snap.position_weight_pct
+
+    metrics_cells = (
+        f'<div style="flex:1;min-width:140px;background:{BG2};border:1px solid {BOR};'
+        f'border-radius:6px;padding:12px 14px;text-align:center">'
+        f'<div style="font-size:1.3em;font-weight:700;color:{corr_col}">{snap.max_correlation:.3f}</div>'
+        f'<div style="color:{DIM};font-size:0.75em;margin-top:4px">Max Correlation</div></div>'
+        f'<div style="flex:1;min-width:140px;background:{BG2};border:1px solid {BOR};'
+        f'border-radius:6px;padding:12px 14px;text-align:center">'
+        f'<div style="font-size:1.3em;font-weight:700;color:{FG}">{pos_w:.1f}%</div>'
+        f'<div style="color:{DIM};font-size:0.75em;margin-top:4px">Position Weight</div></div>'
+        f'<div style="flex:1;min-width:140px;background:{BG2};border:1px solid {BOR};'
+        f'border-radius:6px;padding:12px 14px;text-align:center">'
+        f'<div style="font-size:1.3em;font-weight:700;color:{R if snap.capacity_used_pct > 100 else G}">{snap.capacity_used_pct:.0f}%</div>'
+        f'<div style="color:{DIM};font-size:0.75em;margin-top:4px">Capacity Used</div></div>'
+        f'<div style="flex:1;min-width:140px;background:{BG2};border:1px solid {BOR};'
+        f'border-radius:6px;padding:12px 14px;text-align:center">'
+        f'<div style="font-size:1.3em;font-weight:700;color:{FG}">{snap.held_count}</div>'
+        f'<div style="color:{DIM};font-size:0.75em;margin-top:4px">Positions Held</div></div>'
+    )
+
+    return f"""
+<div style="background:{BG1};border:1px solid {BOR};border-radius:10px;padding:20px 24px;margin-bottom:18px">
+  {_section_header("PORTFOLIO HEALTH", "⚖️")}
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">{metrics_cells}</div>
+  <div style="color:{B};font-size:0.8em;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Sector Allocation</div>
+  <table style="width:100%;border-collapse:collapse">{sector_rows}</table>
+</div>"""
+
+
+def _section_research_insights(snap) -> str:
+    """RESEARCH — Latest verified findings from knowledge base."""
+    rows = ""
+    for ins in snap.research_insights:
+        conf_col = G if ins.get("confidence") == "HIGH" else (A if ins.get("confidence") == "MEDIUM" else DIM)
+        conclusion = ins.get("conclusion") or ""
+        rows += (
+            f'<div style="background:{BG2};border:1px solid {BOR};border-radius:6px;'
+            f'padding:10px 14px;margin-bottom:8px">'
+            f'<div style="color:{DIM};font-size:0.8em;margin-bottom:4px">{ins.get("question","")}</div>'
+            f'<div style="color:{FG};font-size:0.85em">{conclusion[:150]}</div>'
+            f'<div style="margin-top:4px">'
+            f'<span style="background:{conf_col};color:#fff;padding:1px 7px;border-radius:3px;font-size:0.72em;font-weight:600">{ins.get("confidence","")}</span>'
+            f'<span style="color:{G};font-size:0.72em;margin-left:8px">✓ VERIFIED</span>'
+            f'</div></div>'
+        )
+    if not rows:
+        rows = f'<div style="color:{DIM};font-size:0.85em;padding:8px">No verified findings yet.</div>'
+
+    stats = (
+        f'<span style="color:{FG};font-size:0.85em;margin-right:16px">📚 {snap.knowledge_count} findings</span>'
+        f'<span style="color:{A};font-size:0.85em">🔬 {snap.experiments_running} experiments running</span>'
+    )
+
+    return f"""
+<div style="background:{BG1};border:1px solid {BOR};border-radius:10px;padding:20px 24px;margin-bottom:18px">
+  {_section_header("RESEARCH", "🔬")}
+  <div style="margin-bottom:12px">{stats}</div>
+  {rows}
+</div>"""
+
+
 def build_dashboard() -> str:
+    from presentation.portfolio_snapshot import build_portfolio_snapshot
+    snap    = build_portfolio_snapshot()
     now     = _now_cairo()
     now_str = now.strftime("%Y-%m-%d %H:%M:%S")
 
-    # Ordered by importance: executive summary → status → snapshot → performance →
-    # learning → pipeline → research → knowledge → classification → health → pattern intel (research-only)
-    # REMOVED: deployment_history (covered by learning/todays_learning deployments box)
-    # REMOVED: changes_since_yesterday (covered by todays_learning)
     body = (
-        f'<div id="top-ranked">{_section_top_ranked()}</div>'
-        f'<div id="top-watchlist">{_section_top_watchlist()}</div>'
-        f'<div id="exec-summary">{_section_executive_summary()}</div>'
-        f'<div id="alpha-status">{_section_alpha_status()}</div>'
-        f'<div id="snapshot">{_section_production_snapshot()}</div>'
-        f'<div id="performance">{_section_alpha_performance()}</div>'
-        f'<div id="learning">{_section_todays_learning()}</div>'
-        f'<div id="pipeline">{_section_bottom_pipeline()}</div>'
-        f'<div id="research">{_section_current_research()}</div>'
-        f'<div id="knowledge">{_section_knowledge_findings()}</div>'
-        f'<div id="classification">{_section_classification_fib()}</div>'
-        f'<div id="health">{_section_system_health()}</div>'
-        f'<div id="pattern-intel">{_section_pattern_intelligence()}</div>'
+        f'<div id="header">{_section_portfolio_header(snap)}</div>'
+        f'<div id="today">{_section_today(snap)}</div>'
+        f'<div id="portfolio">{_section_current_portfolio(snap)}</div>'
+        f'<div id="health">{_section_portfolio_health_metrics(snap)}</div>'
+        f'<div id="research">{_section_research_insights(snap)}</div>'
+        f'<div id="system">{_section_system_health()}</div>'
     )
 
     return f"""<!DOCTYPE html>
@@ -2269,7 +2477,7 @@ def build_dashboard() -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>EGX — Operations Center</title>
+  <title>{DASH_TITLE}</title>
   <style>
     *{{box-sizing:border-box;margin:0;padding:0}}
     body{{font-family:'Segoe UI',system-ui,sans-serif;background:{BG0};color:{FG};padding:0}}
@@ -2304,18 +2512,12 @@ def build_dashboard() -> str:
 
 <div class="nav">
   <span style="color:{DIM};font-size:0.85em">GO TO:</span>
-  <a href="#top-ranked" class="active" style="border-color:{B};color:{B}">🏆 Rankings</a>
-  <a href="#exec-summary">🎯 Summary</a>
-  <a href="#alpha-status">⚡ Status</a>
-  <a href="#snapshot">📈 Snapshot</a>
-  <a href="#performance">📊 Performance</a>
-  <a href="#learning">🧠 Backbone</a>
-  <a href="#pipeline">🔭 Pipeline</a>
-  <a href="#research">🔬 Evolution</a>
-  <a href="#knowledge">📚 Knowledge</a>
-  <a href="#classification">🎯 Classification</a>
-  <a href="#health">🔧 Health</a>
-  <a href="#pattern-intel">🔬 Pattern Intel</a>
+  <a href="#header" class="active" style="border-color:{B};color:{B}">⚖️ Health</a>
+  <a href="#today">📋 Today</a>
+  <a href="#portfolio">📂 Portfolio</a>
+  <a href="#health">⚖️ Metrics</a>
+  <a href="#research">🔬 Research</a>
+  <a href="#system">🔧 System</a>
   <a href="heatmap.html" style="border-color:{G};color:{G}">📈 Heatmap</a>
 </div>
 

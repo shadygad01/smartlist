@@ -11,6 +11,7 @@ import sqlite3
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+import json
 from presentation.presentation_snapshot import PresentationSnapshot, build_presentation_snapshot
 
 BASE = Path(__file__).parent
@@ -81,6 +82,21 @@ function updateClock(){
 }
 setInterval(updateClock,1000);
 updateClock();
+function triggerScan(){
+  var confirmed=confirm('Open GitHub Actions to manually trigger the EGX Daily Scan?\n\nClick "Run workflow" on the page that opens.');
+  if(confirmed) window.open('https://github.com/shadygad01/smartlist/actions/workflows/daily_scan.yml','_blank');
+}
+function checkUpdates(){
+  fetch('version.json?_='+Date.now()).then(r=>r.json()).then(d=>{
+    var msg='Dashboard Version: '+d.version+'\nCommit: '+d.commit+'\nGenerated: '+d.generated_at+'\nUniverse: '+d.universe_count+'/27 tickers';
+    alert(msg);
+  }).catch(()=>{
+    alert('Built at commit: $COMMIT_MARKER$\n\nCould not fetch version.json — check GitHub Pages deployment.');
+  });
+}
+function refreshDash(){
+  window.location.href=window.location.pathname+'?v='+Date.now();
+}
 </script>
 """
 
@@ -144,6 +160,11 @@ def _s_sticky_header(snap):
         <div style="font-size:14px;font-weight:700;color:{B};" id="cairo-clock">{_cairo_now()} Cairo</div>
       </div>
       <span class="badge" style="background:{mc}22;color:{mc};">&#11044; EGX {mstatus}</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="triggerScan()" style="background:#50d8d022;color:#50d8d0;border:1px solid #50d8d0;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">🔄 Run Scan</button>
+        <button onclick="checkUpdates()" style="background:#f0b84022;color:#f0b840;border:1px solid #f0b840;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">🔍 Check Updates</button>
+        <button onclick="refreshDash()" style="background:#4caf5022;color:#4caf50;border:1px solid #4caf50;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">♻ Refresh</button>
+      </div>
     </div>
   </div>
   <div style="max-width:1100px;margin:6px auto 0;font-size:11px;color:{DIM};">
@@ -169,41 +190,139 @@ def _s_stats(snap):
 </div>"""
 
 
-def _s_waiting_for(snap):
-    # Only tickers where price <= entry_price (discount met, waiting for R2 gate)
-    entries = sorted(
-        [e for e in snap.approaching_entries if e.get("current_price", 0) <= e.get("entry_price", 0)],
-        key=lambda e: e["distance_to_constitutional"]
-    )
-    if not entries:
+def _s_near_entry(snap) -> str:
+    """Near Constitutional Entry — price at/below entry zone AND R2 within 10 pts of gate."""
+    uni = snap.universe_snapshot or []
+
+    def _qualifies(r):
+        r2  = r.get("r2_score") or 0.0
+        cur = r.get("current_price")
+        ez  = r.get("entry_zone")
+        dist_r2 = 60 - r2
+        if dist_r2 > 10:
+            return False
+        # price must be AT or BELOW the entry zone (discount condition met)
+        if cur and ez and ez > 0 and cur > ez:
+            return False
+        return True
+
+    candidates = [r for r in uni if _qualifies(r)]
+    candidates = sorted(candidates, key=lambda r: (60 - (r.get("r2_score") or 0)))
+
+    if not candidates:
         return f"""
 <div class="card" style="border-color:{A}44;">
-  <div class="section-title" style="color:{A};">&#128269; What Am I Waiting For</div>
-  <div style="color:{DIM};font-size:13px;">No tickers in the discount zone approaching constitutional entry right now.</div>
+  <div class="section-title" style="color:{A};">&#127919; NEAR CONSTITUTIONAL ENTRY — Closest Executable Opportunities</div>
+  <div style="color:{DIM};font-size:13px;">No tickers in the discount zone near constitutional entry right now.</div>
 </div>"""
+
     rows = ""
-    for e in entries:
-        dist = e["distance_to_constitutional"]
-        need_move = e.get("need_move_pct", 0.0)
-        urg_c = G if dist <= 0.3 else (A if dist <= 1.0 else DIM)
+    for r in candidates:
+        ticker  = r["ticker"]
+        cur     = r.get("current_price")
+        ez      = r.get("entry_zone")
+        r2      = r.get("r2_score") or 0.0
+        dist_pts = round(60 - r2, 1)
+        cur_s   = f'{cur:.2f}' if cur else "—"
+        ez_s    = f'{ez:.2f}' if ez else "—"
+        dist_s  = f'{dist_pts:.1f} pts'
+        if cur and ez and ez > 0:
+            need_pct = (ez - cur) / cur * 100
+            need_s = "AT ZONE" if abs(need_pct) < 0.5 else f'+{need_pct:.1f}%'
+        else:
+            need_s = "—"
+        waiting = r.get("reason") or "—"
+        mem_s = "&#9733;" if r.get("memory") else ""
+        urg_c = G if dist_pts <= 2 else (A if dist_pts <= 4 else DIM)
         rows += f"""
 <tr>
-  <td style="font-weight:700;color:{B};font-size:14px;">{e['ticker']}</td>
-  <td style="color:{DIM};font-size:11px;">{e.get('sector','')}</td>
-  <td style="color:{W};font-weight:700;">{e['entry_price']:.2f} EGP</td>
-  <td style="color:{FG};">{e['current_price']:.2f}</td>
-  <td style="color:{A};">+{need_move:.1f}% in zone</td>
-  <td style="color:{urg_c};font-weight:700;">R2 {60.0 - dist:.1f} / 60 &mdash; {dist:.1f} pts to gate</td>
+  <td style="font-weight:700;color:{B};font-size:14px;">{ticker}</td>
+  <td style="color:{FG};">{cur_s}</td>
+  <td style="color:{W};font-weight:700;">{ez_s}</td>
+  <td style="color:{urg_c};font-weight:700;">{dist_s}</td>
+  <td style="color:{A};">{need_s}</td>
+  <td style="color:{DIM};font-size:11px;max-width:200px;">{waiting}</td>
+  <td style="color:{A};font-size:13px;">{mem_s}</td>
 </tr>"""
+
     return f"""
 <div class="card" style="border-color:{A}44;">
-  <div class="section-title" style="color:{A};">&#128269; What Am I Waiting For ({len(entries)} in discount zone, near gate)</div>
+  <div class="section-title" style="color:{A};">&#127919; NEAR CONSTITUTIONAL ENTRY — Closest Executable Opportunities ({len(candidates)} tickers)</div>
   <div class="tbl-wrap">
     <table>
-      <tr><th>Ticker</th><th>Sector</th><th>Entry Zone</th><th>Current</th><th>Price Position</th><th>R2 Gate</th></tr>
+      <tr><th>Ticker</th><th>Current</th><th>Entry Zone</th><th>Distance (pts)</th><th>In Zone</th><th>Waiting For</th><th>Memory</th></tr>
       {rows}
     </table>
   </div>
+</div>"""
+
+
+def _s_future_opportunities(snap) -> str:
+    """Collapsible section: universe members approaching but not yet close."""
+    uni = snap.universe_snapshot or []
+
+    def _qualifies(r):
+        status = r.get("status", "")
+        r2     = r.get("r2_score") or 0.0
+        dist_r2 = 60 - r2
+        if status == "BELOW_THRESHOLD":
+            return True
+        if status == "APPROACHING" and dist_r2 > 6:
+            return True
+        return False
+
+    candidates = [r for r in uni if _qualifies(r)]
+    candidates = sorted(candidates, key=lambda r: (60 - (r.get("r2_score") or 0)))
+
+    if not candidates:
+        return ""
+
+    rows = ""
+    for r in candidates:
+        ticker  = r["ticker"]
+        cur     = r.get("current_price")
+        ez      = r.get("entry_zone")
+        r2      = r.get("r2_score") or 0.0
+        score   = r.get("final_score") or 0.0
+        cur_s   = f'{cur:.2f}' if cur else "—"
+        ez_s    = f'{ez:.2f}' if ez else "—"
+        r2_s    = f'{r2:.1f}' if r2 else "—"
+        score_s = f'{score:.1f}' if score else "—"
+        if cur and ez and ez > 0:
+            need_pct = (ez - cur) / cur * 100
+            need_s = f'{need_pct:+.1f}%'
+        else:
+            need_s = "—"
+        reason = r.get("reason") or "—"
+        mem_s  = "&#9733;" if r.get("memory") else ""
+        rows += f"""
+<tr>
+  <td style="font-weight:700;color:{B};font-size:13px;">{ticker}</td>
+  <td style="color:{FG};">{cur_s}</td>
+  <td style="color:{W};">{ez_s}</td>
+  <td style="color:{DIM};">{need_s}</td>
+  <td style="color:{P};">{r2_s}</td>
+  <td style="color:{DIM};">{score_s}</td>
+  <td style="color:{DIM};font-size:11px;max-width:180px;">{reason}</td>
+  <td style="color:{A};font-size:13px;">{mem_s}</td>
+</tr>"""
+
+    return f"""
+<div class="card" style="border-color:{P}44;">
+  <details>
+    <summary>
+      <div class="section-title" style="margin-bottom:0;cursor:pointer;color:{P};display:flex;align-items:center;justify-content:space-between;">
+        <span>&#128197; FUTURE OPPORTUNITIES — Constitutional Candidates in Progress ({len(candidates)} tickers)</span>
+        <span style="font-size:11px;color:{DIM};">&#9660; expand</span>
+      </div>
+    </summary>
+    <div style="margin-top:12px;" class="tbl-wrap">
+      <table>
+        <tr><th>Ticker</th><th>Current</th><th>Entry Zone</th><th>Need Move %</th><th>R2</th><th>Score</th><th>Reason</th><th>Memory</th></tr>
+        {rows}
+      </table>
+    </div>
+  </details>
 </div>"""
 
 
@@ -452,6 +571,7 @@ def _s_universe_status(snap) -> str:
             "APPROACHING":     P,
             "BELOW_THRESHOLD": DIM,
             "NO_DATA":         DIM,
+            "NO_HISTORY":      DIM,
         }
         c = color_map.get(status, DIM)
         return f'<span class="badge" style="background:{c}22;color:{c};">{status.replace("_"," ")}</span>'
@@ -462,7 +582,7 @@ def _s_universe_status(snap) -> str:
     rows_html = ""
     for r in sorted(rows_data, key=lambda x: (
         {"PREMIUM": 0, "ACTIVE": 1, "UNDER_REVIEW": 2, "APPROACHING": 3,
-         "BELOW_THRESHOLD": 4, "NO_DATA": 5}.get(x["status"], 9)
+         "BELOW_THRESHOLD": 4, "NO_DATA": 5, "NO_HISTORY": 6}.get(x["status"], 9)
     )):
         cur  = f'{r["current_price"]:.2f}' if r.get("current_price") else "—"
         ez   = f'{r["entry_zone"]:.2f}' if r.get("entry_zone") else "—"
@@ -517,7 +637,8 @@ def build_dashboard() -> str:
     dna  = _load_stock_dna()
     body = (
         _s_stats(snap) +
-        _s_waiting_for(snap) +
+        _s_near_entry(snap) +
+        _s_future_opportunities(snap) +
         _s_universe_status(snap) +
         _s_market_map(snap, dna) +
         _s_stock_dna(snap, dna) +
@@ -551,6 +672,7 @@ def build_dashboard() -> str:
 
 if __name__ == "__main__":
     import subprocess
+    import json as _json
     from universe_snapshot import build_universe_snapshot
     from stock_dna_engine import build_stock_dna
     build_universe_snapshot()
@@ -563,9 +685,19 @@ if __name__ == "__main__":
     html = build_dashboard().replace("$COMMIT_MARKER$", commit)
     out.write_text(html, encoding="utf-8")
     sha  = hashlib.sha256(html.encode()).hexdigest()
-    print(f"[Dashboard V6] Saved dashboard.html ({len(html)//1024} KB)")
-    print(f"[Dashboard V6] SHA256: {sha[:32]}...")
-    print(f"[Dashboard V6] Commit: {commit}")
-    for section in ["What Am I Waiting For","Market Map","Stock DNA","Full Timeline","System Diagnostics"]:
+    # Generate version.json
+    version_data = {
+        "version": "6.2",
+        "commit": commit,
+        "generated_at": datetime.now(timezone(timedelta(hours=2))).strftime("%Y-%m-%d %H:%M Cairo"),
+        "universe_count": 27,
+        "total_events": 42
+    }
+    (BASE / "version.json").write_text(_json.dumps(version_data, indent=2))
+    print(f"[Dashboard V6.2] Saved dashboard.html ({len(html)//1024} KB)")
+    print(f"[Dashboard V6.2] SHA256: {sha[:32]}...")
+    print(f"[Dashboard V6.2] Commit: {commit}")
+    print(f"[Dashboard V6.2] version.json written (v6.2)")
+    for section in ["NEAR CONSTITUTIONAL ENTRY","FUTURE OPPORTUNITIES","Market Map","Stock DNA","Full Timeline","System Diagnostics"]:
         present = section.replace(" ","") in html.replace(" ","")
-        print(f"[Dashboard V6] Section '{section}': {'OK' if present else 'MISSING'}")
+        print(f"[Dashboard V6.2] Section '{section}': {'OK' if present else 'MISSING'}")

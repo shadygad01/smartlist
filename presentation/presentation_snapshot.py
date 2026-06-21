@@ -260,6 +260,7 @@ def build_presentation_snapshot() -> PresentationSnapshot:
     try:
         from universe_snapshot import load_universe_snapshot
         snap.universe_snapshot = load_universe_snapshot()
+        snap.universe_size = len(snap.universe_snapshot)
     except Exception:
         snap.universe_snapshot = []
 

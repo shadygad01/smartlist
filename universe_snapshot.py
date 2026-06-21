@@ -37,19 +37,24 @@ def _load_pool() -> dict[str, dict]:
             return {}
         rows = conn.execute(
             """SELECT ticker, r2_score, final_score, entry_price, current_price, snapshot_ts
-               FROM candidate_pool WHERE snapshot_ts=?""",
+               FROM candidate_pool WHERE snapshot_ts=? AND entry_price > 0
+               ORDER BY ticker,
+                 ABS(r2_score - 60) ASC,
+                 r2_score DESC""",
             (latest_ts,)
         ).fetchall()
         result = {}
         for r in rows:
-            result[r["ticker"]] = {
-                "r2_score":      r["r2_score"],
-                "final_score":   r["final_score"],
-                "entry_price":   r["entry_price"],
-                "current_price": r["current_price"],
-                "last_scan":     (r["snapshot_ts"] or "")[:10],
-                "source":        "candidate_pool",
-            }
+            # First row per ticker = zone where price is closest to entry (most relevant)
+            if r["ticker"] not in result:
+                result[r["ticker"]] = {
+                    "r2_score":      r["r2_score"],
+                    "final_score":   r["final_score"],
+                    "entry_price":   r["entry_price"],
+                    "current_price": r["current_price"],
+                    "last_scan":     (r["snapshot_ts"] or "")[:10],
+                    "source":        "candidate_pool",
+                }
         return result
     finally:
         conn.close()
@@ -83,18 +88,24 @@ def _load_research() -> dict[str, dict]:
         conn.close()
 
 
-def _load_signal_history() -> dict[str, float]:
-    """Latest price per ticker from signal_history.json."""
+def _load_signal_history() -> dict[str, dict]:
+    """Latest scan data per ticker from signal_history.json."""
     if not _SIGNAL_HIST.exists():
         return {}
     try:
         data = json.loads(_SIGNAL_HIST.read_text())
-        prices = {}
+        result = {}
         for ticker, events in data.items():
             if isinstance(events, list) and events:
                 latest = max(events, key=lambda e: e.get("date", ""))
-                prices[ticker] = latest.get("price")
-        return prices
+                result[ticker] = {
+                    "price":      latest.get("price"),
+                    "score":      latest.get("score", 0),
+                    "r1":         latest.get("r1", 0),
+                    "last_scan":  latest.get("date", ""),
+                    "count":      len(events),
+                }
+        return result
     except Exception:
         return {}
 
@@ -151,7 +162,8 @@ def _load_timeline() -> dict[str, dict]:
 # ── Status derivation ──────────────────────────────────────────────────────────
 
 def _derive_status(ticker: str, r2: float | None, score: float | None,
-                   in_timeline: bool, return_pct: float | None) -> str:
+                   in_timeline: bool, return_pct: float | None,
+                   has_scan_history: bool = False) -> str:
     if in_timeline and return_pct is not None:
         if return_pct >= 50:
             return "PREMIUM"
@@ -161,23 +173,34 @@ def _derive_status(ticker: str, r2: float | None, score: float | None,
             return "UNDER_REVIEW"
     if r2 is not None and r2 >= 50 and score is not None and score >= 35:
         return "APPROACHING"
-    if r2 is not None:
+    if r2 is not None or has_scan_history:
         return "BELOW_THRESHOLD"
-    return "NO_DATA"
+    return "NO_HISTORY"
 
 
-def _derive_waiting_for(r2: float | None, score: float | None) -> str:
-    if r2 is None:
+def _derive_waiting_for(r2: float | None, score: float | None,
+                        has_scan_history: bool = False,
+                        status: str = "") -> str:
+    if r2 is None or r2 == 0:
+        if has_scan_history:
+            return "R1=0 — Price Zone not met (score=0)"
         return "No scan data available"
-    if r2 >= 50 and r2 < 55:
-        return f"Waiting for Demand Confirmation (R2 {r2:.0f}/60)"
-    elif r2 >= 55 and r2 < 58:
-        return f"Waiting for Order Block Touch (R2 {r2:.0f}/60)"
-    elif r2 >= 58 and r2 < 60:
-        return f"Waiting for Constitutional Trigger (R2 {r2:.0f}/60)"
-    else:
-        sc_str = f" Score {score:.0f}" if score is not None else ""
-        return f"Below Threshold (R2 {r2:.0f}{sc_str})"
+    sc = score or 0.0
+    if r2 >= 60 and sc >= 35:
+        if status in ("PREMIUM", "ACTIVE"):
+            return "READY FOR RE-ACCUMULATION"
+        return "READY NOW — R2≥60, Score≥35"
+    if r2 >= 60 and sc < 35:
+        return f"Waiting for Score ≥35 (Score {sc:.1f}/35)"
+    if r2 >= 58:
+        return f"Waiting for Constitutional Trigger (R2 {r2:.1f}/60)"
+    if r2 >= 55:
+        return f"Waiting for Order Block Touch (R2 {r2:.1f}/60)"
+    if r2 >= 50:
+        if sc >= 35:
+            return f"Waiting for Demand Confirmation (R2 {r2:.1f}/60)"
+        return f"Waiting for Score ≥35 and Demand Confirmation (R2 {r2:.1f}/60, Score {sc:.1f}/35)"
+    return f"Below Threshold — Needs R2≥50 (R2 {r2:.1f}/60)"
 
 
 def _derive_action(status: str, return_pct: float | None) -> str:
@@ -202,7 +225,7 @@ def build_universe_snapshot() -> list[dict]:
 
     pool      = _load_pool()
     research  = _load_research()
-    sh_prices = _load_signal_history()
+    sh_data   = _load_signal_history()
     cbr       = _load_constitutional_registry()
     timeline  = _load_timeline()
 
@@ -217,16 +240,25 @@ def build_universe_snapshot() -> list[dict]:
         t = timeline.get(ticker, {})
         in_timeline = bool(t)
 
-        # R2 + score
-        r2    = p.get("r2_score") or r.get("r2_score") or c.get("r2_score")
-        score = p.get("final_score") or r.get("final_score") or c.get("final_score")
+        sh = sh_data.get(ticker, {})
+        has_scan_history = bool(sh)
 
-        # Current price
+        # R2 + score — use explicit None checks to avoid treating 0 as missing
+        def _first_not_none(*vals):
+            for v in vals:
+                if v is not None:
+                    return v
+            return None
+        r2    = _first_not_none(p.get("r2_score"), r.get("r2_score"), c.get("r2_score"))
+        score = _first_not_none(p.get("final_score"), r.get("final_score"), c.get("final_score"))
+
+        # Current price — signal_history beats stale egx_research
+        # Priority: candidate_pool (scanner-computed) > signal_history (today) > timeline > egx_research (stale)
         current_price = (
             p.get("current_price")
-            or r.get("current_price")
+            or sh.get("price")
             or t.get("current_price")
-            or sh_prices.get(ticker)
+            or r.get("current_price")
         )
 
         # Entry price
@@ -248,14 +280,14 @@ def build_universe_snapshot() -> list[dict]:
             distance = round((current_price - entry_price) / entry_price * 100, 2)
 
         # Last scan / last price update
-        last_scan         = p.get("last_scan") or r.get("last_scan") or ""
+        last_scan         = p.get("last_scan") or r.get("last_scan") or sh.get("last_scan") or ""
         last_price_update = t.get("event_date") or last_scan or ""
 
         # Source
-        source = p.get("source") if p else (r.get("source") if r else "constitutional_registry" if c else "NO_DATA")
+        source = p.get("source") if p else (r.get("source") if r else "constitutional_registry" if c else ("signal_history" if has_scan_history else "NO_HISTORY"))
 
-        status     = _derive_status(ticker, r2, score, in_timeline, return_pct)
-        reason     = _derive_waiting_for(r2, score) if not in_timeline else ""
+        status     = _derive_status(ticker, r2, score, in_timeline, return_pct, has_scan_history)
+        reason     = _derive_waiting_for(r2, score, has_scan_history, status)
         action     = _derive_action(status, return_pct)
         memory     = 1 if in_timeline else 0
 

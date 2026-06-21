@@ -132,11 +132,53 @@ def _market_status_section(snap):
 def _all_active(snap):
     if not snap.timeline:
         return ""
-    sorted_tl = sorted(snap.timeline, key=lambda e: -e["return_pct"])
-    return (
-        _section_title(f"&#128202; All Active Opportunities ({len(snap.timeline)} events)") +
-        _opp_table(sorted_tl)
+    # FIRST_BUY only — one per ticker (latest event per ticker)
+    first_buy_by_ticker = {}
+    for e in snap.timeline:
+        if e["event_type"] == "FIRST_BUY":
+            t = e["ticker"]
+            if t not in first_buy_by_ticker or e["event_date"] > first_buy_by_ticker[t]["event_date"]:
+                first_buy_by_ticker[t] = e
+    first_buys = sorted(first_buy_by_ticker.values(), key=lambda e: -e["return_pct"])
+
+    # RE_ACCUMULATION events
+    re_accums = sorted(
+        [e for e in snap.timeline if e["event_type"] == "RE_ACCUMULATION"],
+        key=lambda e: -e["return_pct"]
     )
+
+    out = _section_title(f"&#128202; All Active Opportunities ({len(first_buys)} positions)") + _opp_table(first_buys)
+    if re_accums:
+        out += (
+            _section_title(f"&#128257; Re-Accumulation Events ({len(re_accums)} events)") +
+            _opp_table(re_accums)
+        )
+    return out
+
+
+def _waiting_for_reason(e) -> tuple[str, str]:
+    """Return (reason_text, css_color) based on R2/score/price zone logic."""
+    r2    = e["r2_score"]
+    score = e["final_score"]
+    cp    = e["current_price"]
+    ep    = e["entry_price"]
+
+    # Price-zone check first
+    if cp <= ep:
+        # AT or INSIDE the entry zone
+        return "AT ENTRY ZONE — Awaiting R2 Confirmation", _GREEN
+
+    # Above zone — waiting for conditions
+    if score < 35:
+        return f"Waiting for Score Confirmation ({score:.0f}/35)", _AMBER
+    if 50 <= r2 < 55:
+        return f"Waiting for Demand Confirmation (R2 {r2:.0f}/60)", _MUTED
+    if 55 <= r2 < 58:
+        return f"Waiting for Order Block Touch (R2 {r2:.0f}/60)", _AMBER
+    if 58 <= r2 < 60:
+        return f"Waiting for Constitutional Trigger (R2 {r2:.0f}/60)", _AMBER
+    # Both approaching threshold
+    return f"Approaching Zone — R2 {r2:.0f} Score {score:.0f}", _AMBER
 
 
 def _watch_list(snap):

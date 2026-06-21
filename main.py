@@ -16,7 +16,6 @@ import time
 # yfinance لا يدعم timeout مباشرة — نضع حداً لكل socket operations
 socket.setdefaulttimeout(60)
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from pattern_engine import analyze_entry_patterns
 from signal_logger import log_signal, check_outcomes
 try:
     from snapshot_engine import compute_snapshot_features as _snap_features
@@ -208,47 +207,6 @@ def build_dow_banner(dj):
 # W_PRICE, W_OB, W_LIQ, W_HTF, W_AVWAP, W_MACD, W_DIV, W_DZ
 # imported from signal_engine (loaded from config/weights.json)
 
-# ── Constitutional Cleanup Feature Flags ──────────────────────────────────────
-# Certified LEGACY SAFE by forensic audit 2026-06-21.
-# All flags default False = legacy disabled. Set True to re-enable temporarily.
-# These flags control ONLY email/Telegram display — no effect on constitutional
-# pipeline (candidate_pool.db, buy_registry, universe_snapshot, timeline, DNA).
-ENABLE_STOCK_MULT      = False   # stock_mult / STOCK_QUALITY / compute_expectancy
-ENABLE_CTX_MULT        = False   # CTX_RAMADAN_MULT / CTX_CBE_MULT / regime mult
-ENABLE_PATTERN_ENGINE  = False   # analyze_entry_patterns / learned_weights
-ENABLE_EXPECTANCY      = False   # ranking_engine.compute_expectancy()
-ENABLE_LEGACY_RANKING  = False   # factor_expectancy_score display field
-
-# ── Stock Quality Tiers ────────────────────────────────────────────────────────
-# ⚠️ تنبيه منهجي (مراجعة مستقلة 2026-06):
-# التصنيفات مشتقة من متوسط عوائد "أحداث قيعان محلية" تاريخية، وليست من
-# إشارات الماسح. فحص ثبات الترتيب بين نصفي الفترة (قبل/بعد 2025-08)
-# أعطى Spearman rho = 0.03 ≈ صفر — أي أن ترتيب الأسهم لا يثبت زمنياً
-# والفروق غالباً ضوضاء + Multiple Testing على 27 سهماً.
-# كذلك بعض القيم ملوثة بأحداث Corporate Actions غير معالَجة (EFID/HELI splits).
-# المضاعفات حالياً غير مؤثرة على اختيار الصفقات (score≥65 دائماً عند عبور
-# بوابة r1) — أثرها فقط على Position Sizing. يُنصح بتحييدها إلى 1.00
-# حتى يتوفر دليل حي مستقر ≥ 12 شهراً.
-STOCK_QUALITY: dict[str, float] = {
-    # Tier A  (expectancy > 10%)
-    "MCQE.CA": 1.15, "RAYA.CA": 1.15, "ORHD.CA": 1.15, "ARCC.CA": 1.15,
-    "OIH.CA":  1.15,   # backtest exp=9.9%, wr=39.8% — promoted from Tier C
-    # Tier B  (expectancy 7–10%)
-    "ETEL.CA": 1.07, "PHDC.CA": 1.07, "CCAP.CA": 1.07, "EFID.CA": 1.07,
-    "ISPH.CA": 1.07,   # backtest exp=9.1%, wr=38.1% — newly added
-    # Tier D  (expectancy < 4%)
-    "JUFO.CA": 0.88, "HRHO.CA": 0.88, "EAST.CA": 0.88, "EFIH.CA": 0.88,
-}
-
-# Context multipliers:
-# المراجعة المستقلة (عوائد close-to-close صادقة، 15 يوم تداول، 2,774 حدثاً):
-#   رمضان    (n=325):  متوسط +0.25%  مقابل +3.40% خارج رمضان  → الاتجاه السالب صحيح
-#   نافذة CBE (n=450):  متوسط +4.76%  مقابل +2.70% خارجها       → الاتجاه الموجب صحيح
-# الاتجاهان مدعومان بالبيانات، لكن المقدار (±30%) غير قابل للمعايرة من السجل
-# الحالي (لا يحتوي scores تاريخية). عملياً المضاعفان غير مؤثرَين على اختيار
-# الصفقات (score بعد البوابة ≥65 دائماً) — الأثر على التصنيف والعرض فقط.
-CTX_RAMADAN_MULT = 0.70
-CTX_CBE_MULT     = 1.30
 
 # =========================================
 # POSITION SIZING (Conservative Fund Mode)
@@ -751,61 +709,8 @@ def analyze(symbol):
         price_ok = (r1 >= PRICE_GATE)
         liq_ok   = (r3 >= LIQ_GATE)
 
-        # ── Adjusted score: Stock Quality Tier × Context Multiplier ──────
-        # Gate logic uses raw `total`. Signal label + display use `score`.
-        ctx_mult   = 1.0
-        ctx_labels = []
-        if ENABLE_CTX_MULT:
-            if is_ramadan():
-                ctx_mult  *= CTX_RAMADAN_MULT
-                ctx_labels.append("📿 Ramadan −30%")
-            if is_cbe_window():
-                ctx_mult  *= CTX_CBE_MULT
-                ctx_labels.append("🏦 CBE Window +30%")
-        # ranking_engine is the authority; falls back to STOCK_QUALITY when sample_n < 30
-        _factor_exp_score = 0.0
-        if ENABLE_STOCK_MULT:
-            try:
-                import ranking_engine as _re
-                _exp = _re.compute_expectancy(symbol) if ENABLE_EXPECTANCY else None
-                if _exp is not None and _exp.sample_n >= 30:
-                    stock_mult = _re._expectancy_to_mult(_exp.expectancy)
-                    _tier_lbl  = f"📊 E={_exp.expectancy*100:.1f}% n={_exp.sample_n}"
-                else:
-                    stock_mult = STOCK_QUALITY.get(symbol, 1.0)
-                    _tier_lbl  = {1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,"")
-                if ENABLE_LEGACY_RANKING and cur < eq:
-                    _factor_exp_score = _re.factor_expectancy_score({
-                        "r2_ob": r2, "r3_liquidity": r3, "r4_htf": r4,
-                        "r5_avwap": r5, "r6_macd": r6, "r7_div": r7, "r8_demand": r8,
-                        "sv_hit": bool(sv_result[0]) if sv_result else False,
-                        "hvn_hit": bool(hvn_result[0]) if hvn_result else False,
-                    })
-            except Exception:
-                stock_mult = STOCK_QUALITY.get(symbol, 1.0)
-                _tier_lbl  = {1.15:"⭐ Tier A",1.07:"✅ Tier B",0.88:"⚠️ Tier D"}.get(stock_mult,"")
-            ctx_labels.append(_tier_lbl)
-
-        # ── Regime Filter — multiplied into ctx_mult when bear regime detected ──
-        # Enabled via gates_config.json "regime_filter_enabled": true
-        # Safe default: disabled if key missing. Does NOT change BUY/Wait/Skip
-        # gate logic directly — reduces adj_score so borderline signals fall below gate.
-        _regime_state = ""
-        _regime_mult  = 1.0
-        if ENABLE_CTX_MULT and _REGIME_FILTER_ENABLED and cur < eq:
-            _sg_trend = (_sg.get("egx30_trend", "") or "")
-            if _sg_trend in ("DOWN", "DOWNTREND", "bearish", "Bearish", "downtrend"):
-                _regime_mult   = _REGIME_DOWN_MULT
-                _regime_state  = "bear"
-                ctx_mult      *= _REGIME_DOWN_MULT
-                ctx_labels.append(f"📉 Bear Regime {_REGIME_DOWN_MULT:.0%}")
-            else:
-                _regime_state = "bull" if _sg_trend else "neutral"
-        elif ENABLE_CTX_MULT and _REGIME_FILTER_ENABLED and cur >= eq:
-            _regime_state = "neutral"
-
-        ctx_label  = " · ".join(x for x in ctx_labels if x)
-        score = min(int(round(total * stock_mult * ctx_mult)), 100)
+        ctx_label = ""
+        score = min(int(round(total)), 100)
 
         # ══ سلم الإشارات الصارم (مصدر حقيقة واحد) ══════════════════════════
         #   Skip      : الجودة الخام < 35           → لا يُشترى أبداً
@@ -854,15 +759,7 @@ def analyze(symbol):
             entry_zones = calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo,
                                            _sv=sv_result, _hvn=hvn_result)
 
-        # ── Pattern Recognition + Historical Backtesting ──────────────────────
-        if not ENABLE_PATTERN_ENGINE or cur >= eq:
-            pattern_data = {"ok": False, "reason": "disabled" if not ENABLE_PATTERN_ENGINE else "premium",
-                            "label": "Pattern analysis disabled" if not ENABLE_PATTERN_ENGINE else "Price in Premium Zone — pattern analysis inactive"}
-        else:
-            df_long = download_data(symbol, 500)
-            if df_long.empty or len(df_long) < 30:
-                df_long = df
-            pattern_data = analyze_entry_patterns(df_long, symbol=symbol)
+        pattern_data = {"ok": False, "reason": "removed", "label": ""}
 
         try:
             _vol = df["Volume"]
@@ -939,52 +836,14 @@ def analyze(symbol):
             "sweep_detected": bool("Sweep" in l3),
             "wick_rejection": bool("wick" in l3.lower()),
             "equal_lows":     bool("Equal Lows" in l3),
-            "ctx_mult":         round(ctx_mult, 3),
-            "stock_mult":       round(stock_mult, 3),
             "price_gate":       PRICE_GATE,
             "price_ok":         bool(price_ok),
             "liq_confirmed":    bool(liq_confirmed),
             "early_buy_research": bool(_is_early_buy_research),
             "sv_depth":         _sv_depth,
-            "regime_state":     _regime_state,
-            "regime_multiplier": round(_regime_mult, 3),
-            "factor_exp_score": round(_factor_exp_score, 2),
             **_snap,
         }
 
-        # Pattern Intelligence 2.0 telemetry (research only — never affects result)
-        try:
-            import pattern_kb as _pkb
-            _sig_id = f"{symbol}_{today}"
-            _ind_data = pattern_data.get("detail") if pattern_data.get("ok") else None
-            # Gate flags for PKB pattern lookup (binary: gate scored > 0)
-            _gate_flags = {
-                "r1_price":      1 if (r1 or 0) > 0 else 0,
-                "r2_ob":         1 if (r2 or 0) > 0 else 0,
-                "r3_liquidity":  1 if (r3 or 0) > 0 else 0,
-                "r4_htf":        1 if (r4 or 0) > 0 else 0,
-                "r5_avwap":      1 if (r5 or 0) > 0 else 0,
-                "r6_macd":       1 if (r6 or 0) > 0 else 0,
-                "r7_div":        1 if (r7 or 0) > 0 else 0,
-                "r8_demand":     1 if (r8 or 0) > 0 else 0,
-                "sweep_detected": 1 if result.get("sweep_detected") else 0,
-                "wick_rejection": 1 if result.get("wick_rejection") else 0,
-                "equal_lows":     1 if result.get("equal_lows") else 0,
-                "sv_hit":         1 if result.get("sv_hit") else 0,
-                "hvn_hit":        1 if result.get("hvn_hit") else 0,
-            }
-            _pkb.log_telemetry(
-                signal_id=_sig_id,
-                symbol=symbol,
-                signal_date=today,
-                signal_class=sig if sig not in ("Wait", "Skip") else sig,
-                pattern_score=pattern_data.get("pattern_score") if pattern_data.get("ok") else None,
-                indicators=_ind_data,
-                market_regime=_regime_state,
-                gate_flags=_gate_flags,
-            )
-        except Exception:
-            pass
 
         return result
     except Exception as e:
@@ -1960,52 +1819,7 @@ def _register_new_positions(results):
                 print(f"📌 تسجيل مركز جديد ({results[stock].get('signal')}): {NAMES.get(stock, stock)} @ {price}")
 
 def backfill_pattern_scores():
-    """
-    للمراكز المفتوحة التي لا تحتوي على entry_pattern_score،
-    يحسب الـ pattern_score على البيانات حتى تاريخ الدخول ويحدّثها.
-    """
-    positions = load_open_positions()
-    needs_backfill = [
-        (sym, p) for sym, p in positions.items()
-        if p.get("status") == "open" and not p.get("entry_pattern_score")
-    ]
-
-    if not needs_backfill:
-        return
-
-    print(f"\n🔄 Backfilling pattern scores for {len(needs_backfill)} positions...")
-    from pattern_engine import analyze_entry_patterns
-
-    updated = 0
-    for sym, p in needs_backfill:
-        try:
-            entry_date_str = str(p.get("entry_date", ""))[:10]
-            # نجلب 2 سنة من البيانات ثم نقطع عند تاريخ الدخول
-            df = download_data(sym, days=520)
-            if df is None or df.empty:
-                print(f"  ⚠️  {sym}: no data")
-                continue
-
-            entry_dt = pd.Timestamp(entry_date_str)
-            df_at_entry = df[df.index <= entry_dt]
-
-            if len(df_at_entry) < 80:
-                print(f"  ⚠️  {sym}: insufficient data at entry ({len(df_at_entry)} bars)")
-                continue
-
-            result = analyze_entry_patterns(df_at_entry, symbol=sym)
-            score = round(result.get("pattern_score", 0)) if result.get("ok") else 0
-            positions[sym]["entry_pattern_score"] = score
-            updated += 1
-            print(f"  ✅ {sym}: pattern_score at entry = {score}")
-
-        except Exception as e:
-            print(f"  ❌ {sym}: {e}")
-
-    if updated:
-        with open(POSITIONS_FILE, "w") as f:
-            json.dump(positions, f, indent=2)
-        print(f"✅ Backfilled {updated} positions\n")
+    pass  # pattern_engine removed 2026-06-21
 
 
 def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
@@ -2032,16 +1846,6 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
     monitor_reinforcement(cur_prices, results)
     resolved = check_outcomes(cur_prices)
 
-    # Always refresh learned weights (uses backfill + live data)
-    try:
-        import pattern_engine as _pe
-        new_w = _pe.update_weights_from_log()
-        if new_w:
-            _pe.WEIGHTS = new_w
-            print(f"  🧠 Weights refreshed (alpha={_pe._load_learned_meta().get('alpha', 0):.0%})")
-    except Exception:
-        pass
-
     # Step 3: rebuild HTML using cached prices (no extra HTTP calls)
     html, _ = build_report(holiday_mode=holiday_mode, last_trading=last_trading,
                            _cached_results=results)
@@ -2061,7 +1865,7 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
             log_signal(s, results[s])
 
     # Step 7: research platform — تسجيل + متابعة + تقرير أسبوعي
-    db_log_signals(results, SECTORS, STOCK_QUALITY, is_ramadan(), is_cbe_window())
+    db_log_signals(results, SECTORS, {}, is_ramadan(), is_cbe_window())
     tracker_run_all(verbose=False)
     maybe_run_weekly_report()
 
@@ -2241,12 +2045,6 @@ def _ensure_backfill():
                 return  # عنده بيانات كافية
         print("  🔄 Running historical backfill (first time setup)...")
         run_backfill(period="2y")
-        # بعد الـ backfill، حدّث الأوزان فوراً
-        try:
-            from pattern_engine import update_weights_from_log
-            update_weights_from_log()
-        except Exception:
-            pass
     except Exception as e:
         print(f"  ⚠️ Backfill skipped: {e}")
 

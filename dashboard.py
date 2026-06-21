@@ -23,6 +23,15 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+# ── Presentation layer — single source of truth ───────────────────────────────
+from presentation.presentation_language import (
+    DASH_TITLE, DASH_SUBTITLE, DASH_FOOTER,
+)
+from presentation.presentation_theme import DashTheme as _DT
+from presentation.presentation_formatter import DashboardFormatter as _DashFmt
+
+_dash_fmt = _DashFmt()
+
 CAIRO = ZoneInfo("Africa/Cairo")
 
 
@@ -92,17 +101,17 @@ def _pct(v):
         return "—"
 
 
-# ── CSS constants ─────────────────────────────────────────────────────────────
-G   = "#4caf50"   # green
-R   = "#f44336"   # red
-A   = "#f0b840"   # amber
-B   = "#50d8d0"   # blue accent
-DIM = "#8b8fa8"   # dim text
-FG  = "#d0d4e8"   # foreground
-BG0 = "#0b0c1a"   # page background
-BG1 = "#10112a"   # card background
-BG2 = "#181930"   # inner box
-BOR = "#252645"   # border
+# ── CSS constants — consumed from presentation_theme (single source) ──────────
+G   = _DT.G    # "#4caf50" — green
+R   = _DT.R    # "#f44336" — red
+A   = _DT.A    # "#f0b840" — amber
+B   = _DT.B    # "#50d8d0" — blue accent
+DIM = _DT.DIM  # "#8b8fa8" — dim text
+FG  = _DT.FG   # "#d0d4e8" — foreground
+BG0 = _DT.BG0  # "#0b0c1a" — page background
+BG1 = _DT.BG1  # "#10112a" — card background
+BG2 = _DT.BG2  # "#181930" — inner box
+BOR = _DT.BOR  # "#252645" — border
 
 
 def _badge(ok, yes, no, warn=False):
@@ -128,9 +137,8 @@ def _row2(label, badge, detail=""):
 
 
 def _section_header(title, icon=""):
-    return (f'<div style="color:{B};font-size:1em;font-weight:700;letter-spacing:0.05em;'
-            f'margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid {BOR}">'
-            f'{icon} {title}</div>')
+    # Renders through DashboardFormatter — presentation layer controls styling
+    return _dash_fmt.section_header_raw(title, icon)
 
 
 # ── DB query helper ───────────────────────────────────────────────────────────
@@ -2285,8 +2293,8 @@ def build_dashboard() -> str:
 
 <div class="header">
   <div>
-    <h1>⚡ EGX Constitutional Investment Platform</h1>
-    <div class="meta">Research-Driven · Constitutionally Governed · 27-Symbol Universe · Live State</div>
+    <h1>⚡ {DASH_TITLE}</h1>
+    <div class="meta">{DASH_SUBTITLE}</div>
   </div>
   <div class="meta" style="text-align:right">
     <div style="color:{FG}">{now_str}</div>
@@ -2314,7 +2322,7 @@ def build_dashboard() -> str:
 <div class="container">
 {body}
 <div class="footer">
-  EGX Constitutional Investment Platform · Built {now_str} · Research-Driven · Constitutionally Governed
+  {DASH_FOOTER.format(ts=now_str)}
   <a href="heatmap.html" style="color:{B};text-decoration:none">📈 Signal Heatmap</a>
 </div>
 </div>

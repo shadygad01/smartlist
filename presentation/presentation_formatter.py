@@ -278,17 +278,19 @@ class DashboardFormatter:
 
     def section_header(self, key: str, icon: str = "") -> str:
         title = self.SECTION_TITLES.get(key, key.replace("_", " ").title())
-        border = DT.BOR
-        color  = DT.B
+        return self.section_header_raw(title, icon)
+
+    def section_header_raw(self, title: str, icon: str = "") -> str:
+        """Render a section header from a raw title string (used by dashboard._section_header)."""
         return (
-            f'<div style="color:{color};font-size:1em;font-weight:700;'
+            f'<div style="color:{DT.B};font-size:1em;font-weight:700;'
             f'letter-spacing:0.05em;margin:0 0 12px;padding-bottom:8px;'
-            f'border-bottom:1px solid {border}">'
+            f'border-bottom:1px solid {DT.BOR}">'
             f'{icon} {title}</div>'
         )
 
     def platform_title(self) -> str:
-        return f"EGX Constitutional Investment Platform"
+        return "EGX Constitutional Investment Platform"
 
     def platform_subtitle(self) -> str:
         return "Research-Driven · Constitutionally Governed · 27-Symbol Universe"

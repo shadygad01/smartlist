@@ -4,6 +4,38 @@ Constitutional vocabulary — all user-facing labels live here.
 Production logic is immutable. Only the words we show change.
 """
 
+# ── Stock names — single source of truth ─────────────────────────────────────
+
+STOCK_NAMES = {
+    "COMI.CA": "Commercial International Bank",
+    "TMGH.CA": "Talaat Moustafa Group",
+    "ETEL.CA": "Telecom Egypt",
+    "EGAL.CA": "Egypt Aluminum",
+    "EAST.CA": "Eastern Company",
+    "ABUK.CA": "Abu Qir Fertilizers",
+    "ORAS.CA": "Orascom Construction PLC",
+    "EFIH.CA": "e-Finance for Digital and Financial Investments",
+    "ADIB.CA": "Abu Dhabi Islamic Bank Egypt",
+    "FWRY.CA": "Fawry for Banking Technology",
+    "EMFD.CA": "Emaar Misr for Development",
+    "PHDC.CA": "Palm Hills Developments",
+    "ORHD.CA": "Orascom Development Egypt",
+    "EFID.CA": "Edita Food Industries",
+    "HRHO.CA": "EFG Holding",
+    "JUFO.CA": "Juhayna Food Industries",
+    "BTFH.CA": "Beltone Financial Holding",
+    "RAYA.CA": "Raya Holding",
+    "GBCO.CA": "GB Auto",
+    "HELI.CA": "Heliopolis Housing",
+    "ARCC.CA": "Arabian Cement Company",
+    "MCQE.CA": "Misr Cement (Qena)",
+    "ORWE.CA": "Oriental Weavers",
+    "ISPH.CA": "Ibnsina Pharma",
+    "RMDA.CA": "Rameda Pharmaceutical",
+    "OIH.CA":  "Orascom Investment Holding",
+    "CCAP.CA": "Qalaa Holdings",
+}
+
 # ── Signal vocabulary ─────────────────────────────────────────────────────────
 
 SIGNAL_LABELS = {
@@ -127,3 +159,48 @@ def translate_bq_action(raw_action: str) -> str:
 
 def translate_category(raw_cat: str) -> str:
     return CATEGORY_LABELS.get(raw_cat, raw_cat.replace("_", " ").title())
+
+
+# ── Telegram structural strings ───────────────────────────────────────────────
+
+TG_HEADER              = "📋 *EGX Constitutional Morning Brief*"
+TG_POSITIONS_HEADER    = "📂 *Portfolio Positions  ({n})*"
+TG_SECTION_SEP         = "━━━━━━━━━━━━━━━━━━━━━"
+TG_REALTIME_HEADER     = "🚨 *Real-Time Alert*\n━━━━━━━━━━━━━━━━━━━━━━━"
+TG_CHANGE_HEADER       = "🚨 *Signal Change — BUY Triggered*\n━━━━━━━━━━━━━━━━━━━━━"
+TG_RESEARCH_HEADER     = "🔬 *Research Tracking — Pre-Confirmation*  _(not for entry)_"
+TG_IN_PORTFOLIO        = "  🔵 _In Portfolio_"
+TG_OPEN_POSITION_ICON  = "📌"
+TG_SIGNAL_ICON         = "📈"
+
+# ── Email structural strings ──────────────────────────────────────────────────
+
+EMAIL_HEADER_TITLE     = "EGX Constitutional Morning Brief"
+EMAIL_HEADER_BG        = "#1a3a5c"
+EMAIL_HEADER_FG        = "#ffffff"
+EMAIL_HEADER_SUBTITLE  = "#8fb8d8"
+EMAIL_FOOTER_TEXT      = "EGX Constitutional Investment Platform &nbsp;·&nbsp; Research-Driven &nbsp;·&nbsp; Constitutionally Governed"
+
+# Column headers
+COL_SIGNAL_QUALITY     = "Signal Quality"
+COL_RANK_SCORE         = "Rank Score / Signal Quality"
+COL_FACTOR_EXP         = "Factor Expectancy"
+COL_ENTRY_STRATEGY     = "ENTRY STRATEGY — AVERAGING PLAN"
+COL_PATTERN_INTEL      = "PATTERN INTELLIGENCE — HISTORICAL CONTEXT"
+COL_FACTOR_CONTRIB     = "Factor Contribution"
+
+# Tier row labels
+TIER_PREMIER           = "PREMIER"
+TIER_MONITOR           = "MONITOR"
+
+# ── Dashboard structural strings ──────────────────────────────────────────────
+
+DASH_TITLE             = "EGX Constitutional Investment Platform"
+DASH_SUBTITLE          = "Research-Driven · Constitutionally Governed · 27-Symbol Universe · Live State"
+DASH_FOOTER            = "EGX Constitutional Investment Platform · Built {ts} · Research-Driven · Constitutionally Governed"
+
+# ── Heatmap identity ──────────────────────────────────────────────────────────
+
+HEATMAP_TITLE          = "EGX Constitutional — Signal Score Heatmap"
+HEATMAP_BADGE          = "EGX Constitutional · Cairo Time"
+HEATMAP_SCORE_LABEL    = "Signal Quality Score"

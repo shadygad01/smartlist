@@ -191,34 +191,29 @@ def _s_stats(snap):
 
 
 def _s_near_entry(snap) -> str:
-    """Near Constitutional Entry — tickers within 6 pts, APPROACHING status, or within 10% of entry zone."""
+    """Near Constitutional Entry — price at/below entry zone AND R2 within 10 pts of gate."""
     uni = snap.universe_snapshot or []
 
     def _qualifies(r):
-        r2 = r.get("r2_score") or 0.0
-        status = r.get("status", "")
+        r2  = r.get("r2_score") or 0.0
         cur = r.get("current_price")
         ez  = r.get("entry_zone")
-        dist_r2 = 60 - r2  # distance in R2 pts to constitutional (60)
-        if dist_r2 <= 6:
-            return True
-        if status == "APPROACHING":
-            return True
-        if cur and ez and ez > 0:
-            pct = abs(cur - ez) / ez * 100
-            if pct <= 10:
-                return True
-        return False
+        dist_r2 = 60 - r2
+        if dist_r2 > 10:
+            return False
+        # price must be AT or BELOW the entry zone (discount condition met)
+        if cur and ez and ez > 0 and cur > ez:
+            return False
+        return True
 
     candidates = [r for r in uni if _qualifies(r)]
-    # sort by r2 distance ascending (closest first)
     candidates = sorted(candidates, key=lambda r: (60 - (r.get("r2_score") or 0)))
 
     if not candidates:
         return f"""
 <div class="card" style="border-color:{A}44;">
   <div class="section-title" style="color:{A};">&#127919; NEAR CONSTITUTIONAL ENTRY — Closest Executable Opportunities</div>
-  <div style="color:{DIM};font-size:13px;">No tickers near constitutional entry right now.</div>
+  <div style="color:{DIM};font-size:13px;">No tickers in the discount zone near constitutional entry right now.</div>
 </div>"""
 
     rows = ""
@@ -233,11 +228,10 @@ def _s_near_entry(snap) -> str:
         dist_s  = f'{dist_pts:.1f} pts'
         if cur and ez and ez > 0:
             need_pct = (ez - cur) / cur * 100
-            need_s = "AT ZONE" if abs(need_pct) < 0.5 else f'{need_pct:+.1f}%'
+            need_s = "AT ZONE" if abs(need_pct) < 0.5 else f'+{need_pct:.1f}%'
         else:
             need_s = "—"
         waiting = r.get("reason") or "—"
-        # memory stars
         mem_s = "&#9733;" if r.get("memory") else ""
         urg_c = G if dist_pts <= 2 else (A if dist_pts <= 4 else DIM)
         rows += f"""
@@ -256,7 +250,7 @@ def _s_near_entry(snap) -> str:
   <div class="section-title" style="color:{A};">&#127919; NEAR CONSTITUTIONAL ENTRY — Closest Executable Opportunities ({len(candidates)} tickers)</div>
   <div class="tbl-wrap">
     <table>
-      <tr><th>Ticker</th><th>Current</th><th>Entry Zone</th><th>Distance (pts)</th><th>Need Move %</th><th>Waiting For</th><th>Memory</th></tr>
+      <tr><th>Ticker</th><th>Current</th><th>Entry Zone</th><th>Distance (pts)</th><th>In Zone</th><th>Waiting For</th><th>Memory</th></tr>
       {rows}
     </table>
   </div>

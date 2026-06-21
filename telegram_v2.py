@@ -29,22 +29,49 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
         SEP,
     ]
 
-    # Portfolio Health
-    icon = _health_icon(snap.health_stars)
-    lines.append(f"{icon} Portfolio Health: *{snap.health_stars} {snap.health_label}*")
+    # Registry summary
+    icon    = _health_icon(snap.health_stars)
+    premium = sum(1 for b in snap.constitutional_buys if b.get("status") == "PREMIUM_NOW")
+    active  = sum(1 for b in snap.constitutional_buys if b.get("status") == "ACTIVE_OPPORTUNITY")
+    review  = sum(1 for b in snap.constitutional_buys if b.get("status") == "UNDER_REVIEW")
+
+    lines.append(f"{icon} *{snap.health_stars} {snap.health_label}*")
     lines.append(
-        f"   {snap.held_count} positions"
-        f" · Capacity {snap.capacity_used_pct:.0f}%"
-        f" · Corr {snap.max_correlation:.2f}"
+        f"   *{snap.total_buys}* Constitutional Opportunities"
+        f" · Premium: {premium} · Active: {active} · Review: {review}"
     )
     lines.append("")
 
-    # Opportunities
-    all_opps = snap.opportunities + snap.future_priorities
-    if all_opps:
+    # New BUYs today
+    if snap.new_buys_today:
         lines.append(SEP)
-        lines.append("🎯 *Today's Opportunities*\n")
-        for r in all_opps:
+        lines.append(f"🆕 *NEW Constitutional BUYs Today*\n")
+        for b in snap.new_buys_today:
+            lines.append(f"🟢 *{b['ticker']}*  {b['sector']}  R2={b['buy_r2']:.1f}")
+            lines.append(f"   Entry: {b['buy_price']:.2f} EGP  · Score: {b['buy_score']:.1f}")
+            lines.append("")
+
+    # Constitutional BUY Registry — all N entries
+    lines.append(SEP)
+    lines.append(f"📋 *Constitutional BUY Registry ({snap.total_buys})*\n")
+    for b in snap.constitutional_buys:
+        sign       = "+" if b["return_pct"] >= 0 else ""
+        peak_sign  = "+" if b["peak_return_pct"] >= 0 else ""
+        status_icon = "🏆" if b["status"] == "PREMIUM_NOW" else \
+                      "🟢" if b["status"] == "ACTIVE_OPPORTUNITY" else "🔴"
+        lines.append(
+            f"{status_icon} *{b['ticker']}*  {b['buy_date']}"
+            f"  Entry={b['buy_price']:.2f}  Now={b['current_price']:.2f}"
+            f"  Ret={sign}{b['return_pct']:.1f}%  Peak={peak_sign}{b['peak_return_pct']:.1f}%"
+            f"  {b['days_since_buy']}d"
+        )
+    lines.append("")
+
+    # New opportunities from advisor (today's new signals)
+    if snap.opportunities:
+        lines.append(SEP)
+        lines.append("🎯 *Advisor Opportunities*\n")
+        for r in snap.opportunities[:5]:
             conf_icon = "🟢" if r.get("confidence") == "HIGH" else "🟡"
             reason    = (r.get("reason") or "")[:80]
             lines.append(f"{conf_icon} *{r['ticker']}*  {r.get('sector','')}")
@@ -53,29 +80,12 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
                 lines.append(f"   _{reason}_")
             lines.append("")
 
-    # Future Priorities (brief chip line)
-    fp_tickers = [r["ticker"] for r in snap.future_priorities]
-    if fp_tickers:
-        fp_str = "  ·  ".join(f"*{t}*" for t in fp_tickers)
-        lines.append(f"⏳ *Future Priority:* {fp_str}")
-        lines.append("")
-
-    # Watch List
-    if snap.watch_list:
-        lines.append(SEP)
-        watch_str = "  ·  ".join(snap.watch_list)
-        lines.append(f"👁 *Watch List:* {watch_str}")
-        lines.append("")
-
     # Research (top insight only)
     if snap.research_insights:
         ins        = snap.research_insights[0]
         conclusion = (ins.get("conclusion") or "")[:120]
-        question   = (ins.get("question") or "")[:80]
         lines.append(SEP)
         lines.append(f"🔬 *Research:* {conclusion}")
-        if question:
-            lines.append(f"   _{question}_")
         lines.append("")
 
     lines.append(SEP)

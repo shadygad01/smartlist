@@ -66,10 +66,12 @@ def _section_title(title: str) -> str:
 
 
 def _exec_summary(snap: PresentationSnapshot) -> str:
-    sc = _star_color(snap.health_stars)
-    cap_note = f"Capacity <b>{snap.capacity_used_pct:.0f}%</b>" + \
-               (" ⚠" if snap.capacity_used_pct > 100 else "")
-    sector_note = "" if snap.sector_cap_ok else "&nbsp;·&nbsp;<b style='color:#721c24;'>Sector cap exceeded</b>"
+    sc      = _star_color(snap.health_stars)
+    premium = sum(1 for b in snap.constitutional_buys if b.get("status") == "PREMIUM_NOW")
+    active  = sum(1 for b in snap.constitutional_buys if b.get("status") == "ACTIVE_OPPORTUNITY")
+    review  = sum(1 for b in snap.constitutional_buys if b.get("status") == "UNDER_REVIEW")
+    new_note = f"&nbsp;·&nbsp;<b style='color:#155724;'>+{len(snap.new_buys_today)} new today</b>" \
+               if snap.new_buys_today else ""
     return (
         _section_title("📋 Executive Summary") +
         f"""<table width="100%" cellpadding="12" cellspacing="0" border="0"
@@ -79,9 +81,9 @@ def _exec_summary(snap: PresentationSnapshot) -> str:
       {snap.health_stars} {snap.health_label}</div>
     <div style="font-size:13px;color:#444;margin-top:6px;">{snap.health_narrative}</div>
     <div style="margin-top:10px;font-size:12px;color:{_MUTED};">
-      <b>{snap.held_count}</b> positions held &nbsp;·&nbsp;
-      {cap_note} &nbsp;·&nbsp;
-      Max Correlation <b>{snap.max_correlation:.2f}</b>{sector_note}
+      <b>{snap.total_buys}</b> Constitutional Opportunities{new_note} &nbsp;·&nbsp;
+      <b style="color:{_GREEN};">Premium: {premium}</b> &nbsp;·&nbsp;
+      Active: {active} &nbsp;·&nbsp; Review: {review}
     </div>
   </td></tr>
 </table>"""
@@ -144,46 +146,86 @@ def _future_priorities(snap: PresentationSnapshot) -> str:
     )
 
 
-def _portfolio(snap: PresentationSnapshot) -> str:
-    rows = ""
-    for p in snap.held_positions:
-        rc = _ret_color(p["return_pct"])
-        sign = "+" if p["return_pct"] > 0 else ""
-        rows += f"""
-<tr style="border-bottom:1px solid #e8f0f8;">
-  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:13px;
-    font-weight:700;color:{_NAVY};">{p['ticker']}</td>
-  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;
-    color:{_MUTED};">{p['sector']}</td>
-  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;
-    color:#444;">{p['entry_price']:.2f} EGP</td>
-  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;
-    color:#444;">{p['current_price']:.2f} EGP</td>
-  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:13px;
-    font-weight:700;color:{rc};">{sign}{p['return_pct']:.1f}%</td>
-</tr>"""
+def _constitutional_registry(snap: PresentationSnapshot) -> str:
+    if not snap.constitutional_buys:
+        return (
+            _section_title("📋 Constitutional BUY Registry") +
+            f'<div style="font-family:Arial,sans-serif;font-size:13px;color:{_MUTED};">No constitutional BUYs recorded yet.</div>'
+        )
 
-    if not rows:
-        rows = f'<tr><td colspan=5 style="padding:12px;color:{_MUTED};text-align:center;">No positions held.</td></tr>'
+    new_section = ""
+    if snap.new_buys_today:
+        new_rows = ""
+        for b in snap.new_buys_today:
+            new_rows += (
+                f'<tr><td style="padding:7px 12px;font-family:Arial,sans-serif;'
+                f'font-size:13px;font-weight:700;color:{_NAVY};">{b["ticker"]}</td>'
+                f'<td style="padding:7px 12px;font-family:Arial,sans-serif;'
+                f'font-size:12px;color:{_MUTED};">{b["sector"]}</td>'
+                f'<td style="padding:7px 12px;font-family:Arial,sans-serif;'
+                f'font-size:12px;">R2={b["buy_r2"]:.1f}</td>'
+                f'<td style="padding:7px 12px;font-family:Arial,sans-serif;'
+                f'font-size:12px;color:{_GREEN};font-weight:700;">NEW CONSTITUTIONAL BUY</td>'
+                f'</tr>'
+            )
+        new_section = (
+            _section_title("🆕 NEW Constitutional BUYs Today") +
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+            f' style="border:1px solid #c8f0c8;border-collapse:collapse;background:#f0fff0;">'
+            f'<tr style="background:{_GREEN};">'
+            f'<th align="left" style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;color:{_WHITE};">Ticker</th>'
+            f'<th align="left" style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;color:{_WHITE};">Sector</th>'
+            f'<th align="left" style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;color:{_WHITE};">R2</th>'
+            f'<th align="left" style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;color:{_WHITE};">Signal</th>'
+            f'</tr>{new_rows}</table>'
+        )
+
+    rows = ""
+    for b in snap.constitutional_buys:
+        ret_color  = _ret_color(b["return_pct"])
+        sign       = "+" if b["return_pct"] >= 0 else ""
+        peak_sign  = "+" if b["peak_return_pct"] >= 0 else ""
+        status_color = _GREEN if b["status"] == "PREMIUM_NOW" else \
+                       _AMBER if b["status"] == "ACTIVE_OPPORTUNITY" else _RED
+        rows += (
+            f'<tr style="border-bottom:1px solid #e8f0f8;">'
+            f'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:13px;'
+            f'font-weight:700;color:{_NAVY};">{b["ticker"]}</td>'
+            f'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;'
+            f'color:{_MUTED};">{b["buy_date"]}</td>'
+            f'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;'
+            f'color:{_MUTED};">{b["sector"]}</td>'
+            f'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;'
+            f'color:#444;">{b["buy_price"]:.2f}</td>'
+            f'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;'
+            f'color:#444;">{b["current_price"]:.2f}</td>'
+            f'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:13px;'
+            f'font-weight:700;color:{ret_color};">{sign}{b["return_pct"]:.1f}%</td>'
+            f'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;'
+            f'color:{_GREEN};">{peak_sign}{b["peak_return_pct"]:.1f}%</td>'
+            f'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;'
+            f'color:{_MUTED};">{b["days_since_buy"]}d</td>'
+            f'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;'
+            f'font-weight:700;color:{status_color};">{b["status"].replace("_"," ")}</td>'
+            f'</tr>'
+        )
+
+    th = (
+        f'<tr style="background:{_NAVY};">'
+        + "".join(
+            f'<th align="left" style="padding:7px 12px;font-family:Arial,sans-serif;'
+            f'font-size:11px;color:{_WHITE};">{h}</th>'
+            for h in ["Ticker", "BUY Date", "Sector", "Entry", "Current", "Return", "Peak", "Days", "Status"]
+        )
+        + "</tr>"
+    )
 
     return (
-        _section_title(f"📂 Current Portfolio ({snap.held_count} positions)") +
-        f"""<table width="100%" cellpadding="0" cellspacing="0" border="0"
-          style="border:1px solid #c8daf5;border-collapse:collapse;">
-  <tr style="background:#0B5394;">
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;
-      font-size:11px;color:{_WHITE};">Ticker</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;
-      font-size:11px;color:{_WHITE};">Sector</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;
-      font-size:11px;color:{_WHITE};">Entry</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;
-      font-size:11px;color:{_WHITE};">Current</th>
-    <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;
-      font-size:11px;color:{_WHITE};">Return</th>
-  </tr>
-  {rows}
-</table>"""
+        new_section +
+        _section_title(f"📋 Constitutional BUY Registry — {snap.total_buys} Opportunities (Immutable)") +
+        f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+        f' style="border:1px solid #c8daf5;border-collapse:collapse;">'
+        f'{th}{rows}</table>'
     )
 
 
@@ -294,10 +336,9 @@ def build_email(snap: PresentationSnapshot | None = None) -> str:
     parts = [
         _hdr(snap, now_str),
         _exec_summary(snap),
+        _constitutional_registry(snap),
         _opportunities(snap),
         _future_priorities(snap),
-        _portfolio(snap),
-        _health_metrics(snap),
         _watch(snap),
         _research(snap),
         _footer(),

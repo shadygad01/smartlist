@@ -1,7 +1,8 @@
 """
-Constitutional Presentation Snapshot V2
+Constitutional Presentation Snapshot V3
 Single data contract consumed by dashboard_v2, email_v2, telegram_v2.
-Sources: portfolio_advisor.db, portfolio_manager.db, knowledge_base.db ONLY.
+Sources: constitutional_buy_registry.db, portfolio_advisor.db, knowledge_base.db.
+Historical BUY status NEVER depends on today's R2 — always uses buy_date snapshot.
 """
 from __future__ import annotations
 
@@ -44,23 +45,24 @@ def _clean_reason(text: str) -> str:
 
 @dataclass
 class PresentationSnapshot:
-    # Portfolio health
+    # Portfolio health (from advisor)
     health_stars:     str = "★☆☆☆☆"
     health_label:     str = "Unknown"
     health_narrative: str = ""
 
-    # Holdings
+    # Constitutional BUY Registry — PRIMARY display (all N, never filtered by today's R2)
+    constitutional_buys:  list[dict] = field(default_factory=list)
+    total_buys:           int = 0
+    new_buys_today:       list[dict] = field(default_factory=list)
+
+    # Legacy fields — kept for backward compatibility with advisor sections
     held_positions:   list[dict] = field(default_factory=list)
     held_count:       int = 0
-
-    # Opportunities
-    opportunities:    list[dict] = field(default_factory=list)   # category=ADD → Constitutional BUY
-    future_priorities: list[dict] = field(default_factory=list)  # category=FUTURE_PRIORITY
-
-    # Lists
+    opportunities:    list[dict] = field(default_factory=list)
+    future_priorities: list[dict] = field(default_factory=list)
     watch_list:       list[str] = field(default_factory=list)
 
-    # Portfolio metrics
+    # Portfolio metrics (informational only — not used for BUY gating)
     sector_allocation:    dict[str, float] = field(default_factory=dict)
     max_correlation:      float = 0.0
     capacity_used_pct:    float = 0.0
@@ -78,6 +80,17 @@ class PresentationSnapshot:
 
 def build_presentation_snapshot() -> PresentationSnapshot:
     snap = PresentationSnapshot(generated_at=datetime.now().isoformat())
+
+    # ── 0. Constitutional BUY Registry (V3) ──────────────────────────────────
+    try:
+        import sys
+        sys.path.insert(0, str(BASE))
+        from constitutional_opportunity_engine import get_registry, get_new_buys_today
+        snap.constitutional_buys = get_registry()
+        snap.total_buys          = len(snap.constitutional_buys)
+        snap.new_buys_today      = get_new_buys_today()
+    except Exception:
+        pass
 
     # ── 1. Portfolio Advisor ──────────────────────────────────────────────────
     advisor = _db(_ADVISOR_DB)

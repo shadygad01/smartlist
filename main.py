@@ -47,15 +47,22 @@ POSITIONS_FILE = "open_positions.json"
 # CONFIG
 # =========================================
 
-STOCKS = [
-    "COMI.CA", "TMGH.CA", "ETEL.CA", "EGAL.CA",
-    "EAST.CA", "ABUK.CA", "ORAS.CA", "EFIH.CA",
-    "ADIB.CA", "FWRY.CA", "EMFD.CA", "PHDC.CA",
-    "ORHD.CA", "EFID.CA", "HRHO.CA", "JUFO.CA",
-    "BTFH.CA", "RAYA.CA", "GBCO.CA", "HELI.CA",
-    "ARCC.CA", "MCQE.CA", "ORWE.CA", "ISPH.CA",
-    "RMDA.CA", "OIH.CA",  "CCAP.CA",
-]
+# Constitutional universe — single source of truth is config/scanner_config.py.
+from config.scanner_config import get_constitutional_universe
+STOCKS = get_constitutional_universe()
+
+# ── Presentation layer — single source of truth ───────────────────────────────
+from presentation.presentation_language import (
+    STOCK_NAMES, SIGNAL_EMOJI as _SIGNAL_EMOJI,
+    NO_SETUPS_MESSAGE,
+    TG_HEADER, TG_POSITIONS_HEADER, TG_SECTION_SEP,
+    TG_REALTIME_HEADER, TG_CHANGE_HEADER, TG_RESEARCH_HEADER,
+    EMAIL_HEADER_TITLE, EMAIL_HEADER_BG, EMAIL_HEADER_FG, EMAIL_HEADER_SUBTITLE,
+    EMAIL_FOOTER_TEXT,
+    COL_SIGNAL_QUALITY, COL_RANK_SCORE, COL_FACTOR_CONTRIB,
+    COL_ENTRY_STRATEGY, COL_PATTERN_INTEL,
+    TIER_PREMIER, TIER_MONITOR,
+)
 
 # =========================================
 # WHITELIST - Price Gate Threshold >= 15
@@ -83,35 +90,8 @@ WHITELIST = [
 # after signal_engine is imported below (search for "PRICE_GATE_NORMAL =").
 # Fractions stored in config/gates_config.json — auto-track weight optimization.
 
-NAMES = {
-    "COMI.CA": "Commercial International Bank",
-    "TMGH.CA": "Talaat Moustafa Group",
-    "ETEL.CA": "Telecom Egypt",
-    "EGAL.CA": "Egypt Aluminum",
-    "EAST.CA": "Eastern Company",
-    "ABUK.CA": "Abu Qir Fertilizers",
-    "ORAS.CA": "Orascom Construction PLC",
-    "EFIH.CA": "e-Finance for Digital and Financial Investments",
-    "ADIB.CA": "Abu Dhabi Islamic Bank Egypt",
-    "FWRY.CA": "Fawry for Banking Technology",
-    "EMFD.CA": "Emaar Misr for Development",
-    "PHDC.CA": "Palm Hills Developments",
-    "ORHD.CA": "Orascom Development Egypt",
-    "EFID.CA": "Edita Food Industries",
-    "HRHO.CA": "EFG Holding",
-    "JUFO.CA": "Juhayna Food Industries",
-    "BTFH.CA": "Beltone Financial Holding",
-    "RAYA.CA": "Raya Holding",
-    "GBCO.CA": "GB Auto",
-    "HELI.CA": "Heliopolis Housing",
-    "ARCC.CA": "Arabian Cement Company",
-    "MCQE.CA": "Misr Cement (Qena)",
-    "ORWE.CA": "Oriental Weavers",
-    "ISPH.CA": "Ibnsina Pharma",
-    "RMDA.CA": "Rameda Pharmaceutical",
-    "OIH.CA":  "Orascom Investment Holding",
-    "CCAP.CA": "Qalaa Holdings",
-}
+# Stock names — consumed from presentation layer (single source of truth)
+NAMES = STOCK_NAMES
 
 SECTORS = {
     "COMI.CA": "Banking",
@@ -1101,7 +1081,7 @@ def build_ez_html(r):
     rc = "#155724" if ez["ret_from_avg"]>=10 else ("#856404" if ez["ret_from_avg"]>=5 else "#721c24")
     return (f'<div style="font-family:Arial,sans-serif;font-size:12px;font-weight:bold;'
             f'color:#1C4587;margin:16px 0 5px 0;letter-spacing:0.5px;'
-            f'border-left:4px solid #1C4587;padding-left:8px;">ENTRY ZONES — AVERAGING STRATEGY</div>'
+            f'border-left:4px solid #1C4587;padding-left:8px;">{COL_ENTRY_STRATEGY}</div>'
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0" '
             f'style="border:1px solid #d0e4f7;border-collapse:collapse;background:#f4f8ff;">'
             f'<tr style="background:#1C4587;">'
@@ -1129,7 +1109,7 @@ def build_pattern_html(r):
     header = (
         '<div style="margin:10px 0 4px 0;font-family:Arial,sans-serif;font-size:12px;'
         'font-weight:bold;color:#1C4587;letter-spacing:0.5px;border-left:4px solid #1C4587;'
-        'padding-left:8px;">PATTERN INTELLIGENCE — HISTORICAL ANALYSIS</div>'
+        f'padding-left:8px;">{COL_PATTERN_INTEL}</div>'
     )
     if not p or not p.get("ok"):
         reason = p.get("reason", "") if p else ""
@@ -1272,10 +1252,10 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
             return f'<span style="color:#1a7340;font-size:11px;font-weight:700;">▲{delta}</span>'
         return f'<span style="color:#b02a2a;font-size:11px;font-weight:700;">▼{abs(delta)}</span>'
 
-    # ── TOP RANKED OPPORTUNITIES block ───────────────────────────────────────
+    # ── RANKED OPPORTUNITIES block ────────────────────────────────────────────
     def _build_ranking_block():
-        rows_a = ""  # A-tier: top 5 BUY
-        rows_b = ""  # B-tier: next 5 BUY
+        rows_a = ""  # Premier: top 5 BUY
+        rows_b = ""  # Monitor: next 5 BUY
         buy_rank = 0
         for s in sorted_stocks:
             r = results[s]
@@ -1301,7 +1281,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 <tr style="background:{row_bg};border-bottom:1px solid #dde8f5;">
   <td style="padding:11px 14px;font-family:Arial,sans-serif;width:36px;text-align:center;">
     <div style="font-size:18px;font-weight:800;color:{tier_col};">#{buy_rank}</div>
-    <div style="font-size:10px;font-weight:700;color:{tier_col};letter-spacing:0.5px;">{tier}-TIER</div>
+    <div style="font-size:10px;font-weight:700;color:{tier_col};letter-spacing:0.5px;">{TIER_PREMIER if tier == "A" else TIER_MONITOR}</div>
   </td>
   <td style="padding:11px 14px;font-family:Arial,sans-serif;">
     <div style="font-size:15px;font-weight:700;color:#111;">{NAMES.get(s, s)}</div>
@@ -1320,7 +1300,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
   </td>
   <td align="right" style="padding:11px 14px;font-family:Arial,sans-serif;">
     <div style="font-size:14px;font-weight:600;color:#444;">{score}</div>
-    <div style="font-size:10px;color:#999;">SMC</div>
+    <div style="font-size:10px;color:#999;">signal quality</div>
   </td>
   <td align="center" style="padding:11px 14px;font-family:Arial,sans-serif;width:40px;">{delta_h}</td>
 </tr>"""
@@ -1333,18 +1313,18 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
         if not rows_a:
             return ""
         tier_b_block = f"""
-<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#5b6c82;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f7f9fc;border-top:1px solid #dde8f5;">B-TIER — Watchlist (#6–#10)</div>
+<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#5b6c82;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f7f9fc;border-top:1px solid #dde8f5;">Monitored Opportunities (#6–#10)</div>
 <table width="100%" cellpadding="0" cellspacing="0" border="0"><tbody>{rows_b}</tbody></table>""" if rows_b else ""
         return f"""
 <div style="font-family:Arial,sans-serif;margin:20px 0;border:2px solid #1a3a5c;border-radius:8px;overflow:hidden;">
   <div style="background:linear-gradient(135deg,#1a3a5c,#0B5394);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
     <div>
-      <span style="color:#fff;font-size:15px;font-weight:800;letter-spacing:0.3px;">🏆 TOP RANKED OPPORTUNITIES</span>
-      <span style="color:#8fb8d8;font-size:11px;margin-left:10px;">0.60 × Expectancy + 0.40 × SMC Score</span>
+      <span style="color:#fff;font-size:15px;font-weight:800;letter-spacing:0.3px;">🏆 RANKED OPPORTUNITIES</span>
+      <span style="color:#8fb8d8;font-size:11px;margin-left:10px;">Ranked by Factor Expectancy + Signal Quality</span>
     </div>
     <span style="color:#8fb8d8;font-size:11px;">{fmt_cairo("%d %b %Y")}</span>
   </div>
-  <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#0B5394;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f0f7ff;">A-TIER — Top Opportunities (#1–#5)</div>
+  <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#0B5394;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f0f7ff;">Premier Opportunities (#1–#5)</div>
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
     <thead>
       <tr style="background:#e8f0f8;border-bottom:2px solid #c8daf5;">
@@ -1353,7 +1333,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
         <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;">Signal</th>
         <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">Rank Score</th>
         <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">Expectancy</th>
-        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">SMC</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">{COL_SIGNAL_QUALITY}</th>
         <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:center;">Δ</th>
       </tr>
     </thead>
@@ -1424,7 +1404,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#4a4a4a;text-align:center;">{entry_score}</td>
 </tr>"""
         open_positions_block = f"""
-<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;margin:20px 0 6px 0;letter-spacing:0.5px;">📊 Open Positions — Dynamic Target</div>
+<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;margin:20px 0 6px 0;letter-spacing:0.5px;">📊 Portfolio Positions — Constitutional Targets</div>
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #c8daf5;border-collapse:collapse;margin-bottom:20px;">
   <tr style="background:#0B5394;">
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Stock</th>
@@ -1441,10 +1421,10 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 
     parts.append(f"""
 {holiday_banner}
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a3a5c;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{EMAIL_HEADER_BG};">
   <tr><td style="padding:22px 28px;">
-    <div style="font-family:Arial,sans-serif;color:#fff;font-size:20px;font-weight:700;letter-spacing:0.3px;">EGX Institutional Swing Scanner</div>
-    <div style="font-family:Arial,sans-serif;color:#8fb8d8;font-size:12px;margin-top:6px;letter-spacing:0.3px;">{fmt_cairo("%A, %d %B %Y  ·  %H:%M")} Cairo</div>
+    <div style="font-family:Arial,sans-serif;color:{EMAIL_HEADER_FG};font-size:20px;font-weight:700;letter-spacing:0.3px;">{EMAIL_HEADER_TITLE}</div>
+    <div style="font-family:Arial,sans-serif;color:{EMAIL_HEADER_SUBTITLE};font-size:12px;margin-top:6px;letter-spacing:0.3px;">{fmt_cairo("%A, %d %B %Y  ·  %H:%M")} Cairo</div>
   </td></tr>
 </table>
 {dow_banner}
@@ -1498,7 +1478,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Company</th>
     <th align="right" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Price</th>
     <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Signal</th>
-    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Rank Score / SMC</th>
+    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">{COL_RANK_SCORE}</th>
     <th align="right" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Target</th>
   </tr>
   {wr or '<tr><td colspan="5" style="padding:16px 14px;font-family:Arial,sans-serif;font-size:13px;color:#888;">No data available.</td></tr>'}
@@ -1588,7 +1568,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     </td>
   </tr>
 </table>
-<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#888;margin:16px 0 6px 0;letter-spacing:1px;text-transform:uppercase;">SMC Indicator Breakdown</div>
+<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#888;margin:16px 0 6px 0;letter-spacing:1px;text-transform:uppercase;">{COL_FACTOR_CONTRIB}</div>
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e8eaed;border-collapse:collapse;border-radius:4px;overflow:hidden;">
   <tr style="background:#f6f7f9;">
     <th width="170" align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#777;font-weight:600;border-right:1px solid #eee;letter-spacing:0.4px;">Indicator</th>
@@ -1604,7 +1584,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     parts.append(f"""
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:40px;border-top:1px solid #e8eaed;">
   <tr><td align="center" style="padding:16px;font-family:Arial,sans-serif;font-size:11px;color:#bbb;letter-spacing:0.4px;">
-    EGX Institutional Scanner &nbsp;·&nbsp; TradingView Data Engine
+    {EMAIL_FOOTER_TEXT}
   </td></tr>
 </table>""")
 
@@ -1622,7 +1602,7 @@ def send_email(html, subject_suffix=""):
         print("ERROR: EMAIL_USER or EMAIL_PASS not set."); return False
     msg=MIMEMultipart("alternative")
     date_str=now_cairo().strftime("%Y-%m-%d")
-    msg["Subject"]=f"EGX Scanner — {date_str}{subject_suffix}"
+    msg["Subject"]=f"{EMAIL_HEADER_TITLE} · {date_str}{subject_suffix}"
     msg["From"]=sender; msg["To"]=EMAIL
     msg.attach(MIMEText(html,"html","utf-8"))
     try:
@@ -1903,6 +1883,33 @@ def monitor_reinforcement(current_prices, results):
             send_telegram_zone3_reinforcement(symbol, entry_price, round(cur, 2), avg_price)
 
 
+def _get_position_bq(symbol: str, db_path: str = "egx_research.db") -> dict | None:
+    """Return latest bq_score and action flag for an open position symbol."""
+    try:
+        import sqlite3 as _sqlite3
+        conn = _sqlite3.connect(db_path)
+        row = conn.execute(
+            """SELECT bq.bq_score, bq.classification
+               FROM signals s JOIN bottom_quality bq ON s.id = bq.signal_id
+               WHERE s.symbol = ? AND bq.bq_score IS NOT NULL
+               ORDER BY s.signal_date DESC LIMIT 1""",
+            (symbol,),
+        ).fetchone()
+        conn.close()
+        if row:
+            bq = row[0]
+            if bq < 40:
+                action = "⚠️ REVIEW EXIT"
+            elif bq < 60:
+                action = "📊 MONITOR"
+            else:
+                action = "✅ QUALITY"
+            return {"bq_score": bq, "action": action, "classification": row[1]}
+    except Exception:
+        pass
+    return None
+
+
 def send_telegram_alerts(results):
     """
     Send a Telegram message for every stock with score >= 35.
@@ -1931,9 +1938,10 @@ def send_telegram_alerts(results):
     if not alerts:
         # Send a "nothing today" summary so you know the scan ran
         msg = (
-            f"📊 *EGX Daily Scan — {now_cairo().strftime('%d %b %Y')}*\n"
-            f"━━━━━━━━━━━━━━━━━━━━━\n"
-            f"No setups reached the Wait threshold (≥35) today."
+            f"{TG_HEADER}\n"
+            f"*{now_cairo().strftime('%d %b %Y')}*\n"
+            f"{TG_SECTION_SEP}\n"
+            f"{NO_SETUPS_MESSAGE}"
         )
         open_pos = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
         open_pos.sort(key=lambda x: (
@@ -1942,8 +1950,8 @@ def send_telegram_alerts(results):
             ((x[1].get("current_price", x[1]["entry_price"]) - x[1]["entry_price"]) / x[1]["entry_price"])
         ), reverse=True)
         if open_pos:
-            msg += f"\n\n━━━━━━━━━━━━━━━━━━━━━"
-            msg += f"\n📂 *Open Positions  ({len(open_pos)})*\n"
+            msg += f"\n\n{TG_SECTION_SEP}"
+            msg += f"\n{TG_POSITIONS_HEADER.format(n=len(open_pos))}\n"
             for sym, pos in open_pos:
                 entry = pos["entry_price"]
                 tgt   = pos["target"]
@@ -1960,15 +1968,18 @@ def send_telegram_alerts(results):
                 else:
                     cur_str = "—"
                 score_tag = f"  |  Entry Score {pos['entry_score']}" if pos.get('entry_score') else ""
+                bq_data = _get_position_bq(sym)
+                bq_tag = f"\n   BQ      *{bq_data['bq_score']:.0f}/100*  {bq_data['action']}" if bq_data else ""
                 msg += f"\n📌 *{sym}*  {NAMES.get(sym, sym)}"
                 msg += f"\n   Entry   {entry:.2f} EGP"
                 msg += f"\n   Now     {cur_str}"
                 msg += f"\n   Target  *{tgt:.2f} EGP*{score_tag}"
+                msg += bq_tag
                 if pos.get("reinforced") and pos.get("reinforcement_price"):
                     msg += f"\n   Re-buy  {pos['reinforcement_price']:.2f} EGP"
                     msg += f"\n   Avg     *{pos['avg_price']:.2f} EGP*"
                 msg += "\n"
-            msg += "━━━━━━━━━━━━━━━━━━━━━"
+            msg += TG_SECTION_SEP
         try:
             requests.post(
                 f"https://api.telegram.org/bot{token}/sendMessage",
@@ -1982,9 +1993,10 @@ def send_telegram_alerts(results):
     # Build one summary message with all qualifying stocks
     date_str = now_cairo().strftime("%d %b %Y")
     lines = [
-        f"📊 *EGX Daily Scan — {date_str}*",
-        f"━━━━━━━━━━━━━━━━━━━━━",
-        f"_{len(alerts)} setup(s) above threshold_\n",
+        TG_HEADER,
+        f"*{date_str}*",
+        TG_SECTION_SEP,
+        f"_{len(alerts)} constitutional setup(s) above monitoring threshold_\n",
     ]
 
     # Add open positions section if any exist
@@ -1995,8 +2007,8 @@ def send_telegram_alerts(results):
         ((x[1].get("current_price", x[1]["entry_price"]) - x[1]["entry_price"]) / x[1]["entry_price"])
     ), reverse=True)
     if open_positions_list:
-        lines.append("━━━━━━━━━━━━━━━━━━━━━")
-        lines.append(f"📂 *Open Positions  ({len(open_positions_list)})*\n")
+        lines.append(TG_SECTION_SEP)
+        lines.append(TG_POSITIONS_HEADER.format(n=len(open_positions_list)) + "\n")
         for sym, pos in open_positions_list:
             entry = pos["entry_price"]
             tgt   = pos["target"]
@@ -2013,15 +2025,18 @@ def send_telegram_alerts(results):
             else:
                 cur_str = "—"
             score_tag = f"  |  Entry Score {pos['entry_score']}" if pos.get('entry_score') else ""
+            bq_data = _get_position_bq(sym)
             lines.append(f"📌 *{sym}*  {NAMES.get(sym, sym)}")
             lines.append(f"   Entry   {entry:.2f} EGP")
             lines.append(f"   Now     {cur_str}")
             lines.append(f"   Target  *{tgt:.2f} EGP*{score_tag}")
+            if bq_data:
+                lines.append(f"   BQ      *{bq_data['bq_score']:.0f}/100*  {bq_data['action']}")
             if pos.get("reinforced") and pos.get("reinforcement_price"):
                 lines.append(f"   Re-buy  {pos['reinforcement_price']:.2f} EGP")
                 lines.append(f"   Avg     *{pos['avg_price']:.2f} EGP*")
             lines.append("")
-        lines.append("━━━━━━━━━━━━━━━━━━━━━\n")
+        lines.append(TG_SECTION_SEP + "\n")
 
     # ── EARLY BUY (Research) section — appended after main alerts ──────
     early_buy_alerts = [
@@ -2031,16 +2046,7 @@ def send_telegram_alerts(results):
     ]
     early_buy_alerts.sort(key=lambda x: 0.60 * (x[1].get("factor_exp_score", 0) or 0) + 0.40 * (x[1].get("score", 0) or 0), reverse=True)
 
-    SIGNAL_EMOJI = {
-        "INSTITUTIONAL BUY": "🟣",
-        "VERY STRONG BUY":   "🟢",
-        "STRONG BUY":        "🟢",
-        "BUY":               "🟩",
-        "WAIT":              "🟡",
-        "NEUTRAL":           "⚪",
-        "SELL":              "🔴",
-        "STRONG SELL":       "🔴",
-    }
+    SIGNAL_EMOJI = _SIGNAL_EMOJI   # from presentation_language — single source
     BUY_FAMILY_UPPER = {"BUY", "STRONG BUY", "VERY STRONG BUY", "INSTITUTIONAL BUY"}
 
     for s, r in alerts:
@@ -2093,7 +2099,7 @@ def send_telegram_alerts(results):
                 f"{'─'*25}\n"
                 f"{emoji} *{NAMES.get(s, s)}*  `{s}`{portfolio_tag}\n"
                 f"   Signal     *{r['signal']}*\n"
-                f"   SMC Score  *{r['score']}/100*{adj_tag}\n"
+                f"   Signal Quality  *{r['score']}/100*{adj_tag}\n"
                 f"{ctx_str}"
                 f"   Price      *{r['price']} EGP*\n"
                 f"   Target     *{round(float(target_to_display), 2)} EGP*{upside}\n"
@@ -2106,7 +2112,7 @@ def send_telegram_alerts(results):
                 f"{'─'*25}\n"
                 f"{emoji} *{NAMES.get(s, s)}*  `{s}`{portfolio_tag}\n"
                 f"   Signal     {emoji} {r.get('signal', 'Wait')}\n"
-                f"   SMC Score  *{r['score']}/100*{adj_tag}\n"
+                f"   Signal Quality  *{r['score']}/100*{adj_tag}\n"
                 f"{ctx_str}"
                 f"   Price      *{r['price']} EGP*\n"
                 f"{pi_line}"
@@ -2115,8 +2121,8 @@ def send_telegram_alerts(results):
 
     # ── Append EARLY BUY (Research) section ────────────────────────────
     if early_buy_alerts:
-        lines.append("━━━━━━━━━━━━━━━━━━━━━")
-        lines.append(f"🔬 *EARLY BUY — Research Shadow*  _(not for entry)_\n")
+        lines.append(TG_SECTION_SEP)
+        lines.append(f"{TG_RESEARCH_HEADER}\n")
         lines.append(f"_{len(early_buy_alerts)} signal(s) — partial discount, score ≥ 65, price gate pending_\n")
         for s, r in early_buy_alerts:
             raw = r.get("raw_score", r["score"])
@@ -2128,7 +2134,7 @@ def send_telegram_alerts(results):
                 f"   R1 Position {r.get('r1', 0):.0f}/{W_PRICE:.0f} — partial discount\n"
                 f"   _Research tracking only — no portfolio action_\n"
             )
-        lines.append("━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(TG_SECTION_SEP)
 
     full_msg = "\n".join(lines)
 
@@ -2176,14 +2182,7 @@ def send_alert_for_high_score(stock, score, result):
     
     if token and chat_id:
         signal = result.get("signal", "WAIT").upper()
-        emoji_map = {
-            "INSTITUTIONAL BUY": "🟣",
-            "VERY STRONG BUY":   "🟢",
-            "STRONG BUY":        "🟢",
-            "BUY":               "🟩",
-            "WAIT":              "🟡",
-        }
-        emoji = emoji_map.get(signal, "🟡")
+        emoji = _SIGNAL_EMOJI.get(signal, "🔵")
         
         try:
             upside = ""
@@ -2208,15 +2207,14 @@ def send_alert_for_high_score(stock, score, result):
             adj_tag = f"  _(raw {raw_alert})_" if raw_alert != score else ""
             ctx_alert = f"\n   {result['ctx_label']}" if result.get("ctx_label") else ""
             msg = (
-                f"🚨 *Real-Time Alert*\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"{TG_REALTIME_HEADER}\n"
                 f"{emoji} *{NAMES.get(stock, stock)}*  `{stock}`\n\n"
                 f"   Signal     *{signal}*\n"
-                f"   SMC Score  *{score}/100*{adj_tag}{ctx_alert}\n"
+                f"   Signal Quality  *{score}/100*{adj_tag}{ctx_alert}\n"
                 f"   Price      *{result['price']} EGP*\n"
                 f"   Target     *{round(float(result['target']), 2)} EGP*{upside}"
                 f"{pi_line}\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"{TG_SECTION_SEP}━━\n"
                 f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}"
             )
             
@@ -2418,6 +2416,139 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
     changes = detect_signal_changes(results, previous_results)
     if changes:
         send_change_alert(changes)
+
+    # Discount Reversal Engine — daily scan
+    try:
+        _dre_result = run_discount_scan(results=results)
+        if _dre_result:
+            print(f"  [DiscountReversal] {len(_dre_result)} signals persisted "
+                  f"(top: {_dre_result[0]['symbol']} score={_dre_result[0]['final_score']:.1f})")
+    except Exception as _dre_err:
+        print(f"  [DiscountReversal] skipped: {_dre_err}")
+
+
+def run_discount_scan(results: dict = None) -> list:
+    """
+    Run the Discount Reversal Engine against today's signals.
+    Reads live signal data from `results` (output of analyze()) or falls back
+    to the signals table.  For each EGX30 symbol with price data available,
+    calls engine.scan_symbol() and persists to discount_signals.
+    Returns list of signal dicts sorted by final_score DESC.
+    """
+    from discount_reversal_engine import DiscountReversalEngine, EGX30_SYMBOLS
+
+    engine = DiscountReversalEngine(db_path="egx_research.db")
+    today_str = today_cairo().strftime("%Y-%m-%d")
+    persisted = []
+
+    # Build candidate list from live results dict (keyed by symbol)
+    candidates = {}
+    if results:
+        for sym, r in results.items():
+            if not r.get("ok") or sym not in EGX30_SYMBOLS:
+                continue
+            candidates[sym] = r
+
+    # Fallback: read today's rows from signals table
+    if not candidates:
+        import sqlite3 as _sq
+        conn = _sq.connect("egx_research.db")
+        rows = conn.execute(
+            "SELECT symbol, price, eq, buy_hi, sell_lo, macd_val, macd_hist, snap_consol_len "
+            "FROM signals WHERE signal_date=? AND eq IS NOT NULL",
+            (today_str,)
+        ).fetchall()
+        conn.close()
+        for row in rows:
+            sym = row[0]
+            if sym in EGX30_SYMBOLS:
+                candidates[sym] = {
+                    "price": row[1], "eq": row[2], "buy_hi": row[3],
+                    "sell_lo": row[4], "macd_val": row[5], "macd_hist": row[6],
+                    "snap_consol_len": row[7],
+                }
+
+    for sym, r in candidates.items():
+        try:
+            # Download OHLCV price history
+            df_raw = download_data(sym, 60)
+            if df_raw.empty or len(df_raw) < 10:
+                continue
+
+            # Normalise columns to lowercase
+            df_price = df_raw.rename(columns={
+                "Open": "open", "High": "high", "Low": "low",
+                "Close": "close", "Volume": "volume"
+            }).reset_index()
+            df_price = df_price.rename(columns={df_price.columns[0]: "date"})
+
+            # Resolve price zone boundaries
+            eq_val      = r.get("eq") or 0.0
+            buy_hi_val  = r.get("buy_hi") or 0.0
+            sell_lo_val = r.get("sell_lo") or 0.0
+            if eq_val <= 0:
+                # derive from swings if not in results
+                try:
+                    hi_v, lo_v, eq_v, bhi, slo = swings(df_raw)
+                    eq_val = eq_v; buy_hi_val = bhi; sell_lo_val = slo
+                except Exception:
+                    continue
+
+            discount_bottom = buy_hi_val if buy_hi_val > 0 else eq_val * 0.90
+            premium_top     = sell_lo_val if sell_lo_val > 0 else eq_val * 1.10
+            macd_v  = r.get("macd_val") or 0.0
+            macd_h  = r.get("macd_hist") or r.get("macd_signal") or 0.0
+            days_disc = int(r.get("snap_consol_len") or 0)
+
+            sig = engine.scan_symbol(
+                symbol=sym,
+                price_data=df_price,
+                eq=eq_val,
+                discount_bottom=discount_bottom,
+                premium_top=premium_top,
+                macd_val=macd_v,
+                macd_hist=macd_h,
+                days_in_discount=days_disc,
+            )
+            if sig:
+                engine.persist_signal(sig)
+                persisted.append(sig)
+        except Exception as _e:
+            logger.debug(f"[DiscountReversal] {sym}: {_e}")
+
+    persisted.sort(key=lambda x: x.get("final_score", 0), reverse=True)
+    return persisted
+
+
+def integrate_with_existing_signal(signal_row: dict, price_history, engine) -> dict:
+    """
+    Wire a single signal row (from signals table) into the DiscountReversalEngine.
+    signal_row: dict with keys matching signals table columns.
+    price_history: pd.DataFrame [date, open, high, low, close, volume]
+    engine: DiscountReversalEngine instance
+    Returns persisted signal dict or None.
+    """
+    from discount_reversal_engine import EGX30_SYMBOLS
+    sym = signal_row.get("symbol", "")
+    if sym not in EGX30_SYMBOLS:
+        return None
+
+    eq_val  = signal_row.get("eq") or 0.0
+    bhi     = signal_row.get("buy_hi") or eq_val * 0.90
+    slo     = signal_row.get("sell_lo") or eq_val * 1.10
+    sig = engine.scan_symbol(
+        symbol=sym,
+        price_data=price_history,
+        eq=eq_val,
+        discount_bottom=bhi,
+        premium_top=slo,
+        macd_val=signal_row.get("macd_val") or 0.0,
+        macd_hist=signal_row.get("macd_hist") or 0.0,
+        days_in_discount=int(signal_row.get("snap_consol_len") or 0),
+    )
+    if sig:
+        engine.persist_signal(sig)
+    return sig
 
 
 def _ensure_backfill():
@@ -2980,8 +3111,7 @@ def send_change_alert(changed_stocks):
 
     date_str = now_cairo().strftime("%d %b %Y  %H:%M")
     lines = [
-        f"🚨 *Signal Change — BUY Triggered*",
-        f"━━━━━━━━━━━━━━━━━━━━━",
+        TG_CHANGE_HEADER,
         f"_{date_str}_\n",
     ]
 
@@ -3002,7 +3132,7 @@ def send_change_alert(changed_stocks):
         lines.append(f"{'─'*25}")
         lines.append(f"📈 *{NAMES.get(stock, stock)}*  `{stock}`{wl_tag}")
         lines.append(f"   {item['from']}  →  *{item['to']}*")
-        lines.append(f"   SMC Score  *{item['score']:.0f}/100*{adj_tag}{ctx_line}")
+        lines.append(f"   Signal Quality  *{item['score']:.0f}/100*{adj_tag}{ctx_line}")
         lines.append(f"   Price      *{price} EGP*")
         lines.append(f"   Target     *{target} EGP*{upside}\n")
 

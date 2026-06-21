@@ -38,15 +38,8 @@ STOP_LOSS = 0.06   # stop loss for signal outcome evaluation
 LOG_FILE = "signal_log.json"
 LOCAL_CSV_DIR = "historical_data/historical_data"
 
-STOCKS = [
-    "COMI.CA", "TMGH.CA", "ETEL.CA", "EGAL.CA",
-    "EAST.CA", "ABUK.CA", "ORAS.CA", "EFIH.CA",
-    "ADIB.CA", "FWRY.CA", "EMFD.CA", "PHDC.CA",
-    "ORHD.CA", "EFID.CA", "HRHO.CA", "JUFO.CA",
-    "BTFH.CA", "RAYA.CA", "GBCO.CA", "HELI.CA",
-    "ARCC.CA", "MCQE.CA", "ORWE.CA", "ISPH.CA",
-    "RMDA.CA", "OIH.CA",  "CCAP.CA",
-]
+from config.scanner_config import get_constitutional_universe
+STOCKS = get_constitutional_universe()
 
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 

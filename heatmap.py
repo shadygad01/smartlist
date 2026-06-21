@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
-heatmap.py — EGX SMC Signal Score Heatmap (interactive HTML).
+heatmap.py — EGX Constitutional Signal Score Heatmap (interactive HTML).
 Run: python heatmap.py  →  heatmap.html
 """
 
 import json
 import os
 from datetime import date, datetime, timezone, timedelta
+from presentation.presentation_language import (
+    HEATMAP_TITLE, HEATMAP_BADGE, HEATMAP_SCORE_LABEL, STOCK_NAMES as _HM_NAMES,
+)
 
 BASE    = os.path.dirname(os.path.abspath(__file__))
 WEB_OUT = os.environ.get('WEB_OUT', BASE)   # CI sets WEB_OUT=./web_deploy
@@ -167,7 +170,7 @@ HTML = f"""<!DOCTYPE html>
 <meta name="apple-mobile-web-app-title" content="SMC">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.svg">
-<title>EGX SMC — Signal Score Heatmap</title>
+<title>{HEATMAP_TITLE}</title>
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;min-height:100vh}}
@@ -318,10 +321,10 @@ body{{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-ser
 
 <!-- ── Header ──────────────────────────────────────────────────────── -->
 <div class="header">
-  <h1>EGX SMC — Signal Score Heatmap</h1>
+  <h1>{HEATMAP_TITLE}</h1>
   <span class="badge green">Generated: {cairo_now().strftime('%Y-%m-%d %H:%M')} Cairo</span>
   <span class="badge yellow">{len(positions)} Open Positions</span>
-  <span class="badge">EGX · Cairo Time</span>
+  <span class="badge">{HEATMAP_BADGE}</span>
   <button id="btn-install" style="display:none;align-items:center;gap:6px;background:#238636;border:1px solid #2ea043;border-radius:6px;padding:5px 12px;font-size:12px;color:#fff;cursor:pointer">
     ＋ Install App
   </button>
@@ -803,7 +806,7 @@ function showTip(e, stock, dt, entry, hasPos, isPend) {{
         </div>
         <div style="text-align:right">
           <div class="tt-score-big" style="color:${{sc}}">${{s||'—'}}</div>
-          <div class="tt-score-lbl">SMC Score</div>
+          <div class="tt-score-lbl">{HEATMAP_SCORE_LABEL}</div>
         </div>
       </div>
       <div class="tt-row"><span class="tt-lbl">Price</span><span class="tt-val">EGP ${{p.toFixed(2)}}</span></div>
@@ -950,7 +953,7 @@ if (isIOS && !isInStandalone && !localStorage.getItem('ios_banner_dismissed')) {
     banner.innerHTML = `
         <img src="./icon.svg" style="width:36px;height:36px;border-radius:8px;flex-shrink:0">
         <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:600;color:#e6edf3">Install EGX SMC App</div>
+            <div style="font-size:13px;font-weight:600;color:#e6edf3">Install EGX Constitutional App</div>
             <div style="font-size:11px;color:#8b949e;margin-top:2px">
                 Tap <strong style="color:#c9d1d9">Share</strong>
                 <span style="font-size:14px">⎋</span> then
@@ -1019,7 +1022,7 @@ async function checkChanges() {{
 
         if (alerts.length && Notification.permission === 'granted') {{
             alerts.forEach(msg => {{
-                new Notification('EGX SMC Alert', {{
+                new Notification('EGX Constitutional Alert', {{
                     body: msg,
                     icon: './icon.svg',
                     badge: './icon.svg',

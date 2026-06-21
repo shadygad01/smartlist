@@ -1,17 +1,19 @@
 """
-EGX Scanner — Executive Operations Center Dashboard
-====================================================
+EGX Constitutional Investment Platform — Dashboard
+===================================================
 Sections:
-  1. Alpha Engine Status
-  2. Bottom Discovery Pipeline  [NEW]
-  3. Today's Learning           [IMPROVED]
-  4. Current Research           [IMPROVED]
-  5. Production Alpha Snapshot  [NEW]
-  6. Top Knowledge Findings     [NEW]
-  7. Alpha Performance
-  8. Changes Since Yesterday    [NEW]
+  1. Constitutional Engine Status
+  2. Signal Discovery Pipeline
+  3. Today's Research Insights
+  4. Active Research
+  5. Today's Constitutional Signals
+  6. Knowledge Base Highlights
+  7. Constitutional Performance
+  8. Changes Since Yesterday
   9. Deployment History
  10. System Health
+ 11. Portfolio Intelligence
+ 12. Pattern Intelligence
 """
 
 import json
@@ -20,6 +22,15 @@ import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+# ── Presentation layer — single source of truth ───────────────────────────────
+from presentation.presentation_language import (
+    DASH_TITLE, DASH_SUBTITLE, DASH_FOOTER,
+)
+from presentation.presentation_theme import DashTheme as _DT
+from presentation.presentation_formatter import DashboardFormatter as _DashFmt
+
+_dash_fmt = _DashFmt()
 
 CAIRO = ZoneInfo("Africa/Cairo")
 
@@ -90,17 +101,17 @@ def _pct(v):
         return "—"
 
 
-# ── CSS constants ─────────────────────────────────────────────────────────────
-G   = "#4caf50"   # green
-R   = "#f44336"   # red
-A   = "#f0b840"   # amber
-B   = "#50d8d0"   # blue accent
-DIM = "#8b8fa8"   # dim text
-FG  = "#d0d4e8"   # foreground
-BG0 = "#0b0c1a"   # page background
-BG1 = "#10112a"   # card background
-BG2 = "#181930"   # inner box
-BOR = "#252645"   # border
+# ── CSS constants — consumed from presentation_theme (single source) ──────────
+G   = _DT.G    # "#4caf50" — green
+R   = _DT.R    # "#f44336" — red
+A   = _DT.A    # "#f0b840" — amber
+B   = _DT.B    # "#50d8d0" — blue accent
+DIM = _DT.DIM  # "#8b8fa8" — dim text
+FG  = _DT.FG   # "#d0d4e8" — foreground
+BG0 = _DT.BG0  # "#0b0c1a" — page background
+BG1 = _DT.BG1  # "#10112a" — card background
+BG2 = _DT.BG2  # "#181930" — inner box
+BOR = _DT.BOR  # "#252645" — border
 
 
 def _badge(ok, yes, no, warn=False):
@@ -126,9 +137,8 @@ def _row2(label, badge, detail=""):
 
 
 def _section_header(title, icon=""):
-    return (f'<div style="color:{B};font-size:1em;font-weight:700;letter-spacing:0.05em;'
-            f'margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid {BOR}">'
-            f'{icon} {title}</div>')
+    # Renders through DashboardFormatter — presentation layer controls styling
+    return _dash_fmt.section_header_raw(title, icon)
 
 
 # ── DB query helper ───────────────────────────────────────────────────────────
@@ -162,7 +172,7 @@ def _ff_list(kb_data):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SECTION 1 — ALPHA ENGINE STATUS
+# SECTION 1 — CONSTITUTIONAL ENGINE STATUS
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _section_alpha_status() -> str:
@@ -251,7 +261,7 @@ def _section_alpha_status() -> str:
 
     return f"""
 <div style="background:{BG1};border:2px solid {B};border-radius:10px;padding:20px 24px;margin-bottom:18px">
-  {_section_header("ALPHA ENGINE STATUS", "⚡")}
+  {_section_header("CONSTITUTIONAL ENGINE STATUS", "⚡")}
   {_box("15-Point System Checklist",
     f'<table style="width:100%;border-collapse:collapse">{status_rows}</table>')}
   {_box("Active Production Weights",
@@ -1923,7 +1933,7 @@ def _section_pattern_intelligence() -> str:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _section_top_ranked() -> str:
-    """TOP RANKED OPPORTUNITIES panel — reads scan_results.json (falls back to signal_history)."""
+    """RANKED OPPORTUNITIES panel — reads scan_results.json (falls back to signal_history)."""
     scan  = _load_scan()
     ranks = _load("rank_history.json")
 
@@ -1954,7 +1964,7 @@ def _section_top_ranked() -> str:
 
     if not ranked:
         return f"""<div class="section" style="border-left:4px solid {B}">
-  {_section_header("TOP RANKED OPPORTUNITIES", "🏆")}
+  {_section_header("RANKED OPPORTUNITIES", "🏆")}
   <div style="color:{DIM};font-size:0.85em;padding:12px 0">No BUY signals in current scan.</div>
 </div>"""
 
@@ -2018,7 +2028,7 @@ def _section_top_ranked() -> str:
   <td style="padding:9px 12px;text-align:center;width:42px">{delta_h}</td>
 </tr>"""
         if cur_rank == 5 and len(ranked) > 5:
-            rows += f"""<tr><td colspan="7" style="padding:5px 12px;background:{BG2};font-size:0.75em;color:{DIM};font-weight:700;letter-spacing:0.5px;text-transform:uppercase">B-TIER — Watchlist (#6–#10)</td></tr>"""
+            rows += f"""<tr><td colspan="7" style="padding:5px 12px;background:{BG2};font-size:0.75em;color:{DIM};font-weight:700;letter-spacing:0.5px;text-transform:uppercase">Monitored Opportunities (#6–#10)</td></tr>"""
 
     # Largest movers section
     movers_html = ""
@@ -2046,7 +2056,7 @@ def _section_top_ranked() -> str:
 </div>"""
 
     return f"""<div class="section" style="border-left:4px solid {B}">
-  {_section_header("TOP RANKED OPPORTUNITIES", "🏆")}
+  {_section_header("RANKED OPPORTUNITIES", "🏆")}
   <div style="font-size:0.78em;color:{DIM};margin-bottom:10px">
     Formula: <code style="color:{B}">0.60 × factor_exp_score + 0.40 × SMC score</code> &nbsp;·&nbsp;
     Sorted by production ranking key &nbsp;·&nbsp; {today_str}
@@ -2283,8 +2293,8 @@ def build_dashboard() -> str:
 
 <div class="header">
   <div>
-    <h1>⚡ EGX Executive Operations Center</h1>
-    <div class="meta">EGX Autonomous Bottom Discovery Platform — Live State · 11 Sections</div>
+    <h1>⚡ {DASH_TITLE}</h1>
+    <div class="meta">{DASH_SUBTITLE}</div>
   </div>
   <div class="meta" style="text-align:right">
     <div style="color:{FG}">{now_str}</div>
@@ -2312,7 +2322,7 @@ def build_dashboard() -> str:
 <div class="container">
 {body}
 <div class="footer">
-  EGX Autonomous Bottom Discovery Platform · Built {now_str} · 12 sections
+  {DASH_FOOTER.format(ts=now_str)}
   <a href="heatmap.html" style="color:{B};text-decoration:none">📈 Signal Heatmap</a>
 </div>
 </div>

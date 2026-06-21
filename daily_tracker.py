@@ -386,8 +386,10 @@ def run_bq_scoring(db_path: str = DB_PATH, verbose: bool = True) -> int:
             r20    = f"{bq['r20d']*100:+.1f}%" if bq.get("r20d") is not None else "N/A"
             mfe    = f"{bq['mfe_20d']*100:.1f}%" if bq.get("mfe_20d") is not None else "N/A"
             cls    = bq.get("classification", "?")
+            score  = bq["bq_score"]
+            flag   = "⚠️ REVIEW EXIT" if score < 40 else ("📊 MONITOR" if score < 60 else "✅ QUALITY")
             print(f"  ✓ {sym:<10} {sig['signal_date']}  BQ={bq_str:<5}  "
-                  f"r20d={r20}  MFE={mfe}  [{cls}]")
+                  f"r20d={r20}  MFE={mfe}  [{cls}]  {flag}")
 
     if verbose:
         print(f"[BQ] Done — scored {scored}/{len(signals)}")

@@ -1,17 +1,19 @@
 """
-EGX Scanner — Executive Operations Center Dashboard
-====================================================
+EGX Constitutional Investment Platform — Dashboard
+===================================================
 Sections:
-  1. Alpha Engine Status
-  2. Bottom Discovery Pipeline  [NEW]
-  3. Today's Learning           [IMPROVED]
-  4. Current Research           [IMPROVED]
-  5. Production Alpha Snapshot  [NEW]
-  6. Top Knowledge Findings     [NEW]
-  7. Alpha Performance
-  8. Changes Since Yesterday    [NEW]
+  1. Constitutional Engine Status
+  2. Signal Discovery Pipeline
+  3. Today's Research Insights
+  4. Active Research
+  5. Today's Constitutional Signals
+  6. Knowledge Base Highlights
+  7. Constitutional Performance
+  8. Changes Since Yesterday
   9. Deployment History
  10. System Health
+ 11. Portfolio Intelligence
+ 12. Pattern Intelligence
 """
 
 import json
@@ -162,7 +164,7 @@ def _ff_list(kb_data):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SECTION 1 — ALPHA ENGINE STATUS
+# SECTION 1 — CONSTITUTIONAL ENGINE STATUS
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _section_alpha_status() -> str:
@@ -1923,7 +1925,7 @@ def _section_pattern_intelligence() -> str:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _section_top_ranked() -> str:
-    """TOP RANKED OPPORTUNITIES panel — reads scan_results.json (falls back to signal_history)."""
+    """RANKED OPPORTUNITIES panel — reads scan_results.json (falls back to signal_history)."""
     scan  = _load_scan()
     ranks = _load("rank_history.json")
 

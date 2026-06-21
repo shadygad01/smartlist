@@ -1266,10 +1266,10 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
             return f'<span style="color:#1a7340;font-size:11px;font-weight:700;">▲{delta}</span>'
         return f'<span style="color:#b02a2a;font-size:11px;font-weight:700;">▼{abs(delta)}</span>'
 
-    # ── TOP RANKED OPPORTUNITIES block ───────────────────────────────────────
+    # ── RANKED OPPORTUNITIES block ────────────────────────────────────────────
     def _build_ranking_block():
-        rows_a = ""  # A-tier: top 5 BUY
-        rows_b = ""  # B-tier: next 5 BUY
+        rows_a = ""  # Premier: top 5 BUY
+        rows_b = ""  # Monitor: next 5 BUY
         buy_rank = 0
         for s in sorted_stocks:
             r = results[s]
@@ -2066,7 +2066,7 @@ def send_telegram_alerts(results):
         "VERY STRONG BUY":   "🟢",
         "STRONG BUY":        "🟢",
         "BUY":               "🟩",
-        "WAIT":              "🟡",
+        "WAIT":              "🔵",
         "NEUTRAL":           "⚪",
         "SELL":              "🔴",
         "STRONG SELL":       "🔴",
@@ -2146,7 +2146,7 @@ def send_telegram_alerts(results):
     # ── Append EARLY BUY (Research) section ────────────────────────────
     if early_buy_alerts:
         lines.append("━━━━━━━━━━━━━━━━━━━━━")
-        lines.append(f"🔬 *EARLY BUY — Research Shadow*  _(not for entry)_\n")
+        lines.append(f"🔬 *Research Tracking — Pre-Confirmation*  _(not for entry)_\n")
         lines.append(f"_{len(early_buy_alerts)} signal(s) — partial discount, score ≥ 65, price gate pending_\n")
         for s, r in early_buy_alerts:
             raw = r.get("raw_score", r["score"])
@@ -2211,9 +2211,9 @@ def send_alert_for_high_score(stock, score, result):
             "VERY STRONG BUY":   "🟢",
             "STRONG BUY":        "🟢",
             "BUY":               "🟩",
-            "WAIT":              "🟡",
+            "WAIT":              "🔵",
         }
-        emoji = emoji_map.get(signal, "🟡")
+        emoji = emoji_map.get(signal, "🔵")
         
         try:
             upside = ""

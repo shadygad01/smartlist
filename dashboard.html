@@ -49,14 +49,19 @@ details summary::-webkit-details-marker{display:none;}
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
       <div style="text-align:right;">
         <div style="font-size:11px;color:#8b8fa8;" id="cairo-date">Sunday, 21 June 2026</div>
-        <div style="font-size:14px;font-weight:700;color:#50d8d0;" id="cairo-clock">19:13 Cairo</div>
+        <div style="font-size:14px;font-weight:700;color:#50d8d0;" id="cairo-clock">19:21 Cairo</div>
       </div>
       <span class="badge" style="background:#8b8fa822;color:#8b8fa8;">&#11044; EGX CLOSED (After Hours)</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="triggerScan()" style="background:#50d8d022;color:#50d8d0;border:1px solid #50d8d0;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">🔄 Run Scan</button>
+        <button onclick="checkUpdates()" style="background:#f0b84022;color:#f0b840;border:1px solid #f0b840;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">🔍 Check Updates</button>
+        <button onclick="refreshDash()" style="background:#4caf5022;color:#4caf50;border:1px solid #4caf50;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">♻ Refresh</button>
+      </div>
     </div>
   </div>
   <div style="max-width:1100px;margin:6px auto 0;font-size:11px;color:#8b8fa8;">
     Last Scan: <span style="color:#d0d4e8;">2026-06-21 04:00</span>
-    &nbsp;&middot;&nbsp; Generated: <span style="color:#d0d4e8;">2026-06-21 17:13</span>
+    &nbsp;&middot;&nbsp; Generated: <span style="color:#d0d4e8;">2026-06-21 17:21</span>
     &nbsp;&middot;&nbsp; Data As Of: <span style="color:#d0d4e8;">2026-06-21 04:00</span>
   </div>
 </div>
@@ -469,7 +474,7 @@ details summary::-webkit-details-marker{display:none;}
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:13px;">ADIB.CA</td>
   <td style="color:#d0d4e8;">47.00</td>
-  <td><span class="badge" style="background:#8b8fa822;color:#8b8fa8;">NO DATA</span></td>
+  <td><span class="badge" style="background:#8b8fa822;color:#8b8fa8;">NO HISTORY</span></td>
   <td style="color:#ffffff;font-weight:600;">—</td>
   <td>—</td>
   <td style="color:#8b8fa8;font-size:11px;max-width:200px;">No scan data available</td>
@@ -480,7 +485,7 @@ details summary::-webkit-details-marker{display:none;}
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:13px;">ORAS.CA</td>
   <td style="color:#d0d4e8;">793.00</td>
-  <td><span class="badge" style="background:#8b8fa822;color:#8b8fa8;">NO DATA</span></td>
+  <td><span class="badge" style="background:#8b8fa822;color:#8b8fa8;">NO HISTORY</span></td>
   <td style="color:#ffffff;font-weight:600;">—</td>
   <td>—</td>
   <td style="color:#8b8fa8;font-size:11px;max-width:200px;">No scan data available</td>
@@ -491,7 +496,7 @@ details summary::-webkit-details-marker{display:none;}
 <tr>
   <td style="font-weight:700;color:#50d8d0;font-size:13px;">RAYA.CA</td>
   <td style="color:#d0d4e8;">6.29</td>
-  <td><span class="badge" style="background:#8b8fa822;color:#8b8fa8;">NO DATA</span></td>
+  <td><span class="badge" style="background:#8b8fa822;color:#8b8fa8;">NO HISTORY</span></td>
   <td style="color:#ffffff;font-weight:600;">—</td>
   <td>—</td>
   <td style="color:#8b8fa8;font-size:11px;max-width:200px;">No scan data available</td>
@@ -1483,12 +1488,12 @@ details summary::-webkit-details-marker{display:none;}
 <tr>
   <td style="color:#8b8fa8;font-size:12px;padding:7px 0;">Dashboard</td>
   <td style="padding:7px 8px;"><span class="badge" style="background:#4caf5022;color:#4caf50;">&#10003; PASS</span></td>
-  <td style="color:#4caf50;font-size:12px;padding:7px 0;">dashboard.html · 04f1f206a16c...</td>
+  <td style="color:#4caf50;font-size:12px;padding:7px 0;">dashboard.html · 941fdbd8c2f1...</td>
 </tr>
 <tr>
   <td style="color:#8b8fa8;font-size:12px;padding:7px 0;">Email</td>
   <td style="padding:7px 8px;"><span class="badge" style="background:#4caf5022;color:#4caf50;">&#10003; PASS</span></td>
-  <td style="color:#4caf50;font-size:12px;padding:7px 0;">email.html · 6a1b810c624e...</td>
+  <td style="color:#4caf50;font-size:12px;padding:7px 0;">email.html · 22a55e7fc503...</td>
 </tr>
 <tr>
   <td style="color:#8b8fa8;font-size:12px;padding:7px 0;">Telegram</td>
@@ -1513,7 +1518,7 @@ details summary::-webkit-details-marker{display:none;}
       </div>
       <div>
         <div style="font-size:11px;color:#8b8fa8;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Live Data</div>
-        <table style="font-size:12px;min-width:auto;"><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Timeline Events</td><td style="color:#4caf50;font-size:12px;font-weight:600;padding:5px 8px;">42 (19 First BUY &middot; 23 Re-Accum)</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Universe</td><td style="color:#d0d4e8;font-size:12px;font-weight:600;padding:5px 8px;">24 tickers</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Approaching</td><td style="color:#f0b840;font-size:12px;font-weight:600;padding:5px 8px;">15 tickers</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Last Scan</td><td style="color:#8b8fa8;font-size:12px;font-weight:600;padding:5px 8px;">2026-06-21 04:00:56</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Generated At</td><td style="color:#8b8fa8;font-size:12px;font-weight:600;padding:5px 8px;">2026-06-21 17:13:12</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Market Status</td><td style="color:#8b8fa8;font-size:12px;font-weight:600;padding:5px 8px;">CLOSED (After Hours)</td></tr></table>
+        <table style="font-size:12px;min-width:auto;"><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Timeline Events</td><td style="color:#4caf50;font-size:12px;font-weight:600;padding:5px 8px;">42 (19 First BUY &middot; 23 Re-Accum)</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Universe</td><td style="color:#d0d4e8;font-size:12px;font-weight:600;padding:5px 8px;">24 tickers</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Approaching</td><td style="color:#f0b840;font-size:12px;font-weight:600;padding:5px 8px;">15 tickers</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Last Scan</td><td style="color:#8b8fa8;font-size:12px;font-weight:600;padding:5px 8px;">2026-06-21 04:00:56</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Generated At</td><td style="color:#8b8fa8;font-size:12px;font-weight:600;padding:5px 8px;">2026-06-21 17:21:52</td></tr><tr><td style="color:#8b8fa8;font-size:12px;padding:5px 0;">Market Status</td><td style="color:#8b8fa8;font-size:12px;font-weight:600;padding:5px 8px;">CLOSED (After Hours)</td></tr></table>
       </div>
     </div>
   </details>
@@ -1521,7 +1526,7 @@ details summary::-webkit-details-marker{display:none;}
 <div style="text-align:center;font-size:11px;color:#8b8fa8;padding:16px 0;margin-top:8px;border-top:1px solid #252645;">
   EGX Constitutional Command Center &nbsp;&middot;&nbsp; Append-Only &middot; Immutable Events &middot; No Portfolio Dependency
   <br><span style="font-family:monospace;font-size:10px;color:#8b8fa8;opacity:0.7">
-  dashboard.py v6 &nbsp;&middot;&nbsp; generated 2026-06-21 19:13 Cairo &nbsp;&middot;&nbsp; commit 4f65547
+  dashboard.py v6 &nbsp;&middot;&nbsp; generated 2026-06-21 19:21 Cairo &nbsp;&middot;&nbsp; commit 648b91b
   </span>
 </div>
 </div>
@@ -1543,6 +1548,22 @@ function updateClock(){
 }
 setInterval(updateClock,1000);
 updateClock();
+function triggerScan(){
+  window.open('https://github.com/shadygad01/smartlist/actions/workflows/daily_scan.yml','_blank');
+}
+function checkUpdates(){
+  fetch('version.json').then(r=>r.json()).then(d=>{
+    alert('Version: '+d.version+'
+Commit: '+d.commit+'
+Generated: '+d.generated_at);
+  }).catch(()=>{
+    alert('Current dashboard commit: 648b91b
+Refresh page to check for updates.');
+  });
+}
+function refreshDash(){
+  window.location.href=window.location.pathname+'?v='+Date.now();
+}
 </script>
 
 </body>

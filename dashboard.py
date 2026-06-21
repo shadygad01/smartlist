@@ -82,6 +82,19 @@ function updateClock(){
 }
 setInterval(updateClock,1000);
 updateClock();
+function triggerScan(){
+  window.open('https://github.com/shadygad01/smartlist/actions/workflows/daily_scan.yml','_blank');
+}
+function checkUpdates(){
+  fetch('version.json').then(r=>r.json()).then(d=>{
+    alert('Version: '+d.version+'\nCommit: '+d.commit+'\nGenerated: '+d.generated_at);
+  }).catch(()=>{
+    alert('Current dashboard commit: $COMMIT_MARKER$\nRefresh page to check for updates.');
+  });
+}
+function refreshDash(){
+  window.location.href=window.location.pathname+'?v='+Date.now();
+}
 </script>
 """
 
@@ -145,6 +158,11 @@ def _s_sticky_header(snap):
         <div style="font-size:14px;font-weight:700;color:{B};" id="cairo-clock">{_cairo_now()} Cairo</div>
       </div>
       <span class="badge" style="background:{mc}22;color:{mc};">&#11044; EGX {mstatus}</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="triggerScan()" style="background:#50d8d022;color:#50d8d0;border:1px solid #50d8d0;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">🔄 Run Scan</button>
+        <button onclick="checkUpdates()" style="background:#f0b84022;color:#f0b840;border:1px solid #f0b840;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">🔍 Check Updates</button>
+        <button onclick="refreshDash()" style="background:#4caf5022;color:#4caf50;border:1px solid #4caf50;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600;">♻ Refresh</button>
+      </div>
     </div>
   </div>
   <div style="max-width:1100px;margin:6px auto 0;font-size:11px;color:{DIM};">

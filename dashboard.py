@@ -251,7 +251,7 @@ def _section_alpha_status() -> str:
 
     return f"""
 <div style="background:{BG1};border:2px solid {B};border-radius:10px;padding:20px 24px;margin-bottom:18px">
-  {_section_header("ALPHA ENGINE STATUS", "⚡")}
+  {_section_header("CONSTITUTIONAL ENGINE STATUS", "⚡")}
   {_box("15-Point System Checklist",
     f'<table style="width:100%;border-collapse:collapse">{status_rows}</table>')}
   {_box("Active Production Weights",
@@ -2283,8 +2283,8 @@ def build_dashboard() -> str:
 
 <div class="header">
   <div>
-    <h1>⚡ EGX Executive Operations Center</h1>
-    <div class="meta">EGX Autonomous Bottom Discovery Platform — Live State · 11 Sections</div>
+    <h1>⚡ EGX Constitutional Investment Platform</h1>
+    <div class="meta">Research-Driven · Constitutionally Governed · 27-Symbol Universe · Live State</div>
   </div>
   <div class="meta" style="text-align:right">
     <div style="color:{FG}">{now_str}</div>
@@ -2312,7 +2312,7 @@ def build_dashboard() -> str:
 <div class="container">
 {body}
 <div class="footer">
-  EGX Autonomous Bottom Discovery Platform · Built {now_str} · 12 sections
+  EGX Constitutional Investment Platform · Built {now_str} · Research-Driven · Constitutionally Governed
   <a href="heatmap.html" style="color:{B};text-decoration:none">📈 Signal Heatmap</a>
 </div>
 </div>

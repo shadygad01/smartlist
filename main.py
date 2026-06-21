@@ -1095,7 +1095,7 @@ def build_ez_html(r):
     rc = "#155724" if ez["ret_from_avg"]>=10 else ("#856404" if ez["ret_from_avg"]>=5 else "#721c24")
     return (f'<div style="font-family:Arial,sans-serif;font-size:12px;font-weight:bold;'
             f'color:#1C4587;margin:16px 0 5px 0;letter-spacing:0.5px;'
-            f'border-left:4px solid #1C4587;padding-left:8px;">ENTRY ZONES — AVERAGING STRATEGY</div>'
+            f'border-left:4px solid #1C4587;padding-left:8px;">ENTRY STRATEGY — AVERAGING PLAN</div>'
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0" '
             f'style="border:1px solid #d0e4f7;border-collapse:collapse;background:#f4f8ff;">'
             f'<tr style="background:#1C4587;">'
@@ -1123,7 +1123,7 @@ def build_pattern_html(r):
     header = (
         '<div style="margin:10px 0 4px 0;font-family:Arial,sans-serif;font-size:12px;'
         'font-weight:bold;color:#1C4587;letter-spacing:0.5px;border-left:4px solid #1C4587;'
-        'padding-left:8px;">PATTERN INTELLIGENCE — HISTORICAL ANALYSIS</div>'
+        'padding-left:8px;">PATTERN INTELLIGENCE — HISTORICAL CONTEXT</div>'
     )
     if not p or not p.get("ok"):
         reason = p.get("reason", "") if p else ""
@@ -1295,7 +1295,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 <tr style="background:{row_bg};border-bottom:1px solid #dde8f5;">
   <td style="padding:11px 14px;font-family:Arial,sans-serif;width:36px;text-align:center;">
     <div style="font-size:18px;font-weight:800;color:{tier_col};">#{buy_rank}</div>
-    <div style="font-size:10px;font-weight:700;color:{tier_col};letter-spacing:0.5px;">{tier}-TIER</div>
+    <div style="font-size:10px;font-weight:700;color:{tier_col};letter-spacing:0.5px;">{"PREMIER" if tier == "A" else "MONITOR"}</div>
   </td>
   <td style="padding:11px 14px;font-family:Arial,sans-serif;">
     <div style="font-size:15px;font-weight:700;color:#111;">{NAMES.get(s, s)}</div>
@@ -1314,7 +1314,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
   </td>
   <td align="right" style="padding:11px 14px;font-family:Arial,sans-serif;">
     <div style="font-size:14px;font-weight:600;color:#444;">{score}</div>
-    <div style="font-size:10px;color:#999;">SMC</div>
+    <div style="font-size:10px;color:#999;">signal quality</div>
   </td>
   <td align="center" style="padding:11px 14px;font-family:Arial,sans-serif;width:40px;">{delta_h}</td>
 </tr>"""
@@ -1327,18 +1327,18 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
         if not rows_a:
             return ""
         tier_b_block = f"""
-<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#5b6c82;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f7f9fc;border-top:1px solid #dde8f5;">B-TIER — Watchlist (#6–#10)</div>
+<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#5b6c82;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f7f9fc;border-top:1px solid #dde8f5;">Monitored Opportunities (#6–#10)</div>
 <table width="100%" cellpadding="0" cellspacing="0" border="0"><tbody>{rows_b}</tbody></table>""" if rows_b else ""
         return f"""
 <div style="font-family:Arial,sans-serif;margin:20px 0;border:2px solid #1a3a5c;border-radius:8px;overflow:hidden;">
   <div style="background:linear-gradient(135deg,#1a3a5c,#0B5394);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
     <div>
-      <span style="color:#fff;font-size:15px;font-weight:800;letter-spacing:0.3px;">🏆 TOP RANKED OPPORTUNITIES</span>
-      <span style="color:#8fb8d8;font-size:11px;margin-left:10px;">0.60 × Expectancy + 0.40 × SMC Score</span>
+      <span style="color:#fff;font-size:15px;font-weight:800;letter-spacing:0.3px;">🏆 RANKED OPPORTUNITIES</span>
+      <span style="color:#8fb8d8;font-size:11px;margin-left:10px;">Ranked by Factor Expectancy + Signal Quality</span>
     </div>
     <span style="color:#8fb8d8;font-size:11px;">{fmt_cairo("%d %b %Y")}</span>
   </div>
-  <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#0B5394;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f0f7ff;">A-TIER — Top Opportunities (#1–#5)</div>
+  <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#0B5394;letter-spacing:0.6px;text-transform:uppercase;padding:8px 14px 4px;background:#f0f7ff;">Premier Opportunities (#1–#5)</div>
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
     <thead>
       <tr style="background:#e8f0f8;border-bottom:2px solid #c8daf5;">
@@ -1347,7 +1347,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
         <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;">Signal</th>
         <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">Rank Score</th>
         <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">Expectancy</th>
-        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">SMC</th>
+        <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:right;">Signal Quality</th>
         <th style="padding:7px 14px;font-family:Arial,sans-serif;font-size:10px;color:#5b6c82;font-weight:700;text-transform:uppercase;text-align:center;">Δ</th>
       </tr>
     </thead>
@@ -1418,7 +1418,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
   <td style="padding:9px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#4a4a4a;text-align:center;">{entry_score}</td>
 </tr>"""
         open_positions_block = f"""
-<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;margin:20px 0 6px 0;letter-spacing:0.5px;">📊 Open Positions — Dynamic Target</div>
+<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0B5394;margin:20px 0 6px 0;letter-spacing:0.5px;">📊 Portfolio Positions — Constitutional Targets</div>
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #c8daf5;border-collapse:collapse;margin-bottom:20px;">
   <tr style="background:#0B5394;">
     <th align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#fff;">Stock</th>
@@ -1437,7 +1437,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 {holiday_banner}
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a3a5c;">
   <tr><td style="padding:22px 28px;">
-    <div style="font-family:Arial,sans-serif;color:#fff;font-size:20px;font-weight:700;letter-spacing:0.3px;">EGX Institutional Swing Scanner</div>
+    <div style="font-family:Arial,sans-serif;color:#fff;font-size:20px;font-weight:700;letter-spacing:0.3px;">EGX Constitutional Morning Brief</div>
     <div style="font-family:Arial,sans-serif;color:#8fb8d8;font-size:12px;margin-top:6px;letter-spacing:0.3px;">{fmt_cairo("%A, %d %B %Y  ·  %H:%M")} Cairo</div>
   </td></tr>
 </table>
@@ -1492,7 +1492,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Company</th>
     <th align="right" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Price</th>
     <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Signal</th>
-    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Rank Score / SMC</th>
+    <th align="left" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Rank Score / Signal Quality</th>
     <th align="right" style="padding:10px 14px;font-family:Arial,sans-serif;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;">Target</th>
   </tr>
   {wr or '<tr><td colspan="5" style="padding:16px 14px;font-family:Arial,sans-serif;font-size:13px;color:#888;">No data available.</td></tr>'}
@@ -1582,7 +1582,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     </td>
   </tr>
 </table>
-<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#888;margin:16px 0 6px 0;letter-spacing:1px;text-transform:uppercase;">SMC Indicator Breakdown</div>
+<div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#888;margin:16px 0 6px 0;letter-spacing:1px;text-transform:uppercase;">Factor Contribution</div>
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e8eaed;border-collapse:collapse;border-radius:4px;overflow:hidden;">
   <tr style="background:#f6f7f9;">
     <th width="170" align="left" style="padding:8px 12px;font-family:Arial,sans-serif;font-size:11px;color:#777;font-weight:600;border-right:1px solid #eee;letter-spacing:0.4px;">Indicator</th>
@@ -1598,7 +1598,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     parts.append(f"""
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:40px;border-top:1px solid #e8eaed;">
   <tr><td align="center" style="padding:16px;font-family:Arial,sans-serif;font-size:11px;color:#bbb;letter-spacing:0.4px;">
-    EGX Institutional Scanner &nbsp;·&nbsp; TradingView Data Engine
+    EGX Constitutional Investment Platform &nbsp;·&nbsp; Research-Driven &nbsp;·&nbsp; Constitutionally Governed
   </td></tr>
 </table>""")
 
@@ -1616,7 +1616,7 @@ def send_email(html, subject_suffix=""):
         print("ERROR: EMAIL_USER or EMAIL_PASS not set."); return False
     msg=MIMEMultipart("alternative")
     date_str=now_cairo().strftime("%Y-%m-%d")
-    msg["Subject"]=f"EGX Scanner — {date_str}{subject_suffix}"
+    msg["Subject"]=f"EGX Constitutional Morning Brief · {date_str}{subject_suffix}"
     msg["From"]=sender; msg["To"]=EMAIL
     msg.attach(MIMEText(html,"html","utf-8"))
     try:
@@ -1952,9 +1952,11 @@ def send_telegram_alerts(results):
     if not alerts:
         # Send a "nothing today" summary so you know the scan ran
         msg = (
-            f"📊 *EGX Daily Scan — {now_cairo().strftime('%d %b %Y')}*\n"
+            f"📋 *EGX Constitutional Morning Brief*\n"
+            f"*{now_cairo().strftime('%d %b %Y')}*\n"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
-            f"No setups reached the Wait threshold (≥35) today."
+            f"No constitutional entry setups reached monitoring threshold today.\n"
+            f"Portfolio positions continue under constitutional management."
         )
         open_pos = [(s, p) for s, p in positions.items() if p.get("status") == "open"]
         open_pos.sort(key=lambda x: (
@@ -1964,7 +1966,7 @@ def send_telegram_alerts(results):
         ), reverse=True)
         if open_pos:
             msg += f"\n\n━━━━━━━━━━━━━━━━━━━━━"
-            msg += f"\n📂 *Open Positions  ({len(open_pos)})*\n"
+            msg += f"\n📂 *Portfolio Positions  ({len(open_pos)})*\n"
             for sym, pos in open_pos:
                 entry = pos["entry_price"]
                 tgt   = pos["target"]
@@ -2006,9 +2008,10 @@ def send_telegram_alerts(results):
     # Build one summary message with all qualifying stocks
     date_str = now_cairo().strftime("%d %b %Y")
     lines = [
-        f"📊 *EGX Daily Scan — {date_str}*",
+        f"📋 *EGX Constitutional Morning Brief*",
+        f"*{date_str}*",
         f"━━━━━━━━━━━━━━━━━━━━━",
-        f"_{len(alerts)} setup(s) above threshold_\n",
+        f"_{len(alerts)} constitutional setup(s) above monitoring threshold_\n",
     ]
 
     # Add open positions section if any exist
@@ -2020,7 +2023,7 @@ def send_telegram_alerts(results):
     ), reverse=True)
     if open_positions_list:
         lines.append("━━━━━━━━━━━━━━━━━━━━━")
-        lines.append(f"📂 *Open Positions  ({len(open_positions_list)})*\n")
+        lines.append(f"📂 *Portfolio Positions  ({len(open_positions_list)})*\n")
         for sym, pos in open_positions_list:
             entry = pos["entry_price"]
             tgt   = pos["target"]
@@ -2120,7 +2123,7 @@ def send_telegram_alerts(results):
                 f"{'─'*25}\n"
                 f"{emoji} *{NAMES.get(s, s)}*  `{s}`{portfolio_tag}\n"
                 f"   Signal     *{r['signal']}*\n"
-                f"   SMC Score  *{r['score']}/100*{adj_tag}\n"
+                f"   Signal Quality  *{r['score']}/100*{adj_tag}\n"
                 f"{ctx_str}"
                 f"   Price      *{r['price']} EGP*\n"
                 f"   Target     *{round(float(target_to_display), 2)} EGP*{upside}\n"
@@ -2133,7 +2136,7 @@ def send_telegram_alerts(results):
                 f"{'─'*25}\n"
                 f"{emoji} *{NAMES.get(s, s)}*  `{s}`{portfolio_tag}\n"
                 f"   Signal     {emoji} {r.get('signal', 'Wait')}\n"
-                f"   SMC Score  *{r['score']}/100*{adj_tag}\n"
+                f"   Signal Quality  *{r['score']}/100*{adj_tag}\n"
                 f"{ctx_str}"
                 f"   Price      *{r['price']} EGP*\n"
                 f"{pi_line}"

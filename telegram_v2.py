@@ -1,96 +1,107 @@
 """
-EGX Constitutional Investment Platform — Telegram V2
-Constitutional 15-second Morning Brief. No scanner. No signal engine.
+EGX Constitutional Opportunity Timeline — Telegram V1
+Event-driven brief. No portfolio capacity. No HELD/WATCH/RESERVE.
 """
 from __future__ import annotations
 
 import os
 import requests
+from datetime import datetime
 
 from presentation.presentation_snapshot import PresentationSnapshot, build_presentation_snapshot
 
-TG_HEADER = "📋 *EGX Constitutional Morning Brief*"
+TG_HEADER = "📋 *EGX Constitutional Opportunity Timeline*"
 SEP       = "━━━━━━━━━━━━━━━━━━━━━"
 MAX_CHARS = 4000
 
 
 def _health_icon(stars: str) -> str:
     n = stars.count("★")
-    if n >= 4: return "🟢"
-    if n == 3: return "🟡"
-    return "🔴"
+    return "🟢" if n >= 4 else ("🟡" if n == 3 else "🔴")
+
+
+def _status_icon(status: str) -> str:
+    return "🏆" if status == "PREMIUM_NOW" else ("🟢" if status == "ACTIVE_OPPORTUNITY" else "🔴")
+
+
+def _sign(r: float) -> str:
+    return "+" if r >= 0 else ""
 
 
 def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
-    from datetime import datetime
-    lines = [
-        TG_HEADER,
-        f"*{date_str}*",
-        SEP,
-    ]
+    lines = [TG_HEADER, f"*{date_str}*", SEP]
 
-    # Registry summary
+    # Summary
     icon    = _health_icon(snap.health_stars)
-    premium = sum(1 for b in snap.constitutional_buys if b.get("status") == "PREMIUM_NOW")
-    active  = sum(1 for b in snap.constitutional_buys if b.get("status") == "ACTIVE_OPPORTUNITY")
-    review  = sum(1 for b in snap.constitutional_buys if b.get("status") == "UNDER_REVIEW")
+    premium = sum(1 for e in snap.timeline if e.get("status") == "PREMIUM_NOW")
+    active  = sum(1 for e in snap.timeline if e.get("status") == "ACTIVE_OPPORTUNITY")
+    review  = sum(1 for e in snap.timeline if e.get("status") == "UNDER_REVIEW")
 
     lines.append(f"{icon} *{snap.health_stars} {snap.health_label}*")
     lines.append(
-        f"   *{snap.total_buys}* Constitutional Opportunities"
-        f" · Premium: {premium} · Active: {active} · Review: {review}"
+        f"   *{snap.total_events}* Events · *{snap.total_tickers}* Tickers"
+        f" · First: {len(snap.first_buys)} · Re-Accum: {len(snap.re_accumulations)}"
     )
+    lines.append(f"   🏆 Premium: {premium} · 🟢 Active: {active} · 🔴 Review: {review}")
     lines.append("")
 
-    # New BUYs today
-    if snap.new_buys_today:
+    # New events today
+    if snap.new_events_today:
         lines.append(SEP)
-        lines.append(f"🆕 *NEW Constitutional BUYs Today*\n")
-        for b in snap.new_buys_today:
-            lines.append(f"🟢 *{b['ticker']}*  {b['sector']}  R2={b['buy_r2']:.1f}")
-            lines.append(f"   Entry: {b['buy_price']:.2f} EGP  · Score: {b['buy_score']:.1f}")
+        lines.append(f"⚡ *New Constitutional Events Today ({len(snap.new_events_today)})*\n")
+        for e in snap.new_events_today:
+            label = "🟢 *FIRST BUY*" if e["event_type"] == "FIRST_BUY" else "🔵 *RE-ACCUMULATION*"
+            lines.append(f"{label}  *{e['ticker']}*  {e['sector']}")
+            lines.append(f"   Entry: {e['entry_price']:.2f} EGP  · R2={e['buy_r2']:.1f} · Score={e['buy_score']:.1f}")
             lines.append("")
 
-    # Constitutional BUY Registry — all N entries
+    # Full timeline
     lines.append(SEP)
-    lines.append(f"📋 *Constitutional BUY Registry ({snap.total_buys})*\n")
-    for b in snap.constitutional_buys:
-        sign       = "+" if b["return_pct"] >= 0 else ""
-        peak_sign  = "+" if b["peak_return_pct"] >= 0 else ""
-        status_icon = "🏆" if b["status"] == "PREMIUM_NOW" else \
-                      "🟢" if b["status"] == "ACTIVE_OPPORTUNITY" else "🔴"
+    lines.append(f"📋 *Constitutional Opportunity Timeline ({snap.total_events} events)*\n")
+
+    for e in snap.timeline:
+        si    = _status_icon(e["status"])
+        etype = "🟢" if e["event_type"] == "FIRST_BUY" else "🔵"
         lines.append(
-            f"{status_icon} *{b['ticker']}*  {b['buy_date']}"
-            f"  Entry={b['buy_price']:.2f}  Now={b['current_price']:.2f}"
-            f"  Ret={sign}{b['return_pct']:.1f}%  Peak={peak_sign}{b['peak_return_pct']:.1f}%"
-            f"  {b['days_since_buy']}d"
+            f"{si}{etype} *{e['ticker']}*  {e['event_date']}"
+            f"  Entry={e['entry_price']:.2f}"
+            f"  Now={e['current_price']:.2f}"
+            f"  Ret={_sign(e['return_pct'])}{e['return_pct']:.1f}%"
+            f"  Peak={_sign(e['peak_return_pct'])}{e['peak_return_pct']:.1f}%"
+            f"  {e['days_active']}d"
         )
     lines.append("")
 
-    # New opportunities from advisor (today's new signals)
-    if snap.opportunities:
+    # Leaderboards
+    lb = snap.leaderboards
+    if lb:
         lines.append(SEP)
-        lines.append("🎯 *Advisor Opportunities*\n")
-        for r in snap.opportunities[:5]:
-            conf_icon = "🟢" if r.get("confidence") == "HIGH" else "🟡"
-            reason    = (r.get("reason") or "")[:80]
-            lines.append(f"{conf_icon} *{r['ticker']}*  {r.get('sector','')}")
-            lines.append(f"   {r.get('decision','')}")
-            if reason:
-                lines.append(f"   _{reason}_")
-            lines.append("")
+        lines.append("🏆 *Most Repeated Constitutional Opportunities*\n")
+        for i, a in enumerate(lb.get("most_repeated", [])[:5], 1):
+            lines.append(
+                f"   {i}. *{a['ticker']}*  {a['total_events']} events"
+                f"  avg={_sign(a['avg_return_pct'])}{a['avg_return_pct']:.1f}%"
+                f"  best={_sign(a['best_return_pct'])}{a['best_return_pct']:.1f}%"
+            )
+        lines.append("")
 
-    # Research (top insight only)
+        lines.append("📈 *Highest Compound Return*\n")
+        for i, c in enumerate(lb.get("compound_return", [])[:5], 1):
+            lines.append(
+                f"   {i}. *{c['ticker']}*  {_sign(c['compound_return_pct'])}{c['compound_return_pct']:.1f}%"
+                f"  ({c['total_events']} events)"
+            )
+        lines.append("")
+
+    # Research (top insight)
     if snap.research_insights:
-        ins        = snap.research_insights[0]
-        conclusion = (ins.get("conclusion") or "")[:120]
+        ins = snap.research_insights[0]
         lines.append(SEP)
-        lines.append(f"🔬 *Research:* {conclusion}")
+        lines.append(f"🔬 *Research:* {(ins.get('conclusion') or '')[:120]}")
         lines.append("")
 
     lines.append(SEP)
     lines.append(f"⏰ {datetime.now().strftime('%H:%M  |  %d %b %Y')}")
-
     return "\n".join(lines)
 
 
@@ -108,18 +119,16 @@ def _chunk(text: str) -> list[str]:
 
 
 def send_morning_brief(date_str: str, snap: PresentationSnapshot | None = None) -> None:
-    """Send constitutional morning brief to Telegram."""
     token   = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
-        print("Telegram V2: TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not set — skipping.")
+        print("Telegram V1: TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not set — skipping.")
         return
 
     if snap is None:
         snap = build_presentation_snapshot()
 
     full_msg = build_morning_brief(snap, date_str)
-
     for chunk in _chunk(full_msg):
         try:
             resp = requests.post(
@@ -128,8 +137,8 @@ def send_morning_brief(date_str: str, snap: PresentationSnapshot | None = None) 
                 timeout=10,
             )
             if resp.status_code == 200:
-                print(f"Telegram V2: chunk sent ({len(chunk)} chars)")
+                print(f"Telegram V1: chunk sent ({len(chunk)} chars)")
             else:
-                print(f"Telegram V2: error {resp.status_code} — {resp.text[:200]}")
+                print(f"Telegram V1: error {resp.status_code} — {resp.text[:200]}")
         except Exception as e:
-            print(f"Telegram V2: exception — {e}")
+            print(f"Telegram V1: exception — {e}")

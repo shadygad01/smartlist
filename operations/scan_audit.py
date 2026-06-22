@@ -215,6 +215,18 @@ def update_operations_state(state_path: Optional[str] = None) -> dict:
     # Remove legacy OperationsMonitor key to prevent contradictory data
     existing.pop("validation", None)
 
+    # Refresh timestamp and commit so operations_state is never stale
+    try:
+        import subprocess
+        sha = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=str(BASE), text=True, stderr=subprocess.DEVNULL
+        ).strip()
+    except Exception:
+        sha = existing.get("commit_sha", "")
+    existing["current_cairo_time"] = datetime.now(_EET).isoformat(timespec="seconds")
+    existing["commit_sha"] = sha
+
     existing["scan_slots"] = {
         "expected":        market["summary"]["expected"],
         "completed":       market["summary"]["completed"],

@@ -212,6 +212,9 @@ def update_operations_state(state_path: Optional[str] = None) -> dict:
     result = audit_all()
     market = audit("market_scan")
 
+    # Remove legacy OperationsMonitor key to prevent contradictory data
+    existing.pop("validation", None)
+
     existing["scan_slots"] = {
         "expected":        market["summary"]["expected"],
         "completed":       market["summary"]["completed"],

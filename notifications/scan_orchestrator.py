@@ -163,6 +163,31 @@ class ScanOrchestrator:
         finally:
             conn.close()
 
+    def _cleanup_zombies(self, job_type: str, max_age_minutes: int = 30) -> None:
+        """Mark stuck 'running' executions as failed if older than max_age_minutes."""
+        cutoff = datetime.now(_EET) - timedelta(minutes=max_age_minutes)
+        cutoff_iso = cutoff.isoformat(timespec="seconds")
+        conn = sqlite3.connect(self._db)
+        try:
+            rows = conn.execute(
+                "SELECT execution_id FROM scan_execution "
+                "WHERE job_type=? AND status='running' AND started_at < ?",
+                (job_type, cutoff_iso),
+            ).fetchall()
+            for (eid,) in rows:
+                conn.execute(
+                    "UPDATE scan_execution SET status='failed', finished_at=?, "
+                    "error=? WHERE execution_id=?",
+                    (_now_iso(), "zombie — lock exceeded 30 min", eid),
+                )
+                print(f"[Orchestrator] Zombie cleaned: {job_type} {eid[:8]}")
+            if rows:
+                conn.commit()
+        except Exception as e:
+            print(f"[Orchestrator] zombie cleanup non-fatal: {e}")
+        finally:
+            conn.close()
+
     def _acquire(
         self,
         job_type: str,
@@ -172,6 +197,7 @@ class ScanOrchestrator:
         Insert a 'running' row. Returns execution_id, or None if already running.
         When blocked, records SKIPPED_BY_LOCK in scan_slot_history (not FAILED).
         """
+        self._cleanup_zombies(job_type)
         running_eid = self._is_running(job_type)
         if running_eid:
             print(
@@ -241,6 +267,12 @@ class ScanOrchestrator:
             write_public_status()
         except Exception as _ps_err:
             print(f"[Orchestrator] public_status update non-fatal: {_ps_err}")
+
+        try:
+            from operations.scan_audit import update_operations_state
+            update_operations_state()
+        except Exception as _sa_err:
+            print(f"[Orchestrator] scan_audit update non-fatal: {_sa_err}")
 
     # ── Public job methods ────────────────────────────────────────────────────
 

@@ -114,14 +114,18 @@ for p in _OPERATIONAL_FILES:
         if "_CAIRO_TZ = timezone(timedelta(hours=2))" in text:
             failures.append(f"FAIL: {p.relative_to(BASE)} defines its own _CAIRO_TZ (must import from time_authority)")
 
-# Workflow must not have duplicate Summer/Winter DST crons for Egypt
-wf = BASE / ".github" / "workflows" / "daily_scan.yml"
-if wf.exists():
-    wf_text = wf.read_text()
-    if "30 4 * * 0-4" in wf_text:
-        failures.append("FAIL: daily_scan.yml contains '30 4 * * 0-4' (wrong UTC offset — Egypt is always UTC+2=05:30 UTC)")
-    if "7-10 * * 0-4" in wf_text:
-        failures.append("FAIL: daily_scan.yml contains Summer UTC+3 auto-scan crons (Egypt has no DST)")
+# Verify canonical workflow cron offsets (Africa/Cairo = UTC+3 per ZoneInfo tzdata).
+# 07:30 Cairo = 04:30 UTC; market 10:00-14:30 Cairo = 07:00-11:30 UTC.
+_MORNING_WF = BASE / ".github" / "workflows" / "morning_email.yml"
+if _MORNING_WF.exists():
+    _mt = _MORNING_WF.read_text()
+    if "30 5 * * 0-4" in _mt:
+        failures.append("FAIL: morning_email.yml still uses 05:30 UTC (should be 04:30 UTC for 07:30 Cairo/UTC+3)")
+_MARKET_WF = BASE / ".github" / "workflows" / "market_notifications.yml"
+if _MARKET_WF.exists():
+    _mnt = _MARKET_WF.read_text()
+    if "8-11 * * 0-4" in _mnt:
+        failures.append("FAIL: market_notifications.yml still uses 08:00-11:55 UTC offset (stale UTC+2 cron)")
 
 # ── Report ─────────────────────────────────────────────────────────────────────
 print(f"CI Protection Gate")

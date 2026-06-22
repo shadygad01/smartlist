@@ -9,6 +9,7 @@ import json
 import sqlite3
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from time_authority import now_cairo as _now_cairo_ta
 
 BASE = Path(__file__).parent
 
@@ -18,7 +19,7 @@ _SIGNAL_HIST  = BASE / "signal_history.json"
 _CBR_DB       = BASE / "constitutional_buy_registry.db"
 _SNAP_DB      = BASE / "universe_snapshot.db"
 
-_CAIRO_TZ = timezone(timedelta(hours=2))
+_CAIRO_TZ = _now_cairo_ta().tzinfo
 
 
 # ── Source loaders ─────────────────────────────────────────────────────────────
@@ -229,7 +230,7 @@ def build_universe_snapshot() -> list[dict]:
     cbr       = _load_constitutional_registry()
     timeline  = _load_timeline()
 
-    now_str = datetime.now(_CAIRO_TZ).isoformat()
+    now_str = _now_cairo_ta().isoformat()
     rows: list[dict] = []
 
     for ticker in universe:

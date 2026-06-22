@@ -11,6 +11,7 @@ import os
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime
+from time_authority import now_iso as _now_iso
 from typing import Any
 
 
@@ -168,5 +169,5 @@ def build_portfolio_snapshot() -> PortfolioSnapshot:
         knowledge_count=knowledge_count,
         experiments_running=experiments_running,
         recommendations=recommendations,
-        generated_at=datetime.now().isoformat(),
+        generated_at=_now_iso(),
     )

@@ -85,8 +85,7 @@ jobs:
       - name: Restore existing GH Pages assets (preserve reports)
         run: |
           git fetch origin gh-pages 2>/dev/null || true
-          git checkout origin/gh-pages -- . 2>/dev/null || true
-          rsync -av --exclude='index.html' . web_deploy/ 2>/dev/null || true
+          git checkout origin/gh-pages -- web_deploy/ 2>/dev/null || true
         continue-on-error: true
 
       - name: Deploy to GitHub Pages

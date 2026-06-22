@@ -22,7 +22,7 @@ from typing import Optional
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
-_EET     = timezone(timedelta(hours=2))
+from time_authority import now_cairo as _now_cairo_ta  # noqa: E402
 _SCAN_DB = str(BASE / "scan_execution.db")
 
 # Market session slots (Cairo time): 10:00–14:30 every 5 minutes
@@ -32,7 +32,7 @@ _SLOT_INTERVAL = 5  # minutes
 
 
 def _now() -> datetime:
-    return datetime.now(_EET)
+    return _now_cairo_ta()
 
 
 def _today() -> str:

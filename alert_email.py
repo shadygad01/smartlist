@@ -6,6 +6,7 @@ One email per constitutional event.
 from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
+from time_authority import today_iso as _today_iso, now_cairo as _now_cairo_ta
 from pathlib import Path
 
 BASE = Path(__file__).parent
@@ -55,7 +56,7 @@ def build_alert_email(event: dict) -> tuple[str, str]:
     """Returns (subject, html_body) for a single constitutional event."""
     ticker     = event.get("ticker", "TICKER")
     etype      = event.get("event_type", "FIRST_BUY")
-    event_date = event.get("event_date", datetime.now().strftime("%Y-%m-%d"))
+    event_date = event.get("event_date", _today_iso())
     entry      = float(event.get("entry_price", 0.0))
     current    = float(event.get("current_price", 0.0))
     ret_pct    = float(event.get("return_pct", 0.0))
@@ -132,8 +133,7 @@ def build_alert_email(event: dict) -> tuple[str, str]:
   <div style="font-family:Arial,sans-serif;font-size:13px;color:#333;">{reason}</div>
 </div>"""
 
-    cairo_tz = timezone(timedelta(hours=2))
-    now_s    = datetime.now(cairo_tz).strftime("%d %b %Y %H:%M Cairo")
+    now_s    = _now_cairo_ta().strftime("%d %b %Y %H:%M Cairo")
 
     html_body = f"""<!DOCTYPE html>
 <html>

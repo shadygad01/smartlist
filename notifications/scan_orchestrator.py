@@ -32,11 +32,12 @@ BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
 _DB = str(BASE / "scan_execution.db")
-_EET = timezone(timedelta(hours=2))
+
+from time_authority import now_cairo as _now_cairo_ta  # noqa: E402
 
 
 def _now_iso() -> str:
-    return datetime.now(_EET).isoformat(timespec="seconds")
+    return _now_cairo_ta().isoformat(timespec="seconds")
 
 
 def _commit_sha() -> str:
@@ -51,7 +52,7 @@ def _commit_sha() -> str:
 
 def _slot_time() -> str:
     """Round current time down to the nearest 5-minute slot."""
-    now = datetime.now(_EET)
+    now = _now_cairo_ta()
     return now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0).isoformat(timespec="minutes")
 
 
@@ -165,7 +166,7 @@ class ScanOrchestrator:
 
     def _cleanup_zombies(self, job_type: str, max_age_minutes: int = 30) -> None:
         """Mark stuck 'running' executions as failed if older than max_age_minutes."""
-        cutoff = datetime.now(_EET) - timedelta(minutes=max_age_minutes)
+        cutoff = _now_cairo_ta() - timedelta(minutes=max_age_minutes)
         cutoff_iso = cutoff.isoformat(timespec="seconds")
         conn = sqlite3.connect(self._db)
         try:

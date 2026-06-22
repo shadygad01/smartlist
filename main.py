@@ -377,9 +377,11 @@ def _patch_today_from_tv(df, symbol):
 
 
 def download_data(symbol, days=110):
-    # ── All stocks: yfinance for history + TradingView patch for today ────────
-    # ORAS.CA is listed on Yahoo Finance and works identically to other EGX stocks.
-    # TradingView patch (applied at the end) ensures today's price is always current.
+    # ── All stocks: CSV → yfinance → Yahoo API → TradingView patch for today ──
+    # Priority 1: local committed CSVs (always available, no network, no hang)
+    # Priority 2: yfinance (blocked in GitHub Actions — wrapped with 30s timeout)
+    # Priority 3: Yahoo direct API (also blocked but has explicit timeout=15)
+    # TradingView patch (applied at end) ensures today's price is always current.
     yf_symbol = symbol if symbol.endswith(".CA") else f"{symbol}.CA"
 
     # Convert days to yfinance period string
@@ -396,14 +398,48 @@ def download_data(symbol, days=110):
 
     df = pd.DataFrame()
 
-    try:
-        ticker = yf.Ticker(yf_symbol)
-        df = ticker.history(period=period, interval="1d", auto_adjust=False, repair=True)
-        if not df.empty and len(df) > 5:
-            df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
-            df.index = df.index.tz_localize(None)
-    except Exception as e:
-        print(f"  [{symbol}] yfinance error: {e}")
+    # ── Priority 1: local CSV (committed to repo — zero network, zero hang) ───
+    _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    _csv_path = os.path.join(_BASE_DIR, "historical_data", "historical_data", f"{yf_symbol}.csv")
+    if not os.path.exists(_csv_path):
+        _csv_path = os.path.join(_BASE_DIR, "historical_data", "historical_data",
+                                 f"{symbol}.csv")
+    if os.path.exists(_csv_path):
+        try:
+            _csv_df = pd.read_csv(_csv_path, parse_dates=["Date"])
+            _csv_df = _csv_df.set_index("Date")
+            _csv_df.index = pd.to_datetime(_csv_df.index).tz_localize(None)
+            _csv_df = _csv_df[["Open", "High", "Low", "Close", "Volume"]].copy()
+            # Trim to requested window
+            _cutoff = pd.Timestamp.now() - pd.Timedelta(days=days + 30)
+            _csv_df = _csv_df[_csv_df.index >= _cutoff]
+            if not _csv_df.empty and len(_csv_df) > 5:
+                df = _csv_df
+                print(f"  [{symbol}] CSV loaded: {len(df)} rows from {_csv_path[-40:]}")
+        except Exception as _csv_err:
+            print(f"  [{symbol}] CSV load error: {_csv_err}")
+
+    # ── Priority 2: yfinance (with hard 30s thread timeout to prevent hangs) ──
+    if df.empty:
+        import threading
+        _yf_result = [pd.DataFrame()]
+        def _yf_fetch():
+            try:
+                ticker = yf.Ticker(yf_symbol)
+                _df = ticker.history(period=period, interval="1d", auto_adjust=False, repair=True)
+                if not _df.empty and len(_df) > 5:
+                    _df = _df[["Open", "High", "Low", "Close", "Volume"]].copy()
+                    _df.index = _df.index.tz_localize(None)
+                    _yf_result[0] = _df
+            except Exception as e:
+                print(f"  [{symbol}] yfinance error: {e}")
+        _t = threading.Thread(target=_yf_fetch, daemon=True)
+        _t.start()
+        _t.join(timeout=30)
+        if _t.is_alive():
+            print(f"  [{symbol}] yfinance timeout (30s) — skipping")
+        elif not _yf_result[0].empty:
+            df = _yf_result[0]
 
     if df.empty:
         # Fallback: direct Yahoo Finance chart API

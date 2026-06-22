@@ -11,8 +11,8 @@ on:
       - morning_dispatch
 
   schedule:
-    # 07:30 Cairo (UTC+2) = 05:30 UTC, Sun–Thu
-    - cron: '30 5 * * 0-4'
+    # 07:30 Cairo (UTC+3 per ZoneInfo Africa/Cairo) = 04:30 UTC, Sun–Thu
+    - cron: '30 4 * * 0-4'
 
   workflow_dispatch:
     inputs:

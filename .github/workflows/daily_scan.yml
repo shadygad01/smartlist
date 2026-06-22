@@ -34,7 +34,7 @@ env:
 # منع تراكم الـ runs — لو run جديد جاي، يلغي القديم
 concurrency:
   group: egx-scanner
-  cancel-in-progress: true
+  cancel-in-progress: false   # ScanOrchestrator lock is the ONLY deduplication layer
 
 permissions:
   contents: write
@@ -153,10 +153,10 @@ jobs:
           echo "Morning report and self-healing cycle are executed inside ScanOrchestrator.run_morning_report()."
           echo "No direct director calls here — single execution path enforced."
 
-      - name: Record heartbeat
+      - name: Record heartbeat + scan slot audit
         run: |
           python3 - <<'PYEOF'
-          import sys, subprocess
+          import sys, subprocess, json
           sys.path.insert(0, '.')
           try:
               from operations.heartbeat import update_heartbeat, record_validation
@@ -169,6 +169,16 @@ jobs:
               print('Heartbeat recorded.')
           except Exception as e:
               print(f'Heartbeat error (non-fatal): {e}')
+          try:
+              from operations.scan_audit import update_operations_state
+              state = update_operations_state()
+              slots = state.get('scan_slots', {})
+              print(f"Scan slots — expected={slots.get('expected',0)} "
+                    f"completed={slots.get('completed',0)} "
+                    f"skipped={slots.get('skipped_by_lock',0)} "
+                    f"missing={slots.get('missing',0)}")
+          except Exception as e:
+              print(f'Scan audit non-fatal: {e}')
           PYEOF
 
       - name: Save state to git

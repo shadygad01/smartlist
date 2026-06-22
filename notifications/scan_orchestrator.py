@@ -49,6 +49,12 @@ def _commit_sha() -> str:
         return ""
 
 
+def _slot_time() -> str:
+    """Round current time down to the nearest 5-minute slot."""
+    now = datetime.now(_EET)
+    return now.replace(minute=(now.minute // 5) * 5, second=0, microsecond=0).isoformat(timespec="minutes")
+
+
 def _init_db(db_path: str = _DB) -> None:
     conn = sqlite3.connect(db_path)
     conn.execute("""
@@ -66,6 +72,24 @@ def _init_db(db_path: str = _DB) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_se_job_status ON scan_execution(job_type, status)"
     )
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS scan_slot_history (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            slot_time       TEXT NOT NULL,
+            job_type        TEXT NOT NULL,
+            started_at      TEXT NOT NULL,
+            finished_at     TEXT,
+            status          TEXT NOT NULL DEFAULT 'running',
+            duration_secs   REAL,
+            execution_id    TEXT,
+            dispatch_source TEXT DEFAULT 'github_actions',
+            error           TEXT DEFAULT ''
+        )
+    """)
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_ssh_slot_job "
+        "ON scan_slot_history(slot_time, job_type)"
+    )
     conn.commit()
     conn.close()
 
@@ -79,26 +103,87 @@ class ScanOrchestrator:
 
     # ── Lock management ───────────────────────────────────────────────────────
 
-    def _is_running(self, job_type: str) -> bool:
+    def _is_running(self, job_type: str) -> Optional[str]:
+        """Return running execution_id or None."""
         conn = sqlite3.connect(self._db)
         try:
             row = conn.execute(
                 "SELECT execution_id FROM scan_execution WHERE job_type=? AND status='running'",
                 (job_type,),
             ).fetchone()
-            return row is not None
+            return row[0] if row else None
         finally:
             conn.close()
 
-    def _acquire(self, job_type: str) -> Optional[str]:
+    def _register_slot(
+        self,
+        job_type: str,
+        eid: str,
+        status: str,
+        dispatch_source: str = "github_actions",
+        blocked_by: str = "",
+    ) -> None:
+        """Insert or update scan_slot_history for this slot+job_type."""
+        slot = _slot_time()
+        now  = _now_iso()
+        conn = sqlite3.connect(self._db)
+        try:
+            error_note = f"blocked by {blocked_by[:36]}" if blocked_by else ""
+            conn.execute(
+                """INSERT INTO scan_slot_history
+                   (slot_time, job_type, started_at, status, execution_id, dispatch_source, error)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(slot_time, job_type) DO UPDATE SET
+                       status=excluded.status,
+                       error=excluded.error""",
+                (slot, job_type, now, status, eid, dispatch_source, error_note),
+            )
+            conn.commit()
+        except Exception as e:
+            print(f"[Orchestrator] slot register non-fatal: {e}")
+        finally:
+            conn.close()
+
+    def _close_slot(self, job_type: str, eid: str, status: str, error: str = "") -> None:
+        """Mark the slot_history row finished."""
+        slot = _slot_time()
+        now  = _now_iso()
+        conn = sqlite3.connect(self._db)
+        try:
+            conn.execute(
+                """UPDATE scan_slot_history SET finished_at=?, status=?,
+                   duration_secs=(strftime('%s', ?) - strftime('%s', started_at)),
+                   error=?
+                   WHERE slot_time=? AND job_type=?""",
+                (now, status, now, error[:500], slot, job_type),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        finally:
+            conn.close()
+
+    def _acquire(
+        self,
+        job_type: str,
+        dispatch_source: str = "github_actions",
+    ) -> Optional[str]:
         """
         Insert a 'running' row. Returns execution_id, or None if already running.
-        Uses INSERT-then-check (not INSERT OR FAIL) so errors are distinguishable.
+        When blocked, records SKIPPED_BY_LOCK in scan_slot_history (not FAILED).
         """
-        if self._is_running(job_type):
-            print(f"[Orchestrator] {job_type} already RUNNING — EXIT (duplicate guard)")
+        running_eid = self._is_running(job_type)
+        if running_eid:
+            print(
+                f"[Orchestrator] {job_type} already RUNNING ({running_eid[:8]}) — "
+                f"scan skipped - existing execution active"
+            )
+            # Record the skip — success exit, not failure
+            self._register_slot(job_type, running_eid, "SKIPPED_BY_LOCK",
+                                 dispatch_source=dispatch_source, blocked_by=running_eid)
             return None
-        eid = str(uuid.uuid4())
+
+        eid  = str(uuid.uuid4())
         conn = sqlite3.connect(self._db)
         try:
             conn.execute(
@@ -108,9 +193,11 @@ class ScanOrchestrator:
             )
             conn.commit()
             print(f"[Orchestrator] {job_type} LOCK ACQUIRED — execution_id={eid[:8]}")
-            return eid
         finally:
             conn.close()
+
+        self._register_slot(job_type, eid, "running", dispatch_source=dispatch_source)
+        return eid
 
     def _release(
         self,
@@ -131,6 +218,9 @@ class ScanOrchestrator:
             print(f"[Orchestrator] execution_id={eid[:8]} → {status}")
         finally:
             conn.close()
+
+        # Close the corresponding slot_history row
+        self._close_slot(job_type, eid, status, error=error)
 
         # Update heartbeat + public_status after every execution
         try:

@@ -81,11 +81,11 @@ def send(
         def _do_send(c=chunk):
             nonlocal attempt
             attempt += 1
-            resp = _requests.post(
-                url,
-                json={"chat_id": _chat_id, "text": c, "parse_mode": parse_mode},
-                timeout=10,
-            )
+            payload = {"chat_id": _chat_id, "text": c, "parse_mode": parse_mode}
+            print(f"[telegram_sender] PAYLOAD chat_id={_chat_id} parse_mode={parse_mode} chars={len(c)}")
+            print(f"[telegram_sender] MESSAGE PREVIEW:\n{c[:800]}")
+            resp = _requests.post(url, json=payload, timeout=10)
+            print(f"[telegram_sender] API RESPONSE HTTP {resp.status_code}: {resp.text[:300]}")
             if resp.status_code != 200:
                 raise RuntimeError(f"HTTP {resp.status_code}: {resp.text[:200]}")
             return resp

@@ -70,11 +70,15 @@ def send(
         nonlocal attempt
         attempt += 1
         with smtplib.SMTP(_host, _port, timeout=30) as srv:
+            srv.set_debuglevel(1)   # prints SMTP dialog (220, 250, MAIL FROM, RCPT TO, etc.)
             srv.ehlo()
             srv.starttls()
             srv.ehlo()
             srv.login(_sender, _password)
             srv.sendmail(_sender, _to, raw)
+            print(f"[email_sender] SMTP MAIL FROM:<{_sender}>")
+            print(f"[email_sender] SMTP RCPT TO:<{_to}>")
+            print(f"[email_sender] SMTP Message-ID: {msg.get('Message-ID', 'auto-generated')}")
 
     try:
         with_retry(_do_send, attempts=_ATTEMPTS)

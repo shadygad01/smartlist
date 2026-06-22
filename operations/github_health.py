@@ -200,6 +200,19 @@ def write_public_status() -> dict:
     state = _read_json(BASE / "operations_state.json")
     result = check()
 
+    # price_data_as_of — read from presentation_snapshot.json if available
+    _price_data_as_of = None
+    try:
+        import json as _json
+        _ps = _json.loads((BASE / "presentation_snapshot.json").read_text())
+        _price_data_as_of = _ps.get("price_data_as_of")
+    except Exception:
+        pass
+
+    # next_scan — always from time_authority, never stale heartbeat
+    from time_authority import next_scan as _ta_next_scan
+    _next_scan = _ta_next_scan()
+
     public = {
         "system_health":    result["status"],
         "last_scan":        hb.get("last_scan") or state.get("last_scan"),
@@ -211,6 +224,9 @@ def write_public_status() -> dict:
         "checked_at":       _now().isoformat(timespec="seconds"),
         "morning_report":   "SENT" if result["checks"]["morning_report"]["sent"] else "PENDING",
         "scan_age_hours":   result["checks"]["last_scan"]["age_hours"],
+        "price_data_as_of": _price_data_as_of,
+        "next_scan":        _next_scan,
+        "market_date":      (_price_data_as_of or "")[:10],
     }
 
     out = BASE / "operations" / "public_status.json"

@@ -385,6 +385,19 @@ def _patch_today_from_tv(df, symbol):
     df = df[df.index.normalize() != today_ts]
     df = pd.concat([df, new_row]).sort_index()
     print(f"  [{symbol}] TradingView patch: close={quote['close']:.2f} EGP")
+
+    # Persist patched price to CSV so price_data_as_of reflects today
+    try:
+        _csv_path = os.path.join(_BASE_DIR, "historical_data", "historical_data", f"{yf_symbol}.csv")
+        df_save = df.copy().reset_index()
+        df_save.columns = [str(c) for c in df_save.columns]
+        if "index" in df_save.columns:
+            df_save = df_save.rename(columns={"index": "Date"})
+        df_save["Date"] = pd.to_datetime(df_save["Date"]).dt.strftime("%Y-%m-%d")
+        df_save.to_csv(_csv_path, index=False)
+    except Exception as _csv_save_err:
+        print(f"  [{symbol}] CSV save non-fatal: {_csv_save_err}")
+
     return df
 
 

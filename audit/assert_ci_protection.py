@@ -66,12 +66,13 @@ if stats.get("active_count", -1) != len(active_t):
 gen_at = snap.get("generated_at", "")
 if gen_at:
     try:
-        from datetime import datetime, timezone, timedelta
-        _CAIRO_TZ = timezone(timedelta(hours=2))
+        from datetime import datetime
+        from time_authority import now_cairo as _now_cairo_audit
         dt = datetime.fromisoformat(gen_at)
+        _now_tz = _now_cairo_audit()
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=_CAIRO_TZ)
-        age_h = (datetime.now(_CAIRO_TZ) - dt).total_seconds() / 3600
+            dt = dt.replace(tzinfo=_now_tz.tzinfo)
+        age_h = (_now_tz - dt).total_seconds() / 3600
         if age_h > 26:
             failures.append(f"FAIL: presentation_snapshot.json is {age_h:.1f}h old (>26h)")
     except Exception:

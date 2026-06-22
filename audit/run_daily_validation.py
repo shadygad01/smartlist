@@ -5,17 +5,18 @@ Called after every production scan.
 """
 from __future__ import annotations
 import hashlib, json, sqlite3, sys, subprocess
-from datetime import datetime
 from pathlib import Path
 
 BASE   = Path(__file__).parent.parent
+sys.path.insert(0, str(BASE))
 AUDIT  = Path(__file__).parent
 DAILY  = AUDIT / "daily_validation"
 GOLDEN = AUDIT / "golden_master"
 DAILY.mkdir(exist_ok=True)
 
-TODAY  = datetime.now().strftime("%Y-%m-%d")
-TS     = datetime.now().isoformat()
+from time_authority import now_cairo
+TODAY  = now_cairo().strftime("%Y-%m-%d")
+TS     = now_cairo().isoformat()
 
 def sha256(path: Path) -> str:
     if not path.exists(): return "FILE_NOT_FOUND"

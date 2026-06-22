@@ -4,10 +4,12 @@ Does NOT run jobs itself (GitHub Actions does). Used for SLA tracking.
 """
 from __future__ import annotations
 
-from datetime import datetime, date, timezone, timedelta
+import sys
+from datetime import datetime, date
+from pathlib import Path
 
-_CAIRO_TZ  = timezone(timedelta(hours=2))
-_TRADING   = {0, 1, 2, 3, 6}  # Mon-Thu + Sun (EGX)
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from time_authority import now_cairo, today_cairo, is_trading_day as _is_trading_day, is_market_open as _is_market_open
 
 JOBS = {
     "morning_report": {
@@ -38,16 +40,11 @@ JOBS = {
 
 
 def is_trading_day(d: date | None = None) -> bool:
-    d = d or datetime.now(_CAIRO_TZ).date()
-    return d.weekday() in _TRADING
+    return _is_trading_day(d)
 
 
 def is_market_open() -> bool:
-    now = datetime.now(_CAIRO_TZ)
-    if now.weekday() not in _TRADING:
-        return False
-    mins = now.hour * 60 + now.minute
-    return 600 <= mins <= 870  # 10:00-14:30
+    return _is_market_open()
 
 
 def expected_today(job_name: str) -> bool:
@@ -55,7 +52,7 @@ def expected_today(job_name: str) -> bool:
     job = JOBS.get(job_name)
     if not job:
         return False
-    now  = datetime.now(_CAIRO_TZ)
+    now = now_cairo()
     if job["days"] == "trading" and not is_trading_day():
         return False
     open_h, open_m = job["window_open"]
@@ -66,6 +63,7 @@ def expected_today(job_name: str) -> bool:
 
 def sla_violated(job_name: str, last_run_ts: str | None) -> bool:
     """Return True if job is overdue."""
+    from time_authority import age_hours, _EET
     job = JOBS.get(job_name)
     if not job:
         return False
@@ -76,9 +74,8 @@ def sla_violated(job_name: str, last_run_ts: str | None) -> bool:
     try:
         last = datetime.fromisoformat(last_run_ts)
         if last.tzinfo is None:
-            last = last.replace(tzinfo=_CAIRO_TZ)
-        last_date = last.astimezone(_CAIRO_TZ).date()
-        today = datetime.now(_CAIRO_TZ).date()
-        return last_date < today
+            last = last.replace(tzinfo=_EET)
+        last_date = last.astimezone(_EET).date()
+        return last_date < today_cairo()
     except Exception:
         return True

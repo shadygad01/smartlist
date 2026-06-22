@@ -6,11 +6,13 @@ Only sends: NEW_BUY, NEW_FIRST_BUY, NEW_REACCUMULATION, NEW_ACTIVE, NEW_PREMIUM,
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone, timedelta
+import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
 ALERTS_PATH = Path(__file__).parent / "sent_alerts.json"
-_CAIRO_TZ   = timezone(timedelta(hours=2))
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from time_authority import now_cairo, today_cairo, now_iso, today_iso
 
 ALERT_TYPES = {
     "NEW_BUY",
@@ -23,11 +25,11 @@ ALERT_TYPES = {
 
 
 def _now() -> str:
-    return datetime.now(_CAIRO_TZ).isoformat()
+    return now_iso()
 
 
 def _today() -> str:
-    return datetime.now(_CAIRO_TZ).date().isoformat()
+    return today_iso()
 
 
 def _load() -> dict:
@@ -63,7 +65,7 @@ def mark_sent(alert_type: str, ticker: str, date: str | None = None) -> None:
     if not any(e["key"] == k for e in data["sent"]):
         data["sent"].append({"key": k, "ts": _now()})
         # Prune older than 30 days
-        cutoff = (datetime.now(_CAIRO_TZ) - timedelta(days=30)).date().isoformat()
+        cutoff = (now_cairo() - timedelta(days=30)).date().isoformat()
         data["sent"] = [
             e for e in data["sent"]
             if e["key"].split(":")[-1] >= cutoff

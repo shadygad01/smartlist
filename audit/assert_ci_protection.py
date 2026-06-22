@@ -87,6 +87,42 @@ if hb_path.exists():
     except Exception:
         pass
 
+# ── 3. Time Authority — verify no rogue timezone definitions in operational files ─
+_TIME_AUTHORITY_FILES = [
+    BASE / "time_authority.py",
+]
+_OPERATIONAL_FILES = [
+    BASE / "operations" / "heartbeat.py",
+    BASE / "operations" / "scheduler.py",
+    BASE / "operations" / "sla.py",
+    BASE / "operations" / "alerts.py",
+    BASE / "operations" / "incident.py",
+    BASE / "operations" / "health.py",
+    BASE / "operations" / "knowledge.py",
+    BASE / "operations" / "recovery.py",
+    BASE / "operations" / "director.py",
+    BASE / "presentation" / "presentation_snapshot.py",
+]
+# time_authority.py must exist
+if not (BASE / "time_authority.py").exists():
+    failures.append("FAIL: time_authority.py missing — single time source not installed")
+
+# Operational files must NOT define their own _CAIRO_TZ
+for p in _OPERATIONAL_FILES:
+    if p.exists():
+        text = p.read_text()
+        if "_CAIRO_TZ = timezone(timedelta(hours=2))" in text:
+            failures.append(f"FAIL: {p.relative_to(BASE)} defines its own _CAIRO_TZ (must import from time_authority)")
+
+# Workflow must not have duplicate Summer/Winter DST crons for Egypt
+wf = BASE / ".github" / "workflows" / "daily_scan.yml"
+if wf.exists():
+    wf_text = wf.read_text()
+    if "30 4 * * 0-4" in wf_text:
+        failures.append("FAIL: daily_scan.yml contains '30 4 * * 0-4' (wrong UTC offset — Egypt is always UTC+2=05:30 UTC)")
+    if "7-10 * * 0-4" in wf_text:
+        failures.append("FAIL: daily_scan.yml contains Summer UTC+3 auto-scan crons (Egypt has no DST)")
+
 # ── Report ─────────────────────────────────────────────────────────────────────
 print(f"CI Protection Gate")
 print(f"  near_constitutional : {len(near_t)}")

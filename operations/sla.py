@@ -4,19 +4,21 @@ SLA tracker — stores 30d/90d reliability metrics in operations/sla.json.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone, timedelta
+import sys
+from datetime import datetime
 from pathlib import Path
 
 SLA_PATH = Path(__file__).parent / "sla.json"
-_CAIRO_TZ = timezone(timedelta(hours=2))
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from time_authority import now_cairo, today_cairo, now_iso, today_iso, age_hours
 
 
 def _now() -> str:
-    return datetime.now(_CAIRO_TZ).isoformat()
+    return now_iso()
 
 
 def _today() -> str:
-    return datetime.now(_CAIRO_TZ).date().isoformat()
+    return today_iso()
 
 
 def _load() -> dict:
@@ -47,7 +49,7 @@ def record_event(event_type: str, success: bool, note: str = "") -> None:
         "note":       note,
     })
     # Prune older than 90 days
-    cutoff = (datetime.now(_CAIRO_TZ) - timedelta(days=90)).date().isoformat()
+    cutoff = (now_cairo() - timedelta(days=90)).date().isoformat()
     data["events"] = [e for e in data["events"] if e.get("date", "9999") >= cutoff]
     _save(data)
 
@@ -55,7 +57,7 @@ def record_event(event_type: str, success: bool, note: str = "") -> None:
 def compute_metrics(days: int = 30) -> dict:
     """Return reliability metrics for the last N days."""
     data = _load()
-    cutoff = (datetime.now(_CAIRO_TZ) - timedelta(days=days)).date().isoformat()
+    cutoff = (now_cairo() - timedelta(days=days)).date().isoformat()
     events = [e for e in data["events"] if e.get("date", "") >= cutoff]
 
     def _rate(etype: str) -> dict:

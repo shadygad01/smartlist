@@ -9,18 +9,20 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 BASE = Path(__file__).parent.parent
+sys.path.insert(0, str(BASE))
+from time_authority import now_cairo, now_iso, today_cairo, is_trading_day as _is_trading_day, _EET as _CAIRO_TZ
 
 _ADVISOR_DB = BASE / "portfolio_advisor.db"
 _KB_DB      = BASE / "research" / "knowledge" / "knowledge_base.db"
 _POOL_DB    = BASE / "candidate_pool.db"
 
 # EGX: Sun-Thu 10:00-15:30, UTC+2 (no DST in Egypt)
-_CAIRO_TZ = timezone(timedelta(hours=2))
 _CAIRO_OPEN  = (10, 0)
 _CAIRO_CLOSE = (15, 30)
 _TRADING_DAYS = {0, 1, 2, 3, 6}  # Mon=0 Sun=6; EGX: Sun-Thu
@@ -45,9 +47,9 @@ def _clean_reason(text: str) -> str:
 
 
 def _market_status() -> str:
-    now_cairo = datetime.now(_CAIRO_TZ)
-    dow = now_cairo.weekday()  # Mon=0, Sun=6
-    h, m = now_cairo.hour, now_cairo.minute
+    now_cairo_dt = now_cairo()
+    dow = now_cairo_dt.weekday()  # Mon=0, Sun=6
+    h, m = now_cairo_dt.hour, now_cairo_dt.minute
     mins = h * 60 + m
     if dow not in _TRADING_DAYS:
         return "CLOSED (Weekend)"
@@ -134,7 +136,7 @@ class PresentationSnapshot:
 
 def build_presentation_snapshot() -> PresentationSnapshot:
     snap = PresentationSnapshot(
-        generated_at=datetime.now(_CAIRO_TZ).isoformat(),
+        generated_at=now_iso(),
         market_status=_market_status(),
     )
 

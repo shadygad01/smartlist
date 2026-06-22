@@ -6,17 +6,17 @@ from __future__ import annotations
 
 import sys
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from pathlib import Path
 
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
+from time_authority import now_cairo, today_cairo, now_iso, today_iso, age_hours
 
-_CAIRO_TZ = timezone(timedelta(hours=2))
 
 
 def _log(msg: str) -> None:
-    ts = datetime.now(_CAIRO_TZ).strftime("%H:%M:%S")
+    ts = now_cairo().strftime("%H:%M:%S")
     print(f"[Recovery {ts}] {msg}")
 
 
@@ -95,7 +95,7 @@ def send_morning_email() -> bool:
         user = os.getenv("EMAIL_USER")
         pwd  = os.getenv("EMAIL_PASS")
         msg  = MIMEMultipart("alternative")
-        msg["Subject"] = f"EGX Constitutional Morning Brief — {datetime.now(_CAIRO_TZ).strftime('%d %b %Y')}"
+        msg["Subject"] = f"EGX Constitutional Morning Brief — {now_cairo().strftime('%d %b %Y')}"
         msg["From"]    = user
         msg["To"]      = user
         msg.attach(MIMEText(html, "html"))

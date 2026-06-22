@@ -8,13 +8,15 @@ from __future__ import annotations
 import hashlib
 import json as _json
 import sqlite3
+import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from presentation.presentation_snapshot import PresentationSnapshot, build_presentation_snapshot
 
 BASE = Path(__file__).parent
-_CAIRO_TZ = timezone(timedelta(hours=2))
+sys.path.insert(0, str(BASE))
+from time_authority import now_cairo as _now_cairo, build_time as _build_time, _EET as _CAIRO_TZ
 
 # ── Theme ─────────────────────────────────────────────────────────────────────
 G   = "#4caf50"
@@ -945,7 +947,7 @@ def build_dashboard(build_hash: str = "") -> str:
         _s_diagnostics(snap) +
         _s_operations_center()
     )
-    gen_cairo = datetime.now(_CAIRO_TZ).strftime("%Y-%m-%d %H:%M Cairo")
+    gen_cairo = _build_time()
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1002,7 +1004,7 @@ if __name__ == "__main__":
         "version": "7.0",
         "commit": commit,
         "build_hash": build_hash,
-        "generated_at": datetime.now(_CAIRO_TZ).strftime("%Y-%m-%d %H:%M Cairo"),
+        "generated_at": _build_time(),
         "universe_count": 27,
     }
     (BASE / "version.json").write_text(_json.dumps(version_data, indent=2))

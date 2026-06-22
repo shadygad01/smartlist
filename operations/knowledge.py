@@ -5,15 +5,17 @@ Stored in operations/knowledge.json.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone, timedelta
+import sys
+from datetime import datetime
 from pathlib import Path
 
 KB_PATH = Path(__file__).parent / "knowledge.json"
-_CAIRO_TZ = timezone(timedelta(hours=2))
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from time_authority import now_iso
 
 
 def _now() -> str:
-    return datetime.now(_CAIRO_TZ).isoformat()
+    return now_iso()
 
 
 def _load() -> dict:

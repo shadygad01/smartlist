@@ -7,12 +7,14 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from pathlib import Path
 
 BASE = Path(__file__).parent.parent
+import sys
+sys.path.insert(0, str(BASE))
+from time_authority import now_cairo, today_cairo, now_iso, today_iso, age_hours
 INC_PATH = Path(__file__).parent / "incidents.json"
-_CAIRO_TZ = timezone(timedelta(hours=2))
 
 INCIDENT_TYPES = {
     "MISSED_MORNING_REPORT",
@@ -30,7 +32,7 @@ INCIDENT_TYPES = {
 
 
 def _now() -> str:
-    return datetime.now(_CAIRO_TZ).isoformat()
+    return now_iso()
 
 
 def _load() -> list[dict]:

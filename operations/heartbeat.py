@@ -5,17 +5,19 @@ Single writer, multiple readers. Idempotent updates.
 from __future__ import annotations
 
 import json
+import sys
 import subprocess
-from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 BASE = Path(__file__).parent.parent
+sys.path.insert(0, str(BASE))
 HB_PATH = BASE / "heartbeat.json"
-_CAIRO_TZ = timezone(timedelta(hours=2))
+
+from time_authority import now_iso, next_scan as _next_scan_ta
 
 
 def _now() -> str:
-    return datetime.now(_CAIRO_TZ).isoformat()
+    return now_iso()
 
 
 def _commit() -> str:
@@ -101,24 +103,5 @@ def set_status(status: str) -> dict:
 
 
 def compute_next_scan() -> str:
-    """Return ISO string for next expected EGX scan (10:00-14:30 Cairo, Sun-Thu)."""
-    now = datetime.now(_CAIRO_TZ)
-    # EGX trading days: Mon=0 Tue=1 Wed=2 Thu=3 Sun=6
-    _TRADING = {0, 1, 2, 3, 6}
-    d = now
-    for _ in range(10):
-        dow = d.weekday()
-        if dow in _TRADING:
-            open_t  = d.replace(hour=10, minute=0, second=0, microsecond=0)
-            close_t = d.replace(hour=14, minute=30, second=0, microsecond=0)
-            if d < open_t:
-                return open_t.isoformat()
-            if d < close_t:
-                # Next 5-min slot
-                mins = (d.minute // 5 + 1) * 5
-                nxt  = d.replace(minute=0, second=0, microsecond=0) + timedelta(minutes=mins + d.hour * 60 - d.hour * 60)
-                nxt  = d.replace(hour=d.hour, minute=0, second=0, microsecond=0) + timedelta(minutes=((d.minute // 5) + 1) * 5)
-                return min(nxt, close_t).isoformat()
-        d += timedelta(days=1)
-        d  = d.replace(hour=10, minute=0, second=0, microsecond=0)
-    return ""
+    """Return ISO string for next expected EGX scan. Delegates to time_authority."""
+    return _next_scan_ta()

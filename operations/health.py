@@ -4,11 +4,13 @@ Returns: HEALTHY | WARNING | DEGRADED | CRITICAL
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from pathlib import Path
 
-_CAIRO_TZ = timezone(timedelta(hours=2))
 BASE = Path(__file__).parent.parent
+import sys
+sys.path.insert(0, str(BASE))
+from time_authority import now_cairo, today_cairo, now_iso, today_iso, age_hours
 
 
 def _age_hours(ts: str | None) -> float | None:
@@ -18,7 +20,7 @@ def _age_hours(ts: str | None) -> float | None:
         dt = datetime.fromisoformat(ts)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=_CAIRO_TZ)
-        return (datetime.now(_CAIRO_TZ) - dt).total_seconds() / 3600
+        return (now_cairo() - dt).total_seconds() / 3600
     except Exception:
         return None
 

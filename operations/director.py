@@ -5,21 +5,21 @@ Runs full decision-tree cycle: observe → diagnose → recover → validate →
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from pathlib import Path
 
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
+from time_authority import now_cairo, today_cairo, now_iso, today_iso, age_hours
 
-_CAIRO_TZ = timezone(timedelta(hours=2))
 
 
 def _now() -> str:
-    return datetime.now(_CAIRO_TZ).isoformat()
+    return now_iso()
 
 
 def _log(msg: str) -> None:
-    ts = datetime.now(_CAIRO_TZ).strftime("%H:%M:%S")
+    ts = now_cairo().strftime("%H:%M:%S")
     print(f"[Director {ts}] {msg}")
 
 
@@ -43,7 +43,7 @@ class OperationsDirector:
         )
         from .scheduler   import is_trading_day, sla_violated
 
-        market_date = market_date or datetime.now(_CAIRO_TZ).date().isoformat()
+        market_date = market_date or today_iso()
         _log(f"Starting full cycle for {market_date}")
 
         report = {
@@ -158,7 +158,7 @@ class OperationsDirector:
         from .sla       import record_event
         from .recovery  import rebuild_presentation_snapshot, send_morning_email
 
-        market_date = market_date or datetime.now(_CAIRO_TZ).date().isoformat()
+        market_date = market_date or today_iso()
         _log(f"Running morning report for {market_date}")
 
         ok = rebuild_presentation_snapshot() and send_morning_email()

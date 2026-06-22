@@ -13,14 +13,53 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+import csv as _csv
 
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 from time_authority import now_cairo, now_iso, today_cairo, is_trading_day as _is_trading_day, _EET as _CAIRO_TZ, market_state as _market_state_ta, _MARKET_OPEN_H, _MARKET_OPEN_M
 
-_ADVISOR_DB = BASE / "portfolio_advisor.db"
-_KB_DB      = BASE / "research" / "knowledge" / "knowledge_base.db"
-_POOL_DB    = BASE / "candidate_pool.db"
+_ADVISOR_DB  = BASE / "portfolio_advisor.db"
+_KB_DB       = BASE / "research" / "knowledge" / "knowledge_base.db"
+_POOL_DB     = BASE / "candidate_pool.db"
+_HIST_DIR    = BASE / "historical_data" / "historical_data"
+
+
+def _latest_csv_price(ticker: str) -> tuple[float | None, str]:
+    """Return (latest_close, date_str) from CSV file, or (None, '') if unavailable."""
+    csv_path = _HIST_DIR / f"{ticker}.csv"
+    if not csv_path.exists():
+        return None, ""
+    try:
+        with open(csv_path, newline="") as f:
+            rows = list(_csv.DictReader(f))
+        if not rows:
+            return None, ""
+        last = rows[-1]
+        close = float(last.get("Close", 0) or 0)
+        date  = last.get("Date", "")
+        if close > 0:
+            return close, date
+    except Exception:
+        pass
+    return None, ""
+
+
+def _csv_data_as_of() -> str:
+    """Return the latest trading date found in any CSV file — authoritative price date."""
+    best_date = ""
+    if not _HIST_DIR.exists():
+        return best_date
+    try:
+        for csv_path in _HIST_DIR.glob("*.CA.csv"):
+            with open(csv_path, newline="") as f:
+                for row in _csv.DictReader(f):
+                    d = row.get("Date", "")
+                    if d > best_date:
+                        best_date = d
+    except Exception:
+        pass
+    return best_date
 
 
 def _db(path: Path) -> sqlite3.Connection | None:
@@ -107,7 +146,8 @@ class PresentationSnapshot:
     universe_snapshot: list[dict] = field(default_factory=list)
 
     # Meta
-    generated_at: str = ""
+    generated_at:      str = ""
+    price_data_as_of:  str = ""   # date of latest CSV close — authoritative price date
 
     # Legacy compatibility
     constitutional_buys: list[dict] = field(default_factory=list)
@@ -129,6 +169,7 @@ def build_presentation_snapshot() -> PresentationSnapshot:
     snap = PresentationSnapshot(
         generated_at=now_iso(),
         market_status=_market_status(),
+        price_data_as_of=_csv_data_as_of(),
     )
 
     # ── 0. Constitutional Opportunity Timeline ────────────────────────────────
@@ -222,21 +263,28 @@ def build_presentation_snapshot() -> PresentationSnapshot:
                 ORDER BY r2_score DESC
                 LIMIT 15
             """, (latest_ts,)).fetchall()
-            snap.approaching_entries = [
-                dict(
+            entries = []
+            for r in rows:
+                entry_price = r["entry_price"]
+                # Use latest CSV close as current price — freshest available data
+                csv_price, _ = _latest_csv_price(r["ticker"])
+                current_price = csv_price if csv_price is not None else r["current_price"]
+                # Re-apply constitutional gate with live price
+                if current_price > entry_price:
+                    continue
+                entries.append(dict(
                     ticker=r["ticker"],
                     r2_score=r["r2_score"],
                     final_score=r["max_score"],
-                    entry_price=r["entry_price"],
-                    current_price=r["current_price"],
+                    entry_price=entry_price,
+                    current_price=current_price,
                     sector=r["sector"] or "",
                     distance_to_constitutional=round(60.0 - r["r2_score"], 1),
                     need_move_pct=round(
-                        (r["entry_price"] - r["current_price"]) / r["entry_price"] * 100, 1
-                    ) if r["entry_price"] else 0.0,
-                )
-                for r in rows
-            ]
+                        (entry_price - current_price) / entry_price * 100, 1
+                    ) if entry_price else 0.0,
+                ))
+            snap.approaching_entries = entries
         except Exception:
             pass
         pool.close()
@@ -323,6 +371,7 @@ def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: s
 
     data = {
         "generated_at":        snap.generated_at,
+        "price_data_as_of":    snap.price_data_as_of,
         "market_date":         snap.generated_at[:10],
         "market_status":       snap.market_status,
         "build_hash":          build_hash,

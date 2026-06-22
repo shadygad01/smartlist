@@ -74,6 +74,26 @@ def run_checks() -> dict:
     }.get(ta_market, ta_market)
     market_status_ok = snap.market_status.startswith(expected_status_str.split()[0])
 
+    # ── Per-ticker price assertions ────────────────────────────────────────────
+    # All channels share the same snap object — verify each renderer embeds the
+    # canonical current_price (not an independently fetched value).
+    price_mismatches = []
+    for entry in snap.approaching_entries:
+        ticker  = entry["ticker"]
+        snap_px = entry["current_price"]
+        # Email: current price appears as first number in the ticker's row,
+        # before "EGP" (which marks entry price, not current)
+        email_row_match = re.search(
+            rf'>{re.escape(ticker)}<.*?<td[^>]*>({re.escape(f"{snap_px:.2f}")}|(\d+\.\d+))<',
+            html, re.DOTALL
+        )
+        # Simpler: verify price string appears in email HTML
+        px_str = f"{snap_px:.2f}"
+        if px_str not in html:
+            price_mismatches.append(f"{ticker}: current_price {px_str} not found in email HTML")
+        if px_str not in dash_html:
+            price_mismatches.append(f"{ticker}: current_price {px_str} not found in dashboard HTML")
+
     # ── Assertions ─────────────────────────────────────────────────────────────
     errors = []
 
@@ -86,7 +106,6 @@ def run_checks() -> dict:
             f"Near count mismatch: snapshot={near_count} dashboard={dash_near_count}"
         )
     if tg_near_count not in (near_count, 0) and near_count > 0:
-        # Telegram only shows when there are entries; count should match
         if tg_near_count != near_count:
             errors.append(
                 f"Near count mismatch: snapshot={near_count} telegram={tg_near_count}"
@@ -95,6 +114,12 @@ def run_checks() -> dict:
         errors.append(
             f"Market status mismatch: time_authority={ta_market} snap={snap.market_status}"
         )
+    errors.extend(price_mismatches)
+
+    # Timestamp assertions
+    price_data_as_of = getattr(snap, "price_data_as_of", "")
+    if not price_data_as_of:
+        errors.append("price_data_as_of is empty — CSV price date not set")
 
     results = {
         "near_count_snapshot": near_count,
@@ -105,6 +130,9 @@ def run_checks() -> dict:
         "market_status_time_authority": ta_market,
         "market_status_ok": market_status_ok,
         "last_scan": last_scan,
+        "price_data_as_of": price_data_as_of,
+        "generated_at": snap.generated_at,
+        "price_mismatches": price_mismatches,
         "errors": errors,
         "passed": len(errors) == 0,
     }

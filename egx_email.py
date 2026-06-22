@@ -119,11 +119,13 @@ def _market_status_section(snap):
     mstatus = snap.market_status
     mc = _G if "OPEN" in mstatus and "PRE" not in mstatus else (_A if "PRE" in mstatus else _MUTED)
     scan_s = snap.last_scan_ts[:16].replace("T"," ") if snap.last_scan_ts else "--"
+    data_as_of = getattr(snap, "price_data_as_of", "") or scan_s[:10]
     return (
         _section_title("&#127973; Market Status") +
         f'<div style="font-family:Arial,sans-serif;font-size:13px;color:{_TEXT};padding:10px 0;">'
         f'<span style="color:{mc};font-weight:700;">&#11044; EGX {mstatus}</span>'
         f'&nbsp;&nbsp;&middot;&nbsp;&nbsp;Last Scan: <b>{scan_s}</b>'
+        f'&nbsp;&nbsp;&middot;&nbsp;&nbsp;Data As Of: <b>{data_as_of}</b>'
         f'&nbsp;&nbsp;&middot;&nbsp;&nbsp;Universe: <b>{snap.universe_size}</b> tickers'
         f'</div>'
     )

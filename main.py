@@ -1817,7 +1817,14 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
     html, _, snap = build_report(holiday_mode=holiday_mode, last_trading=last_trading,
                                  _cached_results=results)
 
-    # Step 4: send email + Telegram from the same snapshot
+    # Step 4: write canonical snapshot JSON (single authoritative write — same object as email+telegram)
+    try:
+        from presentation.presentation_snapshot import write_presentation_snapshot_json
+        write_presentation_snapshot_json(snap, build_hash=html_hash(html))
+    except Exception as _snj_err:
+        print(f"  [daily_scan] snapshot JSON write non-fatal: {_snj_err}")
+
+    # Step 4b: send email + Telegram from the same snapshot
     send_email(html, subject_suffix=email_suffix)
     send_telegram_alerts(results, snap=snap)
 
@@ -2053,7 +2060,13 @@ def daily_scan():
 def continuous_scan():
     print(f"\n🔄 Continuous scan at {fmt_cairo()}")
     previous_results = load_previous_results()
-    html, current_results, _ = build_report(holiday_mode=False)
+    html, current_results, snap = build_report(holiday_mode=False)
+    # Write canonical snapshot JSON after every market scan — single authoritative write
+    try:
+        from presentation.presentation_snapshot import write_presentation_snapshot_json
+        write_presentation_snapshot_json(snap)
+    except Exception as _snj_err:
+        print(f"  [continuous_scan] snapshot JSON write non-fatal: {_snj_err}")
     save_scan_results(current_results)
     save_signal_history(current_results)
     changes = detect_signal_changes(current_results, previous_results)

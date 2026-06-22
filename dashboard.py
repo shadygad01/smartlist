@@ -219,11 +219,11 @@ def _load_stock_dna():
 def _s_sticky_header(snap, build_hash: str = ""):
     mstatus = snap.market_status
     mc = _market_status_color(mstatus)
-    # Four distinct timestamps — all converted to Cairo
+    # Three distinct timestamps — semantically distinct
     scan_cairo = _to_cairo(snap.last_scan_ts)
     gen_cairo  = _to_cairo(snap.generated_at)
-    # Data As Of = latest market data in candidate_pool (same source as last_scan_ts)
-    data_as_of = scan_cairo
+    # Data As Of = date of latest CSV close — authoritative price date (not scan time)
+    data_as_of = getattr(snap, "price_data_as_of", "") or scan_cairo
     new_tag = ""
     if snap.new_events_today:
         new_tag = (f'<span class="badge" style="background:{G}22;color:{G};">'

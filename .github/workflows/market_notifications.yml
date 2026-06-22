@@ -78,16 +78,6 @@ jobs:
           sys.exit(0)
           PYEOF
 
-      - name: Rebuild presentation snapshot JSON
-        run: |
-          python3 - <<'PYEOF'
-          from presentation.presentation_snapshot import build_presentation_snapshot, write_presentation_snapshot_json
-          snap = build_presentation_snapshot()
-          write_presentation_snapshot_json(snap)
-          print('presentation_snapshot.json written.')
-          PYEOF
-        continue-on-error: true
-
       - name: Consistency assertions
         run: python operations/consistency_check.py
 
@@ -107,6 +97,10 @@ jobs:
           PYEOF
         continue-on-error: true
 
+      - name: Rebuild dashboard HTML
+        run: python3 dashboard.py || true
+        continue-on-error: true
+
       - name: Save state to git
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -114,7 +108,8 @@ jobs:
           git add heartbeat.json operations_state.json operations/public_status.json \
                   scan_execution.db notification_delivery.db \
                   open_positions.json scan_results.json \
-                  presentation_snapshot.json signal_history.json || true
+                  presentation_snapshot.json signal_history.json \
+                  dashboard.html || true
           git add historical_data/historical_data/*.csv || true
           git diff --staged --quiet || git commit -m "Market scan: state update [skip ci]"
           git push || true

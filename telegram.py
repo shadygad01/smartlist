@@ -37,9 +37,10 @@ def _opp_line(e: dict) -> str:
 
 
 def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
-    cairo_t = _now_cairo().strftime("%H:%M")
-    micon   = _market_icon(snap.market_status)
-    scan_s  = snap.last_scan_ts[:16].replace("T", " ") if snap.last_scan_ts else "--"
+    cairo_t    = _now_cairo().strftime("%H:%M")
+    micon      = _market_icon(snap.market_status)
+    scan_s     = snap.last_scan_ts[:16].replace("T", " ") if snap.last_scan_ts else "--"
+    data_as_of = getattr(snap, "price_data_as_of", "") or scan_s[:10]
 
     lines = [
         "🏛 *EGX Constitutional Command Center*",
@@ -72,7 +73,7 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
         lines.append("")
 
     lines.append(SEP)
-    lines.append(f"⏰ {scan_s} | Last Scan")
+    lines.append(f"⏰ {scan_s} | Last Scan | Data As Of: {data_as_of}")
 
     return "\n".join(lines)
 

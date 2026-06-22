@@ -745,7 +745,7 @@ def _s_operations_center() -> str:
     last_scan  = _to_cairo(hb.get("last_scan", ""))
     last_email = _to_cairo(hb.get("last_email", ""))
     last_dash  = _to_cairo(hb.get("last_dashboard", ""))
-    next_scan  = _to_cairo(hb.get("next_scan", compute_next_scan() if hb else ""))
+    next_scan  = _to_cairo(compute_next_scan())  # always live from time_authority, never stale heartbeat
     rel_pct    = sla30.get("overall_pct")
     rel_label  = reliability_label(rel_pct)
     snap_fresh = "✓ Fresh" if hb.get("last_snapshot") else "—"

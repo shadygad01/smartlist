@@ -206,7 +206,7 @@ def build_presentation_snapshot() -> PresentationSnapshot:
             # (candidate_pool is only updated by standalone builder, not market scans)
             try:
                 import json as _json
-                _hb = _json.loads((_BASE / "heartbeat.json").read_text())
+                _hb = _json.loads((BASE / "heartbeat.json").read_text())
                 snap.last_scan_ts = _hb.get("last_scan") or latest_ts or ""
             except Exception:
                 snap.last_scan_ts = latest_ts or ""

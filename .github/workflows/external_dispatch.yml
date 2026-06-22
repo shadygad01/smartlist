@@ -79,6 +79,19 @@ jobs:
           echo "job_type=${JOB_TYPE}" >> "$GITHUB_OUTPUT"
           echo "Resolved job_type: ${JOB_TYPE}"
 
+      - name: Refresh prices and universe snapshot (market_scan only)
+        if: steps.job.outputs.job_type == 'market_scan' || steps.job.outputs.job_type == 'dispatch'
+        run: |
+          python backfill_egx30.py --download-only || true
+          python3 - <<'PYEOF'
+          from universe_snapshot import build_universe_snapshot
+          from stock_dna_engine import build_stock_dna
+          build_universe_snapshot()
+          build_stock_dna()
+          print('Universe snapshot rebuilt.')
+          PYEOF
+        continue-on-error: true
+
       - name: Run via ScanOrchestrator
         env:
           EMAIL_USER:       ${{ secrets.EMAIL_USER }}
@@ -118,6 +131,20 @@ jobs:
           sys.exit(0)
           PYEOF
 
+      - name: Rebuild presentation snapshot
+        run: |
+          python3 - <<'PYEOF'
+          from presentation.presentation_snapshot import build_presentation_snapshot, write_presentation_snapshot_json
+          snap = build_presentation_snapshot()
+          write_presentation_snapshot_json(snap)
+          print('presentation_snapshot.json written.')
+          PYEOF
+        continue-on-error: true
+
+      - name: Rebuild dashboard
+        run: python3 dashboard.py || true
+        continue-on-error: true
+
       - name: Update public status
         run: |
           python - <<'PYEOF'
@@ -141,6 +168,8 @@ jobs:
           git add heartbeat.json operations_state.json operations/public_status.json \
                   scan_execution.db notification_delivery.db \
                   open_positions.json scan_results.json \
-                  presentation_snapshot.json || true
+                  presentation_snapshot.json dashboard.html \
+                  signal_history.json || true
+          git add historical_data/historical_data/*.csv || true
           git diff --staged --quiet || git commit -m "HA trigger: ${{ steps.job.outputs.job_type }} [skip ci]"
           git push || true

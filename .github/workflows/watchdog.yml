@@ -1,0 +1,119 @@
+name: EGX Watchdog — Self-Healing Scan Guard
+
+# Triggered by external schedulers every 5 minutes.
+# Checks if a market scan is overdue; if yes, fires external_dispatch.
+# Lightweight — no Python pip install needed for the check.
+
+on:
+  repository_dispatch:
+    types:
+      - watchdog_tick     # from cron-job.org / GAS every 5 min
+
+  workflow_dispatch:
+    inputs:
+      force_scan:
+        description: 'Force a market_scan regardless of last scan age'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: egx-watchdog
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check scan freshness and dispatch if needed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_SCAN: ${{ github.event.inputs.force_scan || 'false' }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, sys, subprocess
+          from datetime import datetime, timezone, timedelta
+          from pathlib import Path
+
+          _EET = timezone(timedelta(hours=2))
+
+          def now():
+              return datetime.now(_EET)
+
+          # Read heartbeat
+          hb = {}
+          try:
+              hb = json.loads(Path("heartbeat.json").read_text())
+          except Exception:
+              pass
+
+          last_scan_str = hb.get("last_scan", "")
+          force_scan = os.environ.get("FORCE_SCAN", "false") == "true"
+
+          # Compute scan age
+          scan_age_min = None
+          if last_scan_str:
+              try:
+                  dt = datetime.fromisoformat(last_scan_str)
+                  if dt.tzinfo is None:
+                      dt = dt.replace(tzinfo=_EET)
+                  scan_age_min = (now() - dt).total_seconds() / 60
+              except Exception:
+                  pass
+
+          n = now()
+          hour, minute = n.hour, n.minute
+          dow = n.weekday()  # Mon=0, Sun=6
+          is_trading_day = dow in {0, 1, 2, 3, 6}
+          in_market_hours = is_trading_day and (10, 0) <= (hour, minute) <= (14, 30)
+          is_morning_window = is_trading_day and (7, 25) <= (hour, minute) <= (7, 55)
+
+          print(f"[Watchdog] {n.isoformat(timespec='minutes')} dow={dow} "
+                f"in_market={in_market_hours} morning={is_morning_window} "
+                f"scan_age={scan_age_min:.1f}min" if scan_age_min else
+                f"[Watchdog] {n.isoformat(timespec='minutes')} scan_age=None")
+
+          STALE_MIN = 8  # fire if last scan > 8 min ago during market hours
+
+          should_scan = force_scan or (
+              in_market_hours and (scan_age_min is None or scan_age_min > STALE_MIN)
+          )
+          should_morning = is_morning_window
+
+          if should_morning:
+              job = "morning_report"
+          elif should_scan:
+              job = "market_scan"
+          else:
+              print("[Watchdog] No action needed.")
+              sys.exit(0)
+
+          print(f"[Watchdog] Dispatching {job} via repository_dispatch...")
+          result = subprocess.run([
+              "gh", "api",
+              f"repos/{os.environ.get('GITHUB_REPOSITORY', '')}/" +
+              "dispatches",
+              "--method", "POST",
+              "-f", f"event_type={job}",
+          ], capture_output=True, text=True)
+
+          if result.returncode == 0:
+              print(f"[Watchdog] Dispatched {job} successfully.")
+          else:
+              print(f"[Watchdog] Dispatch failed: {result.stderr}")
+              sys.exit(1)
+          PYEOF

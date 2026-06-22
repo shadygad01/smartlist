@@ -1,10 +1,19 @@
 name: EGX Daily Scanner
 
 on:
+  # Primary scheduler: repository_dispatch from external HA schedulers
+  # (cron-job.org / Google Apps Script) — fires every 5 min during market hours
+  repository_dispatch:
+    types:
+      - daily_scan        # full pipeline (morning + scan)
+      - morning_dispatch  # force morning report
+      - scan_dispatch     # market scan only
+
   schedule:
     # ─────────────────────────────────────────────────────────────────────────
     # Egypt uses EET (UTC+2) year-round — NO DST since 2011.
     # All times are Cairo = UTC+2. Only one cron per slot (no summer/winter split).
+    # NOTE: GitHub Actions cron is backup-only — primary is repository_dispatch.
     #
     # Morning Brief الساعة 7:30 Cairo = 05:30 UTC
     - cron: '30 5 * * 0-4'
@@ -84,7 +93,8 @@ jobs:
           FORCE_DAILY: >-
             ${{
               (github.event.schedule == '30 5 * * 0-4' ||
-               github.event.inputs.force_daily == 'true')
+               github.event.inputs.force_daily == 'true' ||
+               github.event.action == 'morning_dispatch')
               && 'True' || 'False'
             }}
           PYTHONUNBUFFERED: "1"

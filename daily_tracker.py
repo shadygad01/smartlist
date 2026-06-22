@@ -7,6 +7,7 @@ Daily Tracker
 التشغيل اليدوي:  python daily_tracker.py
 """
 
+import os
 import sys
 from datetime import date, timedelta
 
@@ -33,38 +34,65 @@ MIN_CALENDAR_DAYS = 28
 
 # ── Data Fetch ─────────────────────────────────────────────────────────────────
 
+_TRACKER_BASE = os.path.dirname(os.path.abspath(__file__))
+
+
 def _fetch_since(symbol: str, signal_date: str) -> pd.DataFrame | None:
     """
     يجلب OHLCV من اليوم التالي لـ signal_date حتى اليوم.
+    Priority: local CSV (instant) → yfinance with 20s timeout.
     يُرجع DataFrame مفهرس بالتاريخ، أو None عند الخطأ.
     """
     try:
         yf_sym = symbol if symbol.endswith(".CA") else f"{symbol}.CA"
-        start  = (date.fromisoformat(signal_date) + timedelta(days=1)).isoformat()
-        end    = (date.today() + timedelta(days=1)).isoformat()
+        start_dt = date.fromisoformat(signal_date) + timedelta(days=1)
+        start    = start_dt.isoformat()
 
-        import threading as _thr
-        _result = [pd.DataFrame()]
-        def _do_fetch():
-            try:
-                _result[0] = yf.Ticker(yf_sym).history(
-                    start=start, end=end, interval="1d", auto_adjust=False,
-                )
-            except Exception:
-                pass
-        _t = _thr.Thread(target=_do_fetch, daemon=True)
-        _t.start()
-        _t.join(timeout=20)
-        if _t.is_alive():
-            print(f"  [Tracker] {symbol}: yfinance timeout (20s) — skipping")
-            return None
-        df = _result[0]
+        df = pd.DataFrame()
+
+        # Priority 1: local committed CSV (zero network, zero hang risk)
+        for _name in (yf_sym, symbol):
+            _csv = os.path.join(_TRACKER_BASE, "historical_data", "historical_data",
+                                f"{_name}.csv")
+            if os.path.exists(_csv):
+                try:
+                    _df = pd.read_csv(_csv, parse_dates=["Date"])
+                    _df = _df.set_index("Date")
+                    _df.index = pd.to_datetime(_df.index).tz_localize(None)
+                    _df = _df[["High", "Low", "Close", "Volume"]].dropna(subset=["Close"])
+                    _df = _df[_df.index >= pd.Timestamp(start_dt)]
+                    if not _df.empty:
+                        df = _df.sort_index()
+                        break
+                except Exception:
+                    pass
+
+        # Priority 2: yfinance with hard timeout
         if df.empty:
-            return None
+            import threading as _thr
+            end      = (date.today() + timedelta(days=1)).isoformat()
+            _result = [pd.DataFrame()]
+            def _do_fetch():
+                try:
+                    _result[0] = yf.Ticker(yf_sym).history(
+                        start=start, end=end, interval="1d", auto_adjust=False,
+                    )
+                except Exception:
+                    pass
+            _t = _thr.Thread(target=_do_fetch, daemon=True)
+            _t.start()
+            _t.join(timeout=20)
+            if _t.is_alive():
+                print(f"  [Tracker] {symbol}: yfinance timeout (20s) — skipping")
+                return None
+            df = _result[0]
+            if df.empty:
+                return None
+            df = df[["High", "Low", "Close", "Volume"]].dropna(subset=["Close"])
+            df.index = df.index.tz_localize(None)
+            df = df.sort_index()
 
-        df = df[["High", "Low", "Close", "Volume"]].dropna(subset=["Close"])
-        df.index = df.index.tz_localize(None)
-        return df.sort_index()
+        return df if not df.empty else None
 
     except Exception as e:
         print(f"  [Tracker] {symbol}: fetch error — {e}")

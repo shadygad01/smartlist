@@ -13,13 +13,10 @@ Behavior Report Generator
 import json
 import os
 import sys
-import smtplib
 import argparse
 import statistics
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 EXTENDED_LOG  = "extended_signal_log.json"
 REPORT_FILE   = "reports/behavior_report.html"
@@ -608,31 +605,14 @@ def build_report(days_back: int = 0) -> str:
 # ── Email ─────────────────────────────────────────────────────────────────────
 
 def send_report_email(html: str, days_back: int = 0) -> bool:
-    sender   = os.getenv("EMAIL_USER")
-    password = os.getenv("EMAIL_PASS")
-    if not sender or not password:
-        print("[Report] EMAIL_USER / EMAIL_PASS not set — email skipped.")
-        return False
-
     period = f" — آخر {days_back} يوم" if days_back else ""
     subject = f"EGX Behavior Report{period} — {date.today()}"
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"]    = sender
-    msg["To"]      = TO_EMAIL
-    msg.attach(MIMEText(html, "html", "utf-8"))
-
-    try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as srv:
-            srv.ehlo(); srv.starttls(); srv.ehlo()
-            srv.login(sender, password)
-            srv.sendmail(sender, TO_EMAIL, msg.as_string())
+    from notifications.email_sender import send as _send_email
+    ok = _send_email(subject=subject, html=html, to=TO_EMAIL)
+    if ok:
         print(f"[Report] Email sent → {TO_EMAIL}")
-        return True
-    except Exception as e:
-        print(f"[Report] Email error: {e}")
-        return False
+    return ok
 
 
 # ── Entry Point ───────────────────────────────────────────────────────────────

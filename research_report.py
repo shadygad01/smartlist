@@ -18,11 +18,8 @@ Research Report
 
 import json
 import os
-import smtplib
 import sys
 from datetime import date, datetime, timedelta
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 from signal_db import (
     DB_PATH, get_stats, get_mature_signals, get_active_signals,
@@ -1307,27 +1304,17 @@ def send_report_email(html: str, db_path: str = DB_PATH) -> bool:
     today   = date.today().strftime("%Y-%m-%d")
     subject = f"EGX30 Research Report — {today}"
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"]    = EMAIL_FROM
-    msg["To"]      = EMAIL_TO
-    msg.attach(MIMEText(html, "html", "utf-8"))
-
-    try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
-            s.ehlo()
-            s.starttls()
-            s.login(EMAIL_FROM, EMAIL_PASS)
-            s.sendmail(EMAIL_FROM, [EMAIL_TO], msg.as_string())
-
+    from notifications.email_sender import send as _send_email
+    ok = _send_email(
+        subject=subject, html=html, to=EMAIL_TO,
+        sender=EMAIL_FROM or None, password=EMAIL_PASS or None,
+        smtp_host=SMTP_HOST or None, smtp_port=SMTP_PORT or None,
+    )
+    if ok:
         n_mature = get_stats(db_path=db_path).get("with_bq", 0)
         log_report_sent("weekly", n_mature, db_path=db_path)
         print(f"[Report] Email sent to {EMAIL_TO}")
-        return True
-
-    except Exception as e:
-        print(f"[Report] Email failed: {e}")
-        return False
+    return ok
 
 
 # ── Scheduling Helpers ─────────────────────────────────────────────────────────

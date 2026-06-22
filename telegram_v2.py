@@ -99,27 +99,10 @@ def _chunk(text: str) -> list[str]:
 
 def send_morning_brief(date_str: str, snap: PresentationSnapshot | None = None) -> None:
     """Send constitutional morning brief to Telegram."""
-    token   = os.getenv("TELEGRAM_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    if not token or not chat_id:
-        print("Telegram V2: TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not set — skipping.")
-        return
-
     if snap is None:
         snap = build_presentation_snapshot()
 
     full_msg = build_morning_brief(snap, date_str)
 
-    for chunk in _chunk(full_msg):
-        try:
-            resp = requests.post(
-                f"https://api.telegram.org/bot{token}/sendMessage",
-                json={"chat_id": chat_id, "text": chunk, "parse_mode": "Markdown"},
-                timeout=10,
-            )
-            if resp.status_code == 200:
-                print(f"Telegram V2: chunk sent ({len(chunk)} chars)")
-            else:
-                print(f"Telegram V2: error {resp.status_code} — {resp.text[:200]}")
-        except Exception as e:
-            print(f"Telegram V2: exception — {e}")
+    from notifications.telegram_sender import send as _tg
+    _tg(full_msg, subject="MorningBrief")

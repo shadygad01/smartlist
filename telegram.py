@@ -173,19 +173,5 @@ def send_alert(event: dict, snap: PresentationSnapshot | None = None) -> None:
 
 
 def _send_chunks(text: str, token: str, chat_id: str) -> None:
-    if not _HAS_REQUESTS:
-        print("Telegram V6: requests not installed — cannot send.")
-        return
-    for chunk in _chunk(text):
-        try:
-            resp = _requests.post(
-                f"https://api.telegram.org/bot{token}/sendMessage",
-                json={"chat_id": chat_id, "text": chunk, "parse_mode": "Markdown"},
-                timeout=10,
-            )
-            if resp.status_code == 200:
-                print(f"Telegram V6: chunk sent ({len(chunk)} chars)")
-            else:
-                print(f"Telegram V6: error {resp.status_code} — {resp.text[:200]}")
-        except Exception as e:
-            print(f"Telegram V6: exception — {e}")
+    from notifications.telegram_sender import send as _tg
+    _tg(text, token=token, chat_id=chat_id, subject="TelegramV6")

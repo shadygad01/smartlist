@@ -102,13 +102,13 @@ jobs:
 
       - name: Rebuild universe snapshot with fresh prices
         run: |
-          python3 -c "
-from universe_snapshot import build_universe_snapshot
-from stock_dna_engine import build_stock_dna
-build_universe_snapshot()
-build_stock_dna()
-print('Universe snapshot and DNA rebuilt.')
-"
+          python3 - <<'PYEOF'
+          from universe_snapshot import build_universe_snapshot
+          from stock_dna_engine import build_stock_dna
+          build_universe_snapshot()
+          build_stock_dna()
+          print('Universe snapshot and DNA rebuilt.')
+          PYEOF
 
       - name: Assert price freshness — fail if prices are stale
         run: |
@@ -116,12 +116,12 @@ print('Universe snapshot and DNA rebuilt.')
 
       - name: Build presentation snapshot JSON and assert consistency
         run: |
-          python3 -c "
-from presentation.presentation_snapshot import build_presentation_snapshot, write_presentation_snapshot_json
-snap = build_presentation_snapshot()
-write_presentation_snapshot_json(snap)
-print('presentation_snapshot.json written.')
-"
+          python3 - <<'PYEOF'
+          from presentation.presentation_snapshot import build_presentation_snapshot, write_presentation_snapshot_json
+          snap = build_presentation_snapshot()
+          write_presentation_snapshot_json(snap)
+          print('presentation_snapshot.json written.')
+          PYEOF
           python3 audit/assert_presentation_consistency.py
 
       - name: Constitutional Golden Master Validation

@@ -15,10 +15,11 @@ BASE    = os.path.dirname(os.path.abspath(__file__))
 WEB_OUT = os.environ.get('WEB_OUT', BASE)   # CI sets WEB_OUT=./web_deploy
 
 def cairo_now():
-    import sys as _sys, os as _os
-    _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
-    from time_authority import now_cairo as _nc
-    return _nc()
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo('Africa/Cairo'))
+    except Exception:
+        return datetime.now(timezone(timedelta(hours=2)))
 
 
 def load(name):

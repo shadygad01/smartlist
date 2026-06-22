@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "created_at": "2026-06-14T03:30:17.870233+00:00",
-  "last_updated": "2026-06-14T03:30:17.870233+00:00",
+  "last_updated": "2026-06-22T15:30:27.878221+00:00",
   "research_items": {
     "RI-PRICE-INV": {
       "id": "RI-PRICE-INV",
@@ -11,27 +11,27 @@
       "finding": "Current linear scoring rewards the wrong range. delta_r20d when r1>0: +0.59%.",
       "source_report": "logic_analyzer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Open",
       "next_required_action": "Test modified buy-zone scoring in shadow mode; cross-check WF fold consistency.",
-      "estimated_impact": 0.005904057578635526,
+      "estimated_impact": 0.01052137885914746,
       "supporting_modules": [
         "logic_analyzer"
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "n_signals": 1051,
+        "n_signals": 1193,
         "function_impact": {
           "col": "r1_price",
-          "delta_r20d": 0.005904057578635526,
-          "n_pos": 893,
-          "n_zero": 158,
-          "r20d_when_pos": 0.04684266517357223,
-          "r20d_when_zero": 0.040938607594936706,
-          "pf_pos": 2.755658710405815,
-          "pf_zero": 2.22207107634756
+          "delta_r20d": 0.01052137885914746,
+          "n_pos": 1019,
+          "n_zero": 174,
+          "r20d_when_pos": 0.04671678115799804,
+          "r20d_when_zero": 0.03619540229885058,
+          "pf_pos": 2.771972663520092,
+          "pf_zero": 2.0476586542460287
         }
       },
       "history": [
@@ -39,6 +39,70 @@
           "date": "2026-06-14",
           "event": "created",
           "status": "Open"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -50,27 +114,27 @@
       "finding": "r2_ob>0 signals underperform (delta_r20d=-1.4%). 3 modules agree, but WF folds inconsistent — System Audit verdict: OVERFITTED.",
       "source_report": "logic_analyzer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Investigating",
       "next_required_action": "Extend OOS window to 6+ months. Do not remove OB until WF folds converge.",
-      "estimated_impact": 0.014220659491193742,
+      "estimated_impact": 0.012266666337513582,
       "supporting_modules": [
         "logic_analyzer"
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "n_signals": 1051,
+        "n_signals": 1193,
         "function_impact": {
           "col": "r2_ob",
-          "delta_r20d": -0.014220659491193742,
-          "n_pos": 175,
-          "n_zero": 876,
-          "r20d_when_pos": 0.03410228571428571,
-          "r20d_when_zero": 0.04832294520547945,
-          "pf_pos": 2.0904058029270436,
-          "pf_zero": 2.790200415293983
+          "delta_r20d": -0.012266666337513582,
+          "n_pos": 205,
+          "n_zero": 988,
+          "r20d_when_pos": 0.035023414634146335,
+          "r20d_when_zero": 0.04729008097165992,
+          "pf_pos": 2.1557394201825413,
+          "pf_zero": 2.7522464409474803
         }
       },
       "history": [
@@ -78,6 +142,70 @@
           "date": "2026-06-14",
           "event": "created",
           "status": "Investigating"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -89,7 +217,7 @@
       "finding": "Full HH+HL confirmation currently scores highest but returns -0.8%. HL-only returns +11.6%. System Audit WF-consistent.",
       "source_report": "logic_analyzer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
@@ -100,16 +228,16 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "n_signals": 1051,
+        "n_signals": 1193,
         "function_impact": {
           "col": "r4_htf",
-          "delta_r20d": 0.006842326283987912,
-          "n_pos": 720,
-          "n_zero": 331,
-          "r20d_when_pos": 0.04811,
-          "r20d_when_zero": 0.04126767371601209,
-          "pf_pos": 2.837019123683457,
-          "pf_zero": 2.330981798339635
+          "delta_r20d": 0.010096446473487383,
+          "n_pos": 747,
+          "n_zero": 446,
+          "r20d_when_pos": 0.04895676037483267,
+          "r20d_when_zero": 0.038860313901345284,
+          "pf_pos": 2.8680441334218725,
+          "pf_zero": 2.303164733039092
         }
       },
       "history": [
@@ -117,6 +245,62 @@
           "date": "2026-06-14",
           "event": "created",
           "status": "Awaiting Validation"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -128,7 +312,7 @@
       "finding": "SV+HVN together is the worst demand outcome. HVN-only is the best. The scoring function is rewarding the wrong combination.",
       "source_report": "logic_analyzer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Investigating",
@@ -139,16 +323,16 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "n_signals": 1051,
+        "n_signals": 1193,
         "function_impact": {
           "col": "r8_demand",
-          "delta_r20d": 0.009828035552210401,
-          "n_pos": 597,
-          "n_zero": 454,
-          "r20d_when_pos": 0.05020050251256282,
-          "r20d_when_zero": 0.04037246696035242,
-          "pf_pos": 2.935327013483495,
-          "pf_zero": 2.344426188624994
+          "delta_r20d": 0.007616968422128355,
+          "n_pos": 656,
+          "n_zero": 537,
+          "r20d_when_pos": 0.048610823170731704,
+          "r20d_when_zero": 0.04099385474860335,
+          "pf_pos": 2.863637426217053,
+          "pf_zero": 2.396303367436904
         }
       },
       "history": [
@@ -156,6 +340,62 @@
           "date": "2026-06-14",
           "event": "created",
           "status": "Investigating"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -167,7 +407,7 @@
       "finding": "Wick rejection is the weakest liquidity sub-signal. Reducing its multiplier from 0.6 to 0.15 frees weight for equal-lows.",
       "source_report": "logic_analyzer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "LOW",
       "current_status": "Open",
@@ -178,16 +418,16 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "n_signals": 1051,
+        "n_signals": 1193,
         "function_impact": {
           "col": "r3_liquidity",
-          "delta_r20d": 0.006606674213266932,
-          "n_pos": 631,
-          "n_zero": 420,
-          "r20d_when_pos": 0.048595245641838355,
-          "r20d_when_zero": 0.041988571428571424,
-          "pf_pos": 2.922121231116404,
-          "pf_zero": 2.3394500987391766
+          "delta_r20d": 0.007043868515361332,
+          "n_pos": 701,
+          "n_zero": 492,
+          "r20d_when_pos": 0.04808716119828816,
+          "r20d_when_zero": 0.04104329268292683,
+          "pf_pos": 2.928482345133756,
+          "pf_zero": 2.3115002175734394
         }
       },
       "history": [
@@ -195,6 +435,62 @@
           "date": "2026-06-14",
           "event": "created",
           "status": "Open"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -206,7 +502,7 @@
       "finding": "rsi_div=1 signals underperform. r7_div combines RSI+MACD div — RSI drag cancels MACD edge. Need to separate them.",
       "source_report": "logic_analyzer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Open",
@@ -217,16 +513,16 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "n_signals": 1051,
+        "n_signals": 1193,
         "function_impact": {
           "col": "r7_div",
-          "delta_r20d": 0.001432871524729297,
-          "n_pos": 201,
-          "n_zero": 850,
-          "r20d_when_pos": 0.047113930348258705,
-          "r20d_when_zero": 0.04568105882352941,
-          "pf_pos": 2.8782030940103143,
-          "pf_zero": 2.6126967645470778
+          "delta_r20d": 0.0007203723319739522,
+          "n_pos": 237,
+          "n_zero": 956,
+          "r20d_when_pos": 0.04575949367088609,
+          "r20d_when_zero": 0.045039121338912136,
+          "pf_pos": 2.831368840555237,
+          "pf_zero": 2.5973867460090743
         }
       },
       "history": [
@@ -234,6 +530,62 @@
           "date": "2026-06-14",
           "event": "created",
           "status": "Open"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -245,7 +597,7 @@
       "finding": "Three independent methods converge on reducing r6_macd. Only weight change currently with HIGH evidence.",
       "source_report": "weight_optimizer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "HIGH",
       "evidence_strength": "HIGH",
       "current_status": "Awaiting Validation",
@@ -258,15 +610,78 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "optimizer_w": 1.2298314561293058,
+        "optimizer_w": 14.866924266007006,
         "current_w": 4,
-        "oos": -3.882075471697971e-05
+        "oos": 0.00017607070707070655
       },
       "history": [
         {
           "date": "2026-06-14",
           "event": "created",
           "status": "Awaiting Validation"
+        },
+        {
+          "date": "2026-06-14",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -278,7 +693,7 @@
       "finding": "Three methods agree: reduce AVWAP weight. Positive delta when present but modest. Consensus around 4-6.",
       "source_report": "weight_optimizer",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
@@ -291,7 +706,7 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "optimizer_w": 4.259252222232599,
+        "optimizer_w": 7.098076527312876,
         "current_w": 8
       },
       "history": [
@@ -299,6 +714,27 @@
           "date": "2026-06-14",
           "event": "created",
           "status": "Awaiting Validation"
+        },
+        {
+          "date": "2026-06-14",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -310,7 +746,7 @@
       "finding": "Retains 43% of signals, win_rate=68.4%, expected return +0.9% vs baseline. Highest optimizer confidence.",
       "source_report": "weight_optimizer",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
@@ -341,7 +777,7 @@
       "finding": "Score gate >=55: IS +1.75% but OOS -4.52%. Gate >=60: IS +1.06%, OOS OVERFITTED. Both confirmed overfitted.",
       "source_report": "system_audit",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "LOW",
       "evidence_strength": "HIGH",
       "current_status": "Rejected",
@@ -373,12 +809,12 @@
       "finding": "ML rebalance to Liq=28, Div=26, Demand=21, Price=12. OOS improvement=-0.000039 ≈ zero. Conflicts with RL and WF.",
       "source_report": "weight_optimizer",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "LOW",
       "evidence_strength": "LOW",
       "current_status": "Investigating",
       "next_required_action": "Do not promote as a batch. Decompose into per-indicator items. Validate each independently.",
-      "estimated_impact": -3.882075471697971e-05,
+      "estimated_impact": 0.00017607070707070655,
       "supporting_modules": [
         "weight_optimizer"
       ],
@@ -388,22 +824,94 @@
       ],
       "evidence_data": {
         "optimal_weights": {
-          "r1_price": 11.98963904464464,
-          "r2_ob": 4.9926552432933775,
-          "r3_liquidity": 28.185294601774114,
-          "r4_htf": 1.510629527588931,
-          "r5_avwap": 4.259252222232599,
-          "r6_macd": 1.2298314561293058,
-          "r7_div": 26.407050371701203,
-          "r8_demand": 21.425647532635832
+          "r1_price": 7.687122177498011,
+          "r2_ob": 14.467661822445018,
+          "r3_liquidity": 15.244818856521183,
+          "r4_htf": 0.7010961613906433,
+          "r5_avwap": 7.098076527312876,
+          "r6_macd": 14.866924266007006,
+          "r7_div": 10.577000305922937,
+          "r8_demand": 29.35729988290234
         },
-        "oos": -3.882075471697971e-05
+        "oos": 0.00017607070707070655
       },
       "history": [
         {
           "date": "2026-06-14",
           "event": "created",
           "status": "Investigating"
+        },
+        {
+          "date": "2026-06-14",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -415,7 +923,7 @@
       "finding": "sweep=1 signals: IS diff=+0.013, OOS=+0.077, WF consistent=True. Folds=[0.0523, -0.0069, 0.0126, 0.0789].",
       "source_report": "system_audit",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
@@ -428,12 +936,12 @@
       "conflicting_modules": [],
       "evidence_data": {
         "verdict": "CONFIRMED",
-        "oos_diff": 0.0773,
+        "oos_diff": 0.0806,
         "wf_folds": [
-          0.0523,
-          -0.0069,
-          0.0126,
-          0.0789
+          0.0432,
+          -0.0031,
+          0.014,
+          0.0807
         ]
       },
       "history": [
@@ -441,6 +949,433 @@
           "date": "2026-06-14",
           "event": "created",
           "status": "Awaiting Validation"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -452,7 +1387,7 @@
       "finding": "HVN hit outperforms. WF consistent=True, OOS diff=+0.090. Folds=[0.0243, -0.0126, 0.0062, 0.0913].",
       "source_report": "system_audit",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "HIGH",
       "evidence_strength": "HIGH",
       "current_status": "Awaiting Validation",
@@ -466,12 +1401,12 @@
       "conflicting_modules": [],
       "evidence_data": {
         "verdict": "CONFIRMED",
-        "oos_diff": 0.0901,
+        "oos_diff": 0.0956,
         "wf_folds": [
-          0.0243,
-          -0.0126,
-          0.0062,
-          0.0913
+          0.0158,
+          -0.023,
+          0.0036,
+          0.0949
         ]
       },
       "history": [
@@ -479,6 +1414,181 @@
           "date": "2026-06-14",
           "event": "created",
           "status": "Awaiting Validation"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -490,7 +1600,7 @@
       "finding": "Current additive weighted sum has OOS R²=-0.15 (negative!). Architecture is not predicting returns. Recommendation: mandatory gate (sweep=1 + r1≥gate) × quality bonus. Non-linear with minimum viable conditions outperforms additive sum.",
       "source_report": "system_audit",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "CRITICAL",
       "evidence_strength": "HIGH",
       "current_status": "Investigating",
@@ -520,7 +1630,7 @@
       "finding": "Fix HTF scoring inversion: HH+HL currently scores highest but returns -0.8%. HL-only returns +11.6%. A single logic fix (swap full/partial scoring) could shift system performance significantly.",
       "source_report": "system_audit",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "HIGH",
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
@@ -550,12 +1660,12 @@
       "finding": "delta_ret=+0.026 when hvn_hit=1 AND htf_hh=1. WF-consistent=True. Only 8.5% of signals qualify. GX memory flags as overfitted.",
       "source_report": "adaptive_learning",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
       "next_required_action": "Need 6+ months forward data (n≥150) before promoting. Do not apply to main scanner.",
-      "estimated_impact": 0.0264,
+      "estimated_impact": 0.0244,
       "supporting_modules": [
         "adaptive_learning"
       ],
@@ -571,6 +1681,370 @@
           "date": "2026-06-14",
           "event": "created",
           "status": "Awaiting Validation"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
         }
       ]
     },
@@ -582,7 +2056,7 @@
       "finding": "After 40 epochs on 395 signals: top-Q avg=17.26% vs bot-Q avg=21.48%. Loss=0.2386 converging but model is inversely predictive.",
       "source_report": "smc_rl",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "CRITICAL",
       "evidence_strength": "HIGH",
       "current_status": "Investigating",
@@ -593,16 +2067,72 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "discrimination": -4.23,
-        "top_q": 17.26,
-        "bot_q": 21.48,
-        "loss": 0.238598
+        "discrimination": -4.82,
+        "top_q": 15.97,
+        "bot_q": 20.8,
+        "loss": 0.243331
       },
       "history": [
         {
           "date": "2026-06-14",
           "event": "created",
           "status": "Investigating"
+        },
+        {
+          "date": "2026-06-14",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -614,7 +2144,7 @@
       "finding": "865 trades, equity grew to 2427x. But weights barely moved from original (max drift 27.7%). WF is not encoding structural fixes (HTF inversion, OB removal).",
       "source_report": "walk_forward",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Investigating",
@@ -625,15 +2155,113 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "max_drift_pct": 0.277,
-        "n_trades": 865,
-        "equity": 2427.47
+        "max_drift_pct": 0.532,
+        "n_trades": 1016,
+        "equity": 2632.04
       },
       "history": [
         {
           "date": "2026-06-14",
           "event": "created",
           "status": "Investigating"
+        },
+        {
+          "date": "2026-06-14",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-14",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-15",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-15",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -645,7 +2273,7 @@
       "finding": "8085 significant rules found. Top features: snap_reclaim_spd, feat_dist_52w_low, feat_dist_last_bos, snap_atr. Best rule achieves WR=100% on n=15.",
       "source_report": "edge_discovery",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Open",
@@ -667,6 +2295,62 @@
           "date": "2026-06-14",
           "event": "created",
           "status": "Open"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -678,7 +2362,7 @@
       "finding": "RF R²=-1.225, GBM R²=-0.021, XGBoost R²=-0.012. AUC=0.506 (near random). High-confidence prob model hits 72% precision but only on tiny subset.",
       "source_report": "research_quant",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "CRITICAL",
       "evidence_strength": "HIGH",
       "current_status": "Investigating",
@@ -690,16 +2374,261 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "best_r2": -0.012,
+        "best_r2": null,
         "rf_r2": -1.225,
         "gbm_r2": -0.021,
-        "auc": 0.506
+        "auc": null
       },
       "history": [
         {
           "date": "2026-06-14",
           "event": "created",
           "status": "Investigating"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -711,7 +2640,7 @@
       "finding": "macd_div=1: n=74, PF=3.82, WR=44.6%, mean=0.060. RSI div is negative — must be separated before increasing r7_div.",
       "source_report": "historical_backtest",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Investigating",
@@ -734,6 +2663,62 @@
           "date": "2026-06-14",
           "event": "created",
           "status": "Investigating"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -745,7 +2730,7 @@
       "finding": "The learning ecosystem has no mechanism to move findings from Proposed → Staged → Promoted. actual_delta_ret=None for every recommendation. The system discovers but does not learn.",
       "source_report": "gx_research_memory",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "CRITICAL",
       "evidence_strength": "HIGH",
       "current_status": "Open",
@@ -775,7 +2760,7 @@
       "finding": "WF adjusts weights ±0.05 per trade. Structural fixes (HTF inversion, OB removal) require ±5-10 point changes. These cannot coexist in the same update loop.",
       "source_report": "gx_research_memory",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-14",
+      "date_updated": "2026-06-22",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Investigating",
@@ -997,17 +2982,6 @@
       "rank_score": 54.0
     },
     {
-      "id": "RI-HVN-HTF-BONUS",
-      "title": "IMP-5: HVN + HTF_HH super-bonus tier — model_score=100, n=8.5% of signals",
-      "priority": "MEDIUM",
-      "evidence": "MEDIUM",
-      "status": "Awaiting Validation",
-      "impact": 0.0264,
-      "indicator": "multi",
-      "next_action": "Need 6+ months forward data (n≥150) before promoting. Do not apply to main scanner.",
-      "rank_score": 146.8
-    },
-    {
       "id": "RI-MICRO-FEATURES",
       "title": "Edge Discovery: 30 microstructure features predict returns but are absent from s",
       "priority": "MEDIUM",
@@ -1017,6 +2991,17 @@
       "indicator": "micro",
       "next_action": "Start with snap_reclaim_spd (reclaim speed appears in multiple top rules). Research whether it can be computed daily and",
       "rank_score": 147.5
+    },
+    {
+      "id": "RI-HVN-HTF-BONUS",
+      "title": "IMP-5: HVN + HTF_HH super-bonus tier — model_score=100, n=8.5% of signals",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Awaiting Validation",
+      "impact": 0.0244,
+      "indicator": "multi",
+      "next_action": "Need 6+ months forward data (n≥150) before promoting. Do not apply to main scanner.",
+      "rank_score": 147.8
     },
     {
       "id": "RI-DIV-MACD",
@@ -1035,10 +3020,10 @@
       "priority": "MEDIUM",
       "evidence": "MEDIUM",
       "status": "Investigating",
-      "impact": 0.014220659491193742,
+      "impact": 0.012266666337513582,
       "indicator": "r2_ob",
       "next_action": "Extend OOS window to 6+ months. Do not remove OB until WF folds converge.",
-      "rank_score": 152.88967025440314
+      "rank_score": 153.8666668312432
     },
     {
       "id": "RI-HTF-INV",
@@ -1050,6 +3035,17 @@
       "indicator": "r4_htf",
       "next_action": "Implement HTF scoring inversion fix in shadow mode for 20 sessions.",
       "rank_score": 154.5
+    },
+    {
+      "id": "RI-PRICE-INV",
+      "title": "Price scoring inversion: near-EQ (r1=1-10) outperforms deep-discount (r1=21-30)",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Open",
+      "impact": 0.01052137885914746,
+      "indicator": "r1_price",
+      "next_action": "Test modified buy-zone scoring in shadow mode; cross-check WF fold consistency.",
+      "rank_score": 154.73931057042628
     },
     {
       "id": "RI-SYS-WFSCOPE",
@@ -1094,17 +3090,6 @@
       "indicator": "gate",
       "next_action": "Reduces signals by 54.6%. Shadow test 20 sessions to measure opportunity cost before promoting.",
       "rank_score": 156.5
-    },
-    {
-      "id": "RI-PRICE-INV",
-      "title": "Price scoring inversion: near-EQ (r1=1-10) outperforms deep-discount (r1=21-30)",
-      "priority": "MEDIUM",
-      "evidence": "MEDIUM",
-      "status": "Open",
-      "impact": 0.005904057578635526,
-      "indicator": "r1_price",
-      "next_action": "Test modified buy-zone scoring in shadow mode; cross-check WF fold consistency.",
-      "rank_score": 157.04797121068225
     },
     {
       "id": "RI-DEM-PAR",
@@ -1156,15 +3141,666 @@
       "priority": "LOW",
       "evidence": "LOW",
       "status": "Investigating",
-      "impact": 3.882075471697971e-05,
+      "impact": 0.00017607070707070655,
       "indicator": "multi",
       "next_action": "Do not promote as a batch. Decompose into per-indicator items. Validate each independently.",
-      "rank_score": 279.9805896226415
+      "rank_score": 279.91196464646464
     }
   ],
   "run_log": [
     {
       "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-19",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-19",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-19",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-19",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-19",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
       "n_items": 23,
       "n_active": 22,
       "n_validated": 0,

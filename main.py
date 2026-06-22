@@ -2026,16 +2026,12 @@ def _ensure_backfill():
 
 
 def daily_scan():
-    import os as _os
     from notifications.morning_guard import is_morning_sent, record_morning_start
     date_str = today_cairo().isoformat()
 
-    force_resend = _os.getenv("FORCE_RESEND", "").lower() in ("1", "true", "yes")
-    if is_morning_sent(date_str) and not force_resend:
+    if is_morning_sent(date_str):
         print(f"⚠️  Morning report for {date_str} already sent — EXIT (idempotency guard)")
         return
-    if force_resend:
-        print(f"[daily_scan] FORCE_RESEND=True — bypassing idempotency guard for {date_str}")
 
     morning_mid = record_morning_start(date_str)
     print(f"\n📅 Daily scan started at {fmt_cairo()} [id={morning_mid[:8]}]")

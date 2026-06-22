@@ -20,7 +20,8 @@ from pathlib import Path
 
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
-from time_authority import now_cairo as _now_cairo_ta
+
+_EET = timezone(timedelta(hours=2))
 
 HEARTBEAT_STALE_HOURS      = 2
 STATE_STALE_HOURS          = 2
@@ -29,7 +30,7 @@ SCAN_INTRADAY_STALE_MINS   = 15     # during market hours: stale after 15 min
 
 
 def _now() -> datetime:
-    return _now_cairo_ta()
+    return datetime.now(_EET)
 
 
 def _age_hours(iso_str: str | None) -> float | None:

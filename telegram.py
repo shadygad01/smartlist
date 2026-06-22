@@ -79,13 +79,10 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
 
 def send_morning_brief(date_str: str, snap: PresentationSnapshot | None = None) -> None:
     """Send constitutional morning brief via the notification router."""
-    import os as _os
     if snap is None:
         snap = build_presentation_snapshot()
     full_msg = build_morning_brief(snap, date_str)
-    force_resend = _os.getenv("FORCE_RESEND", "").lower() in ("1", "true", "yes")
-    _route(MORNING_BRIEF, full_msg, symbol="", event_date=date_str[:10] if len(date_str) >= 10 else None,
-           check_duplicate=not force_resend)
+    _route(MORNING_BRIEF, full_msg, symbol="", event_date=date_str[:10] if len(date_str) >= 10 else None)
 
 
 def send_alert(event: dict, snap: PresentationSnapshot | None = None) -> None:

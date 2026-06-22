@@ -21,8 +21,8 @@ from typing import Optional
 
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
-from time_authority import now_cairo as _now_cairo_ta
 
+_EET     = timezone(timedelta(hours=2))
 _SCAN_DB = str(BASE / "scan_execution.db")
 
 # Market session slots (Cairo time): 10:00–14:30 every 5 minutes
@@ -32,7 +32,7 @@ _SLOT_INTERVAL = 5  # minutes
 
 
 def _now() -> datetime:
-    return _now_cairo_ta()
+    return datetime.now(_EET)
 
 
 def _today() -> str:
@@ -224,7 +224,7 @@ def update_operations_state(state_path: Optional[str] = None) -> dict:
         ).strip()
     except Exception:
         sha = existing.get("commit_sha", "")
-    existing["current_cairo_time"] = _now_cairo_ta().isoformat(timespec="seconds")
+    existing["current_cairo_time"] = datetime.now(_EET).isoformat(timespec="seconds")
     existing["commit_sha"] = sha
 
     existing["scan_slots"] = {

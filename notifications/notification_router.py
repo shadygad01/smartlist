@@ -16,11 +16,8 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-import sys as _sys
-_sys.path.insert(0, str(Path(__file__).parent.parent))
-from time_authority import now_cairo as _now_cairo_ta
-
 _DB_PATH = Path(__file__).parent.parent / "notification_delivery.db"
+_EET = timezone(timedelta(hours=2))
 
 # ── Event types ────────────────────────────────────────────────────────────────
 MORNING_BRIEF        = "MORNING_BRIEF"
@@ -35,11 +32,11 @@ TIMELINE_EVENT       = "TIMELINE_EVENT"
 
 
 def _now() -> str:
-    return _now_cairo_ta().isoformat()
+    return datetime.now(_EET).isoformat()
 
 
 def _today() -> str:
-    return _now_cairo_ta().date().isoformat()
+    return datetime.now(_EET).date().isoformat()
 
 
 def _conn() -> sqlite3.Connection:

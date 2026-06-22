@@ -608,31 +608,13 @@ def build_report(days_back: int = 0) -> str:
 # ── Email ─────────────────────────────────────────────────────────────────────
 
 def send_report_email(html: str, days_back: int = 0) -> bool:
-    sender   = os.getenv("EMAIL_USER")
-    password = os.getenv("EMAIL_PASS")
-    if not sender or not password:
-        print("[Report] EMAIL_USER / EMAIL_PASS not set — email skipped.")
-        return False
-
+    from notifications.email_sender import send as _send_email
     period = f" — آخر {days_back} يوم" if days_back else ""
     subject = f"EGX Behavior Report{period} — {date.today()}"
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"]    = sender
-    msg["To"]      = TO_EMAIL
-    msg.attach(MIMEText(html, "html", "utf-8"))
-
-    try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as srv:
-            srv.ehlo(); srv.starttls(); srv.ehlo()
-            srv.login(sender, password)
-            srv.sendmail(sender, TO_EMAIL, msg.as_string())
+    ok = _send_email(subject=subject, html=html, to=TO_EMAIL)
+    if ok:
         print(f"[Report] Email sent → {TO_EMAIL}")
-        return True
-    except Exception as e:
-        print(f"[Report] Email error: {e}")
-        return False
+    return ok
 
 
 # ── Entry Point ───────────────────────────────────────────────────────────────

@@ -8,8 +8,6 @@ import os
 import shutil
 import sqlite3
 import tempfile
-import urllib.request
-import urllib.parse
 from datetime import datetime
 from typing import Optional
 
@@ -17,24 +15,10 @@ CONFIG_DIR = "config"
 
 
 def _send_telegram(message: str) -> None:
-    """Fire-and-forget Telegram alert. Silent on failure."""
-    token   = os.getenv("TELEGRAM_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    if not token or not chat_id:
-        return
+    """Fire-and-forget Telegram alert via constitutional router. Silent on failure."""
     try:
-        data = urllib.parse.urlencode({
-            "chat_id": chat_id,
-            "text": message,
-            "parse_mode": "HTML",
-        }).encode()
-        req = urllib.request.Request(
-            f"https://api.telegram.org/bot{token}/sendMessage",
-            data=data,
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=8) as _:
-            pass
+        from notifications.notification_router import route as _route, PRODUCTION_PROMOTION
+        _route(PRODUCTION_PROMOTION, message, parse_mode="HTML", check_duplicate=False)
     except Exception:
         pass
 

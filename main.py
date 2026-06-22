@@ -1,4 +1,3 @@
-import smtplib
 import os
 import json
 import re
@@ -28,8 +27,13 @@ from daily_tracker import run_all as tracker_run_all
 from research_report import maybe_run_weekly_report
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+from notifications.email_sender import send as _send_email_raw
+from notifications.notification_router import (
+    route as _tg_route,
+    MORNING_BRIEF, SIGNAL_CHANGE, FIRST_BUY, TARGET_UPDATE,
+    ZONE3_REINFORCEMENT, HIGH_SCORE, PRODUCTION_PROMOTION,
+    NEAR_CONSTITUTIONAL, TIMELINE_EVENT,
+)
 
 CAIRO = ZoneInfo("Africa/Cairo")
 
@@ -1304,24 +1308,9 @@ def _build_ranking_block_legacy():
 # =========================================
 
 def send_email(html, subject_suffix=""):
-    sender  = os.getenv("EMAIL_USER")
-    password= os.getenv("EMAIL_PASS")
-    if not sender or not password:
-        print("ERROR: EMAIL_USER or EMAIL_PASS not set."); return False
-    msg=MIMEMultipart("alternative")
-    date_str=now_cairo().strftime("%Y-%m-%d")
-    msg["Subject"]=f"{EMAIL_HEADER_TITLE} · {date_str}{subject_suffix}"
-    msg["From"]=sender; msg["To"]=EMAIL
-    msg.attach(MIMEText(html,"html","utf-8"))
-    try:
-        with smtplib.SMTP("smtp.gmail.com",587,timeout=30) as srv:
-            srv.ehlo(); srv.starttls(); srv.ehlo()
-            srv.login(sender,password)
-            srv.sendmail(sender,EMAIL,msg.as_string())
-            print("Email sent successfully."); return True
-    except Exception as e:
-        print(f"Email error: {e}"); traceback.print_exc()
-    return False
+    date_str = now_cairo().strftime("%Y-%m-%d")
+    subject  = f"{EMAIL_HEADER_TITLE} · {date_str}{subject_suffix}"
+    return _send_email_raw(subject=subject, html=html, to=EMAIL)
 
 # =========================================
 # TELEGRAM ALERTS
@@ -1329,11 +1318,6 @@ def send_email(html, subject_suffix=""):
 
 def send_telegram_zone3_reinforcement(symbol, entry_price, reinforcement_price, avg_price):
     """Send alert when Zone 3 reinforcement is triggered"""
-    token   = os.getenv("TELEGRAM_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    if not token or not chat_id:
-        return False
-
     name = NAMES.get(symbol, symbol)
     drop_pct = ((reinforcement_price - entry_price) / entry_price) * 100
 
@@ -1366,27 +1350,11 @@ def send_telegram_zone3_reinforcement(symbol, entry_price, reinforcement_price, 
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}"
     )
-
-    try:
-        requests.post(
-            f"https://api.telegram.org/bot{token}/sendMessage",
-            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
-            timeout=10,
-        )
-        return True
-    except Exception as e:
-        print(f"❌ Telegram error: {e}")
-        return False
+    return _tg_route(ZONE3_REINFORCEMENT, message, symbol=symbol, check_duplicate=False)
 
 
 def send_telegram_target_update(symbol, entry_price, old_target, new_target, current_price, fib_level):
     """Send alert when dynamic target is updated"""
-    token = os.getenv("TELEGRAM_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-
-    if not token or not chat_id:
-        return False
-
     old_pct = ((old_target - entry_price) / entry_price) * 100
     new_pct = ((new_target - entry_price) / entry_price) * 100
 
@@ -1402,17 +1370,7 @@ def send_telegram_target_update(symbol, entry_price, old_target, new_target, cur
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}"
     )
-
-    try:
-        requests.post(
-            f"https://api.telegram.org/bot{token}/sendMessage",
-            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
-            timeout=10,
-        )
-        return True
-    except Exception as e:
-        print(f"❌ Telegram error: {e}")
-        return False
+    return _tg_route(TARGET_UPDATE, message, symbol=symbol, check_duplicate=False)
 
 # =========================================
 # POSITION TRACKING & MANAGEMENT
@@ -1628,11 +1586,6 @@ def send_telegram_alerts(results, snap=None):
 def _send_telegram_alerts_v1(results):
     """Preserved V1 — NOT called in production."""
     from presentation.portfolio_snapshot import build_portfolio_snapshot
-    token   = os.getenv("TELEGRAM_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    if not token or not chat_id:
-        print("Telegram: TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not set — skipping.")
-        return
 
     snap = build_portfolio_snapshot()
     date_str = now_cairo().strftime("%d %b %Y")
@@ -1689,31 +1642,7 @@ def _send_telegram_alerts_v1(results):
     msg_lines.append(f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}")
 
     full_msg = "\n".join(msg_lines)
-
-    MAX = 4000
-    chunks, current = [], ""
-    for line in full_msg.split("\n"):
-        if len(current) + len(line) + 1 > MAX:
-            chunks.append(current)
-            current = line + "\n"
-        else:
-            current += line + "\n"
-    if current:
-        chunks.append(current)
-
-    for chunk in chunks:
-        try:
-            resp = requests.post(
-                f"https://api.telegram.org/bot{token}/sendMessage",
-                json={"chat_id": chat_id, "text": chunk, "parse_mode": "Markdown"},
-                timeout=10,
-            )
-            if resp.status_code == 200:
-                print(f"Telegram: chunk sent ({len(chunk)} chars)")
-            else:
-                print(f"Telegram: HTTP {resp.status_code} — {resp.text[:200]}")
-        except Exception as e:
-            print(f"Telegram error: {e}")
+    _tg_route(MORNING_BRIEF, full_msg, symbol="")
 
 # =========================================
 # ALERT FOR HIGH SCORE (REAL-TIME)
@@ -1725,40 +1654,30 @@ def send_alert_for_high_score(stock, score, result):
     """
     print(f"\n🚨 ALERT: {NAMES.get(stock, stock)} ({stock}) score {score}/100!")
     
-    # إرسال Telegram
-    token = os.getenv("TELEGRAM_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    
-    if token and chat_id:
-        signal = result.get("signal", "WAIT").upper()
-        emoji = _SIGNAL_EMOJI.get(signal, "🔵")
-        
-        try:
-            upside = ""
-            try:
-                pct = (float(result["target"]) - float(result["price"])) / float(result["price"]) * 100
-                upside = f" (+{pct:.1f}%)"
-            except Exception:
-                pass
+    signal = result.get("signal", "WAIT").upper()
+    emoji  = _SIGNAL_EMOJI.get(signal, "🔵")
 
-            msg = (
-                f"{TG_REALTIME_HEADER}\n"
-                f"{emoji} *{NAMES.get(stock, stock)}*  `{stock}`\n\n"
-                f"   Decision   *Constitutional BUY*\n"
-                f"   Price      *{result['price']} EGP*\n"
-                f"   Target     *{round(float(result['target']), 2)} EGP*{upside}\n"
-                f"{TG_SECTION_SEP}━━\n"
-                f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}"
-            )
-            
-            requests.post(
-                f"https://api.telegram.org/bot{token}/sendMessage",
-                json={"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"},
-                timeout=10,
-            )
-            print(f"✅ Telegram alert sent for {stock}")
-        except Exception as e:
-            print(f"❌ Telegram alert error: {e}")
+    try:
+        upside = ""
+        try:
+            pct = (float(result["target"]) - float(result["price"])) / float(result["price"]) * 100
+            upside = f" (+{pct:.1f}%)"
+        except Exception:
+            pass
+
+        msg = (
+            f"{TG_REALTIME_HEADER}\n"
+            f"{emoji} *{NAMES.get(stock, stock)}*  `{stock}`\n\n"
+            f"   Decision   *Constitutional BUY*\n"
+            f"   Price      *{result['price']} EGP*\n"
+            f"   Target     *{round(float(result['target']), 2)} EGP*{upside}\n"
+            f"{TG_SECTION_SEP}━━\n"
+            f"⏰ {now_cairo().strftime('%H:%M  |  %d %b %Y')}"
+        )
+        _tg_route(HIGH_SCORE, msg, symbol=stock)
+        print(f"✅ Telegram alert sent for {stock}")
+    except Exception as e:
+        print(f"❌ Telegram alert error: {e}")
 
 
 
@@ -2290,12 +2209,6 @@ def send_change_email(changed_stocks):
     if not changed_stocks:
         return
 
-    sender   = os.getenv("EMAIL_USER")
-    password = os.getenv("EMAIL_PASS")
-    if not sender or not password:
-        print("⚠️ Email config missing for change alert")
-        return
-
     time_str = fmt_cairo()
 
     def _gain_str(price, target):
@@ -2503,36 +2416,18 @@ def send_change_email(changed_stocks):
         '</body></html>'
     )
 
-    msg = MIMEMultipart("alternative")
     date_str = now_cairo().strftime("%Y-%m-%d %H:%M")
-    msg["Subject"] = f"🚨 Signal Alert: {total_count} stock(s) moved to BUY — {date_str}"
-    msg["From"]    = sender
-    msg["To"]      = EMAIL
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
-
-    try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as srv:
-            srv.ehlo(); srv.starttls(); srv.ehlo()
-            srv.login(sender, password)
-            srv.sendmail(sender, EMAIL, msg.as_string())
+    subject  = f"🚨 Signal Alert: {total_count} stock(s) moved to BUY — {date_str}"
+    ok = _send_email_raw(subject=subject, html=html_body, to=EMAIL)
+    if ok:
         print(f"📧 Email alert sent for {total_count} stock(s) "
               f"({len(whitelist_stocks)} whitelist, {len(normal_stocks)} normal)")
-        return True
-    except Exception as e:
-        print(f"❌ Email error: {e}")
-        return False
+    return ok
 
 
 def send_change_alert(changed_stocks):
     """Send instant Telegram alert when a signal flips to BUY."""
     if not changed_stocks:
-        return
-
-    token = os.getenv("TELEGRAM_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-
-    if not token or not chat_id:
-        print("Telegram config missing")
         return
 
     date_str = now_cairo().strftime("%d %b %Y  %H:%M")
@@ -2564,19 +2459,9 @@ def send_change_alert(changed_stocks):
 
     message = "\n".join(lines)
 
-    try:
-        response = requests.post(
-            f"https://api.telegram.org/bot{token}/sendMessage",
-            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
-            timeout=10,
-        )
-        if response.status_code == 200:
-            print("Signal change alert sent to Telegram")
-        else:
-            print(f"Telegram error: {response.text}")
-    except Exception as e:
-        print(f"Error sending Telegram alert: {e}")
-    
+    if _tg_route(SIGNAL_CHANGE, message, symbol="", check_duplicate=False):
+        print("Signal change alert sent to Telegram")
+
     # إرسال Email للجميع مع التمييز
     send_change_email(changed_stocks)
 

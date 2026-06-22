@@ -3,11 +3,11 @@ name: EGX Daily Scanner
 on:
   schedule:
     # ─────────────────────────────────────────────────────────────────────────
-    # Daily report الساعة 7:00 صبح Cairo
-    # Summer (EEST = UTC+3): 04:00 UTC
-    - cron: '0 4 * * 0-4'
-    # Winter (EET  = UTC+2): 05:00 UTC
-    - cron: '0 5 * * 0-4'
+    # Daily report + Morning Brief الساعة 7:30 صبح Cairo
+    # Summer (EEST = UTC+3): 04:30 UTC
+    - cron: '30 4 * * 0-4'
+    # Winter (EET  = UTC+2): 05:30 UTC
+    - cron: '30 5 * * 0-4'
 
     # كل 5 دقائق من 10:00 لـ 13:55 Cairo
     # Summer (UTC+3): 07:00-10:55 UTC
@@ -124,10 +124,76 @@ jobs:
           PYEOF
           python3 audit/assert_presentation_consistency.py
 
+      - name: CI Protection Gate
+        run: |
+          python3 audit/assert_ci_protection.py
+
       - name: Constitutional Golden Master Validation
         run: |
           python3 audit/run_daily_validation.py
           echo "Validation passed — constitutional output identical to golden master."
+
+      - name: Morning Report — constitutional brief (07:30 Cairo)
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          IS_MORNING: >-
+            ${{
+              (github.event.schedule == '30 4 * * 0-4' ||
+               github.event.schedule == '30 5 * * 0-4')
+              && 'true' || 'false'
+            }}
+        run: |
+          python3 - <<'PYEOF'
+          import os, sys
+          sys.path.insert(0, '.')
+          if os.getenv('IS_MORNING', '').lower() != 'true':
+              print('Not a morning run — skipping morning report.')
+          else:
+              try:
+                  from operations.director import OperationsDirector
+                  director = OperationsDirector()
+                  ok = director.run_morning_report()
+                  print(f'Morning report: {"OK" if ok else "FAILED"}')
+              except Exception as e:
+                  print(f'Morning report error (non-fatal): {e}')
+          PYEOF
+
+      - name: Operations Director — self-healing cycle
+        run: |
+          python3 - <<'PYEOF'
+          import sys, json
+          sys.path.insert(0, '.')
+          try:
+              from operations.director import OperationsDirector
+              director = OperationsDirector()
+              report = director.run_full_cycle()
+              print(f"Operations cycle: status={report['health']['status']}, "
+                    f"recovered={report.get('recovered', [])}, "
+                    f"open_incidents={report['incident_summary']['open']}")
+          except Exception as e:
+              print(f"Operations director error (non-fatal): {e}")
+          PYEOF
+
+      - name: Record heartbeat
+        run: |
+          python3 - <<'PYEOF'
+          import sys, subprocess
+          sys.path.insert(0, '.')
+          try:
+              from operations.heartbeat import update_heartbeat, record_validation
+              from operations.sla import record_event
+              commit = subprocess.check_output(['git','rev-parse','--short','HEAD'], text=True).strip()
+              update_heartbeat(system_status='HEALTHY', commit=commit)
+              record_validation(True)
+              record_event('validation', True, 'ci_pass')
+              record_event('scan', True, 'workflow_complete')
+              print('Heartbeat recorded.')
+          except Exception as e:
+              print(f'Heartbeat error (non-fatal): {e}')
+          PYEOF
 
       - name: Save state to git
         run: |
@@ -136,7 +202,10 @@ jobs:
           git add open_positions.json positions_history.json scan_results.json \
                   signal_history.json signal_log.json learned_weights.json \
                   egx_research.db research_results.json \
-                  changed_symbols.json presentation_snapshot.json || true
+                  changed_symbols.json presentation_snapshot.json \
+                  heartbeat.json || true
+          git add operations/incidents.json operations/sla.json \
+                  operations/knowledge.json operations/sent_alerts.json || true
           git add historical_data/historical_data/*.csv || true
           git add audit/daily_validation/ || true
           git diff --staged --quiet || git commit -m "Auto-update positions and research DB [skip ci]"

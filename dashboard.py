@@ -744,6 +744,163 @@ def _s_diagnostics(snap):
 </div>"""
 
 
+# ── Operations Center ─────────────────────────────────────────────────────────
+def _s_operations_center() -> str:
+    """Operations Center — collapsed when HEALTHY, auto-expanded on WARNING+."""
+    try:
+        from operations.heartbeat import read_heartbeat, compute_next_scan
+        from operations.incident  import list_open_incidents, incident_summary, list_recent
+        from operations.health    import system_health
+        from operations.sla       import compute_metrics, reliability_label
+        hb       = read_heartbeat()
+        open_inc = list_open_incidents()
+        health   = system_health(hb, open_inc)
+        sla30    = compute_metrics(30)
+        recent_i = list_recent(5)
+    except Exception:
+        hb = {}; open_inc = []; health = {"status": "UNKNOWN", "reasons": [], "checks": {}}
+        sla30 = {}; recent_i = []
+
+    status     = health.get("status", "UNKNOWN")
+    status_c   = {
+        "HEALTHY": G, "WARNING": A, "DEGRADED": R, "CRITICAL": R, "UNKNOWN": DIM
+    }.get(status, DIM)
+    status_icon = {"HEALTHY": "✅", "WARNING": "⚠️", "DEGRADED": "🔴", "CRITICAL": "🚨"}.get(status, "❓")
+
+    # ── Minimal footer (always visible) ───────────────────────────────────────
+    last_scan  = _to_cairo(hb.get("last_scan", ""))
+    last_email = _to_cairo(hb.get("last_email", ""))
+    last_dash  = _to_cairo(hb.get("last_dashboard", ""))
+    next_scan  = _to_cairo(hb.get("next_scan", compute_next_scan() if hb else ""))
+    rel_pct    = sla30.get("overall_pct")
+    rel_label  = reliability_label(rel_pct)
+    snap_fresh = "✓ Fresh" if hb.get("last_snapshot") else "—"
+    data_fresh = "✓ Fresh" if hb.get("last_scan") else "—"
+
+    footer_html = f"""
+<div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;
+  font-family:monospace;font-size:11px;color:{DIM};padding:12px 0;">
+  <span>{status_icon} <b style="color:{status_c};">{status}</b></span>
+  <span>🕐 Last Scan: <b style="color:{FG};">{last_scan or '—'}</b></span>
+  <span>⏭ Next: <b style="color:{FG};">{next_scan or '—'}</b></span>
+  <span>📧 Morning Report: <b style="color:{FG};">{last_email or '—'}</b></span>
+  <span>📊 Data: <b style="color:{G if hb.get('last_scan') else DIM};">{data_fresh}</b></span>
+  <span>📈 Reliability: <b style="color:{G if rel_pct and rel_pct>=99 else (A if rel_pct and rel_pct>=95 else DIM)};">{rel_label}</b></span>
+</div>"""
+
+    if status == "HEALTHY" and not open_inc:
+        return f"""
+<div style="border-top:1px solid {BOR};margin-top:8px;">
+  {footer_html}
+</div>"""
+
+    # ── Expanded operations center (WARNING / DEGRADED / CRITICAL) ─────────────
+    reasons_html = ""
+    if health.get("reasons"):
+        reasons_html = "".join(
+            f'<div style="color:{R};font-size:12px;padding:2px 0;">⚠ {r}</div>'
+            for r in health["reasons"]
+        )
+
+    # Incidents table
+    inc_rows = ""
+    for i in open_inc:
+        t_c  = R if i["status"] in ("OPEN", "DIAGNOSED") else A
+        inc_rows += (
+            f'<tr><td style="font-size:11px;padding:4px 6px;color:{t_c};">{i["type"]}</td>'
+            f'<td style="font-size:11px;padding:4px 6px;color:{DIM};">{i["status"]}</td>'
+            f'<td style="font-size:11px;padding:4px 6px;color:{DIM};">'
+            f'{_to_cairo(i["opened_at"])}</td>'
+            f'<td style="font-size:11px;padding:4px 6px;color:{DIM};">'
+            f'{i["notes"][-1][:60] if i["notes"] else ""}</td></tr>'
+        )
+    if not inc_rows:
+        inc_rows = f'<tr><td colspan=4 style="color:{G};font-size:11px;padding:4px;">No open incidents</td></tr>'
+    inc_table = f"""
+<div style="font-size:11px;color:{DIM};text-transform:uppercase;letter-spacing:.4px;margin:10px 0 4px;">Open Incidents ({len(open_inc)})</div>
+<div class="tbl-wrap"><table style="min-width:400px;">
+  <tr><th>Type</th><th>Status</th><th>Opened</th><th>Note</th></tr>
+  {inc_rows}
+</table></div>"""
+
+    # Recent incident history
+    hist_rows = ""
+    for i in recent_i:
+        c = G if i["status"] == "CLOSED" else (R if i["status"] == "OPEN" else A)
+        hist_rows += (
+            f'<tr><td style="font-size:11px;padding:3px 6px;color:{c};">{i["type"]}</td>'
+            f'<td style="font-size:11px;padding:3px 6px;color:{DIM};">{i["status"]}</td>'
+            f'<td style="font-size:11px;padding:3px 6px;color:{DIM};">'
+            f'{_to_cairo(i["opened_at"])[:16]}</td></tr>'
+        )
+    if hist_rows:
+        hist_rows = f"""
+<div style="font-size:11px;color:{DIM};text-transform:uppercase;letter-spacing:.4px;margin:10px 0 4px;">Recent History</div>
+<div class="tbl-wrap"><table style="min-width:300px;">
+  <tr><th>Type</th><th>Status</th><th>Time</th></tr>{hist_rows}
+</table></div>"""
+
+    # SLA metrics
+    def _sla_row(label, m):
+        if not m or m.get("total", 0) == 0:
+            return f'<tr><td style="font-size:11px;color:{DIM};padding:3px 6px;">{label}</td><td style="font-size:11px;color:{DIM};padding:3px 6px;">No data</td></tr>'
+        pct = m.get("pct")
+        c   = G if pct and pct >= 99 else (A if pct and pct >= 95 else R)
+        return (
+            f'<tr><td style="font-size:11px;color:{DIM};padding:3px 6px;">{label}</td>'
+            f'<td style="font-size:11px;color:{c};font-weight:700;padding:3px 6px;">'
+            f'{pct:.1f}% ({m["success"]}/{m["total"]})</td></tr>'
+        )
+    sla_table = f"""
+<div style="font-size:11px;color:{DIM};text-transform:uppercase;letter-spacing:.4px;margin:10px 0 4px;">SLA (30d)</div>
+<table style="min-width:200px;">
+  {_sla_row("Morning Reports", sla30.get("morning"))}
+  {_sla_row("Scans", sla30.get("scans"))}
+  {_sla_row("Dashboards", sla30.get("dashboards"))}
+  {_sla_row("Deployments", sla30.get("deployments"))}
+  {_sla_row("Validations", sla30.get("validations"))}
+  {_sla_row("Recoveries", sla30.get("recoveries"))}
+</table>"""
+
+    # Heartbeat details
+    hb_html = (
+        f'<div style="font-size:11px;color:{DIM};text-transform:uppercase;letter-spacing:.4px;margin:10px 0 4px;">Heartbeat</div>'
+        f'<table style="min-width:200px;">'
+        + "".join(
+            f'<tr><td style="font-size:11px;color:{DIM};padding:3px 6px;">{k}</td>'
+            f'<td style="font-size:11px;color:{FG};padding:3px 6px;font-family:monospace;">'
+            f'{_to_cairo(str(v)) if "at" in k or "scan" in k or "email" in k or "dashboard" in k or "snapshot" in k or "validation" in k else v}</td></tr>'
+            for k, v in hb.items()
+            if k not in ("notes",)
+        )
+        + "</table>"
+    )
+
+    open_attr = ' open' if status != "HEALTHY" else ''
+    return f"""
+<div class="card" style="border-color:{status_c}30;">
+  <details{open_attr}>
+    <summary style="cursor:pointer;list-style:none;">
+      <div class="section-title" style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between;">
+        <span>⚙️ Operations Center
+          <span class="badge" style="background:{status_c}22;color:{status_c};margin-left:8px;">{status_icon} {status}</span>
+          {f'<span class="badge" style="background:{R}22;color:{R};margin-left:4px;">{len(open_inc)} incidents</span>' if open_inc else ''}
+        </span>
+        <span style="font-size:11px;color:{DIM};">▼ expand</span>
+      </div>
+    </summary>
+    <div style="margin-top:14px;">
+      {reasons_html}
+      {footer_html}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;">
+        <div>{inc_table}{hist_rows}</div>
+        <div>{sla_table}{hb_html}</div>
+      </div>
+    </div>
+  </details>
+</div>"""
+
+
 # ── Section mutual-exclusivity assertion ─────────────────────────────────────
 def _assert_sections(snap) -> None:
     uni = snap.universe_snapshot or []
@@ -785,7 +942,8 @@ def build_dashboard(build_hash: str = "") -> str:
         _s_market_map(snap, dna) +
         _s_stock_dna(snap, dna) +
         _s_timeline(snap) +
-        _s_diagnostics(snap)
+        _s_diagnostics(snap) +
+        _s_operations_center()
     )
     gen_cairo = datetime.now(_CAIRO_TZ).strftime("%Y-%m-%d %H:%M Cairo")
     return f"""<!DOCTYPE html>

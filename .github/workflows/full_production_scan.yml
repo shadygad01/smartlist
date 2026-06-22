@@ -1,33 +1,20 @@
-name: EGX Daily Scanner
+name: 🚀 Full Production Scan
+
+# Full pipeline: scan → research → intelligence → dashboard → deploy → state.
+# Triggered manually or via repository_dispatch from GAS for full daily pipeline.
+# GH Pages deploy uses shared concurrency group (egx-pages-deploy) with
+# dashboard_refresh.yml to prevent race conditions — only ONE deployer runs at a time.
+# Schedule removed: market_notifications.yml owns intraday scheduling.
 
 on:
-  # Primary scheduler: repository_dispatch from external HA schedulers
-  # (cron-job.org / Google Apps Script) — fires every 5 min during market hours
   repository_dispatch:
     types:
-      - daily_scan        # full pipeline (morning + scan)
-      - morning_dispatch  # force morning report
-      - scan_dispatch     # market scan only
-
-  schedule:
-    # ─────────────────────────────────────────────────────────────────────────
-    # Egypt uses EET (UTC+2) year-round — NO DST since 2011.
-    # All times are Cairo = UTC+2. Only one cron per slot (no summer/winter split).
-    # NOTE: GitHub Actions cron is backup-only — primary is repository_dispatch.
-    #
-    # Morning Brief الساعة 7:30 Cairo = 05:30 UTC
-    - cron: '30 5 * * 0-4'
-
-    # Auto scan كل 5 دقائق من 10:00 لـ 13:55 Cairo = 08:00-11:55 UTC
-    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 8-11 * * 0-4'
-
-    # Auto scan 14:00-14:30 Cairo = 12:00-12:30 UTC
-    - cron: '0,5,10,15,20,25,30 12 * * 0-4'
+      - daily_scan
 
   workflow_dispatch:
     inputs:
       force_daily:
-        description: 'Force daily scan (test automatic path — no Manual label)'
+        description: 'Force daily scan (no Manual label)'
         required: false
         default: 'false'
         type: boolean
@@ -40,10 +27,9 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-# منع تراكم الـ runs — لو run جديد جاي، يلغي القديم
 concurrency:
-  group: egx-scanner
-  cancel-in-progress: true    # allow new cron to preempt old — ScanOrchestrator deduplicates at Python level
+  group: egx-full-production-scan
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -69,7 +55,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Operations startup check — verify + recover missed jobs
+      - name: Operations startup check
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
@@ -91,12 +77,7 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           FORCE_DAILY: >-
-            ${{
-              (github.event.schedule == '30 5 * * 0-4' ||
-               github.event.inputs.force_daily == 'true' ||
-               github.event.action == 'morning_dispatch')
-              && 'True' || 'False'
-            }}
+            ${{ github.event.inputs.force_daily == 'true' && 'True' || 'False' }}
           PYTHONUNBUFFERED: "1"
           MANUAL_RUN: >-
             ${{
@@ -135,9 +116,8 @@ jobs:
           print('Universe snapshot and DNA rebuilt.')
           PYEOF
 
-      - name: Assert price freshness — fail if prices are stale
-        run: |
-          python3 audit/assert_price_freshness.py
+      - name: Assert price freshness
+        run: python3 audit/assert_price_freshness.py
 
       - name: Build presentation snapshot JSON and assert consistency
         run: |
@@ -150,18 +130,12 @@ jobs:
           python3 audit/assert_presentation_consistency.py
 
       - name: CI Protection Gate
-        run: |
-          python3 audit/assert_ci_protection.py
+        run: python3 audit/assert_ci_protection.py
 
       - name: Constitutional Golden Master Validation
         run: |
           python3 audit/run_daily_validation.py
           echo "Validation passed — constitutional output identical to golden master."
-
-      - name: Morning Report and self-healing — owned by ScanOrchestrator
-        run: |
-          echo "Morning report and self-healing cycle are executed inside ScanOrchestrator.run_morning_report()."
-          echo "No direct director calls here — single execution path enforced."
 
       - name: Record heartbeat + scan slot audit
         run: |
@@ -191,7 +165,7 @@ jobs:
               print(f'Scan audit non-fatal: {e}')
           PYEOF
 
-      - name: Save state to git
+      - name: Save core state to git
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
@@ -205,7 +179,7 @@ jobs:
                   operations/knowledge.json operations/sent_alerts.json || true
           git add historical_data/historical_data/*.csv || true
           git add audit/daily_validation/ || true
-          git diff --staged --quiet || git commit -m "Auto-update positions and research DB [skip ci]"
+          git diff --staged --quiet || git commit -m "Full scan: core state update [skip ci]"
           git push || true
 
       - name: Upload database artifact
@@ -274,12 +248,10 @@ jobs:
           PYEOF
           cp historical_backtest_results.json web_deploy/ || true
           cp manifest.json sw.js icon.svg web_deploy/ || true
-          # Copy fresh HTML into persistent cache dir so skipped runs still have them
           mkdir -p cached_reports
           for f in web_deploy/historical_backtest_report.html web_deploy/research_report.html web_deploy/quant_research_report.html web_deploy/heatmap.html; do
             [ -f "$f" ] && cp "$f" cached_reports/ || true
           done
-          # Restore from cache if any HTML was missing this run
           for f in historical_backtest_report research_report quant_research_report heatmap; do
             [ ! -f "web_deploy/${f}.html" ] && [ -f "cached_reports/${f}.html" ] && cp "cached_reports/${f}.html" "web_deploy/${f}.html" && echo "Restored ${f}.html from cache" || true
           done
@@ -378,7 +350,6 @@ jobs:
               files = sorted(glob.glob(pattern))
               if files:
                   shutil.copy(files[-1], dest)
-                  print(f"Copied {files[-1]} -> {dest}")
               else:
                   print(f"WARNING: no {pattern} found")
           PYEOF
@@ -404,7 +375,7 @@ jobs:
           path: web_deploy/
           retention-days: 1
 
-  # ── D ── Dashboard (after B + C) ─────────────────────────────────────────
+  # ── D ── Dashboard build (after B + C) ───────────────────────────────────
   dashboard_build:
     needs: [research_reports, intelligence_jobs]
     runs-on: ubuntu-latest
@@ -450,12 +421,16 @@ jobs:
           path: web_deploy/
           retention-days: 1
 
-  # ── E ── Deploy ───────────────────────────────────────────────────────────
+  # ── E ── Deploy to GH Pages ───────────────────────────────────────────────
+  # Shared concurrency group with dashboard_refresh.yml prevents race conditions.
   deploy:
     needs: dashboard_build
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
+    concurrency:
+      group: egx-pages-deploy
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
 
@@ -471,4 +446,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./web_deploy
           force_orphan: true
-          commit_message: "Deploy dashboard [skip ci]"
+          commit_message: "Full scan: deploy dashboard [skip ci]"

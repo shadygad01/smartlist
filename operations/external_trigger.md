@@ -38,7 +38,9 @@ Content-Type: application/json
 
 ---
 
-## 2 — Google Apps Script (Recommended)
+## 2 — Google Apps Script (PRIMARY — every 5 minutes)
+
+**This is the production scheduler.** GitHub Actions cron is BACKUP ONLY.
 
 Create a new Apps Script project at https://script.google.com
 
@@ -63,33 +65,28 @@ function dispatchEvent(eventType) {
   Logger.log(`${eventType} → ${resp.getResponseCode()}`);
 }
 
-// ── Trigger functions (attach to time-based triggers below) ──────────────
-
-function triggerMorningReport()    { dispatchEvent('morning_report');    }
-function triggerMarketScanOpen()   { dispatchEvent('market_scan');       }
-function triggerMarketScanMid()    { dispatchEvent('market_scan');       }
-function triggerMarketScanClose()  { dispatchEvent('market_scan');       }
-function triggerDashboard()        { dispatchEvent('dashboard_refresh'); }
-function triggerOpsCheck()         { dispatchEvent('operations_check');  }
+// ── PRIMARY: every-5-min tick (ha_trigger routes by Cairo time) ──────────
+// ha_trigger → external_dispatch.yml → dispatch_from_env()
+// dispatch_from_env routes: hour=7 → morning_report; 10≤hour≤14 → market_scan
+function tick() { dispatchEvent('ha_trigger'); }
 ```
 
 **Setup steps:**
 1. Open https://script.google.com → New project
 2. Paste the script above
 3. Project Settings → Script Properties → Add `GITHUB_PAT` = your token
-4. Triggers (⏰ icon) → Add trigger for each function:
+4. Project Settings → Time zone: set to `Africa/Cairo`
+5. Triggers (⏰ icon) → Add trigger:
 
-| Function                | Schedule          | Cairo time    |
-|-------------------------|-------------------|---------------|
-| `triggerMorningReport`  | Day timer 07:30   | 07:30 EET     |
-| `triggerMarketScanOpen` | Day timer 10:05   | 10:05 EET     |
-| `triggerMarketScanMid`  | Day timer 12:00   | 12:00 EET     |
-| `triggerMarketScanClose`| Day timer 14:35   | 14:35 EET     |
-| `triggerDashboard`      | Day timer 15:00   | 15:00 EET     |
-| `triggerOpsCheck`       | Hour timer        | every 2 hours |
+| Function | Event source | Time-based trigger | Schedule |
+|----------|-------------|-------------------|---------|
+| `tick`   | Time-driven | Minutes timer     | Every 5 minutes |
 
-**Note:** Google Apps Script runs in UTC. Set timezone to `Africa/Cairo` in
-Project Settings → Time zone.
+**That's it — one trigger, fires every 5 minutes 24/7.**
+- At 07:xx Cairo → fires morning_report (morning guard ensures exactly-once)
+- 10:00–14:30 Cairo → fires market_scan (lock ensures exactly-once)
+- Outside windows → dispatch_from_env returns immediately without action
+- All deduplication handled by ScanOrchestrator Python-level lock
 
 ---
 
@@ -114,23 +111,13 @@ Cron: 32 5 * * 1-5
 Body: {"event_type":"morning_report","client_payload":{"event_type":"morning_report","triggered_by":"cron-job.org"}}
 ```
 
-### Market Scan Open (10:02 Cairo = 08:02 UTC)
+### Market Scan — every 5 min during market hours (08:00-12:30 UTC = 10:00-14:30 Cairo)
 ```
-Cron: 2 8 * * 0-4
-Body: {"event_type":"market_scan","client_payload":{"event_type":"market_scan","triggered_by":"cron-job.org"}}
+Cron: */5 8-12 * * 0-4
+Body: {"event_type":"ha_trigger","client_payload":{"event_type":"ha_trigger","triggered_by":"cron-job.org"}}
 ```
-
-### Market Scan Midday (12:02 Cairo = 10:02 UTC)
-```
-Cron: 2 10 * * 0-4
-Body: {"event_type":"market_scan","client_payload":{"event_type":"market_scan","triggered_by":"cron-job.org"}}
-```
-
-### Market Scan Close (14:32 Cairo = 12:32 UTC)
-```
-Cron: 32 12 * * 0-4
-Body: {"event_type":"market_scan","client_payload":{"event_type":"market_scan","triggered_by":"cron-job.org"}}
-```
+Note: ha_trigger routes to dispatch_from_env() which only runs market_scan during 10:00-14:30 Cairo.
+Outside those hours the dispatcher returns immediately — no duplicate scans.
 
 ### Dashboard Refresh (15:05 Cairo = 13:05 UTC)
 ```

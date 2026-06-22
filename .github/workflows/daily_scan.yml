@@ -100,6 +100,20 @@ jobs:
           python -c "from backfill_research_db import ensure_combined_view; ensure_combined_view()" || true
           python cache_orchestrator.py --symbols || true
 
+      - name: Rebuild universe snapshot with fresh prices
+        run: |
+          python3 -c "
+from universe_snapshot import build_universe_snapshot
+from stock_dna_engine import build_stock_dna
+build_universe_snapshot()
+build_stock_dna()
+print('Universe snapshot and DNA rebuilt.')
+"
+
+      - name: Assert price freshness — fail if prices are stale
+        run: |
+          python3 audit/assert_price_freshness.py
+
       - name: Constitutional Golden Master Validation
         run: |
           python3 audit/run_daily_validation.py

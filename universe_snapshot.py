@@ -252,14 +252,20 @@ def build_universe_snapshot() -> list[dict]:
         r2    = _first_not_none(p.get("r2_score"), r.get("r2_score"), c.get("r2_score"))
         score = _first_not_none(p.get("final_score"), r.get("final_score"), c.get("final_score"))
 
-        # Current price — signal_history beats stale egx_research
-        # Priority: candidate_pool (scanner-computed) > signal_history (today) > timeline > egx_research (stale)
+        # Current price
+        # Priority: signal_history (live scanner, freshest EOD from yfinance)
+        #           > candidate_pool (may use historical CSVs, can be 1 session behind)
+        #           > timeline live price
+        #           > egx_research (most stale)
         current_price = (
-            p.get("current_price")
-            or sh.get("price")
+            sh.get("price")
+            or p.get("current_price")
             or t.get("current_price")
             or r.get("current_price")
         )
+
+        # Price scan date — prefer signal_history date (most recent scan), then pool
+        price_date = sh.get("last_scan") or (p.get("last_scan") if p else "") or ""
 
         # Entry price
         entry_price = (
@@ -281,7 +287,8 @@ def build_universe_snapshot() -> list[dict]:
 
         # Last scan / last price update
         last_scan         = p.get("last_scan") or r.get("last_scan") or sh.get("last_scan") or ""
-        last_price_update = t.get("event_date") or last_scan or ""
+        # last_price_update = the date of the PRICE DATA, not the constitutional BUY date
+        last_price_update = price_date or last_scan or ""
 
         # Source
         source = p.get("source") if p else (r.get("source") if r else "constitutional_registry" if c else ("signal_history" if has_scan_history else "NO_HISTORY"))

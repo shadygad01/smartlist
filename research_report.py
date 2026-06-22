@@ -18,11 +18,8 @@ Research Report
 
 import json
 import os
-import smtplib
 import sys
 from datetime import date, datetime, timedelta
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 from signal_db import (
     DB_PATH, get_stats, get_mature_signals, get_active_signals,

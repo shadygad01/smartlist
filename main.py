@@ -2474,67 +2474,13 @@ if __name__ == "__main__":
     print(f"EGX Constitutional Investment Platform — GitHub Actions Mode")
     print(f"Start Time: {fmt_cairo()}")
     print(f"{'='*60}\n")
-    
-    # =========================================
-    # DETERMINE RUN MODE BASED ON TIME
-    # =========================================
-    
-    manual_run  = os.getenv("MANUAL_RUN",  "False") == "True"
-    force_daily = os.getenv("FORCE_DAILY", "False") == "True"
-    hour = now_cairo().hour
-    minute = now_cairo().minute
 
-    print(f"Current time: {hour:02d}:{minute:02d}")
-    print(f"Manual run: {manual_run}")
-    print(f"Force daily: {force_daily}\n")
-
+    # All mode-dispatch is now owned by ScanOrchestrator (Step 4).
+    # main.py delegates immediately — no inline mode logic here.
     try:
-        # =========================================
-        # MODE 1: MANUAL RUN (Any time)
-        # =========================================
-        if manual_run:
-            print("🔧 MANUAL RUN MODE")
-            print("="*60 + "\n")
-            print("🚀 Running manual scan now...\n")
-            manual_scan()
-            print("\n✅ Manual scan completed!")
-            print("="*60 + "\n")
-            sys.exit(0)
-
-        # =========================================
-        # MODE 2: DAILY SCAN (7:00 AM or force_daily)
-        # =========================================
-        elif force_daily or hour == 7:
-            print("📅 DAILY SCAN MODE (7:00 AM)")
-            print("="*60 + "\n")
-            daily_scan()
-            print("\n✅ Daily scan completed!")
-            print("="*60 + "\n")
-            sys.exit(0)
-        
-        # =========================================
-        # MODE 3: CONTINUOUS SCAN (10:00 AM - 2:30 PM)
-        # =========================================
-        elif 10 <= hour <= 14:
-            print("🔄 CONTINUOUS SCAN MODE (Market Hours)")
-            print("="*60 + "\n")
-            continuous_scan()
-            print("\n✅ Continuous scan completed!")
-            print("="*60 + "\n")
-            sys.exit(0)
-        
-        # =========================================
-        # NO ACTION (Outside configured times)
-        # =========================================
-        else:
-            print(f"⏳ No action scheduled for {hour:02d}:{minute:02d}")
-            print("   Configured times:")
-            print("   - 09:00 (Daily Report)")
-            print("   - 10:00-14:30 (Continuous Scan)")
-            print("   - Any time (Manual Run)")
-            print("="*60 + "\n")
-            sys.exit(0)
-    
+        from notifications.scan_orchestrator import ScanOrchestrator
+        ok = ScanOrchestrator().dispatch_from_env()
+        sys.exit(0 if ok is not False else 1)
     except Exception as e:
         print(f"\n❌ Error: {e}")
         traceback.print_exc()

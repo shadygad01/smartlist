@@ -60,7 +60,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run EGX Scanner
+      - name: Run EGX Scanner — via ScanOrchestrator
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
@@ -79,7 +79,13 @@ jobs:
                github.event.inputs.force_daily != 'true')
               && 'True' || 'False'
             }}
-        run: python main.py
+        run: |
+          python -c "
+          from notifications.scan_orchestrator import ScanOrchestrator
+          import sys
+          ok = ScanOrchestrator().dispatch_from_env()
+          sys.exit(0 if ok is not False else 1)
+          "
 
       - name: Refresh historical CSV data
         run: python backfill_egx30.py --download-only || true
@@ -127,48 +133,10 @@ jobs:
           python3 audit/run_daily_validation.py
           echo "Validation passed — constitutional output identical to golden master."
 
-      - name: Morning Report — constitutional brief (07:30 Cairo)
-        env:
-          EMAIL_USER: ${{ secrets.EMAIL_USER }}
-          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          IS_MORNING: >-
-            ${{
-              github.event.schedule == '30 5 * * 0-4'
-              && 'true' || 'false'
-            }}
+      - name: Morning Report and self-healing — owned by ScanOrchestrator
         run: |
-          python3 - <<'PYEOF'
-          import os, sys
-          sys.path.insert(0, '.')
-          if os.getenv('IS_MORNING', '').lower() != 'true':
-              print('Not a morning run — skipping morning report.')
-          else:
-              try:
-                  from operations.director import OperationsDirector
-                  director = OperationsDirector()
-                  ok = director.run_morning_report()
-                  print(f'Morning report: {"OK" if ok else "FAILED"}')
-              except Exception as e:
-                  print(f'Morning report error (non-fatal): {e}')
-          PYEOF
-
-      - name: Operations Director — self-healing cycle
-        run: |
-          python3 - <<'PYEOF'
-          import sys, json
-          sys.path.insert(0, '.')
-          try:
-              from operations.director import OperationsDirector
-              director = OperationsDirector()
-              report = director.run_full_cycle()
-              print(f"Operations cycle: status={report['health']['status']}, "
-                    f"recovered={report.get('recovered', [])}, "
-                    f"open_incidents={report['incident_summary']['open']}")
-          except Exception as e:
-              print(f"Operations director error (non-fatal): {e}")
-          PYEOF
+          echo "Morning report and self-healing cycle are executed inside ScanOrchestrator.run_morning_report()."
+          echo "No direct director calls here — single execution path enforced."
 
       - name: Record heartbeat
         run: |
@@ -431,9 +399,12 @@ jobs:
           path: web_deploy/
         continue-on-error: true
 
-      - name: Generate Master Dashboard
+      - name: Generate Master Dashboard — via ScanOrchestrator
         run: |
-          python dashboard.py || true
+          python -c "
+          from notifications.scan_orchestrator import ScanOrchestrator
+          ScanOrchestrator().run_dashboard_refresh()
+          " || true
           cp dashboard.html web_deploy/index.html || true
 
       - name: Upload final web deploy

@@ -168,7 +168,7 @@ jobs:
           git add heartbeat.json operations_state.json operations/public_status.json \
                   scan_execution.db notification_delivery.db \
                   open_positions.json scan_results.json \
-                  presentation_snapshot.json dashboard.html \
+                  presentation_snapshot.json dashboard.html version.json \
                   signal_history.json || true
           git add historical_data/historical_data/*.csv || true
           git diff --staged --quiet || git commit -m "HA trigger: ${{ steps.job.outputs.job_type }} [skip ci]"

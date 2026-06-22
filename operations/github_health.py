@@ -23,9 +23,10 @@ sys.path.insert(0, str(BASE))
 
 _EET = timezone(timedelta(hours=2))
 
-HEARTBEAT_STALE_HOURS = 2
-STATE_STALE_HOURS     = 2
-SCAN_STALE_HOURS      = 6    # no scan in 6h on a trading day = stale
+HEARTBEAT_STALE_HOURS      = 2
+STATE_STALE_HOURS          = 2
+SCAN_STALE_HOURS           = 6      # no scan in 6h on a trading day = stale
+SCAN_INTRADAY_STALE_MINS   = 15     # during market hours: stale after 15 min
 
 
 def _now() -> datetime:
@@ -115,11 +116,22 @@ def check() -> dict:
 
     scan_age = _last_successful_scan_age()
     if is_trading:
-        scan_ok = scan_age is not None and scan_age < SCAN_STALE_HOURS
-        scan_reason = "" if scan_ok else (
-            f"no scan in {scan_age:.1f}h (>{SCAN_STALE_HOURS}h)" if scan_age
-            else "no successful scan found"
-        )
+        now_h = _now().hour
+        now_m = _now().minute
+        in_market_hours = (10, 0) <= (now_h, now_m) <= (14, 30)
+        if in_market_hours:
+            scan_age_min = scan_age * 60 if scan_age is not None else None
+            scan_ok = scan_age_min is not None and scan_age_min < SCAN_INTRADAY_STALE_MINS
+            scan_reason = "" if scan_ok else (
+                f"intraday scan stale ({scan_age_min:.0f} min > {SCAN_INTRADAY_STALE_MINS} min)" if scan_age_min is not None
+                else "no successful scan found during market hours"
+            )
+        else:
+            scan_ok = scan_age is not None and scan_age < SCAN_STALE_HOURS
+            scan_reason = "" if scan_ok else (
+                f"no scan in {scan_age:.1f}h (>{SCAN_STALE_HOURS}h)" if scan_age is not None
+                else "no successful scan found"
+            )
     else:
         scan_ok = True
         scan_reason = "holiday — scan not required"

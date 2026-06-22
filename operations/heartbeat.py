@@ -132,6 +132,7 @@ def record_scan(market_date: str, build_hash: str = "", status: str = "success")
         market_date=market_date,
         build_hash=build_hash,
         commit=_commit(),
+        next_scan=compute_next_scan(),
     )
 
 

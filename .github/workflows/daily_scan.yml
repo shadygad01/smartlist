@@ -34,7 +34,7 @@ env:
 # منع تراكم الـ runs — لو run جديد جاي، يلغي القديم
 concurrency:
   group: egx-scanner
-  cancel-in-progress: false   # ScanOrchestrator lock is the ONLY deduplication layer
+  cancel-in-progress: true    # allow new cron to preempt old — ScanOrchestrator deduplicates at Python level
 
 permissions:
   contents: write

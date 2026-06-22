@@ -202,7 +202,14 @@ def build_presentation_snapshot() -> PresentationSnapshot:
             latest_ts = pool.execute(
                 "SELECT MAX(snapshot_ts) FROM candidate_pool"
             ).fetchone()[0]
-            snap.last_scan_ts = latest_ts or ""
+            # Use heartbeat.last_scan as the authoritative last scan timestamp
+            # (candidate_pool is only updated by standalone builder, not market scans)
+            try:
+                import json as _json
+                _hb = _json.loads((_BASE / "heartbeat.json").read_text())
+                snap.last_scan_ts = _hb.get("last_scan") or latest_ts or ""
+            except Exception:
+                snap.last_scan_ts = latest_ts or ""
             universe_cnt = pool.execute(
                 "SELECT COUNT(DISTINCT ticker) FROM candidate_pool WHERE snapshot_ts=?",
                 (latest_ts,)

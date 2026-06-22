@@ -181,17 +181,17 @@
   },
   "regime_findings": {
     "latest": {
-      "n_signals": 1051,
+      "n_signals": 1193,
       "behavior": {
-        "n_resolved": 1051,
+        "n_resolved": 1193,
         "n_pending": 0,
-        "win_rate": 38.2,
-        "avg_ret": 4.6,
-        "avg_mfe": 12.97,
-        "pf": 2.66,
+        "win_rate": 37.6,
+        "avg_ret": 4.52,
+        "avg_mfe": 12.81,
+        "pf": 2.64,
         "report_file": "reports/behavior_report.html"
       },
-      "recorded_at": "2026-06-15T18:14:34.122484",
+      "recorded_at": "2026-06-22T08:12:54.975462",
       "source": "regime_lab"
     }
   },
@@ -481,6 +481,38 @@
       "finished_at": "2026-06-18T03:13:48.241476",
       "recorded_at": "2026-06-18T03:13:48.241478",
       "logged_at": "2026-06-18T03:13:48.244564"
+    },
+    {
+      "started_at": "2026-06-22T08:12:53.688026",
+      "outcomes_processed": 21,
+      "labs_run": [
+        "drift_lab",
+        "factor",
+        "regime"
+      ],
+      "drift_detected": false,
+      "optimized": true,
+      "promoted": true,
+      "verdict": "APPROVED",
+      "dry_run": false,
+      "error": null,
+      "lab_results": {
+        "factor": {
+          "error": null,
+          "n_signals": 1193
+        },
+        "regime": {
+          "error": null,
+          "n_signals": 1193
+        }
+      },
+      "val_oos_wr": 0.8273,
+      "val_oos_sharpe": 3.3359,
+      "val_n_oos": 220,
+      "deployment_log_id": 16,
+      "finished_at": "2026-06-22T08:12:55.196327",
+      "recorded_at": "2026-06-22T08:12:55.196336",
+      "logged_at": "2026-06-22T08:12:55.197810"
     }
   ],
   "archived_findings": {

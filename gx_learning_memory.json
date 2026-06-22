@@ -868,8 +868,8 @@
       ]
     }
   ],
-  "total_cycles": 21,
-  "last_cycle_at": "2026-06-18T03:13:48.241478",
+  "total_cycles": 24,
+  "last_cycle_at": "2026-06-22T08:12:55.196336",
   "cycles": [
     {
       "started_at": "2026-06-15T15:36:11.534574",
@@ -1289,7 +1289,70 @@
       "circuit_breaker_reason": "4 promotions in last 24h (max=3)",
       "finished_at": "2026-06-18T03:13:48.241476",
       "recorded_at": "2026-06-18T03:13:48.241478"
+    },
+    {
+      "started_at": "2026-06-19T06:54:10.837680",
+      "finished_at": "2026-06-19T06:54:10.837680",
+      "recorded_at": "2026-06-19T06:54:10.837680",
+      "outcomes_processed": 0,
+      "labs_run": [],
+      "drift_detected": false,
+      "optimized": true,
+      "promoted": true,
+      "verdict": "APPROVED",
+      "deployment_log_id": 14,
+      "triggered_by": "continuous_learning",
+      "note": "auto-promoted by continuous_learning cycle",
+      "reconciled": true,
+      "dry_run": false
+    },
+    {
+      "started_at": "2026-06-21T06:34:17.926803",
+      "finished_at": "2026-06-21T06:34:17.926803",
+      "recorded_at": "2026-06-21T06:34:17.926803",
+      "outcomes_processed": 0,
+      "labs_run": [],
+      "drift_detected": false,
+      "optimized": true,
+      "promoted": true,
+      "verdict": "APPROVED",
+      "deployment_log_id": 15,
+      "triggered_by": "continuous_learning",
+      "note": "auto-promoted by continuous_learning cycle",
+      "reconciled": true,
+      "dry_run": false
+    },
+    {
+      "started_at": "2026-06-22T08:12:53.688026",
+      "outcomes_processed": 21,
+      "labs_run": [
+        "drift_lab",
+        "factor",
+        "regime"
+      ],
+      "drift_detected": false,
+      "optimized": true,
+      "promoted": true,
+      "verdict": "APPROVED",
+      "dry_run": false,
+      "error": null,
+      "lab_results": {
+        "factor": {
+          "error": null,
+          "n_signals": 1193
+        },
+        "regime": {
+          "error": null,
+          "n_signals": 1193
+        }
+      },
+      "val_oos_wr": 0.8273,
+      "val_oos_sharpe": 3.3359,
+      "val_n_oos": 220,
+      "deployment_log_id": 16,
+      "finished_at": "2026-06-22T08:12:55.196327",
+      "recorded_at": "2026-06-22T08:12:55.196336"
     }
   ],
-  "best_approved_oos_wr": 0.8125
+  "best_approved_oos_wr": 0.8273
 }

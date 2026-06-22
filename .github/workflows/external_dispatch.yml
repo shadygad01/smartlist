@@ -145,6 +145,9 @@ jobs:
         run: python3 dashboard.py || true
         continue-on-error: true
 
+      - name: Consistency assertions
+        run: python operations/consistency_check.py
+
       - name: Update public status
         run: |
           python - <<'PYEOF'

@@ -6,16 +6,14 @@ telegram_debounce.json replaced by telegram_delivery SQLite table (exactly-once)
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
-
 from presentation.presentation_snapshot import PresentationSnapshot, build_presentation_snapshot
 from notifications.notification_router import (
     route as _route,
     MORNING_BRIEF, FIRST_BUY, NEAR_CONSTITUTIONAL,
 )
+from time_authority import now_cairo as _now_cairo
 
-SEP       = "━━━━━━━━━━━━━━━━━━━━━"
-_CAIRO_TZ = timezone(timedelta(hours=2))
+SEP = "━━━━━━━━━━━━━━━━━━━━━"
 
 
 def _sign(r: float) -> str:
@@ -39,7 +37,7 @@ def _opp_line(e: dict) -> str:
 
 
 def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
-    cairo_t = datetime.now(_CAIRO_TZ).strftime("%H:%M")
+    cairo_t = _now_cairo().strftime("%H:%M")
     micon   = _market_icon(snap.market_status)
     scan_s  = snap.last_scan_ts[:16].replace("T", " ") if snap.last_scan_ts else "--"
 
@@ -99,7 +97,7 @@ def send_alert(event: dict, snap: PresentationSnapshot | None = None) -> None:
     ret     = float(event.get("return_pct", 0))
     date_s  = event.get("event_date", "")
     type_l  = "🟢 FIRST BUY" if etype == "FIRST_BUY" else "🔵 RE-ACCUMULATION"
-    cairo_t = datetime.now(_CAIRO_TZ).strftime("%H:%M Cairo")
+    cairo_t = _now_cairo().strftime("%H:%M Cairo")
 
     msg = (
         f"⚡ *CONSTITUTIONAL ALERT*\n"

@@ -7,10 +7,10 @@ No executive summary, no portfolio advisor, no leaderboards.
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from presentation.presentation_snapshot import PresentationSnapshot, build_presentation_snapshot
+from time_authority import now_cairo as _now_cairo
 
 _NAVY  = "#1a3a5c"
 _GREEN = "#155724"
@@ -181,56 +181,36 @@ def _waiting_for_reason(e) -> tuple[str, str]:
     return f"Approaching Zone — R2 {r2:.0f} Score {score:.0f}", _AMBER
 
 
-def _watch_list(snap):
-    # Use universe_snapshot for APPROACHING tickers (unified data source)
-    approaching = [r for r in (snap.universe_snapshot or []) if r.get("status") == "APPROACHING"]
-    # Fallback to approaching_entries if universe_snapshot not populated
-    if not approaching and snap.approaching_entries:
-        rows = ""
-        for e in snap.approaching_entries:
-            dist = e["distance_to_constitutional"]
-            urg  = _GREEN if dist <= 0.3 else (_AMBER if dist <= 1.0 else _MUTED)
-            waiting = f"&#8211;{dist:.1f} pts to constitutional"
-            rows += (
-                f'<tr style="border-bottom:1px solid #e8f0f8;">'
-                f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:{_NAVY};">{e["ticker"]}</td>'
-                f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;color:{_MUTED};">{e.get("sector","")}</td>'
-                f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">{e["current_price"]:.2f}</td>'
-                f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">{e["entry_price"]:.2f} EGP</td>'
-                f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;color:{urg};font-weight:700;">{waiting}</td>'
-                f'</tr>'
-            )
-        return (
-            _section_title(f"&#128269; Watch List ({len(snap.approaching_entries)} approaching)") +
-            f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-            f' style="border:1px solid #e8d5a0;border-collapse:collapse;background:#fffcf0;">'
-            f'{_th("Ticker","Sector","Current","Entry Zone","Waiting For")}'
-            f'{rows}</table>'
-        )
-    if not approaching:
+def _near_constitutional_entry(snap):
+    """Render Near Constitutional Entry table — identical columns to dashboard."""
+    entries = snap.approaching_entries
+    if not entries:
         return ""
     rows = ""
-    for e in sorted(approaching, key=lambda x: -(x.get("r2_score") or 0)):
-        cur   = e.get("current_price") or 0.0
-        ez    = e.get("entry_zone") or 0.0
-        r2    = e.get("r2_score") or 0.0
-        dist  = round(60.0 - r2, 1)
-        urg   = _GREEN if dist <= 0.3 else (_AMBER if dist <= 1.0 else _MUTED)
-        waiting = e.get("reason") or f"&#8211;{dist:.1f} pts to constitutional"
+    for e in sorted(entries, key=lambda x: x["distance_to_constitutional"]):
+        dist_pts = e["distance_to_constitutional"]
+        need_pct = e["need_move_pct"]
+        cur_s    = f'{e["current_price"]:.2f}' if e["current_price"] else "—"
+        ez_s     = f'{e["entry_price"]:.2f} EGP' if e["entry_price"] else "—"
+        r2_prog  = f'{60 - dist_pts:.1f} / 60 &nbsp;(&#8722;{dist_pts:.1f})'
+        zone_s   = "AT ZONE" if need_pct < 0.5 else f'+{need_pct:.1f}% above current'
+        waiting  = f"&#8722;{dist_pts:.1f} pts to R2 gate"
+        urg_c    = _GREEN if dist_pts <= 2 else (_AMBER if dist_pts <= 5 else _MUTED)
         rows += (
             f'<tr style="border-bottom:1px solid #e8f0f8;">'
             f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:{_NAVY};">{e["ticker"]}</td>'
-            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;color:{_MUTED};">R2={r2:.0f}</td>'
-            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">{cur:.2f}</td>'
-            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">{ez:.2f} EGP</td>'
-            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;color:{urg};font-weight:700;">{waiting}</td>'
+            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">{cur_s}</td>'
+            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">{ez_s}</td>'
+            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;color:{urg_c};font-weight:700;">{r2_prog}</td>'
+            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;color:{_AMBER};">{zone_s}</td>'
+            f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;color:{urg_c};font-weight:700;">{waiting}</td>'
             f'</tr>'
         )
     return (
-        _section_title(f"&#128269; Watch List ({len(approaching)} approaching)") +
+        _section_title(f"&#127919; NEAR CONSTITUTIONAL ENTRY ({len(entries)} tickers)") +
         f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
         f' style="border:1px solid #e8d5a0;border-collapse:collapse;background:#fffcf0;">'
-        f'{_th("Ticker","R2","Current","Entry Zone","Waiting For")}'
+        f'{_th("Ticker", "Current", "Entry Zone", "R2 Progress", "Zone Position", "Waiting For")}'
         f'{rows}</table>'
     )
 
@@ -252,14 +232,13 @@ def _footer():
 def build_email(snap: PresentationSnapshot | None = None) -> str:
     if snap is None:
         snap = build_presentation_snapshot()
-    cairo_tz = timezone(timedelta(hours=2))
-    now_str  = datetime.now(cairo_tz).strftime("%A, %d %B %Y  &#183;  %H:%M Cairo")
+    now_str = _now_cairo().strftime("%A, %d %B %Y  &#183;  %H:%M Cairo")
     inner = "\n".join([
         _hdr(snap, now_str),
         _today_opportunities(snap),
         _market_status_section(snap),
         _all_active(snap),
-        _watch_list(snap),
+        _near_constitutional_entry(snap),
         _footer(),
     ])
     return (

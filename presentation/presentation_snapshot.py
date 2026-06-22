@@ -16,7 +16,7 @@ from pathlib import Path
 
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
-from time_authority import now_cairo, now_iso, today_cairo, is_trading_day as _is_trading_day, _EET as _CAIRO_TZ
+from time_authority import now_cairo, now_iso, today_cairo, is_trading_day as _is_trading_day, _EET as _CAIRO_TZ, market_state as _market_state_ta, _MARKET_OPEN_H, _MARKET_OPEN_M
 
 _ADVISOR_DB = BASE / "portfolio_advisor.db"
 _KB_DB      = BASE / "research" / "knowledge" / "knowledge_base.db"
@@ -47,19 +47,15 @@ def _clean_reason(text: str) -> str:
 
 
 def _market_status() -> str:
-    now_cairo_dt = now_cairo()
-    dow = now_cairo_dt.weekday()  # Mon=0, Sun=6
-    h, m = now_cairo_dt.hour, now_cairo_dt.minute
-    mins = h * 60 + m
-    if dow not in _TRADING_DAYS:
+    """Delegates to time_authority.market_state() — single source of truth."""
+    state = _market_state_ta()
+    if state == "OPEN":
+        return "OPEN"
+    if state == "PRE_OPEN":
+        return f"PRE-MARKET (opens {_MARKET_OPEN_H:02d}:{_MARKET_OPEN_M:02d})"
+    if state == "WEEKEND":
         return "CLOSED (Weekend)"
-    open_mins  = _CAIRO_OPEN[0]  * 60 + _CAIRO_OPEN[1]
-    close_mins = _CAIRO_CLOSE[0] * 60 + _CAIRO_CLOSE[1]
-    if mins < open_mins:
-        return f"PRE-MARKET (opens {_CAIRO_OPEN[0]:02d}:{_CAIRO_OPEN[1]:02d})"
-    if mins > close_mins:
-        return "CLOSED (After Hours)"
-    return "OPEN"
+    return "CLOSED (After Hours)"
 
 
 def _confidence_stars(total_events: int, avg_return: float, win_rate: float) -> str:

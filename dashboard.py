@@ -276,29 +276,11 @@ def _s_stats(snap):
 
 
 # ── Near Constitutional Entry ─────────────────────────────────────────────────
-# Criteria: price ≤ entry zone (discount met) AND R2 within 10 pts of constitutional gate (60)
-# These tickers need ONLY R2 to cross 60 — they are the highest-priority opportunities.
+# Single source of truth: snap.approaching_entries (from PresentationSnapshot).
+# Criteria: R2 50–59.9, current_price ≤ entry_price, final_score ≥ 35.
+# Stats card, this table, diagnostics, and email all read from this same list.
 def _s_near_entry(snap) -> str:
-    uni = snap.universe_snapshot or []
-
-    def _qualifies(r):
-        r2  = r.get("r2_score") or 0.0
-        cur = r.get("current_price")
-        ez  = r.get("entry_zone")
-        if (60 - r2) > 10:
-            return False
-        if cur and ez and ez > 0 and cur > ez:
-            return False
-        return True
-
-    candidates = sorted(
-        [r for r in uni if _qualifies(r)],
-        key=lambda r: (60 - (r.get("r2_score") or 0))
-    )
-
-    # ── assertion: no ticker duplicated within section ─────────────────────────
-    tickers_here = [r["ticker"] for r in candidates]
-    assert len(tickers_here) == len(set(tickers_here)), f"Duplicate in Near Entry: {tickers_here}"
+    candidates = sorted(snap.approaching_entries, key=lambda e: e["distance_to_constitutional"])
 
     if not candidates:
         return f"""
@@ -310,22 +292,17 @@ def _s_near_entry(snap) -> str:
 </div>"""
 
     rows = ""
-    for r in candidates:
-        ticker   = r["ticker"]
-        cur      = r.get("current_price")
-        ez       = r.get("entry_zone")
-        r2       = r.get("r2_score") or 0.0
-        dist_pts = round(60 - r2, 1)
-        cur_s    = f'{cur:.2f}' if cur else "—"
-        ez_s     = f'{ez:.2f}' if ez else "Awaiting Entry Zone"
-        if cur and ez and ez > 0:
-            need_pct = (ez - cur) / cur * 100
-            zone_s   = "AT ZONE" if abs(need_pct) < 0.5 else f'+{need_pct:.1f}% above current'
-        else:
-            zone_s = "—"
-        waiting  = r.get("reason") or "—"
-        mem_s    = "&#9733;" if r.get("memory") else ""
-        urg_c    = G if dist_pts <= 2 else (A if dist_pts <= 5 else DIM)
+    for e in candidates:
+        ticker    = e["ticker"]
+        cur       = e["current_price"]
+        ez        = e["entry_price"]
+        dist_pts  = e["distance_to_constitutional"]
+        need_pct  = e["need_move_pct"]
+        cur_s     = f'{cur:.2f}' if cur else "—"
+        ez_s      = f'{ez:.2f}' if ez else "—"
+        zone_s    = "AT ZONE" if need_pct < 0.5 else f'+{need_pct:.1f}% above current'
+        waiting   = f"−{dist_pts:.1f} pts to R2 gate"
+        urg_c     = G if dist_pts <= 2 else (A if dist_pts <= 5 else DIM)
         rows += f"""
 <tr>
   <td style="font-weight:700;color:{B};font-size:14px;">{ticker}</td>
@@ -334,7 +311,6 @@ def _s_near_entry(snap) -> str:
   <td style="color:{urg_c};font-weight:700;">{60-dist_pts:.1f} / 60 &nbsp;(&#8722;{dist_pts:.1f})</td>
   <td style="color:{A};font-size:12px;">{zone_s}</td>
   <td style="color:{DIM};font-size:11px;max-width:200px;">{waiting}</td>
-  <td style="color:{A};font-size:13px;">{mem_s}</td>
 </tr>"""
 
     return f"""
@@ -346,7 +322,7 @@ def _s_near_entry(snap) -> str:
   </div>
   <div class="tbl-wrap">
     <table>
-      <tr><th>Ticker</th><th>Current</th><th>Entry Zone</th><th>R2 Progress</th><th>Zone Position</th><th>Waiting For</th><th>Mem</th></tr>
+      <tr><th>Ticker</th><th>Current</th><th>Entry Zone</th><th>R2 Progress</th><th>Zone Position</th><th>Waiting For</th></tr>
       {rows}
     </table>
   </div>
@@ -357,11 +333,7 @@ def _s_near_entry(snap) -> str:
 # Universe members below constitutional threshold: not yet in discount + R2 range.
 def _s_future_opportunities(snap) -> str:
     uni = snap.universe_snapshot or []
-    near_tickers = {
-        r["ticker"] for r in uni
-        if (60 - (r.get("r2_score") or 0)) <= 10
-        and not (r.get("current_price") and r.get("entry_zone") and r["current_price"] > r["entry_zone"])
-    }
+    near_tickers = {e["ticker"] for e in snap.approaching_entries}
 
     def _qualifies(r):
         status  = r.get("status", "")
@@ -906,13 +878,7 @@ def _s_operations_center() -> str:
 # ── Section mutual-exclusivity assertion ─────────────────────────────────────
 def _assert_sections(snap) -> None:
     uni = snap.universe_snapshot or []
-
-    near_tickers = {
-        r["ticker"] for r in uni
-        if (60 - (r.get("r2_score") or 0)) <= 10
-        and not (r.get("current_price") and r.get("entry_zone")
-                 and r["current_price"] > r["entry_zone"])
-    }
+    near_tickers = {e["ticker"] for e in snap.approaching_entries}
     future_tickers = {
         r["ticker"] for r in uni
         if r["ticker"] not in near_tickers

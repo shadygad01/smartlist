@@ -33,7 +33,7 @@ from typing import Optional
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
-_EET          = timezone(timedelta(hours=2))
+from time_authority import now_cairo as _now_cairo_ta
 _SCAN_EXEC_DB = str(BASE / "scan_execution.db")
 _NOTIF_DB     = str(BASE / "notification_delivery.db")
 _STATE_FILE   = str(BASE / "operations_state.json")
@@ -50,7 +50,7 @@ _MARKET_END   = (14, 30)
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _now_cairo() -> datetime:
-    return datetime.now(_EET)
+    return _now_cairo_ta()
 
 
 def _today_str() -> str:

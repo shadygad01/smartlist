@@ -9,6 +9,9 @@ import json
 import sqlite3
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).parent))
+from time_authority import now_cairo as _now_cairo_ta
 
 BASE = Path(__file__).parent
 
@@ -18,7 +21,7 @@ _SIGNAL_HIST  = BASE / "signal_history.json"
 _CBR_DB       = BASE / "constitutional_buy_registry.db"
 _SNAP_DB      = BASE / "universe_snapshot.db"
 
-_CAIRO_TZ = timezone(timedelta(hours=2))
+_CAIRO_TZ = _now_cairo_ta().tzinfo  # canonical tzinfo from time_authority
 
 
 # ── Source loaders ─────────────────────────────────────────────────────────────

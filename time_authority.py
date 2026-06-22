@@ -1,6 +1,7 @@
 """
 Constitutional Time Authority — single source of truth for all time operations.
-Egypt uses EET (UTC+2) year-round. No DST since 2011. Never use UTC+3 for Cairo.
+Egypt Standard Time (Africa/Cairo). Uses ZoneInfo so tzdata governs offset
+automatically — no hardcoded UTC+2 or UTC+3 fixed offsets here.
 
 ALL files must import from here. Direct datetime.now() calls are prohibited
 in operational, presentation, and communications code.
@@ -8,9 +9,10 @@ in operational, presentation, and communications code.
 from __future__ import annotations
 
 from datetime import datetime, date, timezone, timedelta
+from zoneinfo import ZoneInfo
 
-# Egypt Standard Time — UTC+2, no DST
-_EET = timezone(timedelta(hours=2))
+# Egypt Standard Time — canonical ZoneInfo, follows system tzdata
+_EET = ZoneInfo("Africa/Cairo")
 
 # EGX trading days: Sun=6, Mon=0, Tue=1, Wed=2, Thu=3
 _TRADING_DAYS = {0, 1, 2, 3, 6}

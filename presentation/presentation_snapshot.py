@@ -22,10 +22,7 @@ _ADVISOR_DB = BASE / "portfolio_advisor.db"
 _KB_DB      = BASE / "research" / "knowledge" / "knowledge_base.db"
 _POOL_DB    = BASE / "candidate_pool.db"
 
-# EGX: Sun-Thu 10:00-15:30, UTC+2 (no DST in Egypt)
-_CAIRO_OPEN  = (10, 0)
-_CAIRO_CLOSE = (15, 30)
-_TRADING_DAYS = {0, 1, 2, 3, 6}  # Mon=0 Sun=6; EGX: Sun-Thu
+# Market hours and trading days are defined exclusively in time_authority.py
 
 
 def _db(path: Path) -> sqlite3.Connection | None:

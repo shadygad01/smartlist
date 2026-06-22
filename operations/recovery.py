@@ -82,28 +82,29 @@ def send_morning_email() -> bool:
         if not os.getenv("EMAIL_USER") or not os.getenv("EMAIL_PASS"):
             _log("Email env not set — skipping send")
             return True  # Not a failure, just not configured
+
+        from notifications.morning_guard import (
+            is_morning_sent, record_morning_start, record_morning_done,
+            html_hash, snap_hash,
+        )
+        date_str = today_cairo().isoformat()
+        if is_morning_sent(date_str):
+            _log(f"Morning report for {date_str} already sent — skipping (idempotency guard)")
+            return True
+
+        mid = record_morning_start(date_str)
         from presentation.presentation_snapshot import build_presentation_snapshot
-        from email_v2 import build_email
+        from egx_email import build_email
         snap = build_presentation_snapshot()
         html = build_email(snap)
-        _log(f"Morning email built ({len(html)//1024} KB) — send via existing alert_email path")
-        # Trigger the email sender in main.py-compatible way
-        import smtplib
-        from email.mime.multipart import MIMEMultipart
-        from email.mime.text import MIMEText
-        from datetime import datetime
-        user = os.getenv("EMAIL_USER")
-        pwd  = os.getenv("EMAIL_PASS")
-        msg  = MIMEMultipart("alternative")
-        msg["Subject"] = f"EGX Constitutional Morning Brief — {now_cairo().strftime('%d %b %Y')}"
-        msg["From"]    = user
-        msg["To"]      = user
-        msg.attach(MIMEText(html, "html"))
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
-            s.login(user, pwd)
-            s.send_message(msg)
-        _log("Morning email sent")
-        return True
+        _log(f"Morning email built ({len(html)//1024} KB) — sending via notifications package")
+        from notifications.email_sender import send as _send_email
+        subject = f"EGX Constitutional Morning Brief — {now_cairo().strftime('%d %b %Y')}"
+        ok = _send_email(subject=subject, html=html)
+        status = "sent" if ok else "failed"
+        record_morning_done(mid, status, build_hash=html_hash(html), snapshot_hash=snap_hash(snap))
+        _log(f"Morning email {status}")
+        return ok
     except Exception as e:
         _log(f"FAILED send_morning_email: {e}")
         return False

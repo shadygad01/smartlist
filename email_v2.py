@@ -1,9 +1,10 @@
 """
-EGX Constitutional Investment Platform — Email V2
-Constitutional Morning Letter. Consumes PresentationSnapshot only — no own SQL.
-Section order: Header → Executive Summary → Near Constitutional → Active →
-               Re-Accumulation → Future/Watch → Timeline → Statistics → Research → Footer
+DEPRECATED — DO NOT USE FOR MORNING REPORTS.
+Canonical builder is egx_email.py → build_email(snap).
+This file is preserved for reference only and is not imported by any active code path.
 """
+# ruff: noqa
+# pylint: skip-file
 from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta

@@ -1091,7 +1091,7 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
 
     snap = build_presentation_snapshot()
     html = build_email(snap)
-    return html, results
+    return html, results, snap
 
 
 def _build_report_v1(holiday_mode=False, last_trading=None, _cached_results=None):
@@ -1618,13 +1618,11 @@ def _get_position_bq(symbol: str, db_path: str = "egx_research.db") -> dict | No
     return None
 
 
-def send_telegram_alerts(results):
-    """Constitutional Morning Brief V2 — delegates to telegram.py."""
+def send_telegram_alerts(results, snap=None):
+    """Constitutional Morning Brief V2 — delegates to telegram.py. Accepts pre-built snap."""
     from telegram import send_morning_brief
-    from presentation.presentation_snapshot import build_presentation_snapshot
     date_str = now_cairo().strftime("%d %b %Y")
-    snap = build_presentation_snapshot()
-    send_morning_brief(date_str, snap)
+    send_morning_brief(date_str, snap)  # snap=None → telegram.py builds it (fallback only)
 
 
 def _send_telegram_alerts_v1(results):
@@ -1822,22 +1820,24 @@ def backfill_pattern_scores():
     pass  # pattern_engine removed 2026-06-21
 
 
-def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
+def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=None):
     """
     Shared workflow for daily and manual scans:
     1. Fetch data once
     2. Register new positions + update targets
-    3. Rebuild HTML from cached data (no re-fetch)
-    4. Send email + Telegram
+    3. Rebuild HTML + snapshot from cached data (one snapshot, no re-fetch)
+    4. Send email + Telegram from the SAME snapshot
     5. Save results + detect changes
     """
+    from notifications.morning_guard import html_hash, snap_hash, record_morning_done
+
     previous_results = load_previous_results()
 
     # Step 0: backfill missing pattern scores for existing positions
     backfill_pattern_scores()
 
     # Step 1: fetch data
-    html, results = build_report(holiday_mode=holiday_mode, last_trading=last_trading)
+    html, results, _ = build_report(holiday_mode=holiday_mode, last_trading=last_trading)
 
     # Step 2: register positions, update targets
     _register_new_positions(results)
@@ -1846,13 +1846,22 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix):
     monitor_reinforcement(cur_prices, results)
     resolved = check_outcomes(cur_prices)
 
-    # Step 3: rebuild HTML using cached prices (no extra HTTP calls)
-    html, _ = build_report(holiday_mode=holiday_mode, last_trading=last_trading,
-                           _cached_results=results)
+    # Step 3: rebuild HTML using cached prices — ONE snapshot build, shared with Telegram
+    html, _, snap = build_report(holiday_mode=holiday_mode, last_trading=last_trading,
+                                 _cached_results=results)
 
-    # Step 4: send
+    # Step 4: send email + Telegram from the same snapshot
     send_email(html, subject_suffix=email_suffix)
-    send_telegram_alerts(results)
+    send_telegram_alerts(results, snap=snap)
+
+    # Log morning delivery hashes
+    if morning_mid:
+        try:
+            record_morning_done(morning_mid, "sent",
+                                build_hash=html_hash(html),
+                                snapshot_hash=snap_hash(snap))
+        except Exception:
+            pass
 
     # Step 5: persist + change alerts
     save_scan_results(results)
@@ -2050,16 +2059,26 @@ def _ensure_backfill():
 
 
 def daily_scan():
-    print(f"\n📅 Daily scan started at {fmt_cairo()}")
+    from notifications.morning_guard import is_morning_sent, record_morning_start
+    date_str = today_cairo().isoformat()
+
+    if is_morning_sent(date_str):
+        print(f"⚠️  Morning report for {date_str} already sent — EXIT (idempotency guard)")
+        return
+
+    morning_mid = record_morning_start(date_str)
+    print(f"\n📅 Daily scan started at {fmt_cairo()} [id={morning_mid[:8]}]")
     _ensure_backfill()
     if is_egx_trading_day(today_cairo()):
-        _run_scan_workflow(holiday_mode=False, last_trading=None, email_suffix="")
+        _run_scan_workflow(holiday_mode=False, last_trading=None, email_suffix="",
+                          morning_mid=morning_mid)
     else:
         last_td = most_recent_trading_day(today_cairo())
         _run_scan_workflow(
             holiday_mode=True,
             last_trading=str(last_td),
             email_suffix=f" (Holiday — Last Session: {last_td})",
+            morning_mid=morning_mid,
         )
     print("\n✅ Daily scan completed!")
 
@@ -2067,7 +2086,7 @@ def daily_scan():
 def continuous_scan():
     print(f"\n🔄 Continuous scan at {fmt_cairo()}")
     previous_results = load_previous_results()
-    html, current_results = build_report(holiday_mode=False)
+    html, current_results, _ = build_report(holiday_mode=False)
     save_scan_results(current_results)
     save_signal_history(current_results)
     changes = detect_signal_changes(current_results, previous_results)

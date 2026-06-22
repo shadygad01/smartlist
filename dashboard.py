@@ -856,9 +856,12 @@ if __name__ == "__main__":
     print(f"[Dashboard V7] Commit: {commit}")
     print(f"[Dashboard V7] version.json written (v7.0)")
 
-    # Section content verification
-    snap_check = __import__("presentation.presentation_snapshot", fromlist=["build_presentation_snapshot"]).build_presentation_snapshot()
+    # Write canonical presentation_snapshot.json
+    from presentation.presentation_snapshot import build_presentation_snapshot, write_presentation_snapshot_json
+    snap_check = build_presentation_snapshot()
+    write_presentation_snapshot_json(snap_check, build_hash=build_hash)
     uni = snap_check.universe_snapshot or []
+    snap_check = snap_check  # already assigned above
     near = [r["ticker"] for r in uni if (60-(r.get("r2_score") or 0))<=10
             and not (r.get("current_price") and r.get("entry_zone") and r["current_price"] > r["entry_zone"])]
     bad = [t for t in ["COMI.CA","ORHD.CA","HELI.CA","EMFD.CA","JUFO.CA","PHDC.CA","ARCC.CA"] if t in near]

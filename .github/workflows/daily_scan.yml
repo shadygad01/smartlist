@@ -114,6 +114,16 @@ print('Universe snapshot and DNA rebuilt.')
         run: |
           python3 audit/assert_price_freshness.py
 
+      - name: Build presentation snapshot JSON and assert consistency
+        run: |
+          python3 -c "
+from presentation.presentation_snapshot import build_presentation_snapshot, write_presentation_snapshot_json
+snap = build_presentation_snapshot()
+write_presentation_snapshot_json(snap)
+print('presentation_snapshot.json written.')
+"
+          python3 audit/assert_presentation_consistency.py
+
       - name: Constitutional Golden Master Validation
         run: |
           python3 audit/run_daily_validation.py
@@ -126,7 +136,7 @@ print('Universe snapshot and DNA rebuilt.')
           git add open_positions.json positions_history.json scan_results.json \
                   signal_history.json signal_log.json learned_weights.json \
                   egx_research.db research_results.json \
-                  changed_symbols.json || true
+                  changed_symbols.json presentation_snapshot.json || true
           git add historical_data/historical_data/*.csv || true
           git add audit/daily_validation/ || true
           git diff --staged --quiet || git commit -m "Auto-update positions and research DB [skip ci]"

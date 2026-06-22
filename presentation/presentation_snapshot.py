@@ -295,3 +295,68 @@ def build_presentation_snapshot() -> PresentationSnapshot:
         kb.close()
 
     return snap
+
+
+def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: str = "") -> "Path":
+    """Write canonical presentation_snapshot.json — single source of truth for all layers."""
+    import json
+    import subprocess
+
+    near_tickers = {e["ticker"] for e in snap.approaching_entries}
+    active = [u for u in snap.universe_snapshot if u["status"] in ("ACTIVE", "PREMIUM", "UNDER_REVIEW")]
+    active_tickers = {u["ticker"] for u in active}
+    future_candidates = [
+        u for u in snap.universe_snapshot
+        if u["ticker"] not in near_tickers and u["ticker"] not in active_tickers
+    ]
+    watchlist = [e["ticker"] for e in snap.approaching_entries] + [
+        u["ticker"] for u in future_candidates
+        if u["ticker"] not in near_tickers
+    ]
+
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=str(BASE), text=True
+        ).strip()
+    except Exception:
+        commit = ""
+
+    data = {
+        "generated_at":        snap.generated_at,
+        "market_date":         snap.generated_at[:10],
+        "market_status":       snap.market_status,
+        "build_hash":          build_hash,
+        "commit":              commit,
+        "near_constitutional": snap.approaching_entries,
+        "active":              active,
+        "re_accumulation":     snap.re_accumulations,
+        "future_candidates":   future_candidates,
+        "watchlist":           watchlist,
+        "universe_snapshot":   snap.universe_snapshot,
+        "statistics": {
+            "total_timeline_events":    snap.total_events,
+            "total_tickers_in_timeline": snap.total_tickers,
+            "near_constitutional_count": len(snap.approaching_entries),
+            "active_count":             len(active),
+            "re_accumulation_count":    len(snap.re_accumulations),
+            "future_candidates_count":  len(future_candidates),
+            "universe_size":            len(snap.universe_snapshot),
+            "new_events_today":         len(snap.new_events_today),
+        },
+        "health_stars":      snap.health_stars,
+        "health_label":      snap.health_label,
+        "health_narrative":  snap.health_narrative,
+        "research_insights": snap.research_insights,
+        "knowledge_count":   snap.knowledge_count,
+    }
+
+    out = BASE / "presentation_snapshot.json"
+    out.write_text(json.dumps(data, indent=2, default=str))
+    print(
+        f"[PresentationSnapshot] Wrote presentation_snapshot.json — "
+        f"{len(snap.universe_snapshot)} universe, "
+        f"{len(snap.approaching_entries)} near, "
+        f"{len(active)} active, "
+        f"{len(snap.re_accumulations)} re-acc"
+    )
+    return out

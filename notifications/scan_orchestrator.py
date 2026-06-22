@@ -118,6 +118,7 @@ class ScanOrchestrator:
         status: str = "success",
         build_hash: str = "",
         error: str = "",
+        job_type: str = "",
     ) -> None:
         conn = sqlite3.connect(self._db)
         try:
@@ -130,6 +131,26 @@ class ScanOrchestrator:
             print(f"[Orchestrator] execution_id={eid[:8]} → {status}")
         finally:
             conn.close()
+
+        # Update heartbeat + public_status after every execution
+        try:
+            from operations.heartbeat import update_heartbeat, record_scan
+            from time_authority import today_iso
+            record_scan(market_date=today_iso(), build_hash=build_hash, status=status)
+            if job_type == "morning_report" and status == "success":
+                from operations.heartbeat import record_email
+                record_email(today_iso())
+            if job_type == "dashboard_refresh" and status == "success":
+                from operations.heartbeat import record_dashboard
+                record_dashboard(build_hash=build_hash)
+        except Exception as _hb_err:
+            print(f"[Orchestrator] heartbeat update non-fatal: {_hb_err}")
+
+        try:
+            from operations.github_health import write_public_status
+            write_public_status()
+        except Exception as _ps_err:
+            print(f"[Orchestrator] public_status update non-fatal: {_ps_err}")
 
     # ── Public job methods ────────────────────────────────────────────────────
 
@@ -167,10 +188,10 @@ class ScanOrchestrator:
             except Exception:
                 pass
 
-            self._release(eid, "success", build_hash=build_hash)
+            self._release(eid, "success", build_hash=build_hash, job_type="morning_report")
             return True
         except Exception as e:
-            self._release(eid, "failed", error=str(e))
+            self._release(eid, "failed", error=str(e), job_type="morning_report")
             raise
 
     def run_market_scan(self) -> bool:
@@ -184,10 +205,10 @@ class ScanOrchestrator:
         try:
             from main import continuous_scan
             continuous_scan()
-            self._release(eid, "success")
+            self._release(eid, "success", job_type="market_scan")
             return True
         except Exception as e:
-            self._release(eid, "failed", error=str(e))
+            self._release(eid, "failed", error=str(e), job_type="market_scan")
             raise
 
     def run_position_monitor(self) -> bool:
@@ -208,10 +229,10 @@ class ScanOrchestrator:
             cur_prices = _collect_current_prices(results)
             monitor_positions(cur_prices)
             monitor_reinforcement(cur_prices, results)
-            self._release(eid, "success")
+            self._release(eid, "success", job_type="position_monitor")
             return True
         except Exception as e:
-            self._release(eid, "failed", error=str(e))
+            self._release(eid, "failed", error=str(e), job_type="position_monitor")
             raise
 
     def run_dashboard_refresh(self) -> bool:
@@ -238,10 +259,11 @@ class ScanOrchestrator:
             ok = result.returncode == 0
 
             self._release(eid, "success" if ok else "failed",
-                          error="" if ok else f"dashboard.py exited {result.returncode}")
+                          error="" if ok else f"dashboard.py exited {result.returncode}",
+                          job_type="dashboard_refresh")
             return ok
         except Exception as e:
-            self._release(eid, "failed", error=str(e))
+            self._release(eid, "failed", error=str(e), job_type="dashboard_refresh")
             raise
 
     # ── Dispatcher ────────────────────────────────────────────────────────────

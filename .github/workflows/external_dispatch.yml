@@ -1,0 +1,146 @@
+name: External Dispatch — High Availability Trigger
+
+# Fired by external schedulers (Google Apps Script, cron-job.org) via
+# repository_dispatch when GitHub Actions cron is late or missed.
+# Also accepts workflow_dispatch for manual recovery.
+#
+# Supported event_type values (repository_dispatch clientPayload.event_type):
+#   morning_report    — run morning brief if not yet sent today
+#   market_scan       — run intra-day signal scan
+#   dashboard_refresh — rebuild presentation snapshot + dashboard
+#   operations_check  — run operations monitor startup check only
+
+on:
+  repository_dispatch:
+    types:
+      - morning_report
+      - market_scan
+      - dashboard_refresh
+      - operations_check
+      - ha_trigger           # generic HA trigger — dispatches from env
+
+  workflow_dispatch:
+    inputs:
+      job_type:
+        description: 'Job to run: morning_report | market_scan | dashboard_refresh | operations_check'
+        required: false
+        default: 'operations_check'
+        type: choice
+        options:
+          - morning_report
+          - market_scan
+          - dashboard_refresh
+          - operations_check
+      force:
+        description: 'Force execution even if already completed today'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: egx-external-dispatch-${{ github.event.action || github.event.inputs.job_type }}
+  cancel-in-progress: false   # HA trigger — never cancel, let it complete
+
+permissions:
+  contents: write
+
+jobs:
+
+  external_trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Determine job type
+        id: job
+        run: |
+          # repository_dispatch: event_type in clientPayload or action name
+          REPO_EVENT="${{ github.event.client_payload.event_type }}"
+          DISPATCH_ACTION="${{ github.event.action }}"
+          MANUAL_TYPE="${{ github.event.inputs.job_type }}"
+
+          JOB_TYPE="${REPO_EVENT:-${DISPATCH_ACTION:-${MANUAL_TYPE:-operations_check}}}"
+          # ha_trigger without specific type → dispatch_from_env
+          if [ "$JOB_TYPE" = "ha_trigger" ]; then JOB_TYPE="dispatch"; fi
+          echo "job_type=${JOB_TYPE}" >> "$GITHUB_OUTPUT"
+          echo "Resolved job_type: ${JOB_TYPE}"
+
+      - name: Run via ScanOrchestrator
+        env:
+          EMAIL_USER:       ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS:       ${{ secrets.EMAIL_PASS }}
+          TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PYTHONUNBUFFERED: "1"
+          # For morning_report / market_scan dispatch_from_env needs these
+          FORCE_DAILY: >-
+            ${{ steps.job.outputs.job_type == 'morning_report' && 'True' || 'False' }}
+          MANUAL_RUN:  >-
+            ${{ steps.job.outputs.job_type == 'market_scan' && 'True' || 'False' }}
+        run: |
+          python - <<'PYEOF'
+          import sys, os
+          sys.path.insert(0, '.')
+          from notifications.scan_orchestrator import ScanOrchestrator
+
+          job_type = "${{ steps.job.outputs.job_type }}"
+          print(f"[ExternalDispatch] job_type={job_type}")
+
+          orch = ScanOrchestrator()
+          dispatch = {
+              "morning_report":    orch.run_morning_report,
+              "market_scan":       orch.run_market_scan,
+              "dashboard_refresh": orch.run_dashboard_refresh,
+              "operations_check":  lambda: (
+                  __import__('notifications.operations_monitor', fromlist=['OperationsMonitor'])
+                  .OperationsMonitor().startup_check()
+              ),
+              "dispatch":          orch.dispatch_from_env,
+          }
+
+          fn = dispatch.get(job_type, orch.dispatch_from_env)
+          result = fn()
+          print(f"[ExternalDispatch] result={result}")
+          sys.exit(0)
+          PYEOF
+
+      - name: Update public status
+        run: |
+          python - <<'PYEOF'
+          import sys, json
+          sys.path.insert(0, '.')
+          try:
+              from operations.github_health import check, write_public_status
+              public = write_public_status()
+              result = check()
+              print(f"Health: {result['status']}")
+              print(json.dumps(public, indent=2))
+          except Exception as e:
+              print(f"public_status update non-fatal: {e}")
+          PYEOF
+        continue-on-error: true
+
+      - name: Save state to git
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add heartbeat.json operations_state.json operations/public_status.json \
+                  scan_execution.db notification_delivery.db \
+                  open_positions.json scan_results.json \
+                  presentation_snapshot.json || true
+          git diff --staged --quiet || git commit -m "HA trigger: ${{ steps.job.outputs.job_type }} [skip ci]"
+          git push || true

@@ -43,10 +43,22 @@ def _fetch_since(symbol: str, signal_date: str) -> pd.DataFrame | None:
         start  = (date.fromisoformat(signal_date) + timedelta(days=1)).isoformat()
         end    = (date.today() + timedelta(days=1)).isoformat()
 
-        df = yf.Ticker(yf_sym).history(
-            start=start, end=end,
-            interval="1d", auto_adjust=False,
-        )
+        import threading as _thr
+        _result = [pd.DataFrame()]
+        def _do_fetch():
+            try:
+                _result[0] = yf.Ticker(yf_sym).history(
+                    start=start, end=end, interval="1d", auto_adjust=False,
+                )
+            except Exception:
+                pass
+        _t = _thr.Thread(target=_do_fetch, daemon=True)
+        _t.start()
+        _t.join(timeout=20)
+        if _t.is_alive():
+            print(f"  [Tracker] {symbol}: yfinance timeout (20s) — skipping")
+            return None
+        df = _result[0]
         if df.empty:
             return None
 

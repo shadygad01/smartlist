@@ -146,8 +146,20 @@ TV_HEADERS = {
 
 def get_dow_jones_status():
     try:
-        ticker = yf.Ticker("^DJI")
-        hist   = ticker.history(period="5d", interval="1d", auto_adjust=False)
+        import threading as _thr
+        _dji_result = [pd.DataFrame()]
+        def _dji_fetch():
+            try:
+                t = yf.Ticker("^DJI")
+                _dji_result[0] = t.history(period="5d", interval="1d", auto_adjust=False)
+            except Exception:
+                pass
+        _t = _thr.Thread(target=_dji_fetch, daemon=True)
+        _t.start()
+        _t.join(timeout=15)
+        if _t.is_alive():
+            return None  # timed out — skip DJI gracefully
+        hist = _dji_result[0]
         if hist.empty or len(hist) < 2:
             return None
         hist = hist.dropna(subset=["Close"])

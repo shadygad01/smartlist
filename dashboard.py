@@ -163,7 +163,7 @@ function refreshDash(){
 // ── Run Scan (workflow_dispatch — opens GitHub Actions) ───────────────────────
 function triggerScan(){
   if(confirm('This will open GitHub Actions.\\nClick "Run workflow" on the page that opens.\\n\\nNote: scan takes ~30 minutes to complete.')){
-    window.open('https://github.com/shadygad01/smartlist/actions/workflows/full_production_scan.yml','_blank');
+    window.open('https://github.com/shadygad01/smartlist/actions/workflows/daily_scan.yml','_blank');
   }
 }
 </script>

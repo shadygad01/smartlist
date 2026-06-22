@@ -1,0 +1,120 @@
+name: 🔔 Market Notifications
+
+# Intraday market scan — fires every 5 min during EGX trading hours.
+# Sends BUY/alert signals via Telegram. No email. No GH Pages deploy.
+# Triggered by Google Apps Script (repository_dispatch) or GitHub schedule as backup.
+
+on:
+  repository_dispatch:
+    types:
+      - market_scan
+      - ha_trigger
+      - scan_dispatch
+
+  schedule:
+    # EGX market hours: Sun–Thu 10:00–14:30 Cairo (UTC+2).
+    # Every 5 min from 10:00–13:55 Cairo = 08:00–11:55 UTC
+    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 8-11 * * 0-4'
+    # 14:00–14:30 Cairo = 12:00–12:30 UTC
+    - cron: '0,5,10,15,20,25,30 12 * * 0-4'
+
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: egx-market-notifications
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+
+  market_notifications:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Refresh prices and universe snapshot
+        run: |
+          python backfill_egx30.py --download-only || true
+          python3 - <<'PYEOF'
+          from universe_snapshot import build_universe_snapshot
+          from stock_dna_engine import build_stock_dna
+          build_universe_snapshot()
+          build_stock_dna()
+          print('Universe snapshot rebuilt.')
+          PYEOF
+        continue-on-error: true
+
+      - name: Run Market Scan — via ScanOrchestrator
+        env:
+          EMAIL_USER:       ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS:       ${{ secrets.EMAIL_PASS }}
+          TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PYTHONUNBUFFERED: "1"
+          MANUAL_RUN: "True"
+        run: |
+          python - <<'PYEOF'
+          import sys
+          sys.path.insert(0, '.')
+          from notifications.scan_orchestrator import ScanOrchestrator
+          result = ScanOrchestrator().run_market_scan()
+          print(f"[MarketNotifications] result={result}")
+          sys.exit(0)
+          PYEOF
+
+      - name: Rebuild presentation snapshot JSON
+        run: |
+          python3 - <<'PYEOF'
+          from presentation.presentation_snapshot import build_presentation_snapshot, write_presentation_snapshot_json
+          snap = build_presentation_snapshot()
+          write_presentation_snapshot_json(snap)
+          print('presentation_snapshot.json written.')
+          PYEOF
+        continue-on-error: true
+
+      - name: Consistency assertions
+        run: python operations/consistency_check.py
+
+      - name: Update public status
+        run: |
+          python - <<'PYEOF'
+          import sys, json
+          sys.path.insert(0, '.')
+          try:
+              from operations.github_health import check, write_public_status
+              public = write_public_status()
+              result = check()
+              print(f"Health: {result['status']}")
+              print(json.dumps(public, indent=2))
+          except Exception as e:
+              print(f"public_status update non-fatal: {e}")
+          PYEOF
+        continue-on-error: true
+
+      - name: Save state to git
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add heartbeat.json operations_state.json operations/public_status.json \
+                  scan_execution.db notification_delivery.db \
+                  open_positions.json scan_results.json \
+                  presentation_snapshot.json signal_history.json || true
+          git add historical_data/historical_data/*.csv || true
+          git diff --staged --quiet || git commit -m "Market scan: state update [skip ci]"
+          git push || true

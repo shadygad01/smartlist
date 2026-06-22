@@ -1,0 +1,108 @@
+name: 📧 Morning Email
+
+# Sends morning constitutional brief via email + Telegram.
+# Triggered by Google Apps Script (repository_dispatch) or GitHub schedule as backup.
+# Does NOT build dashboard or deploy GH Pages.
+
+on:
+  repository_dispatch:
+    types:
+      - morning_report
+      - morning_dispatch
+
+  schedule:
+    # 07:30 Cairo (UTC+2) = 05:30 UTC, Sun–Thu
+    - cron: '30 5 * * 0-4'
+
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force send even if already sent today'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: egx-morning-email
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+
+  morning_email:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send Morning Email + Telegram Brief
+        env:
+          EMAIL_USER:       ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS:       ${{ secrets.EMAIL_PASS }}
+          TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PYTHONUNBUFFERED: "1"
+          FORCE_DAILY: "True"
+        run: |
+          python - <<'PYEOF'
+          import sys
+          sys.path.insert(0, '.')
+          from notifications.scan_orchestrator import ScanOrchestrator
+          result = ScanOrchestrator().run_morning_report()
+          print(f"[MorningEmail] result={result}")
+          sys.exit(0)
+          PYEOF
+
+      - name: Rebuild presentation snapshot JSON
+        run: |
+          python3 - <<'PYEOF'
+          from presentation.presentation_snapshot import build_presentation_snapshot, write_presentation_snapshot_json
+          snap = build_presentation_snapshot()
+          write_presentation_snapshot_json(snap)
+          print('presentation_snapshot.json written.')
+          PYEOF
+        continue-on-error: true
+
+      - name: Consistency assertions
+        run: python operations/consistency_check.py
+
+      - name: Update public status
+        run: |
+          python - <<'PYEOF'
+          import sys, json
+          sys.path.insert(0, '.')
+          try:
+              from operations.github_health import check, write_public_status
+              public = write_public_status()
+              result = check()
+              print(f"Health: {result['status']}")
+              print(json.dumps(public, indent=2))
+          except Exception as e:
+              print(f"public_status update non-fatal: {e}")
+          PYEOF
+        continue-on-error: true
+
+      - name: Save state to git
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add heartbeat.json operations_state.json operations/public_status.json \
+                  scan_execution.db notification_delivery.db \
+                  presentation_snapshot.json version.json || true
+          git diff --staged --quiet || git commit -m "Morning email: state update [skip ci]"
+          git push || true

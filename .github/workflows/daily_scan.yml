@@ -60,6 +60,21 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Operations startup check — verify + recover missed jobs
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PYTHONUNBUFFERED: "1"
+        run: |
+          python -c "
+          import json
+          from notifications.operations_monitor import OperationsMonitor
+          state = OperationsMonitor().startup_check()
+          print(json.dumps(state, indent=2, default=str))
+          " || true
+
       - name: Run EGX Scanner — via ScanOrchestrator
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
@@ -164,7 +179,8 @@ jobs:
                   signal_history.json signal_log.json learned_weights.json \
                   egx_research.db research_results.json \
                   changed_symbols.json presentation_snapshot.json \
-                  heartbeat.json || true
+                  heartbeat.json operations_state.json \
+                  scan_execution.db notification_delivery.db || true
           git add operations/incidents.json operations/sla.json \
                   operations/knowledge.json operations/sent_alerts.json || true
           git add historical_data/historical_data/*.csv || true

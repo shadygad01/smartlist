@@ -251,6 +251,9 @@ class ScanOrchestrator:
         Determine job type from environment variables (FORCE_DAILY, MANUAL_RUN)
         and current Cairo time, then dispatch to the appropriate method.
         This is the single entry point called by the workflow.
+
+        Runs OperationsMonitor.startup_check() FIRST on every execution
+        to detect and recover any missed operations before starting new work.
         """
         from time_authority import now_cairo
         manual_run  = os.getenv("MANUAL_RUN",  "False") == "True"
@@ -260,6 +263,13 @@ class ScanOrchestrator:
 
         print(f"[Orchestrator] dispatch_from_env — "
               f"time={hour:02d}:{minute:02d} FORCE_DAILY={force_daily} MANUAL_RUN={manual_run}")
+
+        # Startup health check — recover any missed/failed jobs before new work
+        try:
+            from notifications.operations_monitor import OperationsMonitor
+            OperationsMonitor().startup_check()
+        except Exception as e:
+            print(f"[Orchestrator] startup_check non-fatal: {e}")
 
         if manual_run:
             print("[Orchestrator] → run_morning_report (MANUAL_RUN)")

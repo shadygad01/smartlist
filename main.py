@@ -388,13 +388,16 @@ def _patch_today_from_tv(df, symbol):
 
     # Persist patched price to CSV so price_data_as_of reflects today
     try:
-        _csv_path = os.path.join(_BASE_DIR, "historical_data", "historical_data", f"{yf_symbol}.csv")
+        _yf_symbol_local = symbol if symbol.endswith(".CA") else f"{symbol}.CA"
+        _base_dir_local  = os.path.dirname(os.path.abspath(__file__))
+        _csv_path = os.path.join(_base_dir_local, "historical_data", "historical_data", f"{_yf_symbol_local}.csv")
         df_save = df.copy().reset_index()
         df_save.columns = [str(c) for c in df_save.columns]
         if "index" in df_save.columns:
             df_save = df_save.rename(columns={"index": "Date"})
         df_save["Date"] = pd.to_datetime(df_save["Date"]).dt.strftime("%Y-%m-%d")
         df_save.to_csv(_csv_path, index=False)
+        print(f"  [{symbol}] CSV saved: {_csv_path[-50:]}")
     except Exception as _csv_save_err:
         print(f"  [{symbol}] CSV save non-fatal: {_csv_save_err}")
 

@@ -46,7 +46,17 @@ def _latest_csv_price(ticker: str) -> tuple[float | None, str]:
 
 
 def _csv_data_as_of() -> str:
-    """Return the latest trading date found in any CSV file — authoritative price date."""
+    """Return the most recent price date — PriceAuthority first, then CSV fallback."""
+    # Primary: universe_snapshot.db last_price_update (reflects actual scan date)
+    try:
+        from price_authority import get_data_as_of
+        auth_date = get_data_as_of()
+        if auth_date:
+            return auth_date
+    except Exception:
+        pass
+
+    # Fallback: scan CSV files
     best_date = ""
     if not _HIST_DIR.exists():
         return best_date
@@ -263,17 +273,29 @@ def build_presentation_snapshot() -> PresentationSnapshot:
                 ORDER BY r2_score DESC
                 LIMIT 15
             """, (latest_ts,)).fetchall()
+            # Load PriceAuthority prices once for all tickers
+            try:
+                from price_authority import get_all_prices as _get_all_prices
+                _auth_prices = _get_all_prices()
+            except Exception:
+                _auth_prices = {}
+
             entries = []
             for r in rows:
                 entry_price = r["entry_price"]
-                # Use latest CSV close as current price — freshest available data
-                csv_price, _ = _latest_csv_price(r["ticker"])
-                current_price = csv_price if csv_price is not None else r["current_price"]
-                # Re-apply constitutional gate with live price
+                # PriceAuthority is the single source of truth for current price.
+                # Fallback: CSV price, then candidate_pool price.
+                ticker = r["ticker"]
+                if ticker in _auth_prices and _auth_prices[ticker] > 0:
+                    current_price = _auth_prices[ticker]
+                else:
+                    csv_price, _ = _latest_csv_price(ticker)
+                    current_price = csv_price if csv_price is not None else r["current_price"]
+                # Re-apply constitutional gate with authoritative price
                 if current_price > entry_price:
                     continue
                 entries.append(dict(
-                    ticker=r["ticker"],
+                    ticker=ticker,
                     r2_score=r["r2_score"],
                     final_score=r["max_score"],
                     entry_price=entry_price,

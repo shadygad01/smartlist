@@ -129,6 +129,9 @@ jobs:
           PYEOF
           python3 audit/assert_presentation_consistency.py
 
+      - name: Price Consistency Gate (ONE ticker = ONE price)
+        run: python3 audit/assert_price_consistency.py
+
       - name: CI Protection Gate
         run: python3 audit/assert_ci_protection.py
 

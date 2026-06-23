@@ -76,17 +76,16 @@ jobs:
       - name: Build dashboard
         run: python3 dashboard.py || true
 
+      - name: Price consistency assertion (ONE ticker = ONE price)
+        run: python3 audit/assert_price_consistency.py
+        continue-on-error: true
+
       - name: Prepare web deploy
         run: |
           mkdir -p web_deploy
           cp dashboard.html web_deploy/index.html
+          cp version.json web_deploy/ 2>/dev/null || true
           cp manifest.json sw.js icon.svg web_deploy/ 2>/dev/null || true
-
-      - name: Restore existing GH Pages assets (preserve reports)
-        run: |
-          git fetch origin gh-pages 2>/dev/null || true
-          git checkout origin/gh-pages -- web_deploy/ 2>/dev/null || true
-        continue-on-error: true
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

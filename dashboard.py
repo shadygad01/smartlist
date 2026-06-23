@@ -46,6 +46,31 @@ body{{background:{BG0};font-family:'Segoe UI',system-ui,Arial,sans-serif;color:{
 .section-title{{font-size:13px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
   color:{DIM};margin-bottom:14px;border-bottom:1px solid {BOR};padding-bottom:8px;}}
 .badge{{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap;}}
+.signal-card{{background:{BG2};border:1px solid {G}44;border-radius:10px;padding:18px;margin-bottom:14px;position:relative;}}
+.signal-card.reaccum{{border-color:{P}44;}}
+.signal-card-header{{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;}}
+.signal-ticker{{font-size:22px;font-weight:800;color:{W};letter-spacing:1px;}}
+.signal-action-btn{{display:inline-block;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:800;
+  letter-spacing:0.5px;text-transform:uppercase;border:2px solid;cursor:default;}}
+.signal-grid{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;}}
+.signal-grid-4{{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px;}}
+.signal-box{{background:{BG1};border:1px solid {BOR};border-radius:7px;padding:10px 12px;}}
+.signal-box-lbl{{font-size:10px;color:{DIM};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}}
+.signal-box-val{{font-size:16px;font-weight:700;color:{W};}}
+.signal-box-sub{{font-size:11px;color:{DIM};margin-top:2px;}}
+.signal-reasons{{background:{BG1};border:1px solid {BOR};border-radius:7px;padding:12px 14px;margin-bottom:14px;}}
+.signal-reason-row{{display:flex;align-items:center;gap:8px;font-size:13px;color:{FG};padding:3px 0;}}
+.signal-hist{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}}
+.signal-meta{{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:11px;color:{DIM};}}
+.signal-meta span b{{color:{FG};}}
+.conf-high{{color:{G};font-weight:700;}} .conf-med{{color:{A};font-weight:700;}} .conf-low{{color:{R};font-weight:700;}}
+@keyframes pulse{{0%,100%{{opacity:1;}}50%{{opacity:.55;}}}}
+@media(max-width:700px){{
+  .signal-grid{{grid-template-columns:1fr 1fr;}}
+  .signal-grid-4{{grid-template-columns:1fr 1fr;}}
+  .signal-hist{{grid-template-columns:1fr 1fr;}}
+  .signal-card-header{{flex-direction:column;align-items:flex-start;}}
+}}
 .tbl-wrap{{overflow-x:auto;-webkit-overflow-scrolling:touch;}}
 table{{width:100%;border-collapse:collapse;font-size:13px;min-width:480px;}}
 th{{text-align:left;padding:9px 10px;color:{DIM};font-size:11px;font-weight:700;
@@ -272,6 +297,292 @@ def _s_stats(snap):
     <div class="stat"><div class="stat-val" style="color:{G};">{premium_count}</div><div class="stat-lbl">Premium</div></div>
     <div class="stat"><div class="stat-val" style="color:{FG};">{snap.universe_size}</div><div class="stat-lbl">Universe</div></div>
   </div>
+</div>"""
+
+
+# ── Constitutional Buy Signals ────────────────────────────────────────────────
+def _s_buy_signals(snap) -> str:
+    """
+    HIGHEST PRIORITY section. Answers: what to buy, why, at what price, when.
+    Sources:
+      - snap.new_events_today  → confirmed constitutional events fired today
+      - snap.timeline          → re-accumulation candidates (price ≤ entry, active holder)
+      - snap.analytics         → historical stats per ticker
+      - snap.constitutional_leaders → win_rate, confidence per ticker
+    """
+    leaders_by_t  = {l["ticker"]: l for l in (snap.constitutional_leaders or [])}
+    analytics     = snap.analytics or {}
+    market_open   = "OPEN" in snap.market_status and "PRE" not in snap.market_status
+    market_pre    = "PRE" in snap.market_status
+    gen_cairo     = _to_cairo(snap.generated_at)
+
+    # ── 1. Today's new confirmed signals ──────────────────────────────────────
+    today_signals = sorted(
+        snap.new_events_today or [],
+        key=lambda e: (e["event_type"] != "FIRST_BUY", -e.get("buy_r2", 0))
+    )
+
+    # ── 2. Re-accumulation candidates: timeline holders back at / below entry ──
+    # Tickers that are ACTIVE constitutional holders, whose current_price has
+    # retraced to ≤ entry_price (return_pct ≤ 0), and are NOT in today's signals.
+    today_tickers = {e["ticker"] for e in today_signals}
+    seen_reaccum  = set()
+    reaccum_candidates = []
+    # Use the most-recent event per ticker, sorted by proximity to entry (closest first)
+    by_ticker_latest: dict[str, dict] = {}
+    for e in (snap.timeline or []):
+        t = e["ticker"]
+        if t not in by_ticker_latest or e["event_date"] > by_ticker_latest[t]["event_date"]:
+            by_ticker_latest[t] = e
+    for ticker, e in sorted(by_ticker_latest.items(),
+                            key=lambda x: x[1]["return_pct"]):
+        if ticker in today_tickers or ticker in seen_reaccum:
+            continue
+        # Price is at or below the original buy price → back in accumulation zone
+        if e["return_pct"] <= 0:
+            seen_reaccum.add(ticker)
+            reaccum_candidates.append(e)
+
+    all_signals = today_signals + reaccum_candidates
+    has_active  = bool(all_signals)
+
+    # ── Helper: build one signal card ─────────────────────────────────────────
+    def _signal_card(e: dict, is_today: bool) -> str:
+        ticker     = e["ticker"]
+        etype      = e["event_type"]
+        is_new_buy = etype == "FIRST_BUY"
+        entry_p    = e["entry_price"]
+        cur_p      = e["current_price"]
+        ret_p      = e["return_pct"]
+        r2         = e.get("buy_r2", 0.0)
+        score      = e.get("buy_score", 0.0)
+        ev_date    = e.get("event_date", "")
+        sector     = e.get("sector", "")
+        days_held  = e.get("days_active", 0)
+
+        dist_pct   = round((cur_p - entry_p) / entry_p * 100, 2) if entry_p else 0.0
+        discount_pct = round((entry_p - cur_p) / entry_p * 100, 2) if entry_p and cur_p < entry_p else 0.0
+
+        # Historical stats
+        leader  = leaders_by_t.get(ticker, {})
+        an      = analytics.get(ticker, {})
+        n_prev  = an.get("total_events", 0)
+        avg_ret = an.get("avg_return_pct", 0.0)
+        best_ret= an.get("best_return_pct", 0.0)
+        win_rate= leader.get("win_rate", 0.0)
+        confidence = leader.get("confidence", "DEVELOPING")
+        conf_cls   = "conf-high" if confidence in ("ELITE","STRONG") else ("conf-med" if confidence == "CONFIRMED" else "conf-low")
+
+        # Action
+        if is_today and market_open:
+            action_lbl, action_c = "BUY NOW", G
+        elif is_today and market_pre:
+            action_lbl, action_c = "BUY ON OPEN", A
+        elif is_today:
+            action_lbl, action_c = f"BUY LIMIT @ {entry_p:.2f}", B
+        elif is_new_buy and discount_pct > 0:
+            action_lbl, action_c = f"BUY LIMIT @ {entry_p:.2f}", B
+        else:
+            action_lbl, action_c = "RE-ACCUMULATE", P
+
+        type_lbl = "NEW BUY" if is_new_buy else "RE-ACCUMULATION"
+        type_c   = B if is_new_buy else P
+        live_tag = (
+            f'<span class="badge" style="background:{R}22;color:{R};animation:pulse 1.5s infinite;">&#128308; LIVE SIGNAL</span> '
+            if is_today else ""
+        )
+        card_cls = "signal-card" if is_new_buy else "signal-card reaccum"
+        border_c = G if is_new_buy else P
+
+        # Reason bullets — decode from buy_r2, buy_score, return
+        reasons = []
+        if r2 >= 60:   reasons.append(("✓", f"R2 Constitutional Gate cleared ({r2:.1f} / 60)", G))
+        elif r2 >= 55: reasons.append(("◎", f"R2 approaching gate ({r2:.1f} / 60)", A))
+        if score >= 35:reasons.append(("✓", f"Constitutional Score met ({score:.1f} / 35+)", G))
+        if discount_pct > 0:
+            reasons.append(("✓", f"Discount Zone confirmed (price {discount_pct:.1f}% below entry)", G))
+        elif dist_pct <= 0.5:
+            reasons.append(("✓", "At Entry Zone (price at constitutional gate)", G))
+        if n_prev >= 2:
+            reasons.append(("✓", f"Proven track record: {n_prev} prior signals, avg return {avg_ret:+.1f}%", G))
+        elif n_prev == 1:
+            reasons.append(("◎", "First constitutional event for this ticker", A))
+        if win_rate >= 0.7:
+            reasons.append(("✓", f"High historical win rate ({win_rate*100:.0f}%)", G))
+        if not reasons:
+            reasons.append(("◎", "Constitutional criteria met (R2 + Score + Discount Zone)", A))
+
+        reasons_html = "".join(
+            f'<div class="signal-reason-row">'
+            f'<span style="color:{rc};font-size:14px;flex-shrink:0;">{icon}</span>'
+            f'<span>{txt}</span></div>'
+            for icon, txt, rc in reasons
+        )
+
+        # Distance / discount display
+        dist_html = (
+            f'<span class="neg">{dist_pct:+.1f}%</span>'
+            if dist_pct < 0 else
+            f'<span class="pos">{dist_pct:+.1f}%</span>'
+        )
+        disc_html = (
+            f'<span class="pos">{discount_pct:.1f}% below entry</span>'
+            if discount_pct > 0 else
+            f'<span class="neg">+{abs(discount_pct):.1f}% above entry</span>'
+        )
+
+        hist_win_s = f"{win_rate*100:.0f}%" if win_rate else "—"
+        hist_avg_s = f"{avg_ret:+.1f}%" if avg_ret else "—"
+        hist_best_s= f"{best_ret:+.1f}%" if best_ret else "—"
+        hist_n_s   = str(n_prev) if n_prev else "1st"
+
+        # Pulse animation only for live signals
+        pulse_style = ""
+        if is_today:
+            pulse_style = f"box-shadow:0 0 0 2px {border_c}88,0 0 18px {border_c}44;"
+
+        return f"""
+<div class="{card_cls}" style="{pulse_style}">
+  <div class="signal-card-header">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      {live_tag}
+      <span class="signal-ticker">{ticker}</span>
+      <span class="badge" style="background:{type_c}22;color:{type_c};font-size:12px;">{type_lbl}</span>
+      <span style="font-size:12px;color:{DIM};">{sector}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span class="{conf_cls}" style="font-size:12px;">{confidence}</span>
+      <span class="signal-action-btn" style="color:{action_c};border-color:{action_c};background:{action_c}18;">{action_lbl}</span>
+    </div>
+  </div>
+
+  <div class="signal-grid">
+    <div class="signal-box">
+      <div class="signal-box-lbl">Entry Price</div>
+      <div class="signal-box-val" style="color:{W};">{entry_p:.2f} <span style="font-size:12px;color:{DIM};">EGP</span></div>
+      <div class="signal-box-sub">Constitutional buy zone</div>
+    </div>
+    <div class="signal-box">
+      <div class="signal-box-lbl">Current Price</div>
+      <div class="signal-box-val" style="color:{FG};">{cur_p:.2f} <span style="font-size:12px;color:{DIM};">EGP</span></div>
+      <div class="signal-box-sub">Distance: {dist_html}</div>
+    </div>
+    <div class="signal-box">
+      <div class="signal-box-lbl">Discount</div>
+      <div class="signal-box-val" style="color:{G if discount_pct > 0 else A};">{discount_pct:.1f}%</div>
+      <div class="signal-box-sub">{disc_html}</div>
+    </div>
+  </div>
+
+  <div class="signal-grid-4">
+    <div class="signal-box">
+      <div class="signal-box-lbl">Constitutional Score</div>
+      <div class="signal-box-val" style="color:{G};">{score:.1f}</div>
+      <div class="signal-box-sub">Threshold: 35+</div>
+    </div>
+    <div class="signal-box">
+      <div class="signal-box-lbl">R2 Score</div>
+      <div class="signal-box-val" style="color:{G if r2>=60 else A};">{r2:.1f} <span style="font-size:11px;color:{DIM};">/ 60</span></div>
+      <div class="signal-box-sub">Gate: ≥ 60</div>
+    </div>
+    <div class="signal-box">
+      <div class="signal-box-lbl">Signal Date</div>
+      <div class="signal-box-val" style="font-size:14px;">{ev_date}</div>
+      <div class="signal-box-sub">{days_held}d active · Cairo</div>
+    </div>
+    <div class="signal-box">
+      <div class="signal-box-lbl">Signal Status</div>
+      <div class="signal-box-val" style="font-size:13px;color:{'#4caf50' if is_today else A};">{'🔴 TODAY' if is_today else '📌 ACTIVE'}</div>
+      <div class="signal-box-sub">Scan: {gen_cairo[:10]}</div>
+    </div>
+  </div>
+
+  <div class="signal-reasons">
+    <div style="font-size:11px;color:{DIM};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Why This Signal Exists</div>
+    {reasons_html}
+  </div>
+
+  <div class="signal-hist">
+    <div class="signal-box">
+      <div class="signal-box-lbl">Win Rate</div>
+      <div class="signal-box-val" style="color:{G if win_rate>=0.7 else (A if win_rate>=0.5 else R)};">{hist_win_s}</div>
+      <div class="signal-box-sub">Historical signals</div>
+    </div>
+    <div class="signal-box">
+      <div class="signal-box-lbl">Avg Return</div>
+      <div class="signal-box-val" style="color:{G if avg_ret>0 else R};">{hist_avg_s}</div>
+      <div class="signal-box-sub">Per event</div>
+    </div>
+    <div class="signal-box">
+      <div class="signal-box-lbl">Best Return</div>
+      <div class="signal-box-val" style="color:{G};">{hist_best_s}</div>
+      <div class="signal-box-sub">Max historical</div>
+    </div>
+    <div class="signal-box">
+      <div class="signal-box-lbl">Prior Signals</div>
+      <div class="signal-box-val" style="color:{FG};">{hist_n_s}</div>
+      <div class="signal-box-sub">Similar setups</div>
+    </div>
+  </div>
+</div>"""
+
+    # ── Empty state: find last signal ─────────────────────────────────────────
+    def _empty_state() -> str:
+        tl = snap.timeline or []
+        if not tl:
+            last_html = '<div style="color:{DIM};font-size:13px;">No constitutional events recorded yet.</div>'
+        else:
+            last = max(tl, key=lambda e: e["event_date"])
+            last_html = f"""
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px;">
+  <div class="signal-box"><div class="signal-box-lbl">Last Ticker</div>
+    <div class="signal-box-val" style="color:{B};">{last['ticker']}</div></div>
+  <div class="signal-box"><div class="signal-box-lbl">Last Signal Date</div>
+    <div class="signal-box-val" style="font-size:14px;">{last['event_date']}</div></div>
+  <div class="signal-box"><div class="signal-box-lbl">Return Since Signal</div>
+    <div class="signal-box-val" class="{_rc(last['return_pct'])}">{_sign(last['return_pct'])}{last['return_pct']:.1f}%</div></div>
+</div>"""
+        return f"""
+<div style="text-align:center;padding:24px 0;">
+  <div style="font-size:32px;margin-bottom:10px;">&#128274;</div>
+  <div style="font-size:16px;font-weight:700;color:{DIM};margin-bottom:4px;">No Constitutional Buy Signals Available</div>
+  <div style="font-size:12px;color:{DIM};margin-bottom:16px;">No tickers currently meet R2≥60 + Score≥35 + Price≤Entry simultaneously.</div>
+  {last_html}
+</div>"""
+
+    # ── Assemble section ──────────────────────────────────────────────────────
+    if not has_active:
+        inner = _empty_state()
+        count_tag = f'<span style="font-size:12px;color:{DIM};font-weight:400;">— no active signals</span>'
+        border_col = BOR
+        title_c    = DIM
+    else:
+        n_live = len(today_signals)
+        n_re   = len(reaccum_candidates)
+        parts  = []
+        if n_live: parts.append(f"{n_live} LIVE{'  ·  ' if n_re else ''}")
+        if n_re:   parts.append(f"{n_re} RE-ACCUM")
+        count_tag  = f'<span style="font-size:12px;color:{G};font-weight:700;">{" ".join(parts)}</span>'
+        border_col = G if today_signals else P
+        title_c    = G if today_signals else P
+
+        # Separator between today signals and re-accum candidates
+        today_cards = "".join(_signal_card(e, True)  for e in today_signals)
+        re_cards    = "".join(_signal_card(e, False) for e in reaccum_candidates)
+        re_sep      = ""
+        if today_signals and reaccum_candidates:
+            re_sep = f'<div style="font-size:11px;color:{DIM};text-transform:uppercase;letter-spacing:0.5px;margin:6px 0 10px;">&#128260; Re-Accumulation Candidates (price returned to constitutional zone)</div>'
+        inner = today_cards + re_sep + re_cards
+
+    return f"""
+<div class="card" style="border:2px solid {border_col}66;border-radius:12px;
+  background:linear-gradient(135deg,{BG1} 0%,{BG2} 100%);padding:22px;">
+  <div class="section-title" style="color:{title_c};border-color:{border_col}33;
+    display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <span>&#128994; CONSTITUTIONAL BUY SIGNALS &nbsp;{count_tag}</span>
+    <span style="font-size:11px;color:{DIM};font-weight:400;">{gen_cairo}</span>
+  </div>
+  {inner}
 </div>"""
 
 
@@ -904,6 +1215,7 @@ def build_dashboard(build_hash: str = "") -> str:
 
     body = (
         _s_stats(snap) +
+        _s_buy_signals(snap) +
         _s_near_entry(snap) +
         _s_future_opportunities(snap) +
         _s_universe_status(snap) +

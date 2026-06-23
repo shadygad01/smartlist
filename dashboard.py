@@ -447,11 +447,11 @@ def _s_buy_signals(snap) -> str:
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       {live_tag}
       <span class="signal-ticker">{ticker}</span>
-      <span class="badge" style="background:{type_c}22;color:{type_c};font-size:12px;">{type_lbl}</span>
+      <span style="font-size:10px;color:{DIM};text-transform:uppercase;letter-spacing:.5px;margin-right:2px;">Signal Type:</span><span class="badge" style="background:{type_c}22;color:{type_c};font-size:12px;">{type_lbl}</span>
       <span style="font-size:12px;color:{DIM};">{sector}</span>
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span class="{conf_cls}" style="font-size:12px;">{confidence}</span>
+      <span style="font-size:10px;color:{DIM};text-transform:uppercase;letter-spacing:.5px;">Confidence:</span>&nbsp;<span class="{conf_cls}" style="font-size:12px;">{confidence}</span>
       <span class="signal-action-btn" style="color:{action_c};border-color:{action_c};background:{action_c}18;">{action_lbl}</span>
     </div>
   </div>

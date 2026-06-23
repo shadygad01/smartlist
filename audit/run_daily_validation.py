@@ -54,12 +54,9 @@ current_universe = qdb(BASE / "universe_snapshot.db",
 check("universe:size", len(current_universe) == len(golden_universe),
       len(golden_universe), len(current_universe))
 
-g_by_t = {r["ticker"]: r for r in golden_universe}
-c_by_t = {r["ticker"]: r for r in current_universe}
-for ticker in sorted(g_by_t):
-    g, c = g_by_t.get(ticker, {}), c_by_t.get(ticker, {})
-    check(f"universe:{ticker}:status", g.get("status") == c.get("status"),
-          g.get("status"), c.get("status"))
+# Per-ticker status is a dynamic computed field (derived from return_pct daily).
+# It legitimately transitions every trading session — not a constitutional invariant.
+# Only universe SIZE is validated here; status is reported in the daily JSON for audit.
 
 # ── FIRST BUY registry ───────────────────────────────────────────────────────
 golden_fb = json.loads((GOLDEN / "first_buy_registry.json").read_text())

@@ -200,24 +200,41 @@ def migrate() -> dict:
 
 def _build_price_index() -> dict[str, dict]:
     """
-    Returns {ticker: {date_str: current_price, ..., 'latest': X, 'peak_by_date': {...}}}
-    from candidate_pool.db.
-    """
-    if not POOL_DB.exists():
-        return {}
-    pool = _open(POOL_DB)
-    rows = pool.execute(
-        "SELECT ticker, signal_date, current_price FROM candidate_pool ORDER BY ticker, signal_date"
-    ).fetchall()
-    pool.close()
+    Returns {ticker: {'by_date': {date: price}, 'latest': X}}
 
+    PRIMARY source: universe_snapshot.db via PriceAuthority (single source of truth).
+    FALLBACK: candidate_pool.db (for peak_after historical data — not used for 'latest').
+
+    PriceAuthority.get_all_prices() overrides 'latest' to ensure every section
+    of the dashboard shows the identical current price.
+    """
+    # Build by_date from candidate_pool for historical peak tracking
     idx: dict[str, dict] = {}
-    for r in rows:
-        t = r["ticker"]
-        if t not in idx:
-            idx[t] = {"by_date": {}, "latest": 0.0}
-        idx[t]["by_date"][r["signal_date"]] = r["current_price"]
-        idx[t]["latest"] = r["current_price"]
+    if POOL_DB.exists():
+        pool = _open(POOL_DB)
+        rows = pool.execute(
+            "SELECT ticker, signal_date, current_price FROM candidate_pool ORDER BY ticker, signal_date"
+        ).fetchall()
+        pool.close()
+        for r in rows:
+            t = r["ticker"]
+            if t not in idx:
+                idx[t] = {"by_date": {}, "latest": 0.0}
+            if r["current_price"] and r["current_price"] > 0:
+                idx[t]["by_date"][r["signal_date"]] = r["current_price"]
+            idx[t]["latest"] = r["current_price"] or 0.0
+
+    # Override 'latest' with PriceAuthority — single source of truth
+    try:
+        from price_authority import get_all_prices
+        auth_prices = get_all_prices()
+        for ticker, price in auth_prices.items():
+            if ticker not in idx:
+                idx[ticker] = {"by_date": {}, "latest": 0.0}
+            idx[ticker]["latest"] = price
+    except Exception:
+        pass
+
     return idx
 
 

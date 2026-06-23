@@ -1,8 +1,16 @@
-name: 📧 Morning Email
+name: 📧 Morning Email + Dashboard Deploy
 
-# Sends morning constitutional brief via email + Telegram.
+# Sends morning constitutional brief via email + Telegram, then rebuilds
+# the universe snapshot, presentation snapshot, dashboard, and deploys to GH Pages.
 # Triggered by Google Apps Script (repository_dispatch) or GitHub schedule as backup.
-# Does NOT build dashboard or deploy GH Pages.
+#
+# EXECUTION ORDER (required for price consistency):
+#   1. Refresh CSVs (backfill_egx30)
+#   2. Morning report — analyze() fetches live TV prices, saves to signal_history.json
+#   3. Rebuild universe_snapshot.db — NOW reads today's signal_history.json prices
+#   4. Rebuild presentation_snapshot.json — PriceAuthority reads fresh universe_snapshot.db
+#   5. Build dashboard — ONE snapshot, ONE html, ONE deploy
+#   6. Deploy to GH Pages
 
 on:
   repository_dispatch:
@@ -31,16 +39,19 @@ concurrency:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
 
   morning_email:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -49,6 +60,9 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Refresh historical CSV data
+        run: python backfill_egx30.py --download-only || true
 
       - name: Send Morning Email + Telegram Brief
         env:
@@ -69,8 +83,35 @@ jobs:
           sys.exit(0)
           PYEOF
 
+      - name: Rebuild universe snapshot with today's prices
+        # Must run AFTER morning_report so signal_history.json has today's live prices.
+        # PriceAuthority reads universe_snapshot.db — this step makes it authoritative.
+        run: |
+          python3 - <<'PYEOF'
+          from universe_snapshot import build_universe_snapshot
+          from stock_dna_engine import build_stock_dna
+          build_universe_snapshot()
+          build_stock_dna()
+          print('Universe snapshot and DNA rebuilt with today prices.')
+          PYEOF
+
+      - name: Rebuild presentation snapshot (uses PriceAuthority)
+        run: |
+          python3 - <<'PYEOF'
+          from presentation.presentation_snapshot import build_presentation_snapshot, write_presentation_snapshot_json
+          snap = build_presentation_snapshot()
+          write_presentation_snapshot_json(snap)
+          print('presentation_snapshot.json written.')
+          PYEOF
+
+      - name: Build dashboard
+        run: python3 dashboard.py || true
+
       - name: Consistency assertions
         run: python operations/consistency_check.py
+
+      - name: Price consistency assertion (ONE ticker = ONE price)
+        run: python3 audit/assert_price_consistency.py
 
       - name: Update public status
         run: |
@@ -94,6 +135,23 @@ jobs:
           git config user.name "github-actions[bot]"
           git add heartbeat.json operations_state.json operations/public_status.json \
                   scan_execution.db notification_delivery.db \
-                  presentation_snapshot.json version.json || true
-          git diff --staged --quiet || git commit -m "Morning email: state update [skip ci]"
+                  presentation_snapshot.json version.json dashboard.html \
+                  signal_history.json || true
+          git add historical_data/historical_data/*.csv || true
+          git diff --staged --quiet || git commit -m "Morning email: full state update [skip ci]"
           git push || true
+
+      - name: Prepare web deploy
+        run: |
+          mkdir -p web_deploy
+          cp dashboard.html web_deploy/index.html
+          cp version.json web_deploy/ 2>/dev/null || true
+          cp manifest.json sw.js icon.svg web_deploy/ 2>/dev/null || true
+
+      - name: Deploy dashboard to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./web_deploy
+          keep_files: true
+          commit_message: "Morning email: deploy dashboard [skip ci]"

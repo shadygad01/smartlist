@@ -176,8 +176,3 @@ jobs:
           git add historical_data/historical_data/*.csv || true
           git diff --staged --quiet || git commit -m "HA trigger: ${{ steps.job.outputs.job_type }} [skip ci]"
           git push || true
-      - name: Trigger Dashboard Refresh
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          event-type: dashboard_refresh

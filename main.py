@@ -1888,6 +1888,7 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
     except Exception as _eb_err:
         print(f"  [EarlyBuy] skipped: {_eb_err}")
     # Pattern Intelligence 2.0 — daily incremental learning
+    raise Exception("TEST_12345")
     try:
         import pattern_kb as _pkb
         ...

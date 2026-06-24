@@ -2303,227 +2303,32 @@ def detect_signal_changes(snap) -> list[dict]:
     return list(snap.new_events_today or [])
 
 
-def send_change_email(changed_stocks):
-    """
-    إرسال Email فوري عند تغيير أي سهم (whitelist أو عادي) إلى BUY
-    """
-    if not changed_stocks:
+def send_change_email(changed_events):
+    """Send one alert email per constitutional event via alert_email.build_alert_email()."""
+    if not changed_events:
         return
 
-    time_str = fmt_cairo()
+    from alert_email import build_alert_email
 
-    def _gain_str(price, target):
-        try:
-            pct = round(((float(target) - float(price)) / float(price)) * 100, 1)
-            return f"+{pct}%"
-        except Exception:
-            return ""
-
-    def _stock_card(item, is_whitelist):
-        stock  = item["stock"]
-        price  = item.get("price", "N/A")
-        target = item.get("target", "N/A")
-        score  = item.get("score", 0)
-        fexp   = float(item.get("factor_exp_score", 0) or 0)
-        blended = round(0.60 * fexp + 0.40 * score, 1)
-        signal = item.get("to", "Buy")
-        ez     = item.get("entry_zones")
-
-        gain  = _gain_str(price, target)
-        bar_w = min(int(score), 100)
-        # gradient spans the filled portion — short bars stay amber, long bars reach deep green
-        bar_gradient = "linear-gradient(90deg,#f59e0b 0%,#eab308 25%,#84cc16 50%,#22c55e 75%,#16a34a 100%)"
-
-        # Zone 1 → سعر الدخول المقترح
-        entry_price = price
-        if ez and "z1" in ez:
-            entry_price = ez["z1"]["center"]
-
-        # Zone 3 → منطقة Deep Value
-        z3_lo = z3_hi = None
-        if ez and "z3" in ez:
-            z3_lo = ez["z3"]["lo"]
-            z3_hi = ez["z3"]["hi"]
-
-        hdr_bg    = "#b45309" if is_whitelist else "#1d4ed8"
-        hdr_label = f"⭐ {stock} — WHITELIST" if is_whitelist else f"📈 {stock}"
-
-        pat_row = ""  # Pattern analysis removed — constitutional portfolio presentation only
-
-        if z3_lo is not None:
-            dv_row = (
-                f'<tr><td style="padding:0 16px 16px;">'
-                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-                f' style="background:#0d1117;border-radius:10px;border-left:4px solid #818cf8;">'
-                f'<tr><td style="padding:12px 15px;">'
-                f'<p style="color:#94a3b8;font-size:10px;text-transform:uppercase;'
-                f'letter-spacing:1px;margin:0 0 8px 0;">🔷 منطقة Deep Value — Zone 3</p>'
-                f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
-                f'<tr>'
-                f'<td style="color:#818cf8;font-size:14px;font-weight:bold;">{z3_lo} EGP</td>'
-                f'<td align="center" style="color:#4b5563;font-size:13px;">↔</td>'
-                f'<td align="right" style="color:#818cf8;font-size:14px;font-weight:bold;">{z3_hi} EGP</td>'
-                f'</tr></table>'
-                f'</td></tr></table>'
-                f'</td></tr>'
-            )
-        else:
-            dv_row = (
-                f'<tr><td style="padding:0 16px 16px;">'
-                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-                f' style="background:#0d1117;border-radius:10px;border-left:4px solid #374151;">'
-                f'<tr><td style="padding:10px 15px;">'
-                f'<p style="color:#4b5563;font-size:11px;margin:0;">🔷 Deep Value Zone: غير متاح</p>'
-                f'</td></tr></table>'
-                f'</td></tr>'
-            )
-
-        return (
-            f'<tr><td style="padding:3px 0 0;">'
-            f'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a1f36;">'
-
-            # ── card header ──
-            f'<tr><td style="background:{hdr_bg};padding:12px 18px;">'
-            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
-            f'<tr>'
-            f'<td style="color:#fff;font-size:15px;font-weight:bold;">{hdr_label}</td>'
-            f'<td align="right">'
-            f'<span style="background:rgba(0,0,0,0.28);color:#fff;padding:4px 12px;'
-            f'border-radius:20px;font-size:12px;font-weight:bold;">{signal}</span>'
-            f'</td>'
-            f'</tr></table>'
-            f'</td></tr>'
-
-            # ── current price + target ──
-            f'<tr><td style="padding:14px 16px 0;">'
-            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
-            f'<tr>'
-            f'<td width="48%" style="background:#0d1117;border-radius:10px;padding:14px;text-align:center;vertical-align:top;">'
-            f'<p style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:0 0 5px 0;">السعر الحالي</p>'
-            f'<p style="color:#f8fafc;font-size:22px;font-weight:bold;margin:0 0 2px 0;">{price}</p>'
-            f'<p style="color:#64748b;font-size:11px;margin:0;">EGP</p>'
-            f'</td>'
-            f'<td width="4%">&nbsp;</td>'
-            f'<td width="48%" style="background:#0d1117;border-radius:10px;padding:14px;text-align:center;vertical-align:top;">'
-            f'<p style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin:0 0 5px 0;">التارجت المستهدف</p>'
-            f'<p style="color:#22c55e;font-size:22px;font-weight:bold;margin:0 0 2px 0;">{target}</p>'
-            f'<p style="color:#22c55e;font-size:11px;margin:0;">{gain}</p>'
-            f'</td>'
-            f'</tr></table>'
-            f'</td></tr>'
-
-            # ── buy alert context ──
-            f'<tr><td style="padding:12px 16px 0;">'
-            f'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0d1117;border-radius:10px;">'
-            f'<tr><td style="padding:12px 15px;">'
-            f'<div style="color:#22c55e;font-size:14px;font-weight:700;margin-bottom:6px;">⚡ Constitutional Buy Alert</div>'
-            f'<div style="color:#94a3b8;font-size:11px;">Stock entered constitutional buy zone — portfolio management action required.</div>'
-            f'</td></tr></table>'
-            f'</td></tr>'
-
-            # ── pattern intelligence ──
-            + pat_row +
-
-            # ── entry price (Zone 1) ──
-            f'<tr><td style="padding:12px 16px 0;">'
-            f'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0d1117;border-radius:10px;">'
-            f'<tr><td style="padding:12px 15px;">'
-            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
-            f'<tr>'
-            f'<td style="color:#94a3b8;font-size:12px;">🎯 سعر الدخول</td>'
-            f'<td align="right" style="color:#fbbf24;font-size:16px;font-weight:bold;">{entry_price} EGP</td>'
-            f'</tr></table>'
-            f'</td></tr></table>'
-            f'</td></tr>'
-
-            # ── deep value zone ──
-            + dv_row +
-
-            f'</table></td></tr>'
-        )
-
-    whitelist_stocks = [s for s in changed_stocks if s["stock"] in WHITELIST]
-    normal_stocks    = [s for s in changed_stocks if s["stock"] not in WHITELIST]
-    total_count      = len(changed_stocks)
-
-    cards_html = ""
-
-    if whitelist_stocks:
-        cards_html += (
-            f'<tr><td style="padding:18px 18px 8px;">'
-            f'<p style="color:#f59e0b;font-size:12px;font-weight:bold;'
-            f'letter-spacing:1.5px;margin:0;text-transform:uppercase;">'
-            f'⭐ Whitelist Stocks ({len(whitelist_stocks)})</p>'
-            f'<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">'
-            f'<tr><td style="background:#d97706;height:2px;border-radius:1px;"></td></tr>'
-            f'</table></td></tr>'
-        )
-        for item in whitelist_stocks:
-            cards_html += _stock_card(item, True)
-
-    if normal_stocks:
-        cards_html += (
-            f'<tr><td style="padding:18px 18px 8px;">'
-            f'<p style="color:#60a5fa;font-size:12px;font-weight:bold;'
-            f'letter-spacing:1.5px;margin:0;text-transform:uppercase;">'
-            f'📈 Stocks ({len(normal_stocks)})</p>'
-            f'<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">'
-            f'<tr><td style="background:#3b82f6;height:2px;border-radius:1px;"></td></tr>'
-            f'</table></td></tr>'
-        )
-        for item in normal_stocks:
-            cards_html += _stock_card(item, False)
-
-    html_body = (
-        '<!DOCTYPE html><html><head>'
-        '<meta charset="UTF-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '</head>'
-        '<body style="margin:0;padding:0;background:#0d1117;font-family:Arial,Helvetica,sans-serif;">'
-        '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-        ' style="background:#0d1117;padding:24px 0;">'
-        '<tr><td align="center">'
-        '<table width="560" cellpadding="0" cellspacing="0" border="0"'
-        ' style="max-width:560px;width:100%;">'
-
-        # header
-        '<tr><td style="background:#141928;border-radius:16px 16px 0 0;'
-        'padding:28px 28px 20px;text-align:center;">'
-        '<p style="color:#ef4444;font-size:32px;margin:0 0 10px;">🚨</p>'
-        '<h1 style="color:#ffffff;font-size:22px;font-weight:bold;'
-        'margin:0 0 8px;letter-spacing:2px;text-transform:uppercase;">Buy Signal Alert</h1>'
-        f'<p style="color:#94a3b8;font-size:13px;margin:0 0 18px;">📅 {time_str}</p>'
-        '<table width="100%" cellpadding="0" cellspacing="0">'
-        '<tr><td style="background:#ef4444;height:3px;border-radius:2px;font-size:1px;">&nbsp;</td></tr>'
-        '</table>'
-        '</td></tr>'
-
-        # cards wrapper
-        '<tr><td style="background:#1a1f36;padding:0 18px;">'
-        '<table width="100%" cellpadding="0" cellspacing="0" border="0">'
-        + cards_html +
-        '</table>'
-        '</td></tr>'
-
-        # footer
-        '<tr><td style="background:#141928;border-radius:0 0 16px 16px;'
-        'padding:14px;text-align:center;">'
-        '<p style="color:#374151;font-size:11px;margin:0;letter-spacing:0.5px;">'
-        'EGX Constitutional Investment Platform &copy; 2026</p>'
-        '</td></tr>'
-
-        '</table>'
-        '</td></tr></table>'
-        '</body></html>'
-    )
-
-    date_str = now_cairo().strftime("%Y-%m-%d %H:%M")
-    subject  = f"🚨 Signal Alert: {total_count} stock(s) moved to BUY — {date_str}"
-    ok = _send_email_raw(subject=subject, html=html_body, to=EMAIL)
-    if ok:
-        print(f"📧 Email alert sent for {total_count} stock(s) "
-              f"({len(whitelist_stocks)} whitelist, {len(normal_stocks)} normal)")
-    return ok
+    sent = 0
+    for event in changed_events:
+        # Handle legacy format (has 'stock' key instead of 'ticker')
+        if "stock" in event and "ticker" not in event:
+            sig = event.get("to", "Buy")
+            event = {
+                "ticker":        event["stock"],
+                "event_type":    "FIRST_BUY" if sig == "Buy" else "RE_ACCUMULATION",
+                "entry_price":   event.get("target", 0.0),
+                "current_price": event.get("price", 0.0),
+                "sector":        event.get("ctx_label", ""),
+                "buy_score":     event.get("score", 0),
+            }
+        subject, html = build_alert_email(event)
+        ok = _send_email_raw(subject=subject, html=html, to=EMAIL)
+        if ok:
+            sent += 1
+            print(f"📧 Alert email sent: {event.get('ticker', '?')} {event.get('event_type', '?')}")
+    print(f"📧 Alert emails sent: {sent}/{len(changed_events)}")
 
 
 def _normalize_change_item(item: dict) -> dict:
@@ -2593,7 +2398,7 @@ def send_change_alert(changed_events):
     if _tg_route(SIGNAL_CHANGE, message, symbol="", check_duplicate=False):
         print("Signal change alert sent to Telegram")
 
-    send_change_email(changed_stocks)
+    send_change_email(changed_events)
 
 # =========================================
 # RUN

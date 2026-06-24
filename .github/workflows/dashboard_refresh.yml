@@ -51,21 +51,6 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Refresh prices and universe snapshot
-        run: |
-          python backfill_egx30.py --download-only || true
-
-          python3 - <<'PYEOF'
-          from universe_snapshot import build_universe_snapshot
-          from stock_dna_engine import build_stock_dna
-
-          build_universe_snapshot()
-          build_stock_dna()
-
-          print("Universe snapshot rebuilt.")
-          PYEOF
-        continue-on-error: true
-
       - name: Rebuild presentation snapshot
         run: |
           python3 - <<'PYEOF'

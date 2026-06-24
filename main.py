@@ -1772,7 +1772,7 @@ def _collect_current_prices(results):
         and results[s]["price"] > 0
     }
 
-_BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy"}
+_BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy", "Re-Accumulation", "RE-ACCUMULATION", "Confirmed", "CONFIRMED"}
 
 def _register_new_positions(results):
     """

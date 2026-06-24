@@ -1882,17 +1882,20 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
         _ebt.daily_run(results=results, signal_date=_today)
     except Exception as _eb_err:
         print(f"  [EarlyBuy] skipped: {_eb_err}")
-
-    # Pattern Intelligence 2.0 — daily incremental learning (research only)
+    # Pattern Intelligence 2.0 — daily incremental learning
     try:
         import pattern_kb as _pkb
-        _pkb_result = _pkb.daily_run()
-        print(f"  [PatternKB] daily_run: {_pkb_result.get('n_signals',0)} signals "
-              f"{_pkb_result.get('n_patterns',0)} patterns "
-              f"dir_corrected={_pkb_result.get('directions_corrected',False)}")
+        ...
     except Exception as _pkb_err:
         print(f"  [PatternKB] skipped: {_pkb_err}")
+
     changes = detect_signal_changes(results, previous_results)
+
+    print("=" * 60)
+    print(f"DEBUG changes count = {len(changes)}")
+    print(changes)
+    print("=" * 60)
+
     if changes:
         send_change_alert(changes)
 

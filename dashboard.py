@@ -339,6 +339,12 @@ def _s_buy_signals(snap) -> tuple:
 
     # ── 1. Today's confirmed events ───────────────────────────────────────────
     today_events  = list(snap.new_events_today or [])
+    print("="*80)
+    print("TODAY EVENTS")
+    for e in today_events:
+    if e.get("ticker") == "EAST.CA":
+        print(e)
+    print("="*80)
     today_tickers = {e["ticker"] for e in today_events}
     today_new_buy  = [e for e in today_events if e["event_type"] == "FIRST_BUY"]
     today_re_today = [e for e in today_events if e["event_type"] != "FIRST_BUY"]
@@ -349,14 +355,31 @@ def _s_buy_signals(snap) -> tuple:
         t = e["ticker"]
         if t not in by_ticker_latest or e["event_date"] > by_ticker_latest[t]["event_date"]:
             by_ticker_latest[t] = e
-    seen = set(today_tickers)
+        seen = set(today_tickers)
     reaccum_hist = []
+
+    print("=" * 80)
+    print("REACCUM HIST BEFORE BUILD")
+    print("timeline size =", len(snap.timeline or []))
+    print("=" * 80)
+
     for ticker, e in sorted(by_ticker_latest.items(), key=lambda x: x[1]["return_pct"]):
+        if ticker == "EAST.CA":
+            print("EAST TIMELINE EVENT =", e)
+
         if ticker in seen:
             continue
+
         if e["return_pct"] <= 0:
             seen.add(ticker)
             reaccum_hist.append(e)
+
+    print("=" * 80)
+    print("REACCUM HIST RESULT")
+    for e in reaccum_hist:
+        if e["ticker"] == "EAST.CA":
+            print(e)
+    print("=" * 80)
 
     # ── 3. Build blocks with conviction ranking ───────────────────────────────
     def _conv(e: dict) -> float:

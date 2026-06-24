@@ -408,7 +408,6 @@ class ScanOrchestrator:
 
         print(f"[Orchestrator] dispatch_from_env — "
               f"time={hour:02d}:{minute:02d} FORCE_DAILY={force_daily} MANUAL_RUN={manual_run}")
-
         # Startup health check — recover any missed/failed jobs before new work
         try:
             from notifications.operations_monitor import OperationsMonitor
@@ -416,7 +415,7 @@ class ScanOrchestrator:
         except Exception as e:
             print(f"[Orchestrator] startup_check non-fatal: {e}")
 
-                manual_job = os.getenv("MANUAL_JOB", "").lower()
+        manual_job = os.getenv("MANUAL_JOB", "").lower()
 
         # تشغيل التقرير الصباحى يدوياً
         if manual_job == "morning":

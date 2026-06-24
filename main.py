@@ -2060,19 +2060,33 @@ def daily_scan():
 def continuous_scan():
     print(f"\n🔄 Continuous scan at {fmt_cairo()}")
     html, current_results, snap = build_report(holiday_mode=False)
+
+    # Register any new constitutional timeline events from today's candidate_pool
+    try:
+        from constitutional_timeline_engine import run_daily as _tl_run_daily
+        _tl_result = _tl_run_daily()
+        if _tl_result.get("new_events"):
+            print(f"  [Timeline] New events: {_tl_result['new_events']}")
+    except Exception as _tl_err:
+        print(f"  [continuous_scan] timeline engine non-fatal: {_tl_err}")
+
+    # Detect changes BEFORE overwriting scan_results.json (needs previous state)
+    changes = detect_signal_changes(snap)
+
     try:
         from presentation.presentation_snapshot import write_presentation_snapshot_json
         write_presentation_snapshot_json(snap)
     except Exception as _snj_err:
         print(f"  [continuous_scan] snapshot JSON write non-fatal: {_snj_err}")
+
     save_scan_results(current_results)
     save_signal_history(current_results)
-    changes = detect_signal_changes(snap)
+
     if changes:
         print(f"🚨 Found {len(changes)} new constitutional event(s) today!")
         send_change_alert(changes)
     else:
-        print("ℹ️ No new constitutional events today")
+        print("ℹ️ No signal changes detected")
 
 
 def manual_scan():
@@ -2225,11 +2239,67 @@ def load_previous_results():
 
 
 def detect_signal_changes(snap) -> list[dict]:
-    """Return new constitutional events recorded today — the single source of truth.
+    """Detect stocks that newly entered the constitutional buy zone in this scan.
 
-    Dashboard, Email, and Telegram all read from snap.new_events_today; change
-    alerts now use the same list so every consumer sees identical data.
+    Strategy: compare universe_snapshot stocks meeting the constitutional gate
+    (r2 >= 60 AND final_score >= 35 AND current_price <= entry_zone) against
+    the previous scan_results.json.  A stock is "new" if it qualifies now but
+    did NOT show a buy-class signal in the previous scan, or if no previous
+    scan exists.
+
+    Falls back to snap.new_events_today (timeline-DB events) only when
+    universe_snapshot is unavailable, to preserve backward compatibility.
     """
+    # ── Primary path: universe_snapshot comparison ───────────────────────────
+    current_universe = snap.universe_snapshot or []
+    if current_universe:
+        # Load previous scan signals (keyed by ticker)
+        prev_buy_tickers: set[str] = set()
+        try:
+            prev = load_previous_results()
+            if prev:
+                _BUY_CLASS = {"Buy", "Strong Buy", "Very Strong Buy",
+                              "Institutional Buy", "Re-Accumulation",
+                              "RE-ACCUMULATION", "Confirmed", "CONFIRMED"}
+                prev_buy_tickers = {
+                    sym for sym, r in prev.items()
+                    if isinstance(r, dict) and r.get("signal") in _BUY_CLASS
+                }
+        except Exception:
+            pass
+
+        new_events: list[dict] = []
+        for u in current_universe:
+            ticker      = u.get("ticker", "")
+            r2          = float(u.get("r2_score") or 0)
+            score       = float(u.get("final_score") or 0)
+            cur_price   = float(u.get("current_price") or 0)
+            entry_price = float(u.get("entry_zone") or 0)
+
+            # Constitutional gate: R2 >= 60, score >= 35, price at or below entry
+            if r2 < 60.0 or score < 35.0:
+                continue
+            if entry_price > 0 and cur_price > entry_price * 1.02:
+                # Price is more than 2% above entry — not in buy zone
+                continue
+
+            # Only alert if this ticker was NOT already a buy signal last scan
+            if ticker not in prev_buy_tickers:
+                new_events.append({
+                    "ticker":        ticker,
+                    "event_type":    "RE_ACCUMULATION",
+                    "event_date":    today_cairo().isoformat(),
+                    "entry_price":   entry_price if entry_price > 0 else cur_price,
+                    "current_price": cur_price,
+                    "buy_r2":        r2,
+                    "buy_score":     score,
+                    "sector":        u.get("sector", ""),
+                    "return_pct":    u.get("return_pct", 0.0),
+                    "status":        u.get("status", ""),
+                })
+        return new_events
+
+    # ── Fallback: timeline-DB events written today ────────────────────────────
     return list(snap.new_events_today or [])
 
 

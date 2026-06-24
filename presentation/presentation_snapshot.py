@@ -307,6 +307,20 @@ def build_presentation_snapshot() -> PresentationSnapshot:
                     ) if entry_price else 0.0,
                 ))
             snap.approaching_entries = entries
+
+            # Canonical exclusivity: BUY / RE-ACCUMULATION signals have
+            # higher priority than NEAR ENTRY and must never appear twice.
+            signal_tickers = {
+                e["ticker"] for e in (
+                    (snap.new_events_today or []) +
+                    (snap.re_accumulations or [])
+                )
+            }
+            if signal_tickers:
+                snap.approaching_entries = [
+                    e for e in snap.approaching_entries
+                    if e["ticker"] not in signal_tickers
+                ]
         except Exception:
             pass
         pool.close()

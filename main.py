@@ -1821,7 +1821,12 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
 
     # Step 1: fetch data
     html, results, _ = build_report(holiday_mode=holiday_mode, last_trading=last_trading)
-
+    print("\n" + "="*80)
+    print("LIVE RESULT FOR EAST.CA")
+    from pprint import pprint
+    pprint(results.get("EAST.CA"))
+    print("="*80 + "\n")
+    
     # Step 2: register positions, update targets
     _register_new_positions(results)
     cur_prices = _collect_current_prices(results)
@@ -1891,6 +1896,11 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
 
 
     print("=" * 80)
+
+    print("\n" + "="*80)
+    print("CURRENT SIGNAL:", results.get("EAST.CA", {}).get("signal"))
+    print("PREVIOUS SIGNAL:", previous_results.get("EAST.CA", {}).get("signal"))
+    print("="*80 + "\n")
 
     changes = detect_signal_changes(results, previous_results)
 

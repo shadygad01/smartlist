@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "created_at": "2026-06-14T03:30:17.870233+00:00",
-  "last_updated": "2026-06-24T18:06:38.477373+00:00",
+  "last_updated": "2026-06-24T19:40:27.316949+00:00",
   "research_items": {
     "RI-PRICE-INV": {
       "id": "RI-PRICE-INV",
@@ -1410,8 +1410,8 @@
         "verdict": "CONFIRMED",
         "oos_diff": 0.0807,
         "wf_folds": [
-          0.0428,
-          0.0032,
+          0.0446,
+          -0.0006,
           0.014,
           0.0829
         ]
@@ -2009,6 +2009,13 @@
           "fields": [
             "evidence_data"
           ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -2382,7 +2389,7 @@
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
       "next_required_action": "Need 6+ months forward data (n≥150) before promoting. Do not apply to main scanner.",
-      "estimated_impact": 0.0231,
+      "estimated_impact": 0.025,
       "supporting_modules": [
         "adaptive_learning"
       ],
@@ -2772,6 +2779,13 @@
         },
         {
           "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
           "event": "updated",
           "fields": [
             "estimated_impact"
@@ -3846,6 +3860,17 @@
       "rank_score": 54.0
     },
     {
+      "id": "RI-HVN-HTF-BONUS",
+      "title": "IMP-5: HVN + HTF_HH super-bonus tier — model_score=100, n=8.5% of signals",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Awaiting Validation",
+      "impact": 0.025,
+      "indicator": "multi",
+      "next_action": "Need 6+ months forward data (n≥150) before promoting. Do not apply to main scanner.",
+      "rank_score": 147.5
+    },
+    {
       "id": "RI-MICRO-FEATURES",
       "title": "Edge Discovery: 30 microstructure features predict returns but are absent from s",
       "priority": "MEDIUM",
@@ -3855,17 +3880,6 @@
       "indicator": "micro",
       "next_action": "Start with snap_reclaim_spd (reclaim speed appears in multiple top rules). Research whether it can be computed daily and",
       "rank_score": 147.5
-    },
-    {
-      "id": "RI-HVN-HTF-BONUS",
-      "title": "IMP-5: HVN + HTF_HH super-bonus tier — model_score=100, n=8.5% of signals",
-      "priority": "MEDIUM",
-      "evidence": "MEDIUM",
-      "status": "Awaiting Validation",
-      "impact": 0.0231,
-      "indicator": "multi",
-      "next_action": "Need 6+ months forward data (n≥150) before promoting. Do not apply to main scanner.",
-      "rank_score": 148.45
     },
     {
       "id": "RI-DIV-MACD",
@@ -4693,6 +4707,13 @@
     },
     {
       "date": "2026-06-23",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
       "n_items": 23,
       "n_active": 22,
       "n_validated": 0,

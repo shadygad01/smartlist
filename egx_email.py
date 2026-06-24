@@ -476,7 +476,7 @@ def _near_constitutional_entry(snap: PresentationSnapshot, dna: dict) -> str:
         )
 
     return (
-        _section_hdr(4, f"NEAR CONSTITUTIONAL ENTRY ({total_e})", badge=mem_badge) +
+        _section_hdr(4, f"NEAR CONSTITUTIONAL ENTRY ({total_e} tickers)", badge=mem_badge) +
         f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
         f' style="border:1px solid #e8d5a0;border-collapse:collapse;background:#fffcf0;">'
         f'{_th("Ticker","Current","Entry Zone","R2 Progress","Zone Position","Waiting For","Hist. Val.")}'

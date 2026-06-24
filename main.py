@@ -1889,7 +1889,15 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
     except Exception as _pkb_err:
         print(f"  [PatternKB] skipped: {_pkb_err}")
 
+
+    print("=" * 80)
+
     changes = detect_signal_changes(results, previous_results)
+
+    print("=" * 80)
+    print("EAST RESULT")
+    print(results.get("EAST.CA"))
+    print("=" * 80)
 
     print("=" * 60)
     print(f"DEBUG changes count = {len(changes)}")

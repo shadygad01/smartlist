@@ -442,6 +442,7 @@ class ScanOrchestrator:
             f"({hour:02d}:{minute:02d}) — no action"
         )
         return True
+        
     def recent_executions(self, limit: int = 20) -> list[dict]:
         """Return recent execution log rows."""
         conn = sqlite3.connect(self._db)

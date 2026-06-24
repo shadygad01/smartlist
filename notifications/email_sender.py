@@ -45,11 +45,34 @@ def send(
     Returns:
         True on success, False on failure.
     """
+    import hashlib, re as _re, os as _os_inner
+    from pathlib import Path as _Path
+
     _sender   = sender   or os.getenv("EMAIL_USER", "")
     _password = password or os.getenv("EMAIL_PASS", "")
     _to       = to       or os.getenv("EMAIL_USER", "")
     _host     = smtp_host or os.getenv("SMTP_HOST", _SMTP_HOST)
     _port     = smtp_port or int(os.getenv("SMTP_PORT", str(_SMTP_PORT)))
+
+    # ── PRE-SEND INSTRUMENTATION ─────────────────────────────────────────────
+    _sha = hashlib.sha256(html.encode()).hexdigest()
+    _near_m = _re.search(r'NEAR CONSTITUTIONAL ENTRY \((\d+) tickers?\)', html)
+    _near_n = int(_near_m.group(1)) if _near_m else 0
+    _prices = _re.findall(r'(\d+\.\d+)\s*(?:EGP|egp)', html)
+    print(f"[email_sender] PRE-SMTP AUDIT:")
+    print(f"  subject   : {subject}")
+    print(f"  html_size : {len(html)} bytes")
+    print(f"  sha256    : {_sha[:24]}...")
+    print(f"  near_count: {_near_n}")
+    print(f"  prices_in_html: {_prices[:8]}")
+    # Save a copy before sending so it can be inspected
+    _art = _Path(__file__).parent.parent / "runtime_email.html"
+    try:
+        _art.write_text(html, encoding="utf-8")
+        print(f"  saved to  : {_art}")
+    except Exception as _e:
+        print(f"  save_err  : {_e}")
+    # ─────────────────────────────────────────────────────────────────────────
 
     if not _sender or not _password:
         print("[email_sender] EMAIL_USER / EMAIL_PASS not set — skipping.")

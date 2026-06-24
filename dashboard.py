@@ -349,38 +349,39 @@ def _s_buy_signals(snap) -> tuple:
     today_new_buy  = [e for e in today_events if e["event_type"] == "FIRST_BUY"]
     today_re_today = [e for e in today_events if e["event_type"] != "FIRST_BUY"]
 
-    # ── 2. Historical re-accumulation candidates ──────────────────────────────
-    by_ticker_latest: dict[str, dict] = {}
-    for e in (snap.timeline or []):
-        t = e["ticker"]
-        if t not in by_ticker_latest or e["event_date"] > by_ticker_latest[t]["event_date"]:
-            by_ticker_latest[t] = e
-        seen = set(today_tickers)
-    reaccum_hist = []
+    # ── 2. Live re-accumulation candidates (single source of truth) ───────────
 
-    print("=" * 80)
-    print("REACCUM HIST BEFORE BUILD")
-    print("timeline size =", len(snap.timeline or []))
-    print("=" * 80)
+reaccum_hist = []
 
-    for ticker, e in sorted(by_ticker_latest.items(), key=lambda x: x[1]["return_pct"]):
-        if ticker == "EAST.CA":
-            print("EAST TIMELINE EVENT =", e)
+for row in (snap.universe_snapshot or []):
 
-        if ticker in seen:
+    signal = (row.get("signal") or "").strip().upper()
+
+    if signal in {
+        "RE-ACCUMULATION",
+        "BUY",
+        "STRONG BUY",
+        "VERY STRONG BUY",
+        "INSTITUTIONAL BUY",
+    }:
+
+        ticker = row["ticker"]
+
+        if ticker in today_tickers:
             continue
 
-        if e["return_pct"] <= 0:
-            seen.add(ticker)
-            reaccum_hist.append(e)
-
-    print("=" * 80)
-    print("REACCUM HIST RESULT")
-    for e in reaccum_hist:
-        if e["ticker"] == "EAST.CA":
-            print(e)
-    print("=" * 80)
-
+        reaccum_hist.append({
+            "ticker": ticker,
+            "event_type": "RE_ACCUMULATION",
+            "entry_price": row.get("entry_zone", row.get("current_price")),
+            "current_price": row.get("current_price"),
+            "buy_r2": row.get("r2_score", 0),
+            "buy_score": row.get("final_score", 0),
+            "event_date": snap.generated_at[:10],
+            "return_pct": row.get("return_pct", 0),
+            "sector": row.get("sector", ""),
+            "days_active": 0,
+        })
     # ── 3. Build blocks with conviction ranking ───────────────────────────────
     def _conv(e: dict) -> float:
         return _conviction_score(

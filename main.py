@@ -1819,24 +1819,15 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
     # Step 0: backfill missing pattern scores for existing positions
     backfill_pattern_scores()
 
-    # Step 1: fetch data
-    html, results, _ = build_report(holiday_mode=holiday_mode, last_trading=last_trading)
-    print("\n" + "="*80)
-    print("LIVE RESULT FOR EAST.CA")
-    from pprint import pprint
-    pprint(results.get("EAST.CA"))
-    print("="*80 + "\n")
-    
+    # Step 1: fetch data + build snapshot (single build, shared with email + Telegram)
+    html, results, snap = build_report(holiday_mode=holiday_mode, last_trading=last_trading)
+
     # Step 2: register positions, update targets
     _register_new_positions(results)
     cur_prices = _collect_current_prices(results)
     monitor_positions(cur_prices)
     monitor_reinforcement(cur_prices, results)
     resolved = check_outcomes(cur_prices)
-
-    # Step 3: rebuild HTML using cached prices — ONE snapshot build, shared with Telegram
-    html, _, snap = build_report(holiday_mode=holiday_mode, last_trading=last_trading,
-                                 _cached_results=results)
 
     # Step 4: write canonical snapshot JSON (single authoritative write — same object as email+telegram)
     try:
@@ -1887,34 +1878,7 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
         _ebt.daily_run(results=results, signal_date=_today)
     except Exception as _eb_err:
         print(f"  [EarlyBuy] skipped: {_eb_err}")
-    # Pattern Intelligence 2.0 — daily incremental learning
-    raise Exception("TEST_12345")
-    try:
-        import pattern_kb as _pkb
-        ...
-    except Exception as _pkb_err:
-        print(f"  [PatternKB] skipped: {_pkb_err}")
-
-
-    print("=" * 80)
-
-    print("\n" + "="*80)
-    print("CURRENT SIGNAL:", results.get("EAST.CA", {}).get("signal"))
-    print("PREVIOUS SIGNAL:", previous_results.get("EAST.CA", {}).get("signal"))
-    print("="*80 + "\n")
-
-    changes = detect_signal_changes(results, previous_results)
-
-    print("=" * 80)
-    print("EAST RESULT")
-    print(results.get("EAST.CA"))
-    print("=" * 80)
-
-    print("=" * 60)
-    print(f"DEBUG changes count = {len(changes)}")
-    print(changes)
-    print("=" * 60)
-
+    changes = detect_signal_changes(snap)
     if changes:
         send_change_alert(changes)
 
@@ -2097,9 +2061,7 @@ def daily_scan():
 
 def continuous_scan():
     print(f"\n🔄 Continuous scan at {fmt_cairo()}")
-    previous_results = load_previous_results()
     html, current_results, snap = build_report(holiday_mode=False)
-    # Write canonical snapshot JSON after every market scan — single authoritative write
     try:
         from presentation.presentation_snapshot import write_presentation_snapshot_json
         write_presentation_snapshot_json(snap)
@@ -2107,12 +2069,12 @@ def continuous_scan():
         print(f"  [continuous_scan] snapshot JSON write non-fatal: {_snj_err}")
     save_scan_results(current_results)
     save_signal_history(current_results)
-    changes = detect_signal_changes(current_results, previous_results)
+    changes = detect_signal_changes(snap)
     if changes:
-        print(f"🚨 Found {len(changes)} signal change(s)!")
+        print(f"🚨 Found {len(changes)} new constitutional event(s) today!")
         send_change_alert(changes)
     else:
-        print("ℹ️ No signal changes detected")
+        print("ℹ️ No new constitutional events today")
 
 
 def manual_scan():
@@ -2264,42 +2226,13 @@ def load_previous_results():
     return {}
 
 
-def detect_signal_changes(current_results, previous_results):
-    """
-    كشف التغييرات في الإشارات (من Wait إلى BUY/STRONG BUY)
-    """
-    changed_stocks = []
-    
-    for stock in STOCKS:
-        current = current_results.get(stock, {})
-        previous = previous_results.get(stock, {})
-        
-        current_sig = current.get("signal", "Skip")
-        previous_sig = previous.get("signal", "Skip")
-        current_score = current.get("score", 0)
-        current_raw_score = current.get("raw_score", current_score)
-        current_price = current.get("price", "N/A")
-        current_target = current.get("target", "N/A")
+def detect_signal_changes(snap) -> list[dict]:
+    """Return new constitutional events recorded today — the single source of truth.
 
-        # Signal upgraded from Skip/Wait into a buy class
-        BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy", "Re-Accumulation", "RE-ACCUMULATION", "Re Accumulation", "Confirmed", "CONFIRMED"}
-        print(f"DEBUG {stock}: prev={previous_sig!r} current={current_sig!r}")
-        if previous_sig != current_sig and current_sig in BUY_SIGNALS:
-            changed_stocks.append({
-                "stock": stock,
-                "from": previous_sig,
-                "to": current_sig,
-                "score": current_score,
-                "raw_score": current_raw_score,
-                "factor_exp_score": current.get("factor_exp_score", 0),
-                "ctx_label": current.get("ctx_label", ""),
-                "price": current_price,
-                "target": current_target,
-                "entry_zones": current.get("entry_zones", None),
-                "pattern": current.get("pattern", {}),
-            })
-    
-    return changed_stocks
+    Dashboard, Email, and Telegram all read from snap.new_events_today; change
+    alerts now use the same list so every consumer sees identical data.
+    """
+    return list(snap.new_events_today or [])
 
 
 def send_change_email(changed_stocks):
@@ -2525,10 +2458,42 @@ def send_change_email(changed_stocks):
     return ok
 
 
-def send_change_alert(changed_stocks):
-    """Send instant Telegram alert when a signal flips to BUY."""
-    if not changed_stocks:
+def _normalize_change_item(item: dict) -> dict:
+    """Normalize a constitutional timeline event to the change-alert wire format.
+
+    Accepts either the legacy compare-dict (has 'stock' key) or a timeline event
+    (has 'ticker' key).  Returns a unified dict both send_change_alert and
+    send_change_email can consume without branching.
+    """
+    if "stock" in item:
+        return item  # already legacy format
+    etype  = item.get("event_type", "RE_ACCUMULATION")
+    sig    = "Buy" if etype == "FIRST_BUY" else "RE-ACCUMULATION"
+    stock  = item["ticker"]
+    price  = item.get("current_price", "N/A")
+    entry  = item.get("entry_price", "N/A")
+    score  = item.get("buy_score", 0)
+    return {
+        "stock":            stock,
+        "from":             "Prior",
+        "to":               sig,
+        "score":            score,
+        "raw_score":        score,
+        "factor_exp_score": 0,
+        "ctx_label":        item.get("sector", ""),
+        "price":            price,
+        "target":           entry,
+        "entry_zones":      None,
+        "pattern":          {},
+    }
+
+
+def send_change_alert(changed_events):
+    """Send instant Telegram + email alert for new constitutional events today."""
+    if not changed_events:
         return
+
+    changed_stocks = [_normalize_change_item(e) for e in changed_events]
 
     date_str = now_cairo().strftime("%d %b %Y  %H:%M")
     lines = [
@@ -2540,10 +2505,8 @@ def send_change_alert(changed_stocks):
         stock  = item['stock']
         price  = item.get('price', 'N/A')
         target = item.get('target', 'N/A')
-        raw_c  = item.get("raw_score", item["score"])
-        adj_tag = f"  _(raw {raw_c:.0f})_" if raw_c != item["score"] else ""
-        ctx_line = f"\n   {item['ctx_label']}" if item.get("ctx_label") else ""
-        wl_tag  = "  ⭐ _Watchlist_" if stock in WHITELIST else ""
+        score  = item.get("score", 0)
+        wl_tag = "  ⭐ _Watchlist_" if stock in WHITELIST else ""
 
         try:
             upside = f"  (+{(float(target) - float(price)) / float(price) * 100:.1f}%)"
@@ -2553,16 +2516,15 @@ def send_change_alert(changed_stocks):
         lines.append(f"{'─'*25}")
         lines.append(f"📈 *{NAMES.get(stock, stock)}*  `{stock}`{wl_tag}")
         lines.append(f"   {item['from']}  →  *{item['to']}*")
-        lines.append(f"   Constitutional BUY — entered buy zone{ctx_line}")
+        lines.append(f"   Constitutional BUY — entered buy zone")
         lines.append(f"   Price      *{price} EGP*")
-        lines.append(f"   Target     *{target} EGP*{upside}\n")
+        lines.append(f"   Entry Zone *{target} EGP*{upside}\n")
 
     message = "\n".join(lines)
 
     if _tg_route(SIGNAL_CHANGE, message, symbol="", check_duplicate=False):
         print("Signal change alert sent to Telegram")
 
-    # إرسال Email للجميع مع التمييز
     send_change_email(changed_stocks)
 
 # =========================================

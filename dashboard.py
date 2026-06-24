@@ -339,49 +339,34 @@ def _s_buy_signals(snap) -> tuple:
 
     # ── 1. Today's confirmed events ───────────────────────────────────────────
     today_events  = list(snap.new_events_today or [])
-    print("="*80)
-    print("TODAY EVENTS")
-    for e in today_events:
-    if e.get("ticker") == "EAST.CA":
-        print(e)
-    print("="*80)
     today_tickers = {e["ticker"] for e in today_events}
     today_new_buy  = [e for e in today_events if e["event_type"] == "FIRST_BUY"]
     today_re_today = [e for e in today_events if e["event_type"] != "FIRST_BUY"]
 
-    # ── 2. Live re-accumulation candidates (single source of truth) ───────────
+    # ── 2. Live re-accumulation candidates from universe_snapshot ─────────────
+    reaccum_hist = []
+    for row in (snap.universe_snapshot or []):
+        r2    = row.get("r2_score") or 0.0
+        score = row.get("final_score") or 0.0
+        cp    = row.get("current_price") or 0.0
+        ep    = row.get("entry_zone") or 0.0
+        if r2 >= 60 and score >= 35 and ep > 0 and cp <= ep:
+            ticker = row["ticker"]
+            if ticker in today_tickers:
+                continue
+            reaccum_hist.append({
+                "ticker":        ticker,
+                "event_type":    "RE_ACCUMULATION",
+                "entry_price":   ep,
+                "current_price": cp,
+                "buy_r2":        r2,
+                "buy_score":     score,
+                "event_date":    snap.generated_at[:10],
+                "return_pct":    row.get("return_pct", 0),
+                "sector":        row.get("sector", ""),
+                "days_active":   0,
+            })
 
-reaccum_hist = []
-
-for row in (snap.universe_snapshot or []):
-
-    signal = (row.get("signal") or "").strip().upper()
-
-    if signal in {
-        "RE-ACCUMULATION",
-        "BUY",
-        "STRONG BUY",
-        "VERY STRONG BUY",
-        "INSTITUTIONAL BUY",
-    }:
-
-        ticker = row["ticker"]
-
-        if ticker in today_tickers:
-            continue
-
-        reaccum_hist.append({
-            "ticker": ticker,
-            "event_type": "RE_ACCUMULATION",
-            "entry_price": row.get("entry_zone", row.get("current_price")),
-            "current_price": row.get("current_price"),
-            "buy_r2": row.get("r2_score", 0),
-            "buy_score": row.get("final_score", 0),
-            "event_date": snap.generated_at[:10],
-            "return_pct": row.get("return_pct", 0),
-            "sector": row.get("sector", ""),
-            "days_active": 0,
-        })
     # ── 3. Build blocks with conviction ranking ───────────────────────────────
     def _conv(e: dict) -> float:
         return _conviction_score(

@@ -29,6 +29,8 @@ concurrency:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
 
@@ -97,9 +99,20 @@ jobs:
           PYEOF
         continue-on-error: true
 
+      - name: Rebuild presentation snapshot
+        run: |
+          python3 - <<'PYEOF'
+          from presentation.presentation_snapshot import (
+              build_presentation_snapshot,
+              write_presentation_snapshot_json,
+          )
+          snap = build_presentation_snapshot()
+          write_presentation_snapshot_json(snap)
+          print("presentation_snapshot.json written.")
+          PYEOF
+
       - name: Rebuild dashboard HTML
-        run: python3 dashboard.py || true
-        continue-on-error: true
+        run: python3 dashboard.py
 
       - name: Save state to git
         run: |
@@ -113,3 +126,22 @@ jobs:
           git add historical_data/historical_data/*.csv || true
           git diff --staged --quiet || git commit -m "Market scan: state update [skip ci]"
           git push || true
+
+      - name: Prepare web deploy
+        run: |
+          rm -rf web_deploy
+          mkdir -p web_deploy
+          cp dashboard.html web_deploy/index.html
+          cp version.json web_deploy/ 2>/dev/null || true
+          cp manifest.json web_deploy/ 2>/dev/null || true
+          cp sw.js web_deploy/ 2>/dev/null || true
+          cp icon.svg web_deploy/ 2>/dev/null || true
+          cp presentation_snapshot.json web_deploy/ 2>/dev/null || true
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./web_deploy
+          keep_files: true
+          commit_message: "Market scan: deploy dashboard [skip ci]"

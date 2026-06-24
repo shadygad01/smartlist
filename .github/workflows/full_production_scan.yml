@@ -377,3 +377,72 @@ jobs:
           name: intelligence-web
           path: web_deploy/
           retention-days: 1
+
+  # ── D ── Dashboard build + GitHub Pages deploy ────────────────────────────
+  dashboard_deploy:
+    needs: [scan_core, research_reports, intelligence_jobs]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: egx-pages-deploy
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download research artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: research-web
+          path: web_deploy/
+        continue-on-error: true
+
+      - name: Download intelligence artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: intelligence-web
+          path: web_deploy/
+        continue-on-error: true
+
+      - name: Rebuild presentation snapshot
+        run: |
+          python3 - <<'PYEOF'
+          from presentation.presentation_snapshot import (
+              build_presentation_snapshot,
+              write_presentation_snapshot_json,
+          )
+          snap = build_presentation_snapshot()
+          write_presentation_snapshot_json(snap)
+          print("presentation_snapshot.json written.")
+          PYEOF
+
+      - name: Build dashboard HTML
+        run: python3 dashboard.py
+
+      - name: Prepare web deploy
+        run: |
+          mkdir -p web_deploy
+          cp dashboard.html        web_deploy/index.html
+          cp version.json          web_deploy/ 2>/dev/null || true
+          cp manifest.json         web_deploy/ 2>/dev/null || true
+          cp sw.js                 web_deploy/ 2>/dev/null || true
+          cp icon.svg              web_deploy/ 2>/dev/null || true
+          cp presentation_snapshot.json web_deploy/ 2>/dev/null || true
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./web_deploy
+          keep_files: true
+          commit_message: "Full scan: deploy dashboard [skip ci]"

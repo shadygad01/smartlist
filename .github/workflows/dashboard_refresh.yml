@@ -1,25 +1,18 @@
 name: 📊 Dashboard Refresh
 
-# Sole GH Pages deployer — no other workflow uses peaceiris.
-# Triggers:
-#   1. repository_dispatch: dashboard_refresh (from GAS or external_dispatch replacement)
-#   2. push to main: when dashboard.py or presentation source changes (code changes only)
-#   3. workflow_dispatch: manual refresh
-# Concurrency group egx-pages-deploy is shared with full_production_scan deploy step
-# to prevent race conditions.
+# Single responsibility:
+# Build presentation snapshot
+# Build dashboard
+# Deploy to GitHub Pages
+#
+# No git commit
+# No git push
+# No self-trigger loop
 
 on:
   repository_dispatch:
     types:
       - dashboard_refresh
-
-  push:
-    branches: [main]
-    paths:
-      - 'dashboard.py'
-      - 'presentation/**'
-      - 'pattern_kb.py'
-      - 'signal_db.py'
 
   workflow_dispatch:
 
@@ -36,56 +29,78 @@ permissions:
 jobs:
 
   dashboard_refresh:
+
     runs-on: ubuntu-latest
     timeout-minutes: 10
+
     steps:
-      - uses: actions/checkout@v4
+
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.11"
+          cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
 
       - name: Refresh prices and universe snapshot
         run: |
           python backfill_egx30.py --download-only || true
+
           python3 - <<'PYEOF'
           from universe_snapshot import build_universe_snapshot
           from stock_dna_engine import build_stock_dna
+
           build_universe_snapshot()
           build_stock_dna()
-          print('Universe snapshot rebuilt.')
+
+          print("Universe snapshot rebuilt.")
           PYEOF
         continue-on-error: true
 
       - name: Rebuild presentation snapshot
         run: |
           python3 - <<'PYEOF'
-          from presentation.presentation_snapshot import build_presentation_snapshot, write_presentation_snapshot_json
+          from presentation.presentation_snapshot import (
+              build_presentation_snapshot,
+              write_presentation_snapshot_json,
+          )
+
           snap = build_presentation_snapshot()
           write_presentation_snapshot_json(snap)
-          print('presentation_snapshot.json written.')
+
+          print("presentation_snapshot.json written.")
           PYEOF
 
       - name: Build dashboard
-        run: python3 dashboard.py || true
+        run: |
+          python3 dashboard.py
 
-      - name: Price consistency assertion (ONE ticker = ONE price)
-        run: python3 audit/assert_price_consistency.py
+      - name: Price consistency assertion
+        run: |
+          python3 audit/assert_price_consistency.py
         continue-on-error: true
 
       - name: Prepare web deploy
         run: |
+          rm -rf web_deploy
           mkdir -p web_deploy
+
           cp dashboard.html web_deploy/index.html
+
           cp version.json web_deploy/ 2>/dev/null || true
-          cp manifest.json sw.js icon.svg web_deploy/ 2>/dev/null || true
+          cp manifest.json web_deploy/ 2>/dev/null || true
+          cp sw.js web_deploy/ 2>/dev/null || true
+          cp icon.svg web_deploy/ 2>/dev/null || true
+          cp presentation_snapshot.json web_deploy/ 2>/dev/null || true
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -93,29 +108,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./web_deploy
           keep_files: true
-          commit_message: "Deploy dashboard [skip ci]"
-
-      - name: Update public status
-        run: |
-          python - <<'PYEOF'
-          import sys, json
-          sys.path.insert(0, '.')
-          try:
-              from operations.github_health import check, write_public_status
-              public = write_public_status()
-              result = check()
-              print(f"Health: {result['status']}")
-              print(json.dumps(public, indent=2))
-          except Exception as e:
-              print(f"public_status update non-fatal: {e}")
-          PYEOF
-        continue-on-error: true
-
-      - name: Save state to git
-        run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add presentation_snapshot.json dashboard.html heartbeat.json \
-                  operations/public_status.json || true
-          git diff --staged --quiet || git commit -m "Dashboard refresh: snapshot + html [skip ci]"
-          git push || true
+          commit_message: Deploy dashboard [skip ci]

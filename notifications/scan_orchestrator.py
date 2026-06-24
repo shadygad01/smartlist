@@ -416,31 +416,33 @@ class ScanOrchestrator:
         except Exception as e:
             print(f"[Orchestrator] startup_check non-fatal: {e}")
 
-manual_job = os.getenv("MANUAL_JOB", "").lower()
+                manual_job = os.getenv("MANUAL_JOB", "").lower()
 
-# تشغيل التقرير الصباحى يدوياً
-if manual_job == "morning":
-    print("[Orchestrator] → run_morning_report (MANUAL_JOB=morning)")
-    return self.run_morning_report()
+        # تشغيل التقرير الصباحى يدوياً
+        if manual_job == "morning":
+            print("[Orchestrator] → run_morning_report (MANUAL_JOB=morning)")
+            return self.run_morning_report()
 
-# تشغيل السكان يدوياً من زر Run Scan
-if manual_run:
-    print("[Orchestrator] → run_market_scan (MANUAL_RUN)")
-    return self.run_market_scan()
+        # تشغيل السكان يدوياً من زر Run Scan
+        if manual_run:
+            print("[Orchestrator] → run_market_scan (MANUAL_RUN)")
+            return self.run_market_scan()
 
-# التقرير الصباحى التلقائى
-if force_daily or hour == 7:
-    print("[Orchestrator] → run_morning_report (FORCE_DAILY or 07:xx)")
-    return self.run_morning_report()
+        # التقرير الصباحى التلقائى
+        if force_daily or hour == 7:
+            print("[Orchestrator] → run_morning_report (FORCE_DAILY or 07:xx)")
+            return self.run_morning_report()
 
-# سكان السوق أثناء الجلسة
-if 10 <= hour <= 14:
-    print("[Orchestrator] → run_market_scan (market hours)")
-    return self.run_market_scan()
+        # سكان السوق أثناء الجلسة
+        if 10 <= hour <= 14:
+            print("[Orchestrator] → run_market_scan (market hours)")
+            return self.run_market_scan()
 
-print(f"[Orchestrator] Outside scheduled windows ({hour:02d}:{minute:02d}) — no action")
-return True
-
+        print(
+            f"[Orchestrator] Outside scheduled windows "
+            f"({hour:02d}:{minute:02d}) — no action"
+        )
+        return True
     def recent_executions(self, limit: int = 20) -> list[dict]:
         """Return recent execution log rows."""
         conn = sqlite3.connect(self._db)

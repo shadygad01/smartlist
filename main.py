@@ -1814,8 +1814,6 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
     """
     from notifications.morning_guard import html_hash, snap_hash, record_morning_done
 
-    previous_results = load_previous_results()
-
     # Step 0: backfill missing pattern scores for existing positions
     backfill_pattern_scores()
 

@@ -2260,7 +2260,7 @@ def detect_signal_changes(current_results, previous_results):
         current_target = current.get("target", "N/A")
 
         # Signal upgraded from Skip/Wait into a buy class
-        BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy"}
+        BUY_SIGNALS = {"Buy", "Strong Buy", "Very Strong Buy", "Institutional Buy", "Re-Accumulation", "RE-ACCUMULATION", "Re Accumulation", "Confirmed", "CONFIRMED"}
         if previous_sig in ("Skip", "Wait") and current_sig in BUY_SIGNALS:
             changed_stocks.append({
                 "stock": stock,

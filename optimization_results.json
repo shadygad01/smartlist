@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-25 13:22 UTC",
+  "generated_at": "2026-06-25 14:41 UTC",
   "n_signals": 1204,
   "baseline": {
     "label": "All signals (baseline)",
@@ -127,28 +127,6 @@
       "delta_mfe": 0.011435908929522481
     },
     {
-      "type": "Weight Optimization",
-      "indicator": "All r1-r8",
-      "col": "all",
-      "change": "Rebalance r1-r8 weights based on RF importance + optimization",
-      "current": "r1=30, r2=10, r3=20, r4=10, r5=8, r6=4, r7=3, r8=15",
-      "proposed": "Demand Zone=29.4, Liquidity=15.2, MACD=14.9, Order Block=14.5, Divergence=10.6, Price Zone=7.7, AVWAP=7.1, HTF Structure=0.7",
-      "sample_n": 603,
-      "retention": 0.5008305647840532,
-      "win_rate": 0.6882255389718076,
-      "exp_ret": 0.05453946932006633,
-      "median_ret": 0.04,
-      "mfe": 0.13391940298507463,
-      "mae": -0.06785157545605307,
-      "max_dd": -0.305,
-      "pf": 3.3088690597378534,
-      "opportunities": 603,
-      "confidence": 0.55,
-      "delta_ret": 0.005504165543383233,
-      "delta_mfe": 0.006583937868795575,
-      "oos_improvement": -0.00047209517345399646
-    },
-    {
       "type": "Interaction Gate",
       "indicator": "Liquidity + AVWAP",
       "col": "r3_liquidity+r5_avwap",
@@ -168,6 +146,28 @@
       "confidence": 0.7,
       "delta_ret": 0.005362145336015464,
       "delta_mfe": 0.0009492690175116614
+    },
+    {
+      "type": "Weight Optimization",
+      "indicator": "All r1-r8",
+      "col": "all",
+      "change": "Rebalance r1-r8 weights based on RF importance + optimization",
+      "current": "r1=30, r2=10, r3=20, r4=10, r5=8, r6=4, r7=3, r8=15",
+      "proposed": "Demand Zone=29.4, Liquidity=15.2, MACD=14.9, Order Block=14.5, Divergence=10.6, Price Zone=7.7, AVWAP=7.1, HTF Structure=0.7",
+      "sample_n": 603,
+      "retention": 0.5008305647840532,
+      "win_rate": 0.6882255389718076,
+      "exp_ret": 0.05453946932006633,
+      "median_ret": 0.04,
+      "mfe": 0.13391940298507463,
+      "mae": -0.06785157545605307,
+      "max_dd": -0.305,
+      "pf": 3.3088690597378534,
+      "opportunities": 603,
+      "confidence": 0.55,
+      "delta_ret": 0.00486653202633696,
+      "delta_mfe": 0.006583937868795575,
+      "oos_improvement": -0.00047209517345399646
     },
     {
       "type": "Indicator Gate",

@@ -333,6 +333,7 @@ def get_timeline() -> list[dict]:
             buy_r2           = float(r["buy_r2"]),
             buy_score        = float(r["buy_score"]),
             sector           = r["sector"] or "",
+            signal_version   = r["signal_version"] or "v1",
             current_price    = current_price,
             return_pct       = round(ret_pct, 2),
             peak_return_pct  = round(peak_ret, 2),

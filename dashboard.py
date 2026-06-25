@@ -1051,7 +1051,15 @@ def _s_stock_dna(snap, dna):
         confidence = d.get("memory_confidence", "DEVELOPING")
         conf_c = G if confidence == "STRONG" else (B if confidence == "CONFIRMED" else DIM)
         re_lines = ""
-        for re in re_accums:
+        re_display = re_accums[-3:]  # latest 3 only (store all, display 3)
+        hidden_n   = len(re_accums) - len(re_display)
+        if hidden_n > 0:
+            re_lines += (
+                f'<div style="font-size:11px;color:{DIM};margin-top:3px;font-style:italic;">'
+                f'+ {hidden_n} earlier re-accumulation{"s" if hidden_n != 1 else ""} (5-year history)'
+                f'</div>'
+            )
+        for re in re_display:
             re_lines += (
                 f'<div style="font-size:12px;color:{DIM};margin-top:3px;">'
                 f'Re-Accumulation {re["event_date"]} @ {re["entry_price"]:.2f} EGP '

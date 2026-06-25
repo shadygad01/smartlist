@@ -310,10 +310,13 @@ def build_presentation_snapshot() -> PresentationSnapshot:
 
             # Canonical exclusivity: BUY / RE-ACCUMULATION signals have
             # higher priority than NEAR ENTRY and must never appear twice.
+            # Only production events (signal_version != 'wf_v1') gate exclusivity;
+            # historical walk-forward archive events must not block current near-entry.
             signal_tickers = {
                 e["ticker"] for e in (
                     (snap.new_events_today or []) +
-                    (snap.re_accumulations or [])
+                    [e for e in (snap.re_accumulations or [])
+                     if e.get("signal_version") != "wf_v1"]
                 )
             }
             if signal_tickers:

@@ -1157,6 +1157,30 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
             if res.get("ok"):
                 print(f"  Done: {res.get('name', sym)}")
 
+    # ── PRICE PARITY FIX: flush live prices BEFORE snapshot reads universe_snapshot.db ──
+    # analyze() returns today's live prices in results[ticker]["price"].
+    # save_signal_history() writes them to signal_history.json.
+    # build_universe_snapshot() reads signal_history.json (highest priority source)
+    # and refreshes universe_snapshot.db so price_authority.get_all_prices() returns
+    # today's prices — not yesterday's stale values from the previous run.
+    # Without this, email gets 2026-06-23 prices while dashboard gets 2026-06-24 prices.
+    save_signal_history(results)
+    try:
+        from universe_snapshot import build_universe_snapshot
+        build_universe_snapshot()
+        # Phase 7 instrumentation: print prices for key tickers at this boundary
+        _AUDIT_TICKERS = {"EAST.CA", "MCQE.CA", "OIH.CA", "FWRY.CA", "BTFH.CA", "HELI.CA"}
+        from price_authority import get_all_prices as _gap
+        _px = _gap()
+        for _t in sorted(_AUDIT_TICKERS):
+            _p = _px.get(_t)
+            _src = results.get(_t, {}).get("price")
+            _match = "✓" if _p is not None and _src is not None and abs(_p - _src) < 0.02 else "✗"
+            print(f"  [PriceAudit] {_t}: universe_db={_p} analyze={_src} {_match}")
+    except Exception as _ub_err:
+        print(f"  [build_report] universe rebuild non-fatal: {_ub_err}")
+    # ─────────────────────────────────────────────────────────────────────────────
+
     snap = build_presentation_snapshot()
     html = build_email(snap)
     return html, results, snap
@@ -2239,68 +2263,79 @@ def load_previous_results():
 
 
 def detect_signal_changes(snap) -> list[dict]:
-    """Detect stocks that newly entered the constitutional buy zone in this scan.
-
-    Strategy: compare universe_snapshot stocks meeting the constitutional gate
-    (r2 >= 60 AND final_score >= 35 AND current_price <= entry_zone) against
-    the previous scan_results.json.  A stock is "new" if it qualifies now but
-    did NOT show a buy-class signal in the previous scan, or if no previous
-    scan exists.
-
-    Falls back to snap.new_events_today (timeline-DB events) only when
-    universe_snapshot is unavailable, to preserve backward compatibility.
     """
-    # ── Primary path: universe_snapshot comparison ───────────────────────────
+    Return genuine constitutional state transitions only.
+
+    Uses signal_state_store.record_transition() as the idempotency gate:
+      - First call: UNIQUE INSERT succeeds → transition recorded → event returned
+      - Subsequent calls with same data: INSERT OR IGNORE fires → event NOT returned
+
+    Idempotent: calling this any number of times with identical market data
+    produces at most ONE event per ticker per trading day.
+    """
+    from notifications.signal_state_store import (
+        get_current_state, record_transition,
+        STATE_NONE, STATE_CONST_BUY,
+    )
+
     current_universe = snap.universe_snapshot or []
-    if current_universe:
-        # Load previous scan signals (keyed by ticker)
-        prev_buy_tickers: set[str] = set()
-        try:
-            prev = load_previous_results()
-            if prev:
-                _BUY_CLASS = {"Buy", "Strong Buy", "Very Strong Buy",
-                              "Institutional Buy", "Re-Accumulation",
-                              "RE-ACCUMULATION", "Confirmed", "CONFIRMED"}
-                prev_buy_tickers = {
-                    sym for sym, r in prev.items()
-                    if isinstance(r, dict) and r.get("signal") in _BUY_CLASS
-                }
-        except Exception:
-            pass
+    if not current_universe:
+        # Fallback: timeline-DB events written today (backward compat only)
+        return list(snap.new_events_today or [])
 
-        new_events: list[dict] = []
-        for u in current_universe:
-            ticker      = u.get("ticker", "")
-            r2          = float(u.get("r2_score") or 0)
-            score       = float(u.get("final_score") or 0)
-            cur_price   = float(u.get("current_price") or 0)
-            entry_price = float(u.get("entry_zone") or 0)
+    try:
+        event_date = today_cairo().isoformat()
+    except Exception:
+        from datetime import date
+        event_date = date.today().isoformat()
 
-            # Constitutional gate: R2 >= 60, score >= 35, price at or below entry
-            if r2 < 60.0 or score < 35.0:
-                continue
-            if entry_price > 0 and cur_price > entry_price * 1.02:
-                # Price is more than 2% above entry — not in buy zone
-                continue
+    new_events: list[dict] = []
 
-            # Only alert if this ticker was NOT already a buy signal last scan
-            if ticker not in prev_buy_tickers:
-                new_events.append({
-                    "ticker":        ticker,
-                    "event_type":    "RE_ACCUMULATION",
-                    "event_date":    today_cairo().isoformat(),
-                    "entry_price":   entry_price if entry_price > 0 else cur_price,
-                    "current_price": cur_price,
-                    "buy_r2":        r2,
-                    "buy_score":     score,
-                    "sector":        u.get("sector", ""),
-                    "return_pct":    u.get("return_pct", 0.0),
-                    "status":        u.get("status", ""),
-                })
-        return new_events
+    for u in current_universe:
+        ticker      = u.get("ticker", "")
+        r2          = float(u.get("r2_score") or 0)
+        score       = float(u.get("final_score") or 0)
+        cur_price   = float(u.get("current_price") or 0)
+        entry_price = float(u.get("entry_zone") or 0)
 
-    # ── Fallback: timeline-DB events written today ────────────────────────────
-    return list(snap.new_events_today or [])
+        if not ticker:
+            continue
+
+        # Constitutional gate: R2 >= 60 AND score >= 35 AND price at/below entry zone
+        in_buy_zone = (
+            r2 >= 60.0 and score >= 35.0 and
+            (entry_price == 0 or cur_price <= entry_price * 1.02)
+        )
+        current_state = STATE_CONST_BUY if in_buy_zone else STATE_NONE
+
+        from_state = get_current_state(ticker)
+
+        if current_state == STATE_NONE:
+            # Ticker exited buy zone: update state silently, no notification
+            if from_state != STATE_NONE:
+                record_transition(ticker, from_state, STATE_NONE, event_date)
+            continue
+
+        # Ticker is in constitutional buy zone.
+        # record_transition returns True ONLY if this is the first time today.
+        is_new = record_transition(ticker, from_state, current_state, event_date)
+
+        if is_new:
+            event_type = "FIRST_BUY" if from_state == STATE_NONE else "RE_ACCUMULATION"
+            new_events.append({
+                "ticker":        ticker,
+                "event_type":    event_type,
+                "event_date":    event_date,
+                "entry_price":   entry_price if entry_price > 0 else cur_price,
+                "current_price": cur_price,
+                "buy_r2":        r2,
+                "buy_score":     score,
+                "sector":        u.get("sector", ""),
+                "return_pct":    u.get("return_pct", 0.0),
+                "status":        u.get("status", ""),
+            })
+
+    return new_events
 
 
 def send_change_email(changed_events):
@@ -2361,44 +2396,77 @@ def _normalize_change_item(item: dict) -> dict:
     }
 
 
-def send_change_alert(changed_events):
-    """Send instant Telegram + email alert for new constitutional events today."""
+def send_change_alert(changed_events: list[dict]) -> None:
+    """
+    Send per-ticker Telegram + email alerts for genuine constitutional state transitions.
+
+    Each ticker is sent as an individual Telegram message using:
+      - symbol=ticker  (per-ticker deduplication key in telegram_delivery table)
+      - check_duplicate=True  (router checks UNIQUE(event_type, symbol, event_date))
+
+    This gives TWO independent deduplication layers:
+      1. signal_event_log UNIQUE(ticker, event_date, to_state) — business state gate
+         (detect_signal_changes already filtered; only new transitions reach here)
+      2. telegram_delivery UNIQUE(event_type, symbol, event_date) — delivery gate
+         (prevents duplicate sends if send_change_alert is called multiple times)
+
+    Notifications are transient delivery records. They never own business state.
+    """
     if not changed_events:
         return
 
-    changed_stocks = [_normalize_change_item(e) for e in changed_events]
+    from notifications.signal_state_store import mark_notified, STATE_CONST_BUY
 
-    date_str = now_cairo().strftime("%d %b %Y  %H:%M")
-    lines = [
-        TG_CHANGE_HEADER,
-        f"_{date_str}_\n",
-    ]
+    try:
+        event_date = today_cairo().isoformat()
+        date_str   = now_cairo().strftime("%d %b %Y  %H:%M")
+    except Exception:
+        from datetime import date as _date, datetime as _dt
+        event_date = _date.today().isoformat()
+        date_str   = _dt.now().strftime("%d %b %Y  %H:%M")
 
-    for item in changed_stocks:
-        stock  = item['stock']
-        price  = item.get('price', 'N/A')
-        target = item.get('target', 'N/A')
-        score  = item.get("score", 0)
-        wl_tag = "  ⭐ _Watchlist_" if stock in WHITELIST else ""
+    for event in changed_events:
+        ticker     = event.get("ticker", "?")
+        etype      = event.get("event_type", "RE_ACCUMULATION")
+        cur_price  = event.get("current_price", "N/A")
+        entry      = event.get("entry_price", "N/A")
+        score      = event.get("buy_score", 0)
+        r2         = event.get("buy_r2", 0)
+        wl_tag     = "  ⭐ _Watchlist_" if ticker in WHITELIST else ""
 
         try:
-            upside = f"  (+{(float(target) - float(price)) / float(price) * 100:.1f}%)"
+            upside = f"  (+{(float(entry) - float(cur_price)) / float(cur_price) * 100:.1f}%)"
         except Exception:
             upside = ""
 
-        lines.append(f"{'─'*25}")
-        lines.append(f"📈 *{NAMES.get(stock, stock)}*  `{stock}`{wl_tag}")
-        lines.append(f"   {item['from']}  →  *{item['to']}*")
-        lines.append(f"   Constitutional BUY — entered buy zone")
-        lines.append(f"   Price      *{price} EGP*")
-        lines.append(f"   Entry Zone *{target} EGP*{upside}\n")
+        tg_lines = [
+            TG_CHANGE_HEADER,
+            f"_{date_str}_\n",
+            "─" * 25,
+            f"{'♻️' if 'RE_ACCUM' in etype else '⚡'} *{NAMES.get(ticker, ticker)}*  `{ticker}`{wl_tag}",
+            f"   Constitutional *{etype.replace('_', ' ')}*",
+            f"   Price       *{cur_price} EGP*",
+            f"   Entry Zone  *{entry} EGP*{upside}",
+            f"   R2={r2:.1f}  Score={score:.1f}",
+        ]
+        message = "\n".join(tg_lines)
 
-    message = "\n".join(lines)
+        # Per-ticker Telegram with duplicate check — router enforces UNIQUE(event_type, ticker, date)
+        tg_event = FIRST_BUY if etype == "FIRST_BUY" else SIGNAL_CHANGE
+        tg_ok = _tg_route(tg_event, message, symbol=ticker, check_duplicate=True)
+        if tg_ok:
+            print(f"[ChangeAlert] Telegram → {ticker} {etype}")
+            mark_notified(ticker, STATE_CONST_BUY, event_date, channel="telegram")
 
-    if _tg_route(SIGNAL_CHANGE, message, symbol="", check_duplicate=False):
-        print("Signal change alert sent to Telegram")
-
+    # Send one email per changed ticker (send_change_email already per-event)
     send_change_email(changed_events)
+    for event in changed_events:
+        mark_notified(
+            event.get("ticker", ""),
+            STATE_CONST_BUY,
+            event_date,
+            channel="email",
+        )
 
 # =========================================
 # RUN

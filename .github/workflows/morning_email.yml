@@ -4,11 +4,17 @@ name: 📧 Morning Email + Dashboard Deploy
 # the universe snapshot, presentation snapshot, dashboard, and deploys to GH Pages.
 # Triggered by Google Apps Script (repository_dispatch) or GitHub schedule as backup.
 #
-# EXECUTION ORDER (required for price consistency):
+# EXECUTION ORDER:
 #   1. Refresh CSVs (backfill_egx30)
-#   2. Morning report — analyze() fetches live TV prices, saves to signal_history.json
-#   3. Rebuild universe_snapshot.db — NOW reads today's signal_history.json prices
-#   4. Rebuild presentation_snapshot.json — PriceAuthority reads fresh universe_snapshot.db
+#   2. Morning report — build_report() now internally:
+#        a. analyze() fetches live TV prices into results dict
+#        b. save_signal_history(results) → signal_history.json (today's prices)
+#        c. build_universe_snapshot() → universe_snapshot.db (refreshed with today's prices)
+#        d. build_presentation_snapshot() → PresentationSnapshot (reads fresh universe_snapshot.db)
+#        e. build_email(snap) → email HTML — prices match universe_snapshot.db
+#      Email and dashboard therefore show IDENTICAL current prices (price parity enforced).
+#   3. Rebuild universe_snapshot.db again (idempotent — for dashboard + GH Pages)
+#   4. Rebuild presentation_snapshot.json (idempotent — canonical JSON artifact)
 #   5. Build dashboard — ONE snapshot, ONE html, ONE deploy
 #   6. Deploy to GH Pages
 
@@ -112,6 +118,12 @@ jobs:
 
       - name: Price consistency assertion (ONE ticker = ONE price)
         run: python3 audit/assert_price_consistency.py
+
+      - name: Email price parity assertion (email == dashboard == universe_snapshot.db)
+        run: python3 audit/assert_email_price_parity.py
+
+      - name: Signal idempotency assertion (10 scans = 1 notification)
+        run: python3 audit/assert_signal_idempotency.py
 
       - name: Update public status
         run: |

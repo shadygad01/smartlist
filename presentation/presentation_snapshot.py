@@ -323,21 +323,6 @@ def build_presentation_snapshot() -> PresentationSnapshot:
                     ) if entry_price else 0.0,
                 ))
             snap.approaching_entries = entries
-
-            # Canonical exclusivity: BUY / RE-ACCUMULATION signals have higher
-            # priority than NEAR ENTRY. snap.re_accumulations contains only
-            # production events (v1), so no further signal_version filtering needed.
-            signal_tickers = {
-                e["ticker"] for e in (
-                    (snap.new_events_today or []) +
-                    (snap.re_accumulations or [])
-                )
-            }
-            if signal_tickers:
-                snap.approaching_entries = [
-                    e for e in snap.approaching_entries
-                    if e["ticker"] not in signal_tickers
-                ]
         except Exception:
             pass
         pool.close()
@@ -364,6 +349,31 @@ def build_presentation_snapshot() -> PresentationSnapshot:
         snap.universe_size = len(snap.universe_snapshot)
     except Exception:
         snap.universe_snapshot = []
+
+    # ── Approaching Entry exclusivity (must run after universe_snapshot is loaded) ─
+    # Exclude tickers that are CURRENTLY live constitutional buy/re-accum signals.
+    # "Live" means: R2>=60 AND score>=35 AND price<=entry_zone right now.
+    # Historical RE_ACCUMULATION events must NOT suppress current Near Entry
+    # candidates — a ticker that previously had a re-accum event may be
+    # approaching the constitutional gate again and must be visible.
+    try:
+        live_constitutional_tickers = {
+            r["ticker"] for r in snap.universe_snapshot
+            if (r.get("r2_score") or 0.0) >= 60
+            and (r.get("final_score") or 0.0) >= 35
+            and (r.get("entry_zone") or 0.0) > 0
+            and (r.get("current_price") or 0.0) <= (r.get("entry_zone") or 0.0)
+        }
+        signal_tickers = {
+            e["ticker"] for e in (snap.new_events_today or [])
+        } | live_constitutional_tickers
+        if signal_tickers:
+            snap.approaching_entries = [
+                e for e in snap.approaching_entries
+                if e["ticker"] not in signal_tickers
+            ]
+    except Exception:
+        pass
 
     # ── 3. Knowledge Base ─────────────────────────────────────────────────────
     kb = _db(_KB_DB)

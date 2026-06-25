@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-24",
+  "generated_at": "2026-06-25",
   "disc_min_r1": 18,
   "n_disc_signals": 491,
   "n_all_signals": 1204,
@@ -24,7 +24,7 @@
   "clusters": [
     {
       "pattern_id": "DZ_TREND_LOW_EXPANSION_MODERATE",
-      "pattern_type": "discount_zone_success",
+      "pattern_type": "mixed",
       "context_signature": {
         "market_regime": "trend",
         "volatility_state": "low",
@@ -34,11 +34,11 @@
       "stats": {
         "n": 39,
         "n_resolved": 39,
-        "wr": 0.5897,
-        "pf": 7.654,
-        "mean_r20d": 0.1045,
-        "mean_mfe": 0.1808,
-        "mean_mae": -0.0638
+        "wr": 0.5385,
+        "pf": 6.071,
+        "mean_r20d": 0.094,
+        "mean_mfe": 0.1744,
+        "mean_mae": -0.0656
       },
       "symbols": [
         "ADIB.CA",
@@ -81,32 +81,6 @@
       ]
     },
     {
-      "pattern_id": "DZ_RANGE_MEDIUM_EXPANSION_STRONG",
-      "pattern_type": "discount_zone_success",
-      "context_signature": {
-        "market_regime": "range",
-        "volatility_state": "medium",
-        "structure_state": "expansion",
-        "liquidity_state": "strong"
-      },
-      "stats": {
-        "n": 5,
-        "n_resolved": 5,
-        "wr": 0.8,
-        "pf": 2.688,
-        "mean_r20d": 0.0779,
-        "mean_mfe": 0.1841,
-        "mean_mae": -0.1277
-      },
-      "symbols": [
-        "BTFH.CA",
-        "EFIH.CA",
-        "EGCH.CA",
-        "GBCO.CA",
-        "ORHD.CA"
-      ]
-    },
-    {
       "pattern_id": "DZ_TREND_MEDIUM_UNKNOWN_STRONG",
       "pattern_type": "mixed",
       "context_signature": {
@@ -116,16 +90,17 @@
         "liquidity_state": "strong"
       },
       "stats": {
-        "n": 9,
-        "n_resolved": 9,
-        "wr": 0.4444,
-        "pf": 3.594,
-        "mean_r20d": 0.0727,
-        "mean_mfe": 0.1434,
-        "mean_mae": -0.1112
+        "n": 10,
+        "n_resolved": 10,
+        "wr": 0.4,
+        "pf": 3.64,
+        "mean_r20d": 0.0666,
+        "mean_mfe": 0.1343,
+        "mean_mae": -0.1037
       },
       "symbols": [
         "CCAP.CA",
+        "EFIH.CA",
         "GBCO.CA",
         "ISPH.CA",
         "MCQE.CA",
@@ -334,6 +309,35 @@
       ]
     },
     {
+      "pattern_id": "DZ_MIXED_LOW_EXPANSION_MODERATE",
+      "pattern_type": "discount_zone_failure",
+      "context_signature": {
+        "market_regime": "mixed",
+        "volatility_state": "low",
+        "structure_state": "expansion",
+        "liquidity_state": "moderate"
+      },
+      "stats": {
+        "n": 13,
+        "n_resolved": 13,
+        "wr": 0.3077,
+        "pf": 2.259,
+        "mean_r20d": 0.0356,
+        "mean_mfe": 0.1175,
+        "mean_mae": -0.0851
+      },
+      "symbols": [
+        "BTFH.CA",
+        "CCAP.CA",
+        "COMI.CA",
+        "EFIH.CA",
+        "EGAL.CA",
+        "ETEL.CA",
+        "HELI.CA",
+        "JUFO.CA"
+      ]
+    },
+    {
       "pattern_id": "DZ_TREND_LOW_UNKNOWN_STRONG",
       "pattern_type": "discount_zone_failure",
       "context_signature": {
@@ -447,35 +451,6 @@
       ]
     },
     {
-      "pattern_id": "DZ_MIXED_LOW_EXPANSION_MODERATE",
-      "pattern_type": "discount_zone_failure",
-      "context_signature": {
-        "market_regime": "mixed",
-        "volatility_state": "low",
-        "structure_state": "expansion",
-        "liquidity_state": "moderate"
-      },
-      "stats": {
-        "n": 14,
-        "n_resolved": 14,
-        "wr": 0.2143,
-        "pf": 1.325,
-        "mean_r20d": 0.0111,
-        "mean_mfe": 0.1009,
-        "mean_mae": -0.0852
-      },
-      "symbols": [
-        "BTFH.CA",
-        "CCAP.CA",
-        "COMI.CA",
-        "EAST.CA",
-        "EFIH.CA",
-        "EGAL.CA",
-        "ETEL.CA",
-        "HELI.CA"
-      ]
-    },
-    {
       "pattern_id": "DZ_RANGE_LOW_COMPRESSION_MODERATE",
       "pattern_type": "mixed",
       "context_signature": {
@@ -510,7 +485,7 @@
     },
     {
       "feature": "sweep_detected",
-      "correlation": 0.0391,
+      "correlation": 0.0401,
       "direction": "positive",
       "strength": "weak"
     },
@@ -557,12 +532,6 @@
       "strength": "weak"
     },
     {
-      "feature": "equal_lows",
-      "correlation": -0.0166,
-      "direction": "negative",
-      "strength": "weak"
-    },
-    {
       "feature": "r6_macd",
       "correlation": 0.0139,
       "direction": "positive",
@@ -581,20 +550,26 @@
       "strength": "weak"
     },
     {
+      "feature": "equal_lows",
+      "correlation": -0.0123,
+      "direction": "negative",
+      "strength": "weak"
+    },
+    {
       "feature": "r4_htf",
       "correlation": 0.0105,
       "direction": "positive",
       "strength": "weak"
     },
     {
-      "feature": "r7_div",
-      "correlation": 0.0034,
-      "direction": "positive",
+      "feature": "htf_hl",
+      "correlation": -0.0078,
+      "direction": "negative",
       "strength": "weak"
     },
     {
-      "feature": "htf_hl",
-      "correlation": 0.0006,
+      "feature": "r7_div",
+      "correlation": 0.0034,
       "direction": "positive",
       "strength": "weak"
     },
@@ -625,15 +600,15 @@
       "condition": "with_sweep",
       "type": "structural_condition",
       "stats": {
-        "n": 241,
-        "n_resolved": 241,
-        "wr": 0.3942,
-        "pf": 3.1,
-        "mean_r20d": 0.0528,
-        "mean_mfe": 0.1328,
-        "mean_mae": -0.0745
+        "n": 238,
+        "n_resolved": 238,
+        "wr": 0.395,
+        "pf": 3.085,
+        "mean_r20d": 0.053,
+        "mean_mfe": 0.1334,
+        "mean_mae": -0.0751
       },
-      "vs_baseline": 0.0082,
+      "vs_baseline": 0.0084,
       "verdict": "NEUTRAL — inline with baseline"
     },
     {
@@ -655,15 +630,15 @@
       "condition": "with_htf_trend",
       "type": "structural_condition",
       "stats": {
-        "n": 232,
-        "n_resolved": 232,
-        "wr": 0.4009,
-        "pf": 2.508,
-        "mean_r20d": 0.0475,
-        "mean_mfe": 0.1389,
-        "mean_mae": -0.0814
+        "n": 234,
+        "n_resolved": 234,
+        "wr": 0.3974,
+        "pf": 2.46,
+        "mean_r20d": 0.0462,
+        "mean_mfe": 0.1378,
+        "mean_mae": -0.0811
       },
-      "vs_baseline": 0.0029,
+      "vs_baseline": 0.0016,
       "verdict": "NEUTRAL — inline with baseline"
     },
     {
@@ -685,15 +660,15 @@
       "condition": "no_struct_conf",
       "type": "structural_condition",
       "stats": {
-        "n": 176,
-        "n_resolved": 176,
-        "wr": 0.3807,
-        "pf": 2.08,
-        "mean_r20d": 0.0396,
-        "mean_mfe": 0.1418,
-        "mean_mae": -0.0921
+        "n": 178,
+        "n_resolved": 178,
+        "wr": 0.3764,
+        "pf": 2.079,
+        "mean_r20d": 0.0392,
+        "mean_mfe": 0.1409,
+        "mean_mae": -0.0915
       },
-      "vs_baseline": -0.005,
+      "vs_baseline": -0.0054,
       "verdict": "NEUTRAL — inline with baseline"
     },
     {
@@ -735,10 +710,10 @@
   "evolution": [
     {
       "pattern_id": "DZ_TREND_LOW_EXPANSION_MODERATE",
-      "pattern_type": "discount_zone_success",
-      "stability": "stable",
-      "delta_wr": -0.0156,
-      "delta_r20d": -0.0037
+      "pattern_type": "mixed",
+      "stability": "decaying",
+      "delta_wr": -0.0512,
+      "delta_r20d": -0.0105
     },
     {
       "pattern_id": "DZ_RANGE_LOW_UNKNOWN_WEAK",
@@ -748,32 +723,25 @@
       "delta_r20d": 0.0
     },
     {
-      "pattern_id": "DZ_RANGE_MEDIUM_EXPANSION_STRONG",
-      "pattern_type": "discount_zone_success",
-      "stability": "stable",
-      "delta_wr": 0.0,
-      "delta_r20d": 0.0
-    },
-    {
       "pattern_id": "DZ_TREND_MEDIUM_UNKNOWN_STRONG",
       "pattern_type": "mixed",
-      "stability": "stable",
-      "delta_wr": 0.0,
-      "delta_r20d": 0.0
+      "stability": "fluctuating",
+      "delta_wr": -0.0444,
+      "delta_r20d": -0.0061
     },
     {
       "pattern_id": "DZ_RANGE_LOW_REVERSAL_MODERATE",
       "pattern_type": "mixed",
-      "stability": "fluctuating",
-      "delta_wr": 0.0513,
-      "delta_r20d": 0.0078
+      "stability": "stable",
+      "delta_wr": 0.0,
+      "delta_r20d": 0.0
     },
     {
       "pattern_id": "DZ_RANGE_LOW_EXPANSION_MODERATE",
       "pattern_type": "mixed",
       "stability": "stable",
-      "delta_wr": 0.0055,
-      "delta_r20d": 0.0012
+      "delta_wr": 0.0,
+      "delta_r20d": 0.0
     },
     {
       "pattern_id": "DZ_TREND_LOW_REVERSAL_STRONG",
@@ -786,8 +754,8 @@
       "pattern_id": "DZ_TREND_LOW_EXPANSION_STRONG",
       "pattern_type": "discount_zone_failure",
       "stability": "stable",
-      "delta_wr": -0.043,
-      "delta_r20d": -0.0032
+      "delta_wr": 0.0,
+      "delta_r20d": 0.0
     },
     {
       "pattern_id": "DZ_TREND_LOW_COMPRESSION_STRONG",
@@ -811,6 +779,13 @@
       "delta_r20d": 0.0
     },
     {
+      "pattern_id": "DZ_MIXED_LOW_EXPANSION_MODERATE",
+      "pattern_type": "discount_zone_failure",
+      "stability": "strengthening",
+      "delta_wr": 0.0934,
+      "delta_r20d": 0.0245
+    },
+    {
       "pattern_id": "DZ_TREND_LOW_UNKNOWN_STRONG",
       "pattern_type": "discount_zone_failure",
       "stability": "stable",
@@ -820,26 +795,19 @@
     {
       "pattern_id": "DZ_TREND_LOW_REVERSAL_MODERATE",
       "pattern_type": "mixed",
-      "stability": "decaying",
-      "delta_wr": -0.0714,
-      "delta_r20d": -0.0186
+      "stability": "stable",
+      "delta_wr": 0.0,
+      "delta_r20d": 0.0
     },
     {
       "pattern_id": "DZ_RANGE_LOW_EXPANSION_STRONG",
-      "pattern_type": "discount_zone_failure",
-      "stability": "stable",
-      "delta_wr": 0.013,
-      "delta_r20d": 0.0014
-    },
-    {
-      "pattern_id": "DZ_TREND_LOW_UNKNOWN_WEAK",
       "pattern_type": "discount_zone_failure",
       "stability": "stable",
       "delta_wr": 0.0,
       "delta_r20d": 0.0
     },
     {
-      "pattern_id": "DZ_MIXED_LOW_EXPANSION_MODERATE",
+      "pattern_id": "DZ_TREND_LOW_UNKNOWN_WEAK",
       "pattern_type": "discount_zone_failure",
       "stability": "stable",
       "delta_wr": 0.0,

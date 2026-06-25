@@ -122,6 +122,9 @@ jobs:
       - name: Email price parity assertion (email == dashboard == universe_snapshot.db)
         run: python3 audit/assert_email_price_parity.py
 
+      - name: Signal idempotency assertion (10 scans = 1 notification)
+        run: python3 audit/assert_signal_idempotency.py
+
       - name: Update public status
         run: |
           python - <<'PYEOF'

@@ -76,6 +76,27 @@ def _create_schema(conn: sqlite3.Connection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_coe_date ON constitutional_opportunity_events(event_date)"
     )
+    # Exactly ONE event per (ticker, event_type, event_date) — dedup at DB level.
+    # Migration: if duplicates exist, keep the earliest row before adding the index.
+    try:
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_coe_ticker_type_date "
+            "ON constitutional_opportunity_events(ticker, event_type, event_date)"
+        )
+    except Exception:
+        # Duplicates exist — deduplicate first, then create the index.
+        conn.execute("""
+            DELETE FROM constitutional_opportunity_events
+            WHERE rowid NOT IN (
+                SELECT MIN(rowid)
+                FROM constitutional_opportunity_events
+                GROUP BY ticker, event_type, event_date
+            )
+        """)
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_coe_ticker_type_date "
+            "ON constitutional_opportunity_events(ticker, event_type, event_date)"
+        )
     conn.commit()
 
 

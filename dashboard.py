@@ -1030,45 +1030,75 @@ def _s_market_map(snap, dna):
 
 # ── Stock DNA ─────────────────────────────────────────────────────────────────
 def _s_stock_dna(snap, dna):
-    if not snap.timeline:
+    # Knowledge base: use full history including walk-forward (wf_v1) events
+    tl = snap.knowledge_timeline or snap.timeline
+    if not tl:
         return ""
     by_ticker = {}
-    for e in snap.timeline:
+    for e in tl:
         by_ticker.setdefault(e["ticker"], []).append(e)
 
     cards = ""
     for ticker, events in sorted(by_ticker.items()):
-        ev_sorted = sorted(events, key=lambda e: e["event_date"])
-        first_buy = next((e for e in ev_sorted if e["event_type"] == "FIRST_BUY"), ev_sorted[0])
-        re_accums = [e for e in ev_sorted if e["event_type"] == "RE_ACCUMULATION"]
-        prices    = [e["entry_price"] for e in ev_sorted if e["entry_price"]]
-        returns   = [e["return_pct"] for e in ev_sorted]
-        avg_entry = sum(prices) / len(prices) if prices else 0.0
-        avg_ret   = sum(returns) / len(returns) if returns else 0.0
-        zone_low  = min(prices) if prices else 0.0
-        zone_high = max(prices) if prices else 0.0
+        ev_sorted  = sorted(events, key=lambda e: e["event_date"])
+        first_buy  = next((e for e in ev_sorted if e["event_type"] == "FIRST_BUY"), ev_sorted[0])
+        prices     = [e["entry_price"] for e in ev_sorted if e["entry_price"]]
+        returns    = [e["return_pct"] for e in ev_sorted]
+        avg_entry  = sum(prices) / len(prices) if prices else 0.0
+        avg_ret    = sum(returns) / len(returns) if returns else 0.0
+        best_ret   = max(returns) if returns else 0.0
+        zone_low   = min(prices) if prices else 0.0
+        zone_high  = max(prices) if prices else 0.0
+        wins       = sum(1 for r in returns if r > 0)
+        win_rate   = round(wins / len(returns) * 100) if returns else 0
+        first_seen = ev_sorted[0]["event_date"]
+        last_seen  = ev_sorted[-1]["event_date"]
+        similar    = len(events)
+
         d = dna.get(ticker, {})
         confidence = d.get("memory_confidence", "DEVELOPING")
         conf_c = G if confidence == "STRONG" else (B if confidence == "CONFIRMED" else DIM)
-        re_lines = ""
-        re_display = re_accums[-3:]  # latest 3 only (store all, display 3)
-        hidden_n   = len(re_accums) - len(re_display)
-        if hidden_n > 0:
-            re_lines += (
-                f'<div style="font-size:11px;color:{DIM};margin-top:3px;font-style:italic;">'
-                f'+ {hidden_n} earlier re-accumulation{"s" if hidden_n != 1 else ""} (5-year history)'
-                f'</div>'
-            )
-        for re in re_display:
-            re_lines += (
-                f'<div style="font-size:12px;color:{DIM};margin-top:3px;">'
-                f'Re-Accumulation {re["event_date"]} @ {re["entry_price"]:.2f} EGP '
-                f'→ <span class="{_rc(re["return_pct"])}">{_sign(re["return_pct"])}{re["return_pct"]:.1f}%</span>'
-                f'</div>'
-            )
         current = ev_sorted[-1]["current_price"]
         sector  = ev_sorted[0].get("sector", "")
         n_buy   = len([e for e in events if e["event_type"] == "FIRST_BUY"])
+        n_reac  = len([e for e in events if e["event_type"] == "RE_ACCUMULATION"])
+
+        # Latest 3 historical events of any type (most recent first)
+        latest_3 = sorted(events, key=lambda e: e["event_date"], reverse=True)[:3]
+        hidden_n = len(events) - 3
+        ev_lines = ""
+        if hidden_n > 0:
+            ev_lines += (
+                f'<div style="font-size:11px;color:{DIM};margin-bottom:4px;font-style:italic;">'
+                f'+ {hidden_n} earlier event{"s" if hidden_n != 1 else ""} in 5-year history'
+                f'</div>'
+            )
+        for ev in latest_3:
+            et_lbl = "RE-ACCUM" if ev["event_type"] == "RE_ACCUMULATION" else "BUY"
+            et_c   = P if ev["event_type"] == "RE_ACCUMULATION" else B
+            ret    = ev.get("return_pct") or 0
+            ev_lines += (
+                f'<div style="font-size:12px;color:{DIM};margin-top:3px;">'
+                f'<span style="color:{et_c};font-weight:700;">{et_lbl}</span>'
+                f' {ev["event_date"]} @ {ev["entry_price"]:.2f} EGP'
+                f' → <span class="{_rc(ret)}">{_sign(ret)}{ret:.1f}%</span>'
+                f'</div>'
+            )
+
+        wr_c = G if win_rate >= 60 else (A if win_rate >= 40 else R)
+        hist_summary = (
+            f'<div class="dna-meta" style="margin-top:10px;border-top:1px solid #2a3a4a;padding-top:8px;">'
+            f'<span style="color:{FG};font-weight:700;font-size:11px;text-transform:uppercase;'
+            f'letter-spacing:.5px;">Historical Summary</span><br>'
+            f'<span style="color:{DIM};">Similar Setups:</span> <b style="color:{W};">{similar}</b>'
+            f'&nbsp;·&nbsp;<span style="color:{DIM};">Win Rate:</span> <b style="color:{wr_c};">{win_rate}%</b>'
+            f'&nbsp;·&nbsp;<span style="color:{DIM};">Avg Return:</span> <b class="{_rc(avg_ret)}">{_sign(avg_ret)}{avg_ret:.1f}%</b>'
+            f'&nbsp;·&nbsp;<span style="color:{DIM};">Best Return:</span> <b class="{_rc(best_ret)}">{_sign(best_ret)}{best_ret:.1f}%</b><br>'
+            f'<span style="color:{DIM};">First Seen:</span> <b style="color:{FG};">{first_seen}</b>'
+            f'&nbsp;·&nbsp;<span style="color:{DIM};">Last Seen:</span> <b style="color:{FG};">{last_seen}</b>'
+            f'</div>'
+        )
+
         cards += f"""
 <div class="dna-card">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
@@ -1086,9 +1116,12 @@ def _s_stock_dna(snap, dna):
   </div>
   <div class="dna-meta">
     <span style="color:{FG};">Buy Zone:</span> {zone_low:.2f} – {zone_high:.2f} EGP
-    &nbsp;·&nbsp; <span style="color:{FG};">Events:</span> {len(events)} ({n_buy} BUY · {len(re_accums)} Re-Accum)
+    &nbsp;·&nbsp; <span style="color:{FG};">Events:</span> {similar} ({n_buy} BUY · {n_reac} Re-Accum)
   </div>
-  {re_lines}
+  <div style="font-size:11px;color:{DIM};text-transform:uppercase;letter-spacing:.4px;
+       margin-top:10px;margin-bottom:2px;">Latest Historical Events</div>
+  {ev_lines}
+  {hist_summary}
 </div>"""
 
     return f"""

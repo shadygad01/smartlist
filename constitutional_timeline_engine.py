@@ -276,23 +276,27 @@ def _status(return_pct: float) -> str:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def get_timeline() -> list[dict]:
+def get_timeline(production_only: bool = False) -> list[dict]:
     """
-    All constitutional opportunity events, enriched with live prices.
+    Constitutional opportunity events, enriched with live prices.
+    production_only=True returns only signal_version='v1' (live production events).
+    Default returns all events including historical walk-forward (wf_v1).
     Sorted chronologically (event_date ASC, event_index ASC).
     """
     if not TIMELINE_DB.exists():
         migrate()
 
+    version_clause = "WHERE signal_version='v1'" if production_only else ""
     tl = _open(TIMELINE_DB)
     _create_schema(tl)
-    rows = tl.execute("""
+    rows = tl.execute(f"""
         SELECT * FROM constitutional_opportunity_events
+        {version_clause}
         ORDER BY event_date ASC, ticker ASC, event_index ASC
     """).fetchall()
     tl.close()
 
-    if not rows:
+    if not rows and not production_only:
         migrate()
         tl   = _open(TIMELINE_DB)
         rows = tl.execute("""
@@ -349,14 +353,15 @@ def get_new_events_today() -> list[dict]:
     return [e for e in get_timeline() if e["event_date"] == today]
 
 
-def get_analytics() -> dict[str, dict]:
+def get_analytics(timeline: list[dict] | None = None) -> dict[str, dict]:
     """
     Per-ticker analytics:
     total_events, avg_entry, best_entry, worst_entry, avg_days,
     best_return_event, current_return_each, avg_current_return,
     total_events_count.
+    Pass a pre-computed timeline to avoid a second DB read.
     """
-    timeline = get_timeline()
+    timeline = timeline if timeline is not None else get_timeline()
     by_ticker: dict[str, list] = {}
     for ev in timeline:
         by_ticker.setdefault(ev["ticker"], []).append(ev)

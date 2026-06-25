@@ -124,13 +124,16 @@ class PresentationSnapshot:
     health_label:     str = "Unknown"
     health_narrative: str = ""
 
-    # Constitutional Opportunity Timeline — PRIMARY (all N events, immutable)
+    # Constitutional Opportunity Timeline — OPERATIONAL (v1 production events only)
     timeline:          list[dict] = field(default_factory=list)
     total_events:      int = 0
     total_tickers:     int = 0
     new_events_today:  list[dict] = field(default_factory=list)
     first_buys:        list[dict] = field(default_factory=list)
     re_accumulations:  list[dict] = field(default_factory=list)
+
+    # Historical Knowledge Base — ALL events (v1 + wf_v1 walk-forward history)
+    knowledge_timeline: list[dict] = field(default_factory=list)
 
     # Analytics & leaderboards
     analytics:    dict = field(default_factory=dict)
@@ -187,25 +190,38 @@ def build_presentation_snapshot() -> PresentationSnapshot:
         import sys
         sys.path.insert(0, str(BASE))
         from constitutional_timeline_engine import (
-            get_timeline, get_new_events_today, get_analytics, get_leaderboards
+            get_timeline, get_analytics, get_leaderboards
         )
-        tl = get_timeline()
-        an = get_analytics()
-        lb = get_leaderboards(timeline=tl, analytics=an)
+        from datetime import date as _date
+        _today = _date.today().isoformat()
 
-        snap.timeline         = tl
-        snap.total_events     = len(tl)
-        snap.total_tickers    = len(set(e["ticker"] for e in tl))
-        snap.new_events_today = get_new_events_today()
-        snap.first_buys       = [e for e in tl if e["event_type"] == "FIRST_BUY"]
-        snap.re_accumulations = [e for e in tl if e["event_type"] == "RE_ACCUMULATION"]
-        snap.analytics        = an
-        snap.leaderboards     = lb
+        # OPERATIONAL: production events only (signal_version='v1')
+        tl_ops = get_timeline(production_only=True)
+        # KNOWLEDGE BASE: all events including walk-forward history (wf_v1)
+        tl_all = get_timeline()
 
-        # Build constitutional leaders from analytics + timeline
+        # Analytics and leaderboards use full history — they power knowledge base
+        # enrichment (Similar Setups count, historical win rate, avg return, etc.)
+        an = get_analytics(timeline=tl_all)
+        lb = get_leaderboards(timeline=tl_all, analytics=an)
+
+        # Operational fields — production events only
+        snap.timeline         = tl_ops
+        snap.total_events     = len(tl_ops)
+        snap.total_tickers    = len(set(e["ticker"] for e in tl_ops))
+        snap.new_events_today = [e for e in tl_ops if e["event_date"] == _today]
+        snap.first_buys       = [e for e in tl_ops if e["event_type"] == "FIRST_BUY"]
+        snap.re_accumulations = [e for e in tl_ops if e["event_type"] == "RE_ACCUMULATION"]
+
+        # Knowledge base fields — full history
+        snap.knowledge_timeline = tl_all
+        snap.analytics          = an
+        snap.leaderboards       = lb
+
+        # Build constitutional leaders from full history analytics (knowledge base enrichment)
         leaders = []
         for ticker, a in an.items():
-            ticker_events = [e for e in tl if e["ticker"] == ticker]
+            ticker_events = [e for e in tl_all if e["ticker"] == ticker]
             wins = sum(1 for e in ticker_events if e["return_pct"] > 0)
             win_rate = wins / len(ticker_events) if ticker_events else 0.0
             current_price = ticker_events[-1]["current_price"] if ticker_events else 0.0
@@ -308,15 +324,13 @@ def build_presentation_snapshot() -> PresentationSnapshot:
                 ))
             snap.approaching_entries = entries
 
-            # Canonical exclusivity: BUY / RE-ACCUMULATION signals have
-            # higher priority than NEAR ENTRY and must never appear twice.
-            # Only production events (signal_version != 'wf_v1') gate exclusivity;
-            # historical walk-forward archive events must not block current near-entry.
+            # Canonical exclusivity: BUY / RE-ACCUMULATION signals have higher
+            # priority than NEAR ENTRY. snap.re_accumulations contains only
+            # production events (v1), so no further signal_version filtering needed.
             signal_tickers = {
                 e["ticker"] for e in (
                     (snap.new_events_today or []) +
-                    [e for e in (snap.re_accumulations or [])
-                     if e.get("signal_version") != "wf_v1"]
+                    (snap.re_accumulations or [])
                 )
             }
             if signal_tickers:

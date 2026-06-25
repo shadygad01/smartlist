@@ -101,7 +101,7 @@ def _load_yesterday_events() -> list[dict]:
         yesterday = (date.today() - timedelta(days=1)).isoformat()
         rows = conn.execute(
             "SELECT * FROM constitutional_opportunity_events "
-            "WHERE event_date > ? ORDER BY event_date DESC",
+            "WHERE event_date > ? AND signal_version='v1' ORDER BY event_date DESC",
             (yesterday,)
         ).fetchall()
         conn.close()
@@ -120,7 +120,7 @@ def _load_week_events() -> list[dict]:
         week_ago = (date.today() - timedelta(days=7)).isoformat()
         rows = conn.execute(
             "SELECT * FROM constitutional_opportunity_events "
-            "WHERE event_date > ? ORDER BY event_date DESC",
+            "WHERE event_date > ? AND signal_version='v1' ORDER BY event_date DESC",
             (week_ago,)
         ).fetchall()
         conn.close()

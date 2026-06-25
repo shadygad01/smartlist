@@ -1157,6 +1157,30 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
             if res.get("ok"):
                 print(f"  Done: {res.get('name', sym)}")
 
+    # ── PRICE PARITY FIX: flush live prices BEFORE snapshot reads universe_snapshot.db ──
+    # analyze() returns today's live prices in results[ticker]["price"].
+    # save_signal_history() writes them to signal_history.json.
+    # build_universe_snapshot() reads signal_history.json (highest priority source)
+    # and refreshes universe_snapshot.db so price_authority.get_all_prices() returns
+    # today's prices — not yesterday's stale values from the previous run.
+    # Without this, email gets 2026-06-23 prices while dashboard gets 2026-06-24 prices.
+    save_signal_history(results)
+    try:
+        from universe_snapshot import build_universe_snapshot
+        build_universe_snapshot()
+        # Phase 7 instrumentation: print prices for key tickers at this boundary
+        _AUDIT_TICKERS = {"EAST.CA", "MCQE.CA", "OIH.CA", "FWRY.CA", "BTFH.CA", "HELI.CA"}
+        from price_authority import get_all_prices as _gap
+        _px = _gap()
+        for _t in sorted(_AUDIT_TICKERS):
+            _p = _px.get(_t)
+            _src = results.get(_t, {}).get("price")
+            _match = "✓" if _p is not None and _src is not None and abs(_p - _src) < 0.02 else "✗"
+            print(f"  [PriceAudit] {_t}: universe_db={_p} analyze={_src} {_match}")
+    except Exception as _ub_err:
+        print(f"  [build_report] universe rebuild non-fatal: {_ub_err}")
+    # ─────────────────────────────────────────────────────────────────────────────
+
     snap = build_presentation_snapshot()
     html = build_email(snap)
     return html, results, snap

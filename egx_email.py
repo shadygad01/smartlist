@@ -316,7 +316,7 @@ def _what_happened_yesterday(snap: PresentationSnapshot) -> str:
                 f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:11px;'
                 f'color:{_MUTED};">{e.get("sector","")}</td>'
                 f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:11px;'
-                f'color:{_MUTED};">{e.get("event_date","")}</td>'
+                f'color:{_MUTED};">{e.get("event_end_date") or e.get("event_date","")}</td>'
                 f'</tr>'
             )
         body = (

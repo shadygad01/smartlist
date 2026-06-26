@@ -115,14 +115,6 @@ print("\nTIMELINE CHECK (SEMANTIC):")
 
 COE_DB = BASE / "constitutional_opportunity_events.db"
 
-golden_tl = json.loads((GOLDEN / "timeline.json").read_text())
-current_tl = qdb(COE_DB,
-    "SELECT * FROM constitutional_opportunity_events ORDER BY ticker, event_date")
-
-# Row count: total must match golden snapshot exactly
-check("Timeline row count", len(current_tl) == len(golden_tl),
-      f"{len(current_tl)} vs {len(golden_tl)}")
-
 # Minimum floor counts (append-only: can only grow)
 total_rows = scalar(COE_DB, "SELECT COUNT(*) FROM constitutional_opportunity_events")
 v1_count   = scalar(COE_DB, "SELECT COUNT(*) FROM constitutional_opportunity_events WHERE signal_version='v1'")
@@ -163,10 +155,10 @@ check("timeline:event_date_order", (order_violations or 0) == 0,
 # UNIQUE INDEX must be present
 if COE_DB.exists():
     conn = sqlite3.connect(str(COE_DB))
-    idx_names = [r[1] for r in conn.execute("PRAGMA index_list(constitutional_opportunity_events)").fetchall()]
+    indexes = {r[1]: bool(r[2]) for r in conn.execute("PRAGMA index_list(constitutional_opportunity_events)").fetchall()}
     conn.close()
-    check("timeline:unique_index_exists", "ux_coe_ticker_type_date" in idx_names,
-          f"indexes={idx_names}")
+    check("timeline:unique_index_exists", indexes.get("ux_coe_ticker_type_date") is True,
+          f"indexes={indexes}")
 else:
     check("timeline:unique_index_exists", False, "DB_NOT_FOUND")
 

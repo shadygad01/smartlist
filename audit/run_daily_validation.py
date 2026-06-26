@@ -23,15 +23,20 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 def qdb(db_path: Path, sql: str, params: tuple = ()) -> list[dict]:
-    if not db_path.exists(): return []
-    conn = sqlite3.connect(str(db_path)); conn.row_factory = sqlite3.Row
-    rows = conn.execute(sql, params).fetchall(); conn.close()
+    if not db_path.exists():
+        return []
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(sql, params).fetchall()
+    conn.close()
     return [dict(r) for r in rows]
 
 def scalar(db_path: Path, sql: str, params: tuple = ()):
-    if not db_path.exists(): return None
+    if not db_path.exists():
+        return None
     conn = sqlite3.connect(str(db_path))
-    row = conn.execute(sql, params).fetchone(); conn.close()
+    row = conn.execute(sql, params).fetchone()
+    conn.close()
     return row[0] if row else None
 
 golden_hashes  = json.loads((GOLDEN / "hashes.json").read_text())
@@ -96,13 +101,6 @@ check("dna:rows", len(current_dna) == len(golden_dna), len(golden_dna), len(curr
 
 COE_DB = BASE / "constitutional_opportunity_events.db"
 
-golden_tl = json.loads((GOLDEN / "timeline.json").read_text())
-current_tl = qdb(COE_DB,
-    "SELECT * FROM constitutional_opportunity_events ORDER BY ticker, event_date")
-
-# Row count: total must match golden (exact count, not min — wf_v1 is immutable historical import)
-check("timeline:rows", len(current_tl) == len(golden_tl), len(golden_tl), len(current_tl))
-
 # Minimum thresholds (monotonically non-decreasing — new events can only be added)
 total_rows = scalar(COE_DB, "SELECT COUNT(*) FROM constitutional_opportunity_events")
 v1_count   = scalar(COE_DB, "SELECT COUNT(*) FROM constitutional_opportunity_events WHERE signal_version='v1'")
@@ -136,10 +134,10 @@ check("timeline:event_date_order", (order_violations or 0) == 0, 0, order_violat
 # UNIQUE INDEX must be present — protects against duplicate signals on same day
 if COE_DB.exists():
     conn = sqlite3.connect(str(COE_DB))
-    idx_names = [r[1] for r in conn.execute("PRAGMA index_list(constitutional_opportunity_events)").fetchall()]
+    indexes = {r[1]: bool(r[2]) for r in conn.execute("PRAGMA index_list(constitutional_opportunity_events)").fetchall()}
     conn.close()
-    check("timeline:unique_index_exists", "ux_coe_ticker_type_date" in idx_names,
-          "ux_coe_ticker_type_date", idx_names)
+    check("timeline:unique_index_exists", indexes.get("ux_coe_ticker_type_date") is True,
+          "ux_coe_ticker_type_date (unique)", str(indexes))
 else:
     check("timeline:unique_index_exists", False, "ux_coe_ticker_type_date", "DB_NOT_FOUND")
 

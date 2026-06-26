@@ -82,10 +82,10 @@ def _semantic_ok(db_path: Path, sem: dict) -> tuple[bool, list[str]]:
         errs.append(f"order_violations: {order_err}")
 
     conn = sqlite3.connect(str(db_path))
-    idx_names = [r[1] for r in conn.execute("PRAGMA index_list(constitutional_opportunity_events)").fetchall()]
+    indexes = {r[1]: bool(r[2]) for r in conn.execute("PRAGMA index_list(constitutional_opportunity_events)").fetchall()}
     conn.close()
-    if "ux_coe_ticker_type_date" not in idx_names:
-        errs.append(f"missing unique index: {idx_names}")
+    if indexes.get("ux_coe_ticker_type_date") is not True:
+        errs.append(f"missing unique index: {indexes}")
 
     conn = sqlite3.connect(str(db_path))
     current_ids = {r[0] for r in conn.execute(

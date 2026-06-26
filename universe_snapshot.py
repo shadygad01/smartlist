@@ -268,11 +268,11 @@ def build_universe_snapshot() -> list[dict]:
         # Price scan date — prefer signal_history date (most recent scan), then pool
         price_date = sh.get("last_scan") or (p.get("last_scan") if p else "") or ""
 
-        # Entry price
+        # Entry price — timeline first: canonical v1 event price that anchors return_pct
         entry_price = (
-            p.get("entry_price")
+            t.get("entry_price")
+            or p.get("entry_price")
             or c.get("entry_price")
-            or t.get("entry_price")
             or r.get("entry_price")
         )
 

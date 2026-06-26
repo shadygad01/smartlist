@@ -143,7 +143,7 @@ def _load_timeline() -> dict[str, dict]:
         import sys
         sys.path.insert(0, str(BASE))
         from constitutional_timeline_engine import get_timeline
-        tl = get_timeline()
+        tl = get_timeline(production_only=True)
         result: dict[str, dict] = {}
         for e in tl:
             ticker = e["ticker"]

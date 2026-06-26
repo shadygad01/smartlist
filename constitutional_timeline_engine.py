@@ -522,19 +522,20 @@ def run_daily() -> dict:
 
     for r in todays_rows:
         t = r["ticker"]
-        # Determine current max index for this ticker
+        # Determine current max v1 index for this ticker (ignore wf_v1 indices)
         existing = tl.execute(
-            "SELECT MAX(event_index) FROM constitutional_opportunity_events WHERE ticker=?", (t,)
+            "SELECT MAX(event_index) FROM constitutional_opportunity_events "
+            "WHERE ticker=? AND signal_version='v1'", (t,)
         ).fetchone()[0]
 
         if existing is None:
             idx   = 0
             etype = EVENT_FIRST_BUY
         else:
-            # Check if today's date continues the last cluster or is a new one
+            # Check if today's date continues the last v1 cluster or is a new one
             last_end = tl.execute(
                 "SELECT event_end_date FROM constitutional_opportunity_events "
-                "WHERE ticker=? ORDER BY event_index DESC LIMIT 1", (t,)
+                "WHERE ticker=? AND signal_version='v1' ORDER BY event_index DESC LIMIT 1", (t,)
             ).fetchone()[0]
             last_end_dt = date.fromisoformat(last_end)
             today_dt    = date.fromisoformat(today)
@@ -543,7 +544,7 @@ def run_daily() -> dict:
                 tl.execute("""
                     UPDATE constitutional_opportunity_events
                     SET event_end_date=?, cluster_days=cluster_days+1
-                    WHERE ticker=? AND event_index=?
+                    WHERE ticker=? AND event_index=? AND signal_version='v1'
                 """, (today, t, int(existing)))
                 continue
             else:
@@ -578,6 +579,99 @@ def run_daily() -> dict:
         "total_events":      len(tl_data),
         "total_tickers":     len(set(e["ticker"] for e in tl_data)),
     }
+
+
+def register_alert_events(alert_events: list[dict]) -> list[str]:
+    """
+    Persist constitutional events detected by detect_signal_changes() into
+    constitutional_opportunity_events.db.
+
+    Bridges the gap between the alert pipeline (detect_signal_changes →
+    Alert Email / Telegram) and the morning email pipeline (get_timeline →
+    snap.timeline). Without this, a stale candidate_pool causes run_daily()
+    to miss events that alerts already fired for.
+
+    Uses identical clustering logic to run_daily(): extends existing cluster
+    if within GAP_DAYS, creates new event otherwise.
+    Idempotent: INSERT OR IGNORE + UPDATE with same date = no-op.
+
+    alert_events: list of dicts from detect_signal_changes() with keys:
+        ticker, event_date, entry_price, buy_r2, buy_score, sector
+    Returns: list of event_id strings that were newly inserted.
+    """
+    if not alert_events:
+        return []
+
+    if not TIMELINE_DB.exists():
+        migrate()
+
+    tl = _open(TIMELINE_DB)
+    _create_schema(tl)
+    registered: list[str] = []
+
+    for ev in alert_events:
+        t      = ev.get("ticker", "")
+        today  = ev.get("event_date", date.today().isoformat())
+        entry  = float(ev.get("entry_price") or 0.0)
+        r2     = float(ev.get("buy_r2") or 0.0)
+        score  = float(ev.get("buy_score") or 0.0)
+        sector = ev.get("sector", "")
+
+        if not t or r2 < CONST_R2_MIN or score < CONST_SCORE_MIN:
+            continue
+
+        # Use v1-only queries to avoid wf_v1 event indices polluting the v1 sequence
+        existing = tl.execute(
+            "SELECT MAX(event_index) FROM constitutional_opportunity_events "
+            "WHERE ticker=? AND signal_version='v1'", (t,)
+        ).fetchone()[0]
+
+        if existing is None:
+            idx   = 0
+            etype = EVENT_FIRST_BUY
+        else:
+            last_end = tl.execute(
+                "SELECT event_end_date FROM constitutional_opportunity_events "
+                "WHERE ticker=? AND signal_version='v1' ORDER BY event_index DESC LIMIT 1", (t,)
+            ).fetchone()[0]
+            last_end_dt = date.fromisoformat(last_end)
+            today_dt    = date.fromisoformat(today)
+            if (today_dt - last_end_dt).days <= GAP_DAYS:
+                # Extend existing cluster only if end date actually advances
+                if today > last_end:
+                    tl.execute("""
+                        UPDATE constitutional_opportunity_events
+                        SET event_end_date=?,
+                            cluster_days=(
+                                CAST(julianday(?) - julianday(event_date) AS INTEGER) + 1
+                            )
+                        WHERE ticker=? AND event_index=? AND signal_version='v1'
+                    """, (today, today, t, int(existing)))
+                continue
+            else:
+                idx   = int(existing) + 1
+                etype = EVENT_RE_ACCUMULATION
+
+        eid = _event_id(t, idx)
+        tl.execute("""
+            INSERT OR IGNORE INTO constitutional_opportunity_events
+            (event_id, ticker, event_type, event_index, event_date, event_end_date,
+             cluster_days, entry_price, buy_r2, buy_score,
+             buy_r3, buy_r4, buy_r5, buy_r6, buy_r7, buy_r8,
+             sector, signal_version, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (
+            eid, t, etype, idx, today, today, 1,
+            entry, r2, score,
+            None, None, None, None, None, None,
+            sector, "v1", today,
+        ))
+        if tl.execute("SELECT changes()").fetchone()[0]:
+            registered.append(eid)
+
+    tl.commit()
+    tl.close()
+    return registered
 
 
 # ── CLI / self-test ───────────────────────────────────────────────────────────

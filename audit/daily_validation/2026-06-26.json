@@ -969,9 +969,9 @@
   },
   {
     "date": "2026-06-26",
-    "timestamp": "2026-06-26T14:42:31.131172+03:00",
-    "total_checks": 56,
-    "passed": 56,
+    "timestamp": "2026-06-26T14:47:33.304289+03:00",
+    "total_checks": 55,
+    "passed": 55,
     "failed": 0,
     "overall": "PASS",
     "failures": [],
@@ -1247,12 +1247,6 @@
         "actual": "27"
       },
       {
-        "check": "timeline:rows",
-        "pass": true,
-        "expected": "401",
-        "actual": "401"
-      },
-      {
         "check": "timeline:total_rows_min",
         "pass": true,
         "expected": ">=401",
@@ -1297,8 +1291,8 @@
       {
         "check": "timeline:unique_index_exists",
         "pass": true,
-        "expected": "ux_coe_ticker_type_date",
-        "actual": "['ux_coe_ticker_type_date', 'idx_coe_date', 'idx_coe_ticker', 'sqlite_autoindex_constitutional_opportunity_events_1']"
+        "expected": "ux_coe_ticker_type_date (unique)",
+        "actual": "{'ux_coe_ticker_type_date': True, 'idx_coe_date': False, 'idx_coe_ticker': False, 'sqlite_autoindex_constitutional_opportunity_events_1': True}"
       },
       {
         "check": "timeline:v1_event_ids_preserved",
@@ -1316,8 +1310,8 @@
     "hashes": {
       "candidate_pool.db": "5348372d0f80456117d89e83d83c542591d3e2d819594eb0df7c759794955ace",
       "constitutional_buy_registry.db": "382b7b44c19ae0e4a2bec6c194bbce4d16f6777503acdb1939f70eb14375e4d3",
-      "universe_snapshot.db": "2d649995356762f19371b7c1671a8f6ed2fb7dc3f365947af105290a29cc0e2c",
-      "stock_dna.db": "90615a856b3142773a945f94bedcef4cf0e872c7b740324cbcfb38e2adb41ff4",
+      "universe_snapshot.db": "f1adab40e35b26adfc910710413c9b4a8df3ab75365d506fea482cb030d98811",
+      "stock_dna.db": "9a2fcb28c4455634f7f3161b0db37bc89de823cfd5df4ca8bd2d90e444fe04c9",
       "constitutional_opportunity_events.db": "53521bff3e8a05c54cae1302c8de28a72355fd2e6f1ae5a81a713282d342a391"
     }
   }

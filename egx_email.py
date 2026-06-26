@@ -91,42 +91,28 @@ def _load_stock_dna() -> dict[str, dict]:
         return {}
 
 
-def _load_yesterday_events() -> list[dict]:
-    db_path = BASE / "constitutional_opportunity_events.db"
-    if not db_path.exists():
-        return []
-    try:
-        conn = sqlite3.connect(str(db_path))
-        conn.row_factory = sqlite3.Row
-        yesterday = (date.today() - timedelta(days=1)).isoformat()
-        rows = conn.execute(
-            "SELECT * FROM constitutional_opportunity_events "
-            "WHERE event_date > ? AND signal_version='v1' ORDER BY event_date DESC",
-            (yesterday,)
-        ).fetchall()
-        conn.close()
-        return [dict(r) for r in rows]
-    except Exception:
-        return []
+def _yesterday_events(snap: PresentationSnapshot) -> list[dict]:
+    """Events active on yesterday — uses event_end_date (most recent activity day).
+    event_date is the cluster start; event_end_date is the last day the signal qualified.
+    Both are checked so a single-day cluster (event_end_date == event_date) is found too.
+    """
+    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    return [
+        e for e in (snap.timeline or [])
+        if (e.get("event_end_date") or e.get("event_date")) == yesterday
+    ]
 
 
-def _load_week_events() -> list[dict]:
-    db_path = BASE / "constitutional_opportunity_events.db"
-    if not db_path.exists():
-        return []
-    try:
-        conn = sqlite3.connect(str(db_path))
-        conn.row_factory = sqlite3.Row
-        week_ago = (date.today() - timedelta(days=7)).isoformat()
-        rows = conn.execute(
-            "SELECT * FROM constitutional_opportunity_events "
-            "WHERE event_date > ? AND signal_version='v1' ORDER BY event_date DESC",
-            (week_ago,)
-        ).fetchall()
-        conn.close()
-        return [dict(r) for r in rows]
-    except Exception:
-        return []
+def _week_events(snap: PresentationSnapshot) -> list[dict]:
+    """Events whose most recent activity fell in the last 7 calendar days.
+    Uses event_end_date so extended clusters are included for any day they were active.
+    """
+    today    = date.today().isoformat()
+    week_ago = (date.today() - timedelta(days=7)).isoformat()
+    return [
+        e for e in (snap.timeline or [])
+        if week_ago <= (e.get("event_end_date") or e.get("event_date", "")) < today
+    ]
 
 
 # ── Badge Helpers ─────────────────────────────────────────────────────────────
@@ -287,7 +273,7 @@ def _hdr(snap: PresentationSnapshot, date_str: str) -> str:
 # ── SECTION 1: WHAT HAPPENED YESTERDAY ───────────────────────────────────────
 
 def _what_happened_yesterday(snap: PresentationSnapshot) -> str:
-    yest_events = _load_yesterday_events()
+    yest_events = _yesterday_events(snap)
     buys  = [e for e in yest_events if e["event_type"] == "FIRST_BUY"]
     reacs = [e for e in yest_events if e["event_type"] == "RE_ACCUMULATION"]
     total = len(yest_events)
@@ -346,7 +332,7 @@ def _what_happened_yesterday(snap: PresentationSnapshot) -> str:
 # ── SECTION 2: LAST WEEK SUMMARY ─────────────────────────────────────────────
 
 def _last_week_summary(snap: PresentationSnapshot) -> str:
-    week_events = _load_week_events()
+    week_events = _week_events(snap)
     w_buys  = [e for e in week_events if e["event_type"] == "FIRST_BUY"]
     w_reacs = [e for e in week_events if e["event_type"] == "RE_ACCUMULATION"]
 

@@ -2097,6 +2097,19 @@ def continuous_scan():
     # Detect changes BEFORE overwriting scan_results.json (needs previous state)
     changes = detect_signal_changes(snap)
 
+    # Persist alert events to constitutional_opportunity_events.db immediately.
+    # run_daily() only processes candidate_pool rows for TODAY — if the pool is
+    # stale, events that Alert Email fired for would be invisible to Morning Email.
+    # register_alert_events() bridges this gap using the same clustering logic.
+    if changes:
+        try:
+            from constitutional_timeline_engine import register_alert_events
+            _registered = register_alert_events(changes)
+            if _registered:
+                print(f"  [Timeline] Registered alert events: {_registered}")
+        except Exception as _reg_err:
+            print(f"  [continuous_scan] alert event registration non-fatal: {_reg_err}")
+
     try:
         from presentation.presentation_snapshot import write_presentation_snapshot_json
         write_presentation_snapshot_json(snap)

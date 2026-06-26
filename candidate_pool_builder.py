@@ -229,13 +229,14 @@ def build_candidate_pool(
             latest = df[df["Date"] <= end_date]
             cur_price = float(latest.iloc[-1]["Close"]) if not latest.empty else close
 
-            cid = _make_candidate_id(sym, str(sig_date)[:10], close)
+            candidate_entry_zone = round(close, 4)
+            cid = _make_candidate_id(sym, str(sig_date)[:10], candidate_entry_zone)
 
             row = {
                 "candidate_id":        cid,
                 "ticker":              sym,
                 "signal_date":         str(sig_date)[:10],
-                "candidate_entry_zone": round(close, 4),
+                "candidate_entry_zone": candidate_entry_zone,
                 "current_price":       round(cur_price, 4),
                 "candidate_r2":        round(r2_score, 4),
                 "r3_score":            round(r3_score, 4),

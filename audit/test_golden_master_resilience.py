@@ -76,19 +76,25 @@ def _semantic_ok(db_path: Path, sem: dict) -> tuple[bool, list[str]]:
     if dup_ttd > 0:
         errs.append(f"duplicate_ticker_type_date: {dup_ttd}")
 
-    thresh = scalar("SELECT COUNT(*) FROM constitutional_opportunity_events WHERE constitutional_r2 < 60 OR constitutional_score < 35") or 0
+    thresh = scalar("""SELECT COUNT(*) FROM constitutional_opportunity_events
+       WHERE constitutional_r2 IS NULL OR constitutional_score IS NULL
+          OR constitutional_r2 < 60 OR constitutional_score < 35""") or 0
     if thresh > 0:
         errs.append(f"threshold_violations: {thresh}")
 
-    order_err = scalar("SELECT COUNT(*) FROM constitutional_opportunity_events WHERE event_date > event_end_date") or 0
+    order_err = scalar("""SELECT COUNT(*) FROM constitutional_opportunity_events
+       WHERE event_end_date IS NULL OR event_date > event_end_date""") or 0
     if order_err > 0:
         errs.append(f"order_violations: {order_err}")
 
     conn = sqlite3.connect(str(db_path))
     indexes = {r[1]: bool(r[2]) for r in conn.execute("PRAGMA index_list(constitutional_opportunity_events)").fetchall()}
+    index_columns = []
+    if indexes.get("ux_coe_ticker_type_date") is True:
+        index_columns = [r[2] for r in conn.execute("PRAGMA index_info(ux_coe_ticker_type_date)").fetchall()]
     conn.close()
-    if indexes.get("ux_coe_ticker_type_date") is not True:
-        errs.append(f"missing unique index: {indexes}")
+    if not (indexes.get("ux_coe_ticker_type_date") is True and index_columns == ["ticker", "event_type", "event_date"]):
+        errs.append(f"missing/wrong unique index: {indexes}, columns={index_columns}")
 
     conn = sqlite3.connect(str(db_path))
     current_ids = {r[0] for r in conn.execute(
@@ -102,7 +108,8 @@ def _semantic_ok(db_path: Path, sem: dict) -> tuple[bool, list[str]]:
     cd_bad = scalar("""
         SELECT COUNT(*) FROM constitutional_opportunity_events
         WHERE signal_version='v1'
-          AND event_cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
+          AND (event_end_date IS NULL
+               OR event_cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1))
     """) or 0
     if cd_bad > 0:
         errs.append(f"v1_cluster_days_mismatches: {cd_bad}")
@@ -214,8 +221,9 @@ def test_historical_import_passes_semantic():
          10, 5.0, 61.0, 36.0, None, None, None, None, None, None, None, "wf_v1", "2026-01-01T00:00:00")
         for i in range(5)
     ]
+    before = conn.execute("SELECT COUNT(*) FROM constitutional_opportunity_events").fetchone()[0]
     conn.executemany("""
-        INSERT OR IGNORE INTO constitutional_opportunity_events
+        INSERT INTO constitutional_opportunity_events
         (event_id, ticker, event_type, event_index, event_date, event_end_date,
          event_cluster_days, constitutional_entry_price, constitutional_r2, constitutional_score,
          buy_r3, buy_r4, buy_r5, buy_r6, buy_r7, buy_r8,
@@ -223,9 +231,12 @@ def test_historical_import_passes_semantic():
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """, new_rows)
     conn.commit()
+    after = conn.execute("SELECT COUNT(*) FROM constitutional_opportunity_events").fetchone()[0]
     conn.close()
 
     ok, errs = _semantic_ok(db, sem)
+    _assert("historical_import:rows_inserted", after == before + len(new_rows),
+            f"{after - before} inserted vs {len(new_rows)} expected")
     _assert("historical_import:semantic_pass", ok, str(errs))
 
 

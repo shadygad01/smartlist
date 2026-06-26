@@ -203,20 +203,25 @@ function triggerScan(){
 
 
 def _rc(r):
+    """Return CSS class name ('pos'/'neg'/'neu') for a return value."""
     return "pos" if r > 0 else ("neg" if r < 0 else "neu")
 
 def _sign(r):
+    """Return '+' prefix for non-negative return values."""
     return "+" if r >= 0 else ""
 
 def _type_badge(etype):
+    """Return an HTML badge span for a constitutional event type string."""
     if etype == "FIRST_BUY":
         return f'<span class="badge" style="background:{B}22;color:{B};">FIRST BUY</span>'
     return f'<span class="badge" style="background:{P}22;color:{P};">RE-ACCUM</span>'
 
 def _market_status_color(status):
+    """Return the color constant for a market status string (open/pre/closed)."""
     return G if ("OPEN" in status and "PRE" not in status) else (A if "PRE" in status else DIM)
 
 def _pass_badge(ok):
+    """Return an HTML pass/fail badge span for a boolean check result."""
     return (f'<span class="badge" style="background:{G}22;color:{G};">&#10003; PASS</span>'
             if ok else f'<span class="badge" style="background:{R}22;color:{R};">&#10007; FAIL</span>')
 
@@ -247,6 +252,7 @@ def _conviction_score(e: dict, leader: dict, an: dict) -> float:
 
 
 def _load_stock_dna():
+    """Load all stock DNA rows from stock_dna.db and return as ticker-keyed dict."""
     dna_path = BASE / "stock_dna.db"
     if not dna_path.exists():
         return {}
@@ -262,6 +268,7 @@ def _load_stock_dna():
 
 # ── Header ────────────────────────────────────────────────────────────────────
 def _s_sticky_header(snap, build_hash: str = ""):
+    """Return the HTML sticky header block for the dashboard."""
     mstatus = snap.market_status
     mc = _market_status_color(mstatus)
     # Three distinct timestamps — semantically distinct
@@ -303,6 +310,7 @@ def _s_sticky_header(snap, build_hash: str = ""):
 
 # ── Stats bar ─────────────────────────────────────────────────────────────────
 def _s_stats(snap):
+    """Return the HTML stats bar block showing event counts and universe size."""
     uni = snap.universe_snapshot or []
     premium_count   = sum(1 for r in uni if r.get("status") == "PREMIUM")
     active_count    = sum(1 for r in uni if r.get("status") == "ACTIVE")
@@ -369,6 +377,7 @@ def _s_buy_signals(snap) -> tuple:
 
     # ── 3. Build blocks with conviction ranking ───────────────────────────────
     def _conv(e: dict) -> float:
+        """Return conviction score for a signal event (used for block sorting)."""
         return _conviction_score(
             e, leaders_by_t.get(e["ticker"], {}), analytics.get(e["ticker"], {})
         )
@@ -412,11 +421,13 @@ def _s_buy_signals(snap) -> tuple:
 
     # ── Rank badge ────────────────────────────────────────────────────────────
     def _rank_badge(rank: int) -> str:
+        """Return an HTML rank badge span styled by position (1/2/3 or generic)."""
         cls = {1: "rank-1", 2: "rank-2", 3: "rank-3"}.get(rank, "rank-n")
         return f'<span class="rank-badge {cls}">#{rank}</span>'
 
     # ── Signal card ───────────────────────────────────────────────────────────
     def _signal_card(e: dict, is_today: bool, rank: int) -> str:
+        """Return the HTML signal card block for one constitutional event."""
         ticker     = e["ticker"]
         etype      = e["event_type"]
         is_new_buy = etype == "FIRST_BUY"
@@ -590,6 +601,7 @@ def _s_buy_signals(snap) -> tuple:
 
     # ── Top Opportunity card ──────────────────────────────────────────────────
     def _top_opportunity_card(e: dict) -> str:
+        """Return the HTML card block for the top-ranked constitutional opportunity."""
         ticker     = e["ticker"]
         etype      = e["event_type"]
         is_new_buy = etype == "FIRST_BUY"
@@ -761,6 +773,7 @@ def _s_buy_signals(snap) -> tuple:
 # Criteria: R2 50–59.9, current_price ≤ entry_price, final_score ≥ 35.
 # buy_signal_tickers excluded — those already appear in the buy signals section.
 def _s_near_entry(snap, excluded: frozenset = frozenset()) -> str:
+    """Return the HTML 'Near Constitutional Entry' dashboard section."""
     candidates = sorted(
         [e for e in snap.approaching_entries if e["ticker"] not in excluded],
         key=lambda e: e["distance_to_constitutional"]
@@ -817,10 +830,12 @@ def _s_near_entry(snap, excluded: frozenset = frozenset()) -> str:
 # Universe members below constitutional threshold: not yet in discount + R2 range.
 # buy_signal_tickers and near_tickers excluded — each ticker appears once only.
 def _s_future_opportunities(snap, excluded: frozenset = frozenset()) -> str:
+    """Return the HTML 'Future Opportunities' dashboard section for sub-threshold universe members."""
     uni = snap.universe_snapshot or []
     near_tickers = {e["ticker"] for e in snap.approaching_entries}
 
     def _qualifies(r):
+        """Return True if the universe row should appear in the future opportunities section."""
         status  = r.get("status", "")
         ticker  = r["ticker"]
         if ticker in near_tickers or ticker in excluded:
@@ -894,12 +909,14 @@ def _s_future_opportunities(snap, excluded: frozenset = frozenset()) -> str:
 
 # ── Universe Status ───────────────────────────────────────────────────────────
 def _s_universe_status(snap) -> str:
+    """Return the HTML 'Universe Status' dashboard section table for all 27 tickers."""
     rows_data = snap.universe_snapshot
     if not rows_data:
         return ""
     total = len(rows_data)
 
     def _status_badge(status):
+        """Return an HTML status badge span for the given universe status string."""
         color_map = {
             "PREMIUM":         G,
             "ACTIVE":          B,
@@ -968,6 +985,7 @@ def _s_universe_status(snap) -> str:
 
 # ── Market Map (constitutional holders) ──────────────────────────────────────
 def _s_market_map(snap, dna):
+    """Return the HTML 'Market Map' dashboard section showing all constitutional holders."""
     if not snap.timeline:
         return ""
     by_ticker = {}
@@ -977,16 +995,19 @@ def _s_market_map(snap, dna):
             by_ticker[t] = e
 
     def _status(ret):
+        """Map return percentage to (status label, color constant) tuple."""
         if ret >= 50:  return ("PREMIUM", G)
         elif ret >= 0: return ("ACTIVE", B)
         else:          return ("UNDER REVIEW", R)
 
     def _action(ret):
+        """Return an HTML action recommendation string based on return percentage."""
         if ret >= 50:  return f'<span style="color:{G};font-weight:700;">HOLD — TARGET HIT</span>'
         elif ret >= 0: return f'<span style="color:{B};">HOLD</span>'
         else:          return f'<span style="color:{A};">MONITOR</span>'
 
     def _memory(ticker):
+        """Return HTML star string from stock DNA memory_hits count for ticker."""
         d = dna.get(ticker, {})
         hits = d.get("memory_hits", 0)
         if hits >= 3:   return "&#9733;&#9733;&#9733;&#9733;&#9733;"
@@ -1030,6 +1051,7 @@ def _s_market_map(snap, dna):
 
 # ── Stock DNA ─────────────────────────────────────────────────────────────────
 def _s_stock_dna(snap, dna):
+    """Return the HTML 'Stock DNA' dashboard section with per-ticker memory cards."""
     # Knowledge base: use full history including walk-forward (wf_v1) events
     tl = snap.knowledge_timeline or snap.timeline
     if not tl:
@@ -1140,6 +1162,7 @@ def _s_stock_dna(snap, dna):
 
 # ── Full Timeline ─────────────────────────────────────────────────────────────
 def _s_timeline(snap):
+    """Return the HTML 'Full Constitutional Timeline' dashboard table section."""
     if not snap.timeline:
         return ""
     rows = ""
@@ -1175,6 +1198,7 @@ def _s_timeline(snap):
 
 # ── System Diagnostics ────────────────────────────────────────────────────────
 def _s_diagnostics(snap):
+    """Return the HTML 'System Diagnostics' dashboard section with checks and SLA metrics."""
     tl_ok       = snap.total_events > 0
     fb_ok       = len(snap.first_buys) > 0
     re_ok       = len(snap.re_accumulations) > 0
@@ -1184,6 +1208,7 @@ def _s_diagnostics(snap):
     dna_ok      = (BASE / "stock_dna.db").exists()
 
     def sha(path):
+        """Return first 12 chars of SHA-256 hash for path, or '--' if absent."""
         if not path.exists(): return "--"
         return hashlib.sha256(path.read_bytes()).hexdigest()[:12] + "..."
 
@@ -1342,6 +1367,7 @@ def _s_operations_center() -> str:
 
     # SLA metrics
     def _sla_row(label, m):
+        """Return an HTML SLA metric table row for the given label and metrics dict."""
         if not m or m.get("total", 0) == 0:
             return f'<tr><td style="font-size:11px;color:{DIM};padding:3px 6px;">{label}</td><td style="font-size:11px;color:{DIM};padding:3px 6px;">No data</td></tr>'
         pct = m.get("pct")
@@ -1403,6 +1429,7 @@ def _s_operations_center() -> str:
 
 # ── Section mutual-exclusivity assertion ─────────────────────────────────────
 def _assert_sections(snap) -> None:
+    """Assert that near-entry and future-opportunities ticker sets are mutually exclusive."""
     uni = snap.universe_snapshot or []
     near_tickers = {e["ticker"] for e in snap.approaching_entries}
     future_tickers = {
@@ -1423,6 +1450,7 @@ def _assert_sections(snap) -> None:
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 def build_dashboard(build_hash: str = "") -> str:
+    """Build and return the complete HTML dashboard string from the current presentation snapshot."""
     snap = build_presentation_snapshot()
     dna  = _load_stock_dna()
 

@@ -547,6 +547,7 @@ except Exception:
     _REGIME_DOWN_MULT      = 0.70
 
 def sig_info(score):
+    """Return (label, text_color, bg_color, border_color) tuple for a signal score tier."""
     if score>=85: return "Institutional Buy","#155724","#d4edda","#c3e6cb"
     if score>=70: return "Very Strong Buy",  "#155724","#c3e6cb","#b1dfbb"
     if score>=55: return "Strong Buy",       "#0a3622","#d1e7dd","#a3cfbb"
@@ -676,6 +677,7 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo, _sv=None, _h
 
     # ── entry range ±1.5% around each zone center ─────────────────────────────
     def zone_range(p):
+        """Return (low, high) price range as ±1.5% around zone center price p."""
         return round(p * 0.985, 2), round(p * 1.015, 2)
 
     z1_lo, z1_hi = zone_range(z1_price)
@@ -707,6 +709,7 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo, _sv=None, _h
 # =========================================
 
 def analyze(symbol):
+    """Download OHLCV data for symbol, compute technical levels, and return full analysis dict."""
     try:
         df = download_data(symbol, 110)
         if df.empty or len(df) < 5:
@@ -935,6 +938,7 @@ def analyze(symbol):
 # =========================================
 
 def save_history(stock, r):
+    """Append today's signal result for stock to signals_history.csv, creating the file if needed."""
     row = {"date": now_cairo().strftime("%Y-%m-%d"), "stock": stock,
            "company": NAMES.get(stock, stock), "price": r.get("price", "N/A"),
            "last_dt": r.get("last_dt", "N/A"), "fresh": r.get("is_fresh", False),
@@ -953,6 +957,7 @@ def save_history(stock, r):
 # =========================================
 
 def pill(sc, mx):
+    """Return an inline HTML score pill badge showing sc/mx with color-coded background."""
     pct = int(sc / mx * 100) if mx else 0
     if pct >= 70:
         bg, fg = "#d1f0dd", "#1a7340"
@@ -967,6 +972,7 @@ def pill(sc, mx):
     )
 
 def bar(score):
+    """Return an inline HTML progress bar for score (0–100) with color-coded fill."""
     if score >= 70:
         fg, bg_track = "#1a7340", "#c8ecd8"
     elif score >= 45:
@@ -984,6 +990,7 @@ def bar(score):
     )
 
 def fresh_badge(is_fresh, last_dt):
+    """Return an HTML freshness badge: green checkmark for fresh data, yellow warning for stale."""
     if is_fresh:
         return f'<span style="font-size:11px;padding:2px 7px;border-radius:6px;background:#d4edda;color:#155724;margin-left:8px;">✓ {last_dt}</span>'
     return f'<span style="font-size:11px;padding:2px 7px;border-radius:6px;background:#fff3cd;color:#856404;margin-left:8px;">⚠ Stale: {last_dt}</span>'
@@ -993,11 +1000,13 @@ def fresh_badge(is_fresh, last_dt):
 # =========================================
 
 def build_ez_html(r):
+    """Return HTML entry zones table for a stock result dict, or empty string if no zones computed."""
     ez = r.get("entry_zones")
     if not ez:
         return ""
 
     def conf_badge(n):
+        """Return an HTML confluence badge span styled by count (1/2/3+ stars)."""
         if n >= 3:   bg,fg,txt = "#155724","#fff",f"★★★ {n} confluences"
         elif n == 2: bg,fg,txt = "#856404","#fff",f"★★ {n} confluences"
         else:        bg,fg,txt = "#6c757d","#fff",f"★ {n} confluence"
@@ -1005,6 +1014,7 @@ def build_ez_html(r):
                 f'font-size:11px;font-weight:bold;background:{bg};color:{fg};">{txt}</span>')
 
     def zone_row(num, color, z, cur_price):
+        """Return an HTML table row for one entry zone with label, price range, basis, confluence, and distance."""
         dist     = round(((z["center"] - cur_price) / cur_price) * 100, 1)
         dist_str = f"{dist:+.1f}%" if dist != 0 else "At current"
         label    = "Aggressive" if num==1 else ("Add / Average" if num==2 else "Deep Value")
@@ -1131,6 +1141,7 @@ def build_pattern_html(r):
 FIB_LABELS = {0: "12% Min", 1: "23.6%", 2: "38.2%", 3: "50%", 4: "61.8%", 5: "100%", 6: "150%", 7: "200%"}
 
 def _target_box_html(symbol, r, positions):
+    """Return HTML target box: dynamic Fibonacci target if position open, static initial target otherwise."""
     pos = positions.get(symbol)
     if pos and pos.get("status") == "open":
         dyn_tgt = pos["target"]
@@ -1147,6 +1158,7 @@ def _target_box_html(symbol, r, positions):
     )
 
 def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
+    """Build and return (html, results, snap) for the daily report; runs analyze() for all stocks."""
     # V2 runtime — email rendered by egx_email.py from PresentationSnapshot only
     from egx_email import build_email
     from presentation.presentation_snapshot import build_presentation_snapshot
@@ -1245,6 +1257,7 @@ def _build_report_v1(holiday_mode=False, last_trading=None, _cached_results=None
 </table>"""
 
     def _sec_title(title):
+        """Return an HTML section title div with left-border accent for the email report."""
         return (f'<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:700;'
                 f'color:#1a3a5c;margin:20px 0 8px 0;letter-spacing:0.4px;'
                 f'border-left:4px solid #1a3a5c;padding-left:8px;">{title}</div>')
@@ -1402,6 +1415,7 @@ def _build_report_v1(holiday_mode=False, last_trading=None, _cached_results=None
 
 # ── Stub retained for import compatibility (no longer called by build_report) ─
 def _build_ranking_block_legacy():
+    """Stub retained for import compatibility; no longer called by build_report."""
     pass
 
 # =========================================
@@ -1409,6 +1423,7 @@ def _build_ranking_block_legacy():
 # =========================================
 
 def send_email(html, subject_suffix=""):
+    """Send HTML email with today's Cairo date in the subject, plus optional suffix."""
     date_str = now_cairo().strftime("%Y-%m-%d")
     subject  = f"{EMAIL_HEADER_TITLE} · {date_str}{subject_suffix}"
     return _send_email_raw(subject=subject, html=html, to=EMAIL)
@@ -1423,6 +1438,7 @@ def send_telegram_zone3_reinforcement(symbol, entry_price, reinforcement_price, 
     drop_pct = ((reinforcement_price - entry_price) / entry_price) * 100
 
     def fib_levels_str(ep):
+        """Return formatted Fibonacci target levels string for entry price ep."""
         levels = [
             (12.0, ep * 1.120),
             (23.6, ep * 1.236),
@@ -1802,6 +1818,7 @@ def is_trading_day_today():
 # =========================================
 
 def _collect_current_prices(results):
+    """Return dict of {ticker: price} for all stocks with a valid positive price in results."""
     return {
         s: results[s]["price"] for s in STOCKS
         if results[s].get("ok")
@@ -1837,6 +1854,7 @@ def _register_new_positions(results):
                 print(f"📌 تسجيل مركز جديد ({results[stock].get('signal')}): {NAMES.get(stock, stock)} @ {price}")
 
 def backfill_pattern_scores():
+    """No-op stub; pattern_engine was removed 2026-06-21."""
     pass  # pattern_engine removed 2026-06-21
 
 
@@ -2070,6 +2088,7 @@ def _ensure_backfill():
 
 
 def daily_scan():
+    """Run the scheduled morning scan with idempotency guard; sends email and Telegram on EGX trading days."""
     from notifications.morning_guard import is_morning_sent, record_morning_start
     date_str = today_cairo().isoformat()
 
@@ -2095,6 +2114,7 @@ def daily_scan():
 
 
 def continuous_scan():
+    """Run intraday scan for signal changes, send Telegram/email alerts for new constitutional events."""
     print(f"\n🔄 Continuous scan at {fmt_cairo()}")
     html, current_results, snap = build_report(holiday_mode=False)
 
@@ -2140,6 +2160,7 @@ def continuous_scan():
 
 
 def manual_scan():
+    """Manually trigger the full scan+email workflow, handling holiday mode automatically."""
     print(f"\n🔄 Manual scan at {fmt_cairo()}")
     _ensure_backfill()
     holiday = not is_egx_trading_day(today_cairo())
@@ -2452,6 +2473,18 @@ def send_change_alert(changed_events: list[dict]) -> None:
         date_str   = _dt.now().strftime("%d %b %Y  %H:%M")
 
     for event in changed_events:
+        # Normalize legacy {stock, price, target, score} shape to constitutional shape
+        if "stock" in event and "ticker" not in event:
+            sig = event.get("to", "Buy")
+            event = {
+                "ticker":                     event["stock"],
+                "event_type":                 "FIRST_BUY" if sig == "Buy" else "RE_ACCUMULATION",
+                "constitutional_entry_price": event.get("target", 0.0),
+                "current_price":             event.get("price", 0.0),
+                "constitutional_score":      event.get("score", 0.0),
+                "constitutional_r2":         event.get("r2", 0.0),
+                "sector":                    event.get("ctx_label", ""),
+            }
         ticker     = event.get("ticker", "?")
         etype      = event.get("event_type", "RE_ACCUMULATION")
         cur_price  = event.get("current_price", "N/A")

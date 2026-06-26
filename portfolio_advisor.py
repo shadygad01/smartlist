@@ -176,7 +176,7 @@ def _load_latest_snapshot(mgr_conn: sqlite3.Connection) -> dict:
     if not row:
         return {}
     cols = [d[1] for d in mgr_conn.execute("PRAGMA table_info(portfolio_snapshots)")]
-    snap = dict(zip(cols, row))
+    snap = dict(zip(cols, row, strict=True))
     for key in ("holdings_json", "reserve_json", "watch_json",
                 "sector_alloc_json", "replacement_queue_json",
                 "portfolio_health_json", "corr_matrix_json"):
@@ -194,7 +194,7 @@ def _load_candidate_states(mgr_conn: sqlite3.Connection) -> list[dict]:
     ).fetchall()
     cols = ["ticker", "state", "candidate_r2", "sector", "decision_reason",
             "portfolio_impact", "suggested_action", "candidate_entry_zone"]
-    return [dict(zip(cols, r)) for r in rows]
+    return [dict(zip(cols, r, strict=True)) for r in rows]
 
 
 def _load_best_pool_entry(pool_conn: sqlite3.Connection, ticker: str) -> Optional[dict]:
@@ -214,7 +214,7 @@ def _load_best_pool_entry(pool_conn: sqlite3.Connection, ticker: str) -> Optiona
             "r4_score", "r5_score", "r6_score", "r7_score", "r8_score",
             "expected_reward_score", "sector", "discount_depth", "distance_from_eq",
             "atr20", "volatility20"]
-    return dict(zip(cols, row))
+    return dict(zip(cols, row, strict=True))
 
 
 # ---------------------------------------------------------------------------

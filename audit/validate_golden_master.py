@@ -152,7 +152,8 @@ check("timeline:constitutional_threshold", (thresh_violations or 0) == 0,
 
 # Ordering integrity: event_date must not be after event_end_date
 order_violations = scalar(COE_DB,
-    "SELECT COUNT(*) FROM constitutional_opportunity_events WHERE event_date > event_end_date")
+    """SELECT COUNT(*) FROM constitutional_opportunity_events
+       WHERE event_end_date IS NULL OR event_date > event_end_date""")
 check("timeline:event_date_order", (order_violations or 0) == 0,
       f"ordering violations={order_violations}")
 
@@ -184,7 +185,8 @@ else:
 v1_cd_bad = scalar(COE_DB, """
     SELECT COUNT(*) FROM constitutional_opportunity_events
     WHERE signal_version='v1'
-      AND event_cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
+      AND (event_end_date IS NULL
+           OR event_cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1))
 """)
 check("timeline:v1_cluster_days_consistent", (v1_cd_bad or 0) == 0,
       f"mismatched event_cluster_days={v1_cd_bad}")

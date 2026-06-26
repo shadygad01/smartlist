@@ -21,8 +21,10 @@ MAX_CHARS = 4000
 def _health_icon(stars: str) -> str:
     """Return colored circle emoji representing portfolio health star rating."""
     n = stars.count("★")
-    if n >= 4: return "🟢"
-    if n == 3: return "🟡"
+    if n >= 4:
+        return "🟢"
+    if n == 3:
+        return "🟡"
     return "🔴"
 
 

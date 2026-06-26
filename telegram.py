@@ -23,8 +23,10 @@ def _sign(r: float) -> str:
 
 def _market_icon(status: str) -> str:
     """Return colored circle emoji for market status (OPEN/PRE/CLOSED)."""
-    if "OPEN" in status and "PRE" not in status: return "🟢"
-    if "PRE" in status: return "🟡"
+    if "OPEN" in status and "PRE" not in status:
+        return "🟢"
+    if "PRE" in status:
+        return "🟡"
     return "⚫"
 
 

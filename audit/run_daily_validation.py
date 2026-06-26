@@ -20,7 +20,8 @@ TS     = now_cairo().isoformat()
 
 def sha256(path: Path) -> str:
     """Return SHA-256 hex digest of path, or sentinel string if absent."""
-    if not path.exists(): return "FILE_NOT_FOUND"
+    if not path.exists():
+        return "FILE_NOT_FOUND"
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 def qdb(db_path: Path, sql: str, params: tuple = ()) -> list[dict]:
@@ -128,21 +129,35 @@ check("timeline:no_duplicate_ticker_type_date", (dup_ttd or 0) == 0, 0, dup_ttd)
 
 # Constitutional threshold: all signals must have qualified at constitutional_r2>=60, constitutional_score>=35
 thresh_violations = scalar(COE_DB,
-    "SELECT COUNT(*) FROM constitutional_opportunity_events WHERE constitutional_r2 < 60 OR constitutional_score < 35")
+    """SELECT COUNT(*) FROM constitutional_opportunity_events
+       WHERE constitutional_r2 IS NULL
+          OR constitutional_score IS NULL
+          OR constitutional_r2 < 60
+          OR constitutional_score < 35""")
 check("timeline:constitutional_threshold", (thresh_violations or 0) == 0, 0, thresh_violations)
 
 # Ordering integrity: event_date must not be after event_end_date
 order_violations = scalar(COE_DB,
-    "SELECT COUNT(*) FROM constitutional_opportunity_events WHERE event_date > event_end_date")
+    """SELECT COUNT(*) FROM constitutional_opportunity_events
+       WHERE event_date IS NULL
+          OR event_end_date IS NULL
+          OR julianday(event_date) IS NULL
+          OR julianday(event_end_date) IS NULL
+          OR event_date > event_end_date""")
 check("timeline:event_date_order", (order_violations or 0) == 0, 0, order_violations)
 
 # UNIQUE INDEX must be present — protects against duplicate signals on same day
 if COE_DB.exists():
     conn = sqlite3.connect(str(COE_DB))
     indexes = {r[1]: bool(r[2]) for r in conn.execute("PRAGMA index_list(constitutional_opportunity_events)").fetchall()}
+    index_columns = []
+    if indexes.get("ux_coe_ticker_type_date") is True:
+        index_columns = [r[2] for r in conn.execute("PRAGMA index_info(ux_coe_ticker_type_date)").fetchall()]
     conn.close()
-    check("timeline:unique_index_exists", indexes.get("ux_coe_ticker_type_date") is True,
-          "ux_coe_ticker_type_date (unique)", str(indexes))
+    check("timeline:unique_index_exists",
+          indexes.get("ux_coe_ticker_type_date") is True and index_columns == ["ticker", "event_type", "event_date"],
+          "ux_coe_ticker_type_date UNIQUE(ticker,event_type,event_date)",
+          {"indexes": indexes, "columns": index_columns})
 else:
     check("timeline:unique_index_exists", False, "ux_coe_ticker_type_date", "DB_NOT_FOUND")
 
@@ -164,7 +179,14 @@ else:
 v1_cd_bad = scalar(COE_DB, """
     SELECT COUNT(*) FROM constitutional_opportunity_events
     WHERE signal_version='v1'
-      AND event_cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
+      AND (
+          event_cluster_days IS NULL
+          OR event_date IS NULL
+          OR event_end_date IS NULL
+          OR julianday(event_date) IS NULL
+          OR julianday(event_end_date) IS NULL
+          OR event_cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
+      )
 """)
 check("timeline:v1_cluster_days_consistent", (v1_cd_bad or 0) == 0, 0, v1_cd_bad)
 

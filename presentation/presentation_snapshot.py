@@ -73,6 +73,7 @@ def _csv_data_as_of() -> str:
 
 
 def _db(path: Path) -> sqlite3.Connection | None:
+    """Open SQLite connection with Row factory, or return None if path does not exist."""
     if not path.exists():
         return None
     conn = sqlite3.connect(str(path))
@@ -81,6 +82,7 @@ def _db(path: Path) -> sqlite3.Connection | None:
 
 
 def _clean_reason(text: str) -> str:
+    """Strip raw R-score annotations from reason strings for clean display."""
     if not text:
         return text
     text = re.sub(r'\(\s*R\d+=[\d.]+\s*\)', '', text)
@@ -179,6 +181,7 @@ class PresentationSnapshot:
 
 
 def build_presentation_snapshot() -> PresentationSnapshot:
+    """Build PresentationSnapshot from constitutional timeline, pool, advisor, and universe sources."""
     snap = PresentationSnapshot(
         generated_at=now_iso(),
         market_status=_market_status(),
@@ -278,14 +281,22 @@ def build_presentation_snapshot() -> PresentationSnapshot:
             # Only include tickers where price is AT or BELOW the entry zone
             # (i.e., the discount condition is met — only R2 gate remains)
             rows = pool.execute("""
-                SELECT ticker, MAX(candidate_r2) as candidate_r2, MAX(expected_reward_score) as max_score,
+                SELECT ticker, candidate_r2, expected_reward_score,
                        candidate_entry_zone, current_price, sector
-                FROM candidate_pool
-                WHERE snapshot_ts=?
-                  AND candidate_r2 BETWEEN 50.0 AND 59.9
-                  AND current_price <= candidate_entry_zone
-                GROUP BY ticker
-                HAVING max_score >= 35
+                FROM (
+                    SELECT ticker, candidate_r2, expected_reward_score,
+                           candidate_entry_zone, current_price, sector,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY ticker
+                               ORDER BY candidate_r2 DESC, expected_reward_score DESC
+                           ) AS rn
+                    FROM candidate_pool
+                    WHERE snapshot_ts=?
+                      AND candidate_r2 BETWEEN 50.0 AND 59.9
+                      AND expected_reward_score >= 35
+                      AND current_price <= candidate_entry_zone
+                )
+                WHERE rn = 1
                 ORDER BY candidate_r2 DESC
                 LIMIT 15
             """, (latest_ts,)).fetchall()
@@ -313,18 +324,18 @@ def build_presentation_snapshot() -> PresentationSnapshot:
                 entries.append(dict(
                     ticker=ticker,
                     candidate_r2=r["candidate_r2"],
-                    expected_reward_score=r["max_score"],
+                    expected_reward_score=r["expected_reward_score"],
                     candidate_entry_zone=candidate_entry_zone,
                     current_price=current_price,
                     sector=r["sector"] or "",
                     distance_to_constitutional=round(60.0 - r["candidate_r2"], 1),
                     need_move_pct=round(
-                        (candidate_entry_zone - current_price) / candidate_entry_zone * 100, 1
-                    ) if candidate_entry_zone else 0.0,
+                        (candidate_entry_zone - current_price) / current_price * 100, 1
+                    ) if candidate_entry_zone and current_price else 0.0,
                 ))
             snap.approaching_entries = entries
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"[PresentationSnapshot] candidate pool query failed: {exc}")
         pool.close()
 
     # ── 2. Portfolio Advisor (health narrative only — shown in System Diagnostics)
@@ -372,8 +383,8 @@ def build_presentation_snapshot() -> PresentationSnapshot:
                 e for e in snap.approaching_entries
                 if e["ticker"] not in signal_tickers
             ]
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"[PresentationSnapshot] approaching-entry exclusivity failed: {exc}")
 
     # ── 3. Knowledge Base ─────────────────────────────────────────────────────
     kb = _db(_KB_DB)

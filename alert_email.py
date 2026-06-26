@@ -26,12 +26,15 @@ _LIGHT = "#f8f9fb"
 
 
 def _sign(r: float) -> str:
+    """Return '+' for non-negative values, '' otherwise."""
     return "+" if r >= 0 else ""
 
 def _ret_c(r: float) -> str:
+    """Return HTML color code based on return sign."""
     return _G if r > 0 else (_R if r < 0 else _MUTED)
 
 def _fib_targets(entry: float) -> list[tuple[str, float]]:
+    """Return list of (label, price) Fibonacci extension targets from entry."""
     return [
         ("1.236x", round(entry * 1.236, 2)),
         ("1.382x", round(entry * 1.382, 2)),
@@ -40,6 +43,7 @@ def _fib_targets(entry: float) -> list[tuple[str, float]]:
     ]
 
 def _load_dna(ticker: str) -> dict:
+    """Load stock DNA row for ticker from stock_dna.db; returns empty dict on miss."""
     db_path = BASE / "stock_dna.db"
     if not db_path.exists():
         return {}
@@ -55,6 +59,7 @@ def _load_dna(ticker: str) -> dict:
         return {}
 
 def _load_nearest_cluster(ticker: str) -> str:
+    """Return nearest upcoming event_date from constitutional_opportunity_events for ticker."""
     db_path = BASE / "constitutional_opportunity_events.db"
     if not db_path.exists():
         return ""
@@ -62,13 +67,13 @@ def _load_nearest_cluster(ticker: str) -> str:
         conn = sqlite3.connect(str(db_path))
         conn.row_factory = sqlite3.Row
         row = conn.execute(
-            "SELECT event_date, event_type, entry_price FROM constitutional_opportunity_events "
+            "SELECT event_date, event_type, constitutional_entry_price FROM constitutional_opportunity_events "
             "WHERE ticker=? ORDER BY event_date DESC LIMIT 1",
             (ticker,)
         ).fetchone()
         conn.close()
         if row:
-            return f'{row["event_date"]} @ {float(row["entry_price"]):.2f} EGP'
+            return f'{row["event_date"]} @ {float(row["constitutional_entry_price"]):.2f} EGP'
         return ""
     except Exception:
         return ""
@@ -79,7 +84,7 @@ def build_alert_email(event: dict) -> tuple[str, str]:
     ticker     = event.get("ticker", "TICKER")
     etype      = event.get("event_type", "FIRST_BUY")
     event_date = event.get("event_date", _today_iso())
-    entry      = float(event.get("entry_price", 0.0))
+    entry      = float(event.get("constitutional_entry_price", 0.0))
     current    = float(event.get("current_price", 0.0))
     ret_pct    = float(event.get("return_pct", 0.0))
     sector     = event.get("sector", "")
@@ -405,7 +410,7 @@ if __name__ == "__main__":
         "ticker":        "HELI.CA",
         "event_type":    "FIRST_BUY",
         "event_date":    "2026-06-24",
-        "entry_price":   3.1657,
+        "constitutional_entry_price":   3.1657,
         "current_price": 6.56,
         "return_pct":    107.22,
         "sector":        "Real Estate",
@@ -421,7 +426,7 @@ if __name__ == "__main__":
         "ticker":        "ORHD.CA",
         "event_type":    "RE_ACCUMULATION",
         "event_date":    "2026-06-24",
-        "entry_price":   24.62,
+        "constitutional_entry_price":   24.62,
         "current_price": 39.30,
         "return_pct":    59.63,
         "sector":        "Real Estate",

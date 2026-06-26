@@ -41,12 +41,14 @@ STATUS_UNDER_REVIEW       = "UNDER_REVIEW"      # return < 0%
 # ── Schema ────────────────────────────────────────────────────────────────────
 
 def _open(path: Path) -> sqlite3.Connection:
+    """Open SQLite connection with Row factory enabled."""
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def _create_schema(conn: sqlite3.Connection) -> None:
+    """Create constitutional_opportunity_events table, indexes, and apply one-time repairs."""
     conn.execute("""
         CREATE TABLE IF NOT EXISTS constitutional_opportunity_events (
             event_id         TEXT PRIMARY KEY,
@@ -55,10 +57,10 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             event_index      INTEGER NOT NULL, -- 0=FIRST, 1,2,...=RE_ACCUMULATION
             event_date       TEXT NOT NULL,   -- cluster start date
             event_end_date   TEXT,            -- cluster end date
-            cluster_days     INTEGER,         -- qualifying days in cluster
-            entry_price      REAL NOT NULL,   -- price on event_date
-            buy_r2           REAL NOT NULL,
-            buy_score        REAL NOT NULL,
+            event_cluster_days     INTEGER,         -- qualifying days in cluster
+            constitutional_entry_price      REAL NOT NULL,   -- price on event_date
+            constitutional_r2           REAL NOT NULL,
+            constitutional_score        REAL NOT NULL,
             buy_r3           REAL,
             buy_r4           REAL,
             buy_r5           REAL,
@@ -97,20 +99,21 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             "CREATE UNIQUE INDEX IF NOT EXISTS ux_coe_ticker_type_date "
             "ON constitutional_opportunity_events(ticker, event_type, event_date)"
         )
-    # One-time repair: normalise cluster_days to calendar span for all v1 events.
+    # One-time repair: normalise event_cluster_days to calendar span for all v1 events.
     # Older rows stored qualifying trading-day counts (from migrate's len(dates)),
     # or incremental +1 counts (from pre-fix run_daily).  Calendar span is the
     # correct, idempotent, reproducible value: (end - start).days + 1.
     conn.execute("""
         UPDATE constitutional_opportunity_events
-        SET cluster_days = (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
+        SET event_cluster_days = (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
         WHERE signal_version = 'v1'
-          AND cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
+          AND event_cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
     """)
     conn.commit()
 
 
 def _event_id(ticker: str, idx: int) -> str:
+    """Return deterministic event primary key for ticker at event index."""
     return f"{ticker}_E{idx:02d}"
 
 
@@ -118,7 +121,7 @@ def _event_id(ticker: str, idx: int) -> str:
 
 def _cluster_signals(rows: list) -> list[dict]:
     """
-    Group chronologically sorted (date, entry, r2, score, r3-r8, sector) rows
+    Group chronologically sorted (date, candidate_entry_zone, candidate_r2, expected_reward_score, r3-r8, sector) rows
     into clusters separated by more than GAP_DAYS calendar days.
     Returns list of cluster dicts.
     """
@@ -129,9 +132,9 @@ def _cluster_signals(rows: list) -> list[dict]:
             clusters.append({
                 "start":   dt,
                 "end":     dt,
-                "entry":   r["entry_price"],
-                "r2":      r["r2_score"],
-                "score":   r["final_score"],
+                "entry":   r["candidate_entry_zone"],
+                "r2":      r["candidate_r2"],
+                "score":   r["expected_reward_score"],
                 "r3":      r["r3_score"],
                 "r4":      r["r4_score"],
                 "r5":      r["r5_score"],
@@ -173,10 +176,10 @@ def migrate() -> dict:
 
     for ticker in tickers:
         rows = pool.execute("""
-            SELECT signal_date, entry_price, r2_score, final_score,
+            SELECT signal_date, candidate_entry_zone, candidate_r2, expected_reward_score,
                    r3_score, r4_score, r5_score, r6_score, r7_score, r8_score, sector
             FROM candidate_pool
-            WHERE ticker=? AND r2_score>=? AND final_score>=?
+            WHERE ticker=? AND candidate_r2>=? AND expected_reward_score>=?
             ORDER BY signal_date ASC
         """, (ticker, CONST_R2_MIN, CONST_SCORE_MIN)).fetchall()
 
@@ -198,14 +201,14 @@ def migrate() -> dict:
                 total_skipped += 1
                 continue
 
-            # cluster_days = calendar span (end - start + 1), same formula used by
+            # event_cluster_days = calendar span (end - start + 1), same formula used by
             # run_daily() and register_alert_events(), so the value is always
             # deterministic and idempotent regardless of qualifying trading days.
             calendar_span = (cl["end"] - cl["start"]).days + 1
             tl.execute("""
                 INSERT INTO constitutional_opportunity_events
                 (event_id, ticker, event_type, event_index, event_date, event_end_date,
-                 cluster_days, entry_price, buy_r2, buy_score,
+                 event_cluster_days, constitutional_entry_price, constitutional_r2, constitutional_score,
                  buy_r3, buy_r4, buy_r5, buy_r6, buy_r7, buy_r8,
                  sector, signal_version, created_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -281,6 +284,7 @@ def _peak_after(price_index: dict, ticker: str, from_date: str) -> float:
 
 
 def _status(return_pct: float) -> str:
+    """Map return_pct to PREMIUM_NOW / ACTIVE_OPPORTUNITY / UNDER_REVIEW status label."""
     if return_pct >= 50.0:
         return STATUS_PREMIUM_NOW
     if return_pct >= 0.0:
@@ -325,7 +329,7 @@ def get_timeline(production_only: bool = False) -> list[dict]:
 
     for r in rows:
         t          = r["ticker"]
-        buy_price  = float(r["entry_price"])
+        buy_price  = float(r["constitutional_entry_price"])
         ev_date    = r["event_date"]
 
         current_price = pi.get(t, {}).get("latest") or buy_price
@@ -346,10 +350,10 @@ def get_timeline(production_only: bool = False) -> list[dict]:
             event_index      = int(r["event_index"]),
             event_date       = ev_date,
             event_end_date   = r["event_end_date"] or ev_date,
-            cluster_days     = int(r["cluster_days"] or 1),
-            entry_price      = buy_price,
-            buy_r2           = float(r["buy_r2"]),
-            buy_score        = float(r["buy_score"]),
+            event_cluster_days         = int(r["event_cluster_days"] or 1),
+            constitutional_entry_price = buy_price,
+            constitutional_r2          = float(r["constitutional_r2"]),
+            constitutional_score       = float(r["constitutional_score"]),
             sector           = r["sector"] or "",
             signal_version   = r["signal_version"] or "v1",
             current_price    = current_price,
@@ -363,6 +367,7 @@ def get_timeline(production_only: bool = False) -> list[dict]:
 
 
 def get_new_events_today() -> list[dict]:
+    """Return constitutional events whose event_date is today (for morning-brief new-signal section)."""
     today = date.today().isoformat()
     return [e for e in get_timeline() if e["event_date"] == today]
 
@@ -382,7 +387,7 @@ def get_analytics(timeline: list[dict] | None = None) -> dict[str, dict]:
 
     result: dict[str, dict] = {}
     for t, evs in by_ticker.items():
-        entries = [e["entry_price"] for e in evs]
+        entries = [e["constitutional_entry_price"] for e in evs]
         rets    = [e["return_pct"]  for e in evs]
         best_ev = max(evs, key=lambda e: e["return_pct"])
         result[t] = {
@@ -440,7 +445,7 @@ def get_leaderboards(timeline: list[dict] | None = None,
     compound = []
     for t, a in an.items():
         evs = sorted(a["events"], key=lambda e: e["event_date"])
-        e0  = evs[0]["entry_price"]
+        e0  = evs[0]["constitutional_entry_price"]
         cur = evs[-1]["current_price"]
         compound.append(dict(
             ticker=t, sector=a["sector"],
@@ -484,7 +489,7 @@ def forensic_validation() -> dict:
         pool = _open(POOL_DB)
         pool_tickers = set(
             r[0] for r in pool.execute(
-                "SELECT DISTINCT ticker FROM candidate_pool WHERE r2_score>=? AND final_score>=?",
+                "SELECT DISTINCT ticker FROM candidate_pool WHERE candidate_r2>=? AND expected_reward_score>=?",
                 (CONST_R2_MIN, CONST_SCORE_MIN)
             ).fetchall()
         )
@@ -521,12 +526,12 @@ def run_daily() -> dict:
 
     pool = _open(POOL_DB)
     todays_rows = pool.execute("""
-        SELECT ticker, signal_date, entry_price,
-               r2_score, final_score, r3_score, r4_score, r5_score,
+        SELECT ticker, signal_date, candidate_entry_zone,
+               candidate_r2, expected_reward_score, r3_score, r4_score, r5_score,
                r6_score, r7_score, r8_score, sector
         FROM candidate_pool
-        WHERE signal_date=? AND r2_score>=? AND final_score>=?
-        ORDER BY r2_score DESC
+        WHERE signal_date=? AND candidate_r2>=? AND expected_reward_score>=?
+        ORDER BY candidate_r2 DESC
     """, (today, CONST_R2_MIN, CONST_SCORE_MIN)).fetchall()
     pool.close()
 
@@ -555,13 +560,13 @@ def run_daily() -> dict:
             today_dt    = date.fromisoformat(today)
             if (today_dt - last_end_dt).days <= GAP_DAYS:
                 # Extend existing cluster — only advance when date is actually new
-                # cluster_days uses calendar span formula so repeated calls produce
+                # event_cluster_days uses calendar span formula so repeated calls produce
                 # the same value (idempotent regardless of how many times run_daily runs)
                 if today > last_end:
                     tl.execute("""
                         UPDATE constitutional_opportunity_events
                         SET event_end_date=?,
-                            cluster_days=(CAST(julianday(?) - julianday(event_date) AS INTEGER) + 1)
+                            event_cluster_days=(CAST(julianday(?) - julianday(event_date) AS INTEGER) + 1)
                         WHERE ticker=? AND event_index=? AND signal_version='v1'
                     """, (today, today, t, int(existing)))
                 continue
@@ -573,13 +578,13 @@ def run_daily() -> dict:
         tl.execute("""
             INSERT OR IGNORE INTO constitutional_opportunity_events
             (event_id, ticker, event_type, event_index, event_date, event_end_date,
-             cluster_days, entry_price, buy_r2, buy_score,
+             event_cluster_days, constitutional_entry_price, constitutional_r2, constitutional_score,
              buy_r3, buy_r4, buy_r5, buy_r6, buy_r7, buy_r8,
              sector, signal_version, created_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             eid, t, etype, idx, today, today, 1,
-            r["entry_price"], r["r2_score"], r["final_score"],
+            r["candidate_entry_zone"], r["candidate_r2"], r["expected_reward_score"],
             r["r3_score"], r["r4_score"], r["r5_score"],
             r["r6_score"], r["r7_score"], r["r8_score"],
             r["sector"] or "", "v1", today,
@@ -614,7 +619,7 @@ def register_alert_events(alert_events: list[dict]) -> list[str]:
     Idempotent: INSERT OR IGNORE + UPDATE with same date = no-op.
 
     alert_events: list of dicts from detect_signal_changes() with keys:
-        ticker, event_date, entry_price, buy_r2, buy_score, sector
+        ticker, event_date, constitutional_entry_price, constitutional_r2, constitutional_score, sector
     Returns: list of event_id strings that were newly inserted.
     """
     if not alert_events:
@@ -630,9 +635,9 @@ def register_alert_events(alert_events: list[dict]) -> list[str]:
     for ev in alert_events:
         t      = ev.get("ticker", "")
         today  = ev.get("event_date", date.today().isoformat())
-        entry  = float(ev.get("entry_price") or 0.0)
-        r2     = float(ev.get("buy_r2") or 0.0)
-        score  = float(ev.get("buy_score") or 0.0)
+        entry  = float(ev.get("constitutional_entry_price") or 0.0)
+        r2     = float(ev.get("constitutional_r2") or 0.0)
+        score  = float(ev.get("constitutional_score") or 0.0)
         sector = ev.get("sector", "")
 
         if not t or r2 < CONST_R2_MIN or score < CONST_SCORE_MIN:
@@ -660,7 +665,7 @@ def register_alert_events(alert_events: list[dict]) -> list[str]:
                     tl.execute("""
                         UPDATE constitutional_opportunity_events
                         SET event_end_date=?,
-                            cluster_days=(
+                            event_cluster_days=(
                                 CAST(julianday(?) - julianday(event_date) AS INTEGER) + 1
                             )
                         WHERE ticker=? AND event_index=? AND signal_version='v1'
@@ -674,7 +679,7 @@ def register_alert_events(alert_events: list[dict]) -> list[str]:
         tl.execute("""
             INSERT OR IGNORE INTO constitutional_opportunity_events
             (event_id, ticker, event_type, event_index, event_date, event_end_date,
-             cluster_days, entry_price, buy_r2, buy_score,
+             event_cluster_days, constitutional_entry_price, constitutional_r2, constitutional_score,
              buy_r3, buy_r4, buy_r5, buy_r6, buy_r7, buy_r8,
              sector, signal_version, created_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -713,7 +718,7 @@ if __name__ == "__main__":
         pk   = "+" if ev["peak_return_pct"] >= 0 else ""
         print(
             f"  [{ev['event_type']:<16}] {ev['ticker']:<12} {ev['event_date']}"
-            f"  entry={ev['entry_price']:.2f}  ret={sign}{ev['return_pct']:.1f}%"
+            f"  entry={ev['constitutional_entry_price']:.2f}  ret={sign}{ev['return_pct']:.1f}%"
             f"  peak={pk}{ev['peak_return_pct']:.1f}%  {ev['days_active']}d  [{ev['status']}]"
         )
 

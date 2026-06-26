@@ -192,10 +192,10 @@ def import_to_constitutional_timeline(signals: list[dict]) -> tuple[int, int]:
             event_index    INTEGER NOT NULL,
             event_date     TEXT NOT NULL,
             event_end_date TEXT,
-            cluster_days   INTEGER,
-            entry_price    REAL NOT NULL,
-            buy_r2         REAL NOT NULL,
-            buy_score      REAL NOT NULL,
+            event_cluster_days   INTEGER,
+            constitutional_entry_price    REAL NOT NULL,
+            constitutional_r2         REAL NOT NULL,
+            constitutional_score      REAL NOT NULL,
             buy_r3 REAL, buy_r4 REAL, buy_r5 REAL,
             buy_r6 REAL, buy_r7 REAL, buy_r8 REAL,
             sector         TEXT,
@@ -227,8 +227,8 @@ def import_to_constitutional_timeline(signals: list[dict]) -> tuple[int, int]:
             """
             INSERT OR IGNORE INTO constitutional_opportunity_events
                 (event_id, ticker, event_type, event_index,
-                 event_date, event_end_date, cluster_days,
-                 entry_price, buy_r2, buy_score,
+                 event_date, event_end_date, event_cluster_days,
+                 constitutional_entry_price, constitutional_r2, constitutional_score,
                  signal_version, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -239,9 +239,9 @@ def import_to_constitutional_timeline(signals: list[dict]) -> tuple[int, int]:
                 ev_index,
                 s["date"],
                 s["date"],      # event_end_date = same day (single-day cluster)
-                1,              # cluster_days
+                1,              # event_cluster_days
                 s["entry"],
-                60.0,           # buy_r2 (constitutional minimum; exact value unknown)
+                60.0,           # constitutional_r2 (constitutional minimum; exact value unknown)
                 float(s["score"]),
                 "wf_v1",        # walk-forward version tag
                 _NOW,
@@ -260,6 +260,7 @@ def import_to_constitutional_timeline(signals: list[dict]) -> tuple[int, int]:
 # ── Step 3: Rebuild stock DNA ──────────────────────────────────────────────────
 
 def rebuild_dna() -> None:
+    """Rebuild stock_dna.db from the enriched constitutional timeline after import."""
     try:
         from stock_dna_engine import build_stock_dna
         build_stock_dna()
@@ -271,6 +272,7 @@ def rebuild_dna() -> None:
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    """Parse walk-forward report and import signals to hist_signals and constitutional timeline."""
     print("[Import] Parsing walk-forward validation report...")
     signals = _parse_signals()
     print(f"[Import] Parsed {len(signals)} signals.")

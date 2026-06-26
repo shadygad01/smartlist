@@ -19,21 +19,27 @@ MAX_CHARS = 4000
 
 
 def _health_icon(stars: str) -> str:
+    """Return colored circle emoji representing portfolio health star rating."""
     n = stars.count("★")
-    if n >= 4: return "🟢"
-    if n == 3: return "🟡"
+    if n >= 4:
+        return "🟢"
+    if n == 3:
+        return "🟡"
     return "🔴"
 
 
 def _near(snap: PresentationSnapshot) -> list[dict]:
+    """Return tickers approaching constitutional entry zone."""
     return snap.approaching_entries
 
 
 def _active(snap: PresentationSnapshot) -> list[dict]:
+    """Return universe rows with ACTIVE, PREMIUM, or UNDER_REVIEW status."""
     return [u for u in snap.universe_snapshot if u["status"] in ("ACTIVE", "PREMIUM", "UNDER_REVIEW")]
 
 
 def _future(snap: PresentationSnapshot) -> list[dict]:
+    """Return universe rows not yet near entry and not active — future pipeline."""
     near_t   = {e["ticker"] for e in snap.approaching_entries}
     active_t = {u["ticker"] for u in snap.universe_snapshot
                 if u["status"] in ("ACTIVE", "PREMIUM", "UNDER_REVIEW")}
@@ -42,6 +48,7 @@ def _future(snap: PresentationSnapshot) -> list[dict]:
 
 
 def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
+    """Build and return the v2 Telegram morning brief message for the given snapshot."""
     lines = [
         TG_HEADER,
         f"*{date_str}*",
@@ -73,10 +80,10 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
         lines.append(SEP)
         lines.append("🎯 *Near Constitutional Entry*\n")
         for r in near_items:
-            r2   = r.get("r2_score", 0)
+            r2   = r.get("candidate_r2", 0)
             dist = r.get("distance_to_constitutional", 0)
             cp   = r.get("current_price") or 0
-            ep   = r.get("entry_price") or 0
+            ep   = r.get("candidate_entry_zone") or 0
             lines.append(
                 f"• *{r['ticker']}*  R2 {r2:.1f}  ({dist:.1f} pts to gate)"
             )
@@ -110,8 +117,8 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
         lines.append(SEP)
         lines.append("🔍 *Future Watch List*\n")
         for u in fut_show:
-            r2 = u.get("r2_score") or 0
-            ez = u.get("entry_zone")
+            r2 = u.get("candidate_r2") or 0
+            ez = u.get("constitutional_entry_price")
             ez_s = f"{ez:.2f}" if ez else "No entry zone"
             lines.append(f"• *{u['ticker']}*  R2 {r2:.1f}  Entry {ez_s}")
         lines.append("")
@@ -142,6 +149,7 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
 
 
 def _chunk(text: str) -> list[str]:
+    """Split text into Telegram-safe chunks of at most MAX_CHARS characters."""
     chunks, current = [], ""
     for line in text.split("\n"):
         if len(current) + len(line) + 1 > MAX_CHARS:

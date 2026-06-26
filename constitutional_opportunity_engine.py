@@ -2,7 +2,7 @@
 Constitutional Opportunity Engine V3
 Immutable registry of every first constitutional BUY signal ever generated.
 
-Constitutional BUY definition: R2 >= 60 AND final_score >= 35 (simultaneously).
+Constitutional BUY definition: R2 >= 60 AND expected_reward_score >= 35 (simultaneously).
 Once registered, a BUY is NEVER downgraded, overwritten, or removed.
 No portfolio capacity. No sector cap. No correlation filter. No position limits.
 """
@@ -28,30 +28,32 @@ STATE_FIRST_BUY             = "FIRST_BUY"             # immutable tag on registr
 
 
 def _open(path: Path) -> sqlite3.Connection:
+    """Open SQLite connection with Row factory enabled."""
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def _create_schema(conn: sqlite3.Connection) -> None:
+    """Create constitutional_buy_registry table and indexes if not present."""
     conn.execute("""
         CREATE TABLE IF NOT EXISTS constitutional_buy_registry (
-            registry_id        TEXT PRIMARY KEY,
-            ticker             TEXT NOT NULL,
-            buy_date           TEXT NOT NULL,
-            buy_price          REAL NOT NULL,
-            buy_r2             REAL NOT NULL,
-            buy_score          REAL NOT NULL,
-            buy_r3_score       REAL,
-            buy_r4_score       REAL,
-            buy_r5_score       REAL,
-            buy_r6_score       REAL,
-            buy_r7_score       REAL,
-            buy_r8_score       REAL,
-            sector             TEXT,
-            signal_version     TEXT DEFAULT 'v3',
-            snapshot_timestamp TEXT,
-            created_at         TEXT NOT NULL
+            registry_id              TEXT PRIMARY KEY,
+            ticker                   TEXT NOT NULL,
+            buy_date                 TEXT NOT NULL,
+            constitutional_entry_price REAL NOT NULL,
+            constitutional_r2        REAL NOT NULL,
+            constitutional_score     REAL NOT NULL,
+            buy_r3_score             REAL,
+            buy_r4_score             REAL,
+            buy_r5_score             REAL,
+            buy_r6_score             REAL,
+            buy_r7_score             REAL,
+            buy_r8_score             REAL,
+            sector                   TEXT,
+            signal_version           TEXT DEFAULT 'v3',
+            snapshot_timestamp       TEXT,
+            created_at               TEXT NOT NULL
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_cbr_ticker   ON constitutional_buy_registry(ticker)")
@@ -60,6 +62,7 @@ def _create_schema(conn: sqlite3.Connection) -> None:
 
 
 def _registry_id(ticker: str, buy_date: str) -> str:
+    """Return deterministic registry primary key for ticker+date."""
     return f"{ticker}_{buy_date}"
 
 
@@ -78,12 +81,12 @@ def migrate_from_candidate_pool() -> dict:
 
     # All signals ordered by date — pick first qualifying row per ticker
     rows = pool.execute("""
-        SELECT ticker, signal_date, entry_price,
-               r2_score, r3_score, r4_score, r5_score,
-               r6_score, r7_score, r8_score, final_score,
+        SELECT ticker, signal_date, candidate_entry_zone,
+               candidate_r2, r3_score, r4_score, r5_score,
+               r6_score, r7_score, r8_score, expected_reward_score,
                sector, snapshot_ts
         FROM candidate_pool
-        WHERE r2_score >= ? AND final_score >= ?
+        WHERE candidate_r2 >= ? AND expected_reward_score >= ?
         ORDER BY signal_date ASC, snapshot_ts ASC
     """, (CONST_R2_MIN, CONST_SCORE_MIN)).fetchall()
 
@@ -108,14 +111,14 @@ def migrate_from_candidate_pool() -> dict:
 
         reg.execute("""
             INSERT INTO constitutional_buy_registry
-            (registry_id, ticker, buy_date, buy_price, buy_r2, buy_score,
+            (registry_id, ticker, buy_date, constitutional_entry_price, constitutional_r2, constitutional_score,
              buy_r3_score, buy_r4_score, buy_r5_score, buy_r6_score,
              buy_r7_score, buy_r8_score, sector, signal_version,
              snapshot_timestamp, created_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
-            rid, t, r["signal_date"], r["entry_price"],
-            r["r2_score"], r["final_score"],
+            rid, t, r["signal_date"], r["candidate_entry_zone"],
+            r["candidate_r2"], r["expected_reward_score"],
             r["r3_score"], r["r4_score"], r["r5_score"],
             r["r6_score"], r["r7_score"], r["r8_score"],
             r["sector"], "v3", r["snapshot_ts"],
@@ -136,8 +139,8 @@ def migrate_from_candidate_pool() -> dict:
     }
 
 
-def register_new_buy(ticker: str, buy_date: str, buy_price: float,
-                     buy_r2: float, buy_score: float,
+def register_new_buy(ticker: str, buy_date: str, constitutional_entry_price: float,
+                     constitutional_r2: float, constitutional_score: float,
                      r3: float = None, r4: float = None, r5: float = None,
                      r6: float = None, r7: float = None, r8: float = None,
                      sector: str = "") -> bool:
@@ -160,13 +163,13 @@ def register_new_buy(ticker: str, buy_date: str, buy_price: float,
 
     reg.execute("""
         INSERT INTO constitutional_buy_registry
-        (registry_id, ticker, buy_date, buy_price, buy_r2, buy_score,
+        (registry_id, ticker, buy_date, constitutional_entry_price, constitutional_r2, constitutional_score,
          buy_r3_score, buy_r4_score, buy_r5_score, buy_r6_score,
          buy_r7_score, buy_r8_score, sector, signal_version,
          snapshot_timestamp, created_at)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """, (
-        rid, ticker, buy_date, buy_price, buy_r2, buy_score,
+        rid, ticker, buy_date, constitutional_entry_price, constitutional_r2, constitutional_score,
         r3, r4, r5, r6, r7, r8,
         sector, "v3", datetime.now().isoformat(), datetime.now().isoformat()
     ))
@@ -176,6 +179,7 @@ def register_new_buy(ticker: str, buy_date: str, buy_price: float,
 
 
 def _opportunity_status(return_pct: float) -> str:
+    """Map return_pct to PREMIUM_NOW / ACTIVE_OPPORTUNITY / UNDER_REVIEW status label."""
     if return_pct >= 50.0:
         return STATE_PREMIUM_NOW
     if return_pct >= 0.0:
@@ -236,7 +240,7 @@ def get_registry() -> list[dict]:
     result = []
     for e in entries:
         t          = e["ticker"]
-        buy_price  = float(e["buy_price"])
+        buy_price  = float(e["constitutional_entry_price"])
         buy_date   = e["buy_date"]
 
         pd_t = price_data.get(t, {})
@@ -259,12 +263,12 @@ def get_registry() -> list[dict]:
             days = 0
 
         result.append(dict(
-            ticker           = t,
-            buy_date         = buy_date,
-            buy_price        = buy_price,
-            buy_r2           = float(e["buy_r2"]),
-            buy_score        = float(e["buy_score"]),
-            sector           = e["sector"] or "",
+            ticker                     = t,
+            buy_date                   = buy_date,
+            constitutional_entry_price = buy_price,
+            constitutional_r2          = float(e["constitutional_r2"]),
+            constitutional_score       = float(e["constitutional_score"]),
+            sector                     = e["sector"] or "",
             current_price    = current_price,
             return_pct       = round(ret_pct, 2),
             peak_return_pct  = round(peak_ret, 2),
@@ -291,7 +295,7 @@ def forensic_validation() -> dict:
         return {"error": "Registry not found — run migrate_from_candidate_pool() first"}
 
     reg  = _open(REGISTRY_DB)
-    rows = reg.execute("SELECT ticker, buy_date, buy_r2, buy_score FROM constitutional_buy_registry").fetchall()
+    rows = reg.execute("SELECT ticker, buy_date, constitutional_r2, constitutional_score FROM constitutional_buy_registry").fetchall()
     reg.close()
 
     recovered = len(rows)
@@ -304,7 +308,7 @@ def forensic_validation() -> dict:
         pool = _open(POOL_DB)
         pool_tickers = set(
             r[0] for r in pool.execute(
-                "SELECT DISTINCT ticker FROM candidate_pool WHERE r2_score>=? AND final_score>=?",
+                "SELECT DISTINCT ticker FROM candidate_pool WHERE candidate_r2>=? AND expected_reward_score>=?",
                 (CONST_R2_MIN, CONST_SCORE_MIN)
             ).fetchall()
         )
@@ -343,26 +347,26 @@ def run() -> dict:
 
     pool = _open(POOL_DB)
     todays = pool.execute("""
-        SELECT ticker, signal_date, entry_price,
-               r2_score, r3_score, r4_score, r5_score,
-               r6_score, r7_score, r8_score, final_score, sector
+        SELECT ticker, signal_date, candidate_entry_zone,
+               candidate_r2, r3_score, r4_score, r5_score,
+               r6_score, r7_score, r8_score, expected_reward_score, sector
         FROM candidate_pool
-        WHERE signal_date = ? AND r2_score >= ? AND final_score >= ?
-        ORDER BY r2_score DESC
+        WHERE signal_date = ? AND candidate_r2 >= ? AND expected_reward_score >= ?
+        ORDER BY candidate_r2 DESC
     """, (today, CONST_R2_MIN, CONST_SCORE_MIN)).fetchall()
     pool.close()
 
     new_registrations = []
     for r in todays:
         inserted = register_new_buy(
-            ticker    = r["ticker"],
-            buy_date  = r["signal_date"],
-            buy_price = r["entry_price"],
-            buy_r2    = r["r2_score"],
-            buy_score = r["final_score"],
+            ticker                     = r["ticker"],
+            buy_date                   = r["signal_date"],
+            constitutional_entry_price = r["candidate_entry_zone"],
+            constitutional_r2          = r["candidate_r2"],
+            constitutional_score       = r["expected_reward_score"],
             r3=r["r3_score"], r4=r["r4_score"], r5=r["r5_score"],
             r6=r["r6_score"], r7=r["r7_score"], r8=r["r8_score"],
-            sector    = r["sector"] or "",
+            sector                     = r["sector"] or "",
         )
         if inserted:
             new_registrations.append(r["ticker"])
@@ -389,8 +393,8 @@ if __name__ == "__main__":
         sign = "+" if b["return_pct"] >= 0 else ""
         print(
             f"  {b['ticker']:<12} {b['buy_date']}  "
-            f"R2={b['buy_r2']:.1f}  "
-            f"entry={b['buy_price']:.2f}  "
+            f"R2={b['constitutional_r2']:.1f}  "
+            f"entry={b['constitutional_entry_price']:.2f}  "
             f"now={b['current_price']:.2f}  "
             f"ret={sign}{b['return_pct']:.1f}%  "
             f"peak={b['peak_return_pct']:+.1f}%  "

@@ -11,7 +11,7 @@ Constitution:
   Max pairwise corr  : 0.80
   Weight method      : Equal weight
   Ranking            : R2 (primary) → diversification (secondary)
-  final_score        : NEVER used for ranking
+  expected_reward_score : NEVER used for ranking
 
 State machine:
   NEW → PRIMARY_BUY | BUY_RESERVE | WATCH
@@ -61,13 +61,13 @@ SECTOR_MAP = {
 
 MGR_SCHEMA = """
 CREATE TABLE IF NOT EXISTS candidate_states (
-    state_id         TEXT PRIMARY KEY,
-    candidate_id     TEXT NOT NULL,
-    ticker           TEXT NOT NULL,
-    signal_date      TEXT NOT NULL,
-    entry_price      REAL NOT NULL,
-    state            TEXT NOT NULL,
-    r2_score         REAL,
+    state_id              TEXT PRIMARY KEY,
+    candidate_id          TEXT NOT NULL,
+    ticker                TEXT NOT NULL,
+    signal_date           TEXT NOT NULL,
+    candidate_entry_zone  REAL NOT NULL,
+    state                 TEXT NOT NULL,
+    candidate_r2          REAL,
     sector           TEXT,
     decision_reason  TEXT,
     portfolio_impact TEXT,
@@ -121,18 +121,22 @@ CREATE INDEX IF NOT EXISTS idx_sh_ts     ON state_history(ts);
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _now() -> str:
+    """Return current UTC timestamp as ISO string."""
     return _dt.utcnow().isoformat()
 
 
 def _snap_id(snap_date: str) -> str:
+    """Return a short deterministic ID for a portfolio snapshot."""
     return hashlib.sha256(f"snap|{snap_date}|{_now()}".encode()).hexdigest()[:16]
 
 
 def _state_id(candidate_id: str) -> str:
+    """Return a deterministic state primary key for a candidate."""
     return hashlib.sha256(f"state|{candidate_id}".encode()).hexdigest()[:24]
 
 
 def _conn(db_path: str = MGR_DB) -> sqlite3.Connection:
+    """Open portfolio_manager.db connection with Row factory."""
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
@@ -186,6 +190,7 @@ def _build_correlation_cache(as_of: str, conn: sqlite3.Connection):
 
 
 def _get_corr(ticker_a: str, ticker_b: str, conn: sqlite3.Connection) -> float:
+    """Return cached pairwise correlation between two tickers (1.0 if same ticker)."""
     if ticker_a == ticker_b:
         return 1.0
     key = "|".join(sorted([ticker_a, ticker_b]))
@@ -196,6 +201,7 @@ def _get_corr(ticker_a: str, ticker_b: str, conn: sqlite3.Connection) -> float:
 
 
 def _max_corr_with_held(ticker: str, held_tickers: list, conn: sqlite3.Connection) -> float:
+    """Return maximum pairwise correlation between ticker and any currently held position."""
     if not held_tickers:
         return 0.0
     return max(_get_corr(ticker, h, conn) for h in held_tickers)
@@ -210,7 +216,7 @@ def _latest_candidates(pool_conn: sqlite3.Connection) -> pd.DataFrame:
         SELECT c.*,
                ROW_NUMBER() OVER (
                    PARTITION BY ticker
-                   ORDER BY signal_date DESC, r2_score DESC
+                   ORDER BY signal_date DESC, candidate_r2 DESC
                ) rn
         FROM candidate_pool c
         """,
@@ -222,6 +228,7 @@ def _latest_candidates(pool_conn: sqlite3.Connection) -> pd.DataFrame:
 # ── State machine ─────────────────────────────────────────────────────────────
 
 def _record_transition(conn, candidate_id, ticker, from_state, to_state, reason):
+    """Append a state-machine transition record to state_history."""
     conn.execute(
         "INSERT INTO state_history (candidate_id,ticker,from_state,to_state,reason,ts)"
         " VALUES (?,?,?,?,?,?)",
@@ -230,15 +237,16 @@ def _record_transition(conn, candidate_id, ticker, from_state, to_state, reason)
 
 
 def _upsert_state(conn, row: dict):
+    """Insert or update a candidate state row in candidate_states."""
     conn.execute(
         """
         INSERT INTO candidate_states
-            (state_id, candidate_id, ticker, signal_date, entry_price, state,
-             r2_score, sector, decision_reason, portfolio_impact, replacement_rank,
+            (state_id, candidate_id, ticker, signal_date, candidate_entry_zone, state,
+             candidate_r2, sector, decision_reason, portfolio_impact, replacement_rank,
              sector_exposure, corr_impact, suggested_action, created_at, updated_at)
         VALUES
-            (:state_id,:candidate_id,:ticker,:signal_date,:entry_price,:state,
-             :r2_score,:sector,:decision_reason,:portfolio_impact,:replacement_rank,
+            (:state_id,:candidate_id,:ticker,:signal_date,:candidate_entry_zone,:state,
+             :candidate_r2,:sector,:decision_reason,:portfolio_impact,:replacement_rank,
              :sector_exposure,:corr_impact,:suggested_action,:created_at,:updated_at)
         ON CONFLICT(state_id) DO UPDATE SET
             state=excluded.state,
@@ -269,6 +277,7 @@ def _sector_weights(held: list) -> dict:
 
 
 def _sector_full(sector: str, held: list) -> bool:
+    """Return True if sector weight among held positions meets or exceeds the cap."""
     w = _sector_weights(held)
     return w.get(sector, 0.0) >= MAX_SECTOR_PCT
 
@@ -278,9 +287,9 @@ def _assign_states(candidates: pd.DataFrame, held_tickers: list,
     """
     Assign constitutional states to all candidates.
     Ranking: R2 primary, diversification secondary.
-    final_score NEVER used.
+    expected_reward_score NEVER used.
     """
-    df = candidates.copy().sort_values("r2_score", ascending=False).reset_index(drop=True)
+    df = candidates.copy().sort_values("candidate_r2", ascending=False).reset_index(drop=True)
 
     # Sector counts in current portfolio
     sec_weights = _sector_weights(held_tickers)
@@ -294,9 +303,9 @@ def _assign_states(candidates: pd.DataFrame, held_tickers: list,
     for _, cand in df.iterrows():
         ticker  = cand["ticker"]
         sector  = cand.get("sector") or SECTOR_MAP.get(ticker, "Unknown")
-        r2      = float(cand["r2_score"])
+        r2      = float(cand["candidate_r2"])
         sig_dt  = str(cand["signal_date"])[:10]
-        entry   = float(cand["entry_price"])
+        entry   = float(cand["candidate_entry_zone"])
         cid     = str(cand["candidate_id"])
 
         # Correlation against current portfolio
@@ -360,13 +369,13 @@ def _assign_states(candidates: pd.DataFrame, held_tickers: list,
             rank    = 0
 
         results.append({
-            "state_id":        _state_id(cid),
-            "candidate_id":    cid,
-            "ticker":          ticker,
-            "signal_date":     sig_dt,
-            "entry_price":     entry,
-            "state":           state,
-            "r2_score":        r2,
+            "state_id":           _state_id(cid),
+            "candidate_id":       cid,
+            "ticker":             ticker,
+            "signal_date":        sig_dt,
+            "candidate_entry_zone": entry,
+            "state":              state,
+            "candidate_r2":       r2,
             "sector":          sector,
             "decision_reason": reason,
             "portfolio_impact": impact,
@@ -385,6 +394,7 @@ def _assign_states(candidates: pd.DataFrame, held_tickers: list,
 
 def _portfolio_health(df_states: pd.DataFrame, held_tickers: list,
                       mgr_conn: sqlite3.Connection) -> dict:
+    """Compute portfolio health metrics: capacity, sector weights, max correlation."""
     n_held   = len(held_tickers)
     sec_w    = _sector_weights(held_tickers)
     max_sec  = max(sec_w.values()) if sec_w else 0.0
@@ -430,17 +440,19 @@ def _corr_matrix_subset(tickers: list, mgr_conn: sqlite3.Connection) -> dict:
 def _build_daily_report(df_states: pd.DataFrame, held_tickers: list,
                          snap_date: str, mgr_conn: sqlite3.Connection,
                          pool_conn: sqlite3.Connection) -> dict:
+    """Build full daily portfolio report dict with held detail, states, health, and correlations."""
 
     def state_rows(state_name):
+        """Return sorted list of state row dicts for the given state name."""
         sub = df_states[df_states["state"] == state_name].copy()
         sub = sub.sort_values("replacement_rank" if state_name == "BUY_RESERVE"
-                              else "r2_score", ascending=(state_name == "BUY_RESERVE"))
-        return sub[["ticker","signal_date","entry_price","r2_score","sector",
+                              else "candidate_r2", ascending=(state_name == "BUY_RESERVE"))
+        return sub[["ticker","signal_date","candidate_entry_zone","candidate_r2","sector",
                     "decision_reason","replacement_rank","suggested_action"]].to_dict("records")
 
     # Current prices from pool
     pool_df = pd.read_sql(
-        "SELECT ticker, current_price, entry_price FROM candidate_pool "
+        "SELECT ticker, current_price, candidate_entry_zone FROM candidate_pool "
         "ORDER BY signal_date DESC", pool_conn
     )
     latest_price = pool_df.drop_duplicates("ticker").set_index("ticker")["current_price"].to_dict()
@@ -448,16 +460,16 @@ def _build_daily_report(df_states: pd.DataFrame, held_tickers: list,
     held_detail = []
     for t in held_tickers:
         row = df_states[df_states["ticker"] == t]
-        entry  = float(row["entry_price"].iloc[0]) if not row.empty else None
+        entry  = float(row["candidate_entry_zone"].iloc[0]) if not row.empty else None
         cur    = latest_price.get(t, entry)
         ret    = round((cur / entry - 1) * 100, 1) if (entry and cur) else None
         held_detail.append({
-            "ticker":        t,
-            "sector":        SECTOR_MAP.get(t, "Unknown"),
-            "entry_price":   entry,
-            "current_price": cur,
-            "return_pct":    ret,
-            "r2_score":      float(row["r2_score"].iloc[0]) if not row.empty else None,
+            "ticker":               t,
+            "sector":               SECTOR_MAP.get(t, "Unknown"),
+            "candidate_entry_zone": entry,
+            "current_price":        cur,
+            "return_pct":           ret,
+            "candidate_r2":         float(row["candidate_r2"].iloc[0]) if not row.empty else None,
         })
 
     health   = _portfolio_health(df_states, held_tickers, mgr_conn)
@@ -571,11 +583,13 @@ def run_portfolio_manager(
 
 
 def print_daily_report(report: dict):
+    """Print formatted daily portfolio report to stdout."""
     W = 72
     sep = "=" * W
     dash = "-" * W
 
     def section(title):
+        """Print a section header separator with title."""
         print(f"\n{sep}")
         print(f"  {title}")
         print(sep)
@@ -597,8 +611,8 @@ def print_daily_report(report: dict):
     for r in rows:
         print(f"\n  Ticker  : {r['ticker']}")
         print(f"  Sector  : {r['sector']}")
-        print(f"  R2      : {r['r2_score']:.1f}")
-        print(f"  Entry   : {r['entry_price']:.2f}  (signal {r['signal_date']})")
+        print(f"  R2      : {r['candidate_r2']:.1f}")
+        print(f"  Entry   : {r['candidate_entry_zone']:.2f}  (signal {r['signal_date']})")
         print(f"  Reason  : {r['decision_reason']}")
         print(f"  Action  : {r['suggested_action']}")
 
@@ -609,17 +623,17 @@ def print_daily_report(report: dict):
         print("  None.")
     for r in rows:
         print(f"\n  [{r['replacement_rank']}] {r['ticker']}  |  Sector: {r['sector']}"
-              f"  |  R2: {r['r2_score']:.1f}")
+              f"  |  R2: {r['candidate_r2']:.1f}")
         print(f"      Reason  : {r['decision_reason']}")
         print(f"      Action  : {r['suggested_action']}")
 
     # ── WATCH ─────────────────────────────────────────────────────────────────
     section("WATCH")
-    rows = sorted(report["WATCH"], key=lambda x: -x["r2_score"])
+    rows = sorted(report["WATCH"], key=lambda x: -x["candidate_r2"])
     if not rows:
         print("  None.")
     for r in rows[:8]:    # show top 8
-        print(f"  {r['ticker']:<12} Sector: {r['sector']:<14} R2: {r['r2_score']:.1f}"
+        print(f"  {r['ticker']:<12} Sector: {r['sector']:<14} R2: {r['candidate_r2']:.1f}"
               f"  |  {r['suggested_action'][:50]}")
 
     # ── CURRENT HOLDINGS ─────────────────────────────────────────────────────
@@ -630,10 +644,10 @@ def print_daily_report(report: dict):
     for r in rows:
         ret_str = f"{r['return_pct']:+.1f}%" if r["return_pct"] is not None else "N/A"
         print(f"  {r['ticker']:<12} {r['sector']:<14} "
-              f"Entry: {(r['entry_price'] or 0):.2f}  "
+              f"Entry: {(r['candidate_entry_zone'] or 0):.2f}  "
               f"Current: {(r['current_price'] or 0):.2f}  "
               f"Return: {ret_str}  "
-              f"R2: {(r['r2_score'] or 0):.1f}")
+              f"R2: {(r['candidate_r2'] or 0):.1f}")
 
     # ── SECTOR ALLOCATION ─────────────────────────────────────────────────────
     section("SECTOR ALLOCATION")
@@ -672,7 +686,7 @@ def print_daily_report(report: dict):
         print("  Empty — no reserves pending.")
     for r in queue:
         print(f"  [{r['replacement_rank']}] {r['ticker']:<12} "
-              f"Sector: {r['sector']:<14} R2: {r['r2_score']:.1f}  "
+              f"Sector: {r['sector']:<14} R2: {r['candidate_r2']:.1f}  "
               f"|  {r['suggested_action'][:52]}")
 
     # ── PORTFOLIO HEALTH ──────────────────────────────────────────────────────

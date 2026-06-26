@@ -50,18 +50,23 @@ _BG    = "#eef2f7"
 # ── Core Helpers ──────────────────────────────────────────────────────────────
 
 def _sign(r: float) -> str:
+    """Return '+' for non-negative values, '' otherwise."""
     return "+" if r >= 0 else ""
 
 def _ret_c(r: float) -> str:
+    """Return HTML color constant for a return value (green/red/muted)."""
     return _G if r > 0 else (_R if r < 0 else _MUTED)
 
 def _type_lbl(t: str) -> str:
+    """Return human-readable event type label from event_type string."""
     return "FIRST BUY" if t == "FIRST_BUY" else "RE-ACCUM"
 
 def _type_c(t: str) -> str:
+    """Return HTML color constant for event type (blue=first buy, purple=re-accum)."""
     return _BLUE if t == "FIRST_BUY" else _PURPL
 
 def _status_badge_html(status: str) -> str:
+    """Return an inline HTML status badge span for a constitutional event status."""
     color = {
         "ACTIVE":       _G,
         "PREMIUM":      _A,
@@ -78,6 +83,7 @@ def _status_badge_html(status: str) -> str:
 # ── Data Helpers ──────────────────────────────────────────────────────────────
 
 def _load_stock_dna() -> dict[str, dict]:
+    """Load all stock DNA rows from stock_dna.db and return as ticker-keyed dict."""
     db_path = BASE / "stock_dna.db"
     if not db_path.exists():
         return {}
@@ -148,6 +154,7 @@ def _mem_badge(dna_entry: dict | None) -> str:
 # ── Layout Primitives ─────────────────────────────────────────────────────────
 
 def _section_hdr(num: int, title: str, badge: str = "") -> str:
+    """Return an HTML section header block with numbered label, title, and optional badge."""
     badge_part = (
         f'<span style="float:right;margin-top:-2px;">{badge}</span>'
         if badge else ""
@@ -165,6 +172,7 @@ def _section_hdr(num: int, title: str, badge: str = "") -> str:
 
 
 def _th(*cols: str) -> str:
+    """Return an HTML table header row with navy background for the given column names."""
     cells = "".join(
         f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:10px;'
         f'font-weight:700;color:{_WHITE};letter-spacing:0.4px;text-transform:uppercase;'
@@ -175,12 +183,14 @@ def _th(*cols: str) -> str:
 
 
 def _divider() -> str:
+    """Return an HTML horizontal divider div."""
     return (
         f'<div style="border-top:1px solid {_BORD};margin:24px 0 0 0;"></div>'
     )
 
 
 def _stat_card(value: str | int, label: str, color: str) -> str:
+    """Return an HTML stat card div with a large colored value and a muted label."""
     return (
         f'<div style="background:{color}0d;border:1px solid {color}33;'
         f'border-radius:8px;padding:14px 10px;text-align:center;">'
@@ -195,6 +205,7 @@ def _stat_card(value: str | int, label: str, color: str) -> str:
 # ── HEADER ────────────────────────────────────────────────────────────────────
 
 def _hdr(snap: PresentationSnapshot, date_str: str) -> str:
+    """Return the full HTML email header block with market status badge and stat cards."""
     mstatus = snap.market_status
     is_open = "OPEN" in mstatus and "PRE" not in mstatus
     is_pre  = "PRE" in mstatus
@@ -273,6 +284,7 @@ def _hdr(snap: PresentationSnapshot, date_str: str) -> str:
 # ── SECTION 1: WHAT HAPPENED YESTERDAY ───────────────────────────────────────
 
 def _what_happened_yesterday(snap: PresentationSnapshot) -> str:
+    """Return HTML for the 'What Happened Yesterday' email section."""
     yest_events = _yesterday_events(snap)
     buys  = [e for e in yest_events if e["event_type"] == "FIRST_BUY"]
     reacs = [e for e in yest_events if e["event_type"] == "RE_ACCUMULATION"]
@@ -312,7 +324,7 @@ def _what_happened_yesterday(snap: PresentationSnapshot) -> str:
                 f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:11px;'
                 f'font-weight:700;color:{tc};">{_type_lbl(e["event_type"])}</td>'
                 f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">'
-                f'{float(e["entry_price"]):.2f} EGP</td>'
+                f'{float(e["constitutional_entry_price"]):.2f} EGP</td>'
                 f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:11px;'
                 f'color:{_MUTED};">{e.get("sector","")}</td>'
                 f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:11px;'
@@ -332,6 +344,7 @@ def _what_happened_yesterday(snap: PresentationSnapshot) -> str:
 # ── SECTION 2: LAST WEEK SUMMARY ─────────────────────────────────────────────
 
 def _last_week_summary(snap: PresentationSnapshot) -> str:
+    """Return HTML for the 'Last Week Summary' email section."""
     week_events = _week_events(snap)
     w_buys  = [e for e in week_events if e["event_type"] == "FIRST_BUY"]
     w_reacs = [e for e in week_events if e["event_type"] == "RE_ACCUMULATION"]
@@ -375,6 +388,7 @@ def _last_week_summary(snap: PresentationSnapshot) -> str:
 # ── SECTION 3: NEW SINCE YESTERDAY ───────────────────────────────────────────
 
 def _new_since_yesterday(snap: PresentationSnapshot) -> str:
+    """Return HTML for the 'New Since Yesterday' email section listing new constitutional signals."""
     events = snap.new_events_today or []
     count  = len(events)
 
@@ -396,7 +410,7 @@ def _new_since_yesterday(snap: PresentationSnapshot) -> str:
                 f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:11px;'
                 f'font-weight:700;color:{tc};">{_type_lbl(e["event_type"])}</td>'
                 f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:12px;">'
-                f'{float(e.get("entry_price",0)):.2f} EGP</td>'
+                f'{float(e.get("constitutional_entry_price",0)):.2f} EGP</td>'
                 f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:11px;'
                 f'color:{_MUTED};">{e.get("event_date","")}</td>'
                 f'</tr>'
@@ -414,6 +428,7 @@ def _new_since_yesterday(snap: PresentationSnapshot) -> str:
 # ── SECTION 4: NEAR CONSTITUTIONAL ENTRY ─────────────────────────────────────
 
 def _near_constitutional_entry(snap: PresentationSnapshot, dna: dict) -> str:
+    """Return HTML for the 'Near Constitutional Entry' email section."""
     entries = snap.approaching_entries or []
 
     if not entries:
@@ -436,7 +451,7 @@ def _near_constitutional_entry(snap: PresentationSnapshot, dna: dict) -> str:
         dist   = e["distance_to_constitutional"]
         need   = e["need_move_pct"]
         cur_s  = f'{e["current_price"]:.2f}' if e["current_price"] else "&#8212;"
-        ez_s   = f'{e["entry_price"]:.2f} EGP' if e["entry_price"] else "&#8212;"
+        ez_s   = f'{e["candidate_entry_zone"]:.2f} EGP' if e.get("candidate_entry_zone") else "&#8212;"
         r2_s   = f'{60 - dist:.1f}/60 (&#8722;{dist:.1f})'
         zone_s = "AT ZONE" if need < 0.5 else f'+{need:.1f}% above'
         wait_s = f'&#8722;{dist:.1f} pts to R2'
@@ -473,6 +488,7 @@ def _near_constitutional_entry(snap: PresentationSnapshot, dna: dict) -> str:
 # ── SECTION 5: ACTIVE OPPORTUNITIES ──────────────────────────────────────────
 
 def _active_opportunities(snap: PresentationSnapshot, dna: dict) -> str:
+    """Return HTML for the 'Active Opportunities' email section."""
     active = [
         u for u in snap.universe_snapshot
         if u.get("status") in ("ACTIVE", "PREMIUM", "UNDER_REVIEW")
@@ -501,7 +517,7 @@ def _active_opportunities(snap: PresentationSnapshot, dna: dict) -> str:
         action = a.get("action", "")
         act_c  = _G if action.startswith("HOLD") else (_A if action.startswith("MONITOR") else _MUTED)
         mem    = _mem_badge(dna.get(a["ticker"]))
-        ez     = a.get("entry_zone") or 0
+        ez     = a.get("constitutional_entry_price") or 0
         cp     = a.get("current_price") or 0
 
         rows += (
@@ -533,6 +549,7 @@ def _active_opportunities(snap: PresentationSnapshot, dna: dict) -> str:
 # ── SECTION 6: RE-ACCUMULATION EVENTS ────────────────────────────────────────
 
 def _re_accumulation_events(snap: PresentationSnapshot, dna: dict) -> str:
+    """Return HTML for the 'Re-Accumulation Events' email section."""
     reacs       = snap.re_accumulations or []
     reacs_sort  = sorted(reacs, key=lambda x: -(x.get("return_pct") or 0))
 
@@ -557,7 +574,7 @@ def _re_accumulation_events(snap: PresentationSnapshot, dna: dict) -> str:
         ret  = e.get("return_pct") or 0
         rc   = _ret_c(ret)
         idx  = e.get("event_index", 1)
-        ep   = e.get("entry_price") or 0
+        ep   = e.get("constitutional_entry_price") or 0
         cp   = e.get("current_price") or 0
         mem  = _mem_badge(dna.get(e["ticker"]))
 
@@ -591,6 +608,7 @@ def _re_accumulation_events(snap: PresentationSnapshot, dna: dict) -> str:
 # ── SECTION 7: PORTFOLIO HEALTH ───────────────────────────────────────────────
 
 def _portfolio_health(snap: PresentationSnapshot) -> str:
+    """Return HTML for the 'Portfolio Health' email section with star rating and metrics."""
     stars_c = (
         _G if snap.health_stars.count("★") >= 4
         else (_A if snap.health_stars.count("★") >= 3 else _R)
@@ -652,6 +670,7 @@ def _portfolio_health(snap: PresentationSnapshot) -> str:
 # ── SECTION 8: CONSTITUTIONAL TIMELINE ───────────────────────────────────────
 
 def _constitutional_timeline(snap: PresentationSnapshot) -> str:
+    """Return HTML for the 'Constitutional Timeline' email section (most recent 20 events)."""
     tl = snap.timeline or []
     if not tl:
         return (
@@ -668,7 +687,7 @@ def _constitutional_timeline(snap: PresentationSnapshot) -> str:
         tc  = _type_c(e["event_type"])
         ret = e.get("return_pct") or 0
         rc  = _ret_c(ret)
-        ep  = e.get("entry_price") or 0
+        ep  = e.get("constitutional_entry_price") or 0
         cp  = e.get("current_price") or 0
 
         rows += (
@@ -710,6 +729,7 @@ def _constitutional_timeline(snap: PresentationSnapshot) -> str:
 # ── SECTION 9: CONSTITUTIONAL MEMORY ─────────────────────────────────────────
 
 def _constitutional_memory(snap: PresentationSnapshot, dna: dict) -> str:
+    """Return HTML for the 'Constitutional Memory' email section with stock DNA insights."""
     tl = snap.timeline or []
 
     ticker_events: dict[str, list] = {}
@@ -790,6 +810,7 @@ def _constitutional_memory(snap: PresentationSnapshot, dna: dict) -> str:
 # ── FOOTER ────────────────────────────────────────────────────────────────────
 
 def _footer() -> str:
+    """Return the HTML email footer block with attribution and disclaimer."""
     return f"""
 <table width="100%" cellpadding="0" cellspacing="0" border="0"
   style="margin-top:32px;background:{_NAVY};">
@@ -816,6 +837,7 @@ def _footer() -> str:
 # ── BUILD ─────────────────────────────────────────────────────────────────────
 
 def build_email(snap: PresentationSnapshot | None = None) -> str:
+    """Build and return the full HTML morning email from the current presentation snapshot."""
     if snap is None:
         snap = build_presentation_snapshot()
 

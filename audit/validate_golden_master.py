@@ -16,17 +16,20 @@ FAIL = "\033[91mFAIL\033[0m"
 failures = []
 
 def sha256(path: Path) -> str:
+    """Return SHA-256 hex digest of path, or sentinel string if absent."""
     if not path.exists():
         return "FILE_NOT_FOUND"
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 def check(label: str, ok: bool, detail: str = ""):
+    """Print a PASS/FAIL line and accumulate failures."""
     status = PASS if ok else FAIL
     print(f"  [{status}] {label}" + (f" — {detail}" if detail else ""))
     if not ok:
         failures.append(f"{label}: {detail}")
 
 def qdb(db_path: Path, sql: str, params: tuple = ()) -> list[dict]:
+    """Execute sql against db_path and return rows as dicts; empty list if DB absent."""
     if not db_path.exists():
         return []
     conn = sqlite3.connect(str(db_path))
@@ -36,6 +39,7 @@ def qdb(db_path: Path, sql: str, params: tuple = ()) -> list[dict]:
     return [dict(r) for r in rows]
 
 def scalar(db_path: Path, sql: str, params: tuple = ()):
+    """Execute sql against db_path and return first column of first row; None if absent."""
     if not db_path.exists():
         return None
     conn = sqlite3.connect(str(db_path))

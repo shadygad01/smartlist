@@ -19,10 +19,12 @@ TODAY  = now_cairo().strftime("%Y-%m-%d")
 TS     = now_cairo().isoformat()
 
 def sha256(path: Path) -> str:
+    """Return SHA-256 hex digest of path, or sentinel string if absent."""
     if not path.exists(): return "FILE_NOT_FOUND"
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 def qdb(db_path: Path, sql: str, params: tuple = ()) -> list[dict]:
+    """Execute sql against db_path and return rows as dicts; empty list if DB absent."""
     if not db_path.exists():
         return []
     conn = sqlite3.connect(str(db_path))
@@ -32,6 +34,7 @@ def qdb(db_path: Path, sql: str, params: tuple = ()) -> list[dict]:
     return [dict(r) for r in rows]
 
 def scalar(db_path: Path, sql: str, params: tuple = ()):
+    """Execute sql against db_path and return first column of first row; None if absent."""
     if not db_path.exists():
         return None
     conn = sqlite3.connect(str(db_path))
@@ -46,6 +49,7 @@ failures  = []
 checks    = []
 
 def check(label: str, ok: bool, expected=None, actual=None):
+    """Record a validation check result and append failures to the failures list."""
     entry = {"check": label, "pass": ok, "expected": str(expected), "actual": str(actual)}
     checks.append(entry)
     if not ok:

@@ -34,12 +34,14 @@ _results: list[tuple[str, bool, str]] = []
 
 
 def _assert(name: str, ok: bool, detail: str = "") -> None:
+    """Record and print a test assertion result."""
     _results.append((name, ok, detail))
     status = PASS if ok else FAIL
     print(f"  [{status}] {name}" + (f" — {detail}" if detail else ""))
 
 
 def _sha256(path: Path) -> str:
+    """Return SHA-256 hex digest of path."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 

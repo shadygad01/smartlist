@@ -64,7 +64,7 @@ for db in ["candidate_pool.db", "constitutional_buy_registry.db"]:
 # ── Universe ──────────────────────────────────────────────────────────────────
 golden_universe = json.loads((GOLDEN / "universe_27.json").read_text())
 current_universe = qdb(BASE / "universe_snapshot.db",
-    "SELECT ticker,status,current_price,entry_zone,reason,r2_score,final_score,return_pct FROM universe_snapshot ORDER BY ticker")
+    "SELECT ticker,status,current_price,constitutional_entry_price,waiting_for_reason,candidate_r2,expected_reward_score,return_pct FROM universe_snapshot ORDER BY ticker")
 
 check("universe:size", len(current_universe) == len(golden_universe),
       len(golden_universe), len(current_universe))
@@ -76,20 +76,21 @@ check("universe:size", len(current_universe) == len(golden_universe),
 # ── FIRST BUY registry ───────────────────────────────────────────────────────
 golden_fb = json.loads((GOLDEN / "first_buy_registry.json").read_text())
 current_fb = qdb(BASE / "constitutional_buy_registry.db",
-    "SELECT ticker,buy_date,buy_price,buy_r2,buy_score FROM constitutional_buy_registry ORDER BY ticker,buy_date")
+    "SELECT ticker,buy_date,constitutional_entry_price,constitutional_r2,constitutional_score FROM constitutional_buy_registry ORDER BY ticker,buy_date")
 check("first_buy:count", len(current_fb) == len(golden_fb), len(golden_fb), len(current_fb))
 for i, (g, c) in enumerate(zip(golden_fb, current_fb)):
-    check(f"first_buy:{g['ticker']}:date",    g["buy_date"]  == c["buy_date"],  g["buy_date"],  c["buy_date"])
-    check(f"first_buy:{g['ticker']}:price",   g["buy_price"] == c["buy_price"], g["buy_price"], c["buy_price"])
+    check(f"first_buy:{g['ticker']}:date",  g["buy_date"] == c["buy_date"], g["buy_date"], c["buy_date"])
+    check(f"first_buy:{g['ticker']}:price", g["constitutional_entry_price"] == c["constitutional_entry_price"],
+          g["constitutional_entry_price"], c["constitutional_entry_price"])
 
 # ── Candidate pool ───────────────────────────────────────────────────────────
 golden_pool = json.loads((GOLDEN / "candidate_pool_full.json").read_text())
 current_pool = qdb(BASE / "candidate_pool.db",
-    "SELECT ticker,signal_date,r2_score,final_score,entry_price,current_price,snapshot_ts FROM candidate_pool ORDER BY ticker,signal_date")
+    "SELECT ticker,signal_date,candidate_r2,expected_reward_score,candidate_entry_zone,current_price,snapshot_ts FROM candidate_pool ORDER BY ticker,signal_date")
 check("candidate_pool:rows", len(current_pool) == len(golden_pool), len(golden_pool), len(current_pool))
 
-g_pass = len([r for r in golden_pool  if (r["r2_score"] or 0) >= 60 and (r["final_score"] or 0) >= 35])
-c_pass = len([r for r in current_pool if (r["r2_score"] or 0) >= 60 and (r["final_score"] or 0) >= 35])
+g_pass = len([r for r in golden_pool  if (r["candidate_r2"] or 0) >= 60 and (r["expected_reward_score"] or 0) >= 35])
+c_pass = len([r for r in current_pool if (r["candidate_r2"] or 0) >= 60 and (r["expected_reward_score"] or 0) >= 35])
 check("candidate_pool:constitutional_pass", c_pass == g_pass, g_pass, c_pass)
 
 # ── DNA ───────────────────────────────────────────────────────────────────────
@@ -125,9 +126,9 @@ dup_ttd = scalar(COE_DB,
     "SELECT COUNT(*) FROM (SELECT ticker,event_type,event_date,COUNT(*) c FROM constitutional_opportunity_events GROUP BY ticker,event_type,event_date HAVING c>1)")
 check("timeline:no_duplicate_ticker_type_date", (dup_ttd or 0) == 0, 0, dup_ttd)
 
-# Constitutional threshold: all signals must have qualified at buy_r2>=60, buy_score>=35
+# Constitutional threshold: all signals must have qualified at constitutional_r2>=60, constitutional_score>=35
 thresh_violations = scalar(COE_DB,
-    "SELECT COUNT(*) FROM constitutional_opportunity_events WHERE buy_r2 < 60 OR buy_score < 35")
+    "SELECT COUNT(*) FROM constitutional_opportunity_events WHERE constitutional_r2 < 60 OR constitutional_score < 35")
 check("timeline:constitutional_threshold", (thresh_violations or 0) == 0, 0, thresh_violations)
 
 # Ordering integrity: event_date must not be after event_end_date
@@ -159,11 +160,11 @@ if COE_DB.exists():
 else:
     check("timeline:v1_event_ids_preserved", False, "42 ids present", "DB_NOT_FOUND")
 
-# v1 cluster_days consistency: cluster_days must equal calendar span (end - start + 1)
+# v1 event_cluster_days consistency: event_cluster_days must equal calendar span (end - start + 1)
 v1_cd_bad = scalar(COE_DB, """
     SELECT COUNT(*) FROM constitutional_opportunity_events
     WHERE signal_version='v1'
-      AND cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
+      AND event_cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
 """)
 check("timeline:v1_cluster_days_consistent", (v1_cd_bad or 0) == 0, 0, v1_cd_bad)
 

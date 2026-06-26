@@ -1,12 +1,12 @@
 """
 Cross-Layer Consistency Validator
-Proves that all presentation layers display identical entry_zone values
+Proves that all presentation layers display identical constitutional_entry_price values
 for every ticker that has v1 constitutional events.
 
 Checks:
-  1. universe_snapshot.db.entry_zone == latest v1 timeline event's entry_price
-  2. presentation_snapshot.json universe_snapshot.entry_zone matches DB
-  3. presentation_snapshot.json re_accumulation latest event matches universe entry_zone
+  1. universe_snapshot.db.constitutional_entry_price == latest v1 timeline event's constitutional_entry_price
+  2. presentation_snapshot.json universe_snapshot.constitutional_entry_price matches DB
+  3. presentation_snapshot.json re_accumulation latest event matches universe constitutional_entry_price
   4. dashboard.html universe table and active table show consistent values
 
 Exits 0 if all checks pass, 1 on any failure.
@@ -62,7 +62,7 @@ if not COE_DB.exists():
 conn = sqlite3.connect(str(COE_DB))
 conn.row_factory = sqlite3.Row
 timeline_v1 = conn.execute("""
-    SELECT ticker, event_type, event_date, entry_price
+    SELECT ticker, event_type, event_date, constitutional_entry_price
     FROM constitutional_opportunity_events
     WHERE signal_version = 'v1'
     ORDER BY ticker, event_date DESC
@@ -79,7 +79,7 @@ for row in timeline_v1:
 print(f"  Found {len(latest_v1)} tickers with v1 events\n")
 
 # ── 2. Check universe_snapshot.db against COE truth ───────────────────────────
-print("CHECK 1: universe_snapshot.db.entry_zone == latest v1 event entry_price")
+print("CHECK 1: universe_snapshot.db.constitutional_entry_price == latest v1 event constitutional_entry_price")
 if SNAP_DB.exists():
     conn = sqlite3.connect(str(SNAP_DB))
     conn.row_factory = sqlite3.Row
@@ -92,12 +92,12 @@ if SNAP_DB.exists():
             check(f"  {ticker} in universe_snapshot", False, "MISSING from DB")
             mismatches += 1
             continue
-        snap_ez = snap_rows[ticker].get("entry_zone")
-        truth_ep = truth["entry_price"]
+        snap_ep = snap_rows[ticker].get("constitutional_entry_price")
+        truth_ep = truth["constitutional_entry_price"]
         # Allow 0.001 float tolerance
-        ok = snap_ez is not None and abs(snap_ez - truth_ep) < 0.001
-        check(f"  {ticker} entry_zone", ok,
-              f"universe_snapshot={snap_ez} vs coe_latest={truth_ep} ({truth['event_type']} {truth['event_date']})")
+        ok = snap_ep is not None and abs(snap_ep - truth_ep) < 0.001
+        check(f"  {ticker} constitutional_entry_price", ok,
+              f"universe_snapshot={snap_ep} vs coe_latest={truth_ep} ({truth['event_type']} {truth['event_date']})")
         if not ok:
             mismatches += 1
 
@@ -106,7 +106,7 @@ else:
     check("universe_snapshot.db exists", False, "FILE_NOT_FOUND")
 
 # ── 3. Check presentation_snapshot.json universe_snapshot section ──────────────
-print("\nCHECK 2: presentation_snapshot.json universe_snapshot.entry_zone matches DB")
+print("\nCHECK 2: presentation_snapshot.json universe_snapshot.constitutional_entry_price matches DB")
 if SNAP_JSON.exists():
     snap_data = json.loads(SNAP_JSON.read_text())
     ps_universe = {r["ticker"]: r for r in snap_data.get("universe_snapshot", [])}
@@ -115,16 +115,16 @@ if SNAP_JSON.exists():
         if ticker not in ps_universe:
             check(f"  {ticker} in PS universe", False, "MISSING")
             continue
-        ps_ez = ps_universe[ticker].get("entry_zone")
-        truth_ep = truth["entry_price"]
-        ok = ps_ez is not None and abs(ps_ez - truth_ep) < 0.001
-        check(f"  {ticker} PS.universe_snapshot.entry_zone", ok,
-              f"json={ps_ez} vs coe_latest={truth_ep}")
+        ps_ep = ps_universe[ticker].get("constitutional_entry_price")
+        truth_ep = truth["constitutional_entry_price"]
+        ok = ps_ep is not None and abs(ps_ep - truth_ep) < 0.001
+        check(f"  {ticker} PS.universe_snapshot.constitutional_entry_price", ok,
+              f"json={ps_ep} vs coe_latest={truth_ep}")
 else:
     check("presentation_snapshot.json exists", False, "FILE_NOT_FOUND")
 
 # ── 4. Check presentation_snapshot.json re_accumulation latest event ───────────
-print("\nCHECK 3: presentation_snapshot.json re_accumulation latest entry_price matches universe")
+print("\nCHECK 3: presentation_snapshot.json re_accumulation latest constitutional_entry_price matches universe")
 if SNAP_JSON.exists():
     re_acc_events = snap_data.get("re_accumulation", [])
     re_acc_by_ticker: dict[str, list] = {}
@@ -138,8 +138,8 @@ if SNAP_JSON.exists():
             continue
         # Latest event = highest event_date
         latest_ev = max(events, key=lambda e: e.get("event_date", ""))
-        ev_ep = latest_ev.get("entry_price")
-        truth_ep = latest_v1[ticker]["entry_price"]
+        ev_ep = latest_ev.get("constitutional_entry_price")
+        truth_ep = latest_v1[ticker]["constitutional_entry_price"]
         ok = ev_ep is not None and abs(ev_ep - truth_ep) < 0.001
         check(f"  {ticker} re_acc latest vs universe", ok,
               f"event_entry={ev_ep} ({latest_ev.get('event_date')}) vs coe_latest={truth_ep}")
@@ -156,7 +156,7 @@ if DASH_HTML.exists():
     html = DASH_HTML.read_text()
     dash_mismatches = 0
     for ticker, truth in sorted(latest_v1.items()):
-        truth_ep = truth["entry_price"]
+        truth_ep = truth["constitutional_entry_price"]
         expected_str = f"{truth_ep:.2f}"
         # Check that the expected entry price appears near the ticker in the HTML
         # We look for the ticker symbol and the expected value within a 600-char window

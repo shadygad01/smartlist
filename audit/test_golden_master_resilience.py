@@ -76,7 +76,7 @@ def _semantic_ok(db_path: Path, sem: dict) -> tuple[bool, list[str]]:
     if dup_ttd > 0:
         errs.append(f"duplicate_ticker_type_date: {dup_ttd}")
 
-    thresh = scalar("SELECT COUNT(*) FROM constitutional_opportunity_events WHERE buy_r2 < 60 OR buy_score < 35") or 0
+    thresh = scalar("SELECT COUNT(*) FROM constitutional_opportunity_events WHERE constitutional_r2 < 60 OR constitutional_score < 35") or 0
     if thresh > 0:
         errs.append(f"threshold_violations: {thresh}")
 
@@ -102,7 +102,7 @@ def _semantic_ok(db_path: Path, sem: dict) -> tuple[bool, list[str]]:
     cd_bad = scalar("""
         SELECT COUNT(*) FROM constitutional_opportunity_events
         WHERE signal_version='v1'
-          AND cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
+          AND event_cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
     """) or 0
     if cd_bad > 0:
         errs.append(f"v1_cluster_days_mismatches: {cd_bad}")
@@ -145,7 +145,7 @@ def test_append_only_insert_passes_semantic():
     conn.execute("""
         INSERT INTO constitutional_opportunity_events
         (event_id, ticker, event_type, event_index, event_date, event_end_date,
-         cluster_days, entry_price, buy_r2, buy_score, signal_version, created_at)
+         event_cluster_days, constitutional_entry_price, constitutional_r2, constitutional_score, signal_version, created_at)
         VALUES (?, 'TEST.CA', 'FIRST_BUY', 0, '2099-01-01', '2099-01-01',
                 1, 10.0, 65.0, 40.0, 'v1', '2099-01-01T00:00:00')
     """, (new_id,))
@@ -184,7 +184,7 @@ def test_index_rebuild_passes_semantic():
 
 
 def test_data_normalization_passes_semantic():
-    """Updating cluster_days on existing rows (normalization) passes semantic validation."""
+    """Updating event_cluster_days on existing rows (normalization) passes semantic validation."""
     db = _copy_db()
     sem = json.loads((GOLDEN / "timeline_semantic.json").read_text())
 
@@ -193,7 +193,7 @@ def test_data_normalization_passes_semantic():
     conn.execute("""
         UPDATE constitutional_opportunity_events
         SET event_end_date = event_end_date,
-            cluster_days = (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
+            event_cluster_days = (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
         WHERE signal_version = 'v1'
     """)
     conn.commit()
@@ -217,7 +217,7 @@ def test_historical_import_passes_semantic():
     conn.executemany("""
         INSERT OR IGNORE INTO constitutional_opportunity_events
         (event_id, ticker, event_type, event_index, event_date, event_end_date,
-         cluster_days, entry_price, buy_r2, buy_score,
+         event_cluster_days, constitutional_entry_price, constitutional_r2, constitutional_score,
          buy_r3, buy_r4, buy_r5, buy_r6, buy_r7, buy_r8,
          sector, signal_version, created_at)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -239,7 +239,7 @@ def test_duplicate_rejection_by_unique_index():
     conn.execute("""
         INSERT INTO constitutional_opportunity_events
         (event_id, ticker, event_type, event_index, event_date, event_end_date,
-         cluster_days, entry_price, buy_r2, buy_score, signal_version, created_at)
+         event_cluster_days, constitutional_entry_price, constitutional_r2, constitutional_score, signal_version, created_at)
         VALUES (?, 'DEDUP.CA', 'FIRST_BUY', 0, '2099-06-01', '2099-06-01',
                 1, 10.0, 62.0, 37.0, 'v1', '2099-06-01T00:00:00')
     """, (uid1,))
@@ -252,7 +252,7 @@ def test_duplicate_rejection_by_unique_index():
         conn.execute("""
             INSERT INTO constitutional_opportunity_events
             (event_id, ticker, event_type, event_index, event_date, event_end_date,
-             cluster_days, entry_price, buy_r2, buy_score, signal_version, created_at)
+             event_cluster_days, constitutional_entry_price, constitutional_r2, constitutional_score, signal_version, created_at)
             VALUES (?, 'DEDUP.CA', 'FIRST_BUY', 99, '2099-06-01', '2099-06-01',
                     1, 10.0, 62.0, 37.0, 'v1', '2099-06-01T00:00:00')
         """, (uid2,))
@@ -266,7 +266,7 @@ def test_duplicate_rejection_by_unique_index():
 
 
 def test_threshold_violation_detected():
-    """Semantic validator catches buy_r2 < 60 — data corruption is NOT silently accepted."""
+    """Semantic validator catches constitutional_r2 < 60 — data corruption is NOT silently accepted."""
     db = _copy_db()
     sem = json.loads((GOLDEN / "timeline_semantic.json").read_text())
 
@@ -275,7 +275,7 @@ def test_threshold_violation_detected():
     conn.execute("""
         INSERT INTO constitutional_opportunity_events
         (event_id, ticker, event_type, event_index, event_date, event_end_date,
-         cluster_days, entry_price, buy_r2, buy_score, signal_version, created_at)
+         event_cluster_days, constitutional_entry_price, constitutional_r2, constitutional_score, signal_version, created_at)
         VALUES (?, 'CORRUPT.CA', 'FIRST_BUY', 0, '2099-07-01', '2099-07-01',
                 1, 5.0, 45.0, 20.0, 'v1', '2099-07-01T00:00:00')
     """, (str(uuid.uuid4()),))

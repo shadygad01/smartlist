@@ -55,7 +55,7 @@ class PositionPresentation:
     """One open portfolio position for display."""
     symbol:         str
     name:           str
-    entry_price:    float
+    candidate_entry_zone: float
     current_price:  Optional[float]
     target:         float
     pnl_pct:        Optional[float]

@@ -37,11 +37,11 @@ def _load_pool() -> dict[str, dict]:
         if not latest_ts:
             return {}
         rows = conn.execute(
-            """SELECT ticker, r2_score, final_score, entry_price, current_price, snapshot_ts
-               FROM candidate_pool WHERE snapshot_ts=? AND entry_price > 0
+            """SELECT ticker, candidate_r2, expected_reward_score, candidate_entry_zone, current_price, snapshot_ts
+               FROM candidate_pool WHERE snapshot_ts=? AND candidate_entry_zone > 0
                ORDER BY ticker,
-                 ABS(r2_score - 60) ASC,
-                 r2_score DESC""",
+                 ABS(candidate_r2 - 60) ASC,
+                 candidate_r2 DESC""",
             (latest_ts,)
         ).fetchall()
         result = {}
@@ -49,12 +49,12 @@ def _load_pool() -> dict[str, dict]:
             # First row per ticker = zone where price is closest to entry (most relevant)
             if r["ticker"] not in result:
                 result[r["ticker"]] = {
-                    "r2_score":      r["r2_score"],
-                    "final_score":   r["final_score"],
-                    "entry_price":   r["entry_price"],
-                    "current_price": r["current_price"],
-                    "last_scan":     (r["snapshot_ts"] or "")[:10],
-                    "source":        "candidate_pool",
+                    "candidate_r2":          r["candidate_r2"],
+                    "expected_reward_score": r["expected_reward_score"],
+                    "candidate_entry_zone":  r["candidate_entry_zone"],
+                    "current_price":       r["current_price"],
+                    "last_scan":           (r["snapshot_ts"] or "")[:10],
+                    "source":              "candidate_pool",
                 }
         return result
     finally:
@@ -77,12 +77,12 @@ def _load_research() -> dict[str, dict]:
             sym = r["symbol"]
             if sym not in result:
                 result[sym] = {
-                    "r2_score":      r["r2_ob"] or 0.0,
-                    "final_score":   r["adj_score"] or 0.0,
-                    "current_price": r["price"],
-                    "entry_price":   r["avg_entry"],
-                    "last_scan":     (r["signal_date"] or "")[:10],
-                    "source":        "egx_research",
+                    "candidate_r2":          r["r2_ob"] or 0.0,
+                    "expected_reward_score": r["adj_score"] or 0.0,
+                    "current_price":         r["price"],
+                    "research_entry_zone":   r["avg_entry"],
+                    "last_scan":             (r["signal_date"] or "")[:10],
+                    "source":                "egx_research",
                 }
         return result
     finally:
@@ -119,7 +119,7 @@ def _load_constitutional_registry() -> dict[str, dict]:
     conn.row_factory = sqlite3.Row
     try:
         rows = conn.execute(
-            """SELECT ticker, buy_date, buy_price, buy_r2, buy_score
+            """SELECT ticker, buy_date, constitutional_entry_price, constitutional_r2, constitutional_score
                FROM constitutional_buy_registry ORDER BY ticker, buy_date"""
         ).fetchall()
         result = {}
@@ -127,10 +127,10 @@ def _load_constitutional_registry() -> dict[str, dict]:
             ticker = r["ticker"]
             if ticker not in result:
                 result[ticker] = {
-                    "entry_price": r["buy_price"],
-                    "r2_score":    r["buy_r2"],
-                    "final_score": r["buy_score"],
-                    "buy_date":    r["buy_date"],
+                    "constitutional_entry_price": r["constitutional_entry_price"],
+                    "candidate_r2":              r["constitutional_r2"],
+                    "constitutional_score":      r["constitutional_score"],
+                    "buy_date":                  r["buy_date"],
                 }
         return result
     finally:
@@ -149,11 +149,11 @@ def _load_timeline() -> dict[str, dict]:
             ticker = e["ticker"]
             if ticker not in result or e["event_date"] > result[ticker]["event_date"]:
                 result[ticker] = {
-                    "return_pct":    e["return_pct"],
-                    "entry_price":   e["entry_price"],
-                    "current_price": e["current_price"],
-                    "event_date":    e["event_date"],
-                    "event_type":    e["event_type"],
+                    "return_pct":                e["return_pct"],
+                    "constitutional_entry_price": e["constitutional_entry_price"],
+                    "current_price":             e["current_price"],
+                    "event_date":                e["event_date"],
+                    "event_type":                e["event_type"],
                 }
         return result
     except Exception:
@@ -254,8 +254,8 @@ def build_universe_snapshot() -> list[dict]:
                 if v is not None:
                     return v
             return None
-        r2    = _first_not_none(p.get("r2_score"), r.get("r2_score"), c.get("r2_score"))
-        score = _first_not_none(p.get("final_score"), r.get("final_score"), c.get("final_score"))
+        r2    = _first_not_none(p.get("candidate_r2"), r.get("candidate_r2"), c.get("candidate_r2"))
+        score = _first_not_none(p.get("expected_reward_score"), r.get("expected_reward_score"), c.get("constitutional_score"))
 
         # Current price
         # Priority: signal_history (live scanner, freshest EOD from yfinance)
@@ -273,22 +273,22 @@ def build_universe_snapshot() -> list[dict]:
         price_date = sh.get("last_scan") or (p.get("last_scan") if p else "") or ""
 
         # Entry price — timeline first: canonical v1 event price that anchors return_pct
-        entry_price = (
-            t.get("entry_price")
-            or p.get("entry_price")
-            or c.get("entry_price")
-            or r.get("entry_price")
+        constitutional_entry_price = (
+            t.get("constitutional_entry_price")
+            or p.get("candidate_entry_zone")
+            or c.get("constitutional_entry_price")
+            or r.get("research_entry_zone")
         )
 
         # Return pct
         return_pct = t.get("return_pct")
-        if return_pct is None and current_price and entry_price and entry_price > 0:
-            return_pct = round((current_price - entry_price) / entry_price * 100, 2)
+        if return_pct is None and current_price and constitutional_entry_price and constitutional_entry_price > 0:
+            return_pct = round((current_price - constitutional_entry_price) / constitutional_entry_price * 100, 2)
 
         # Distance
         distance = None
-        if current_price and entry_price and entry_price > 0:
-            distance = round((current_price - entry_price) / entry_price * 100, 2)
+        if current_price and constitutional_entry_price and constitutional_entry_price > 0:
+            distance = round((current_price - constitutional_entry_price) / constitutional_entry_price * 100, 2)
 
         # Last scan / last price update
         last_scan         = p.get("last_scan") or r.get("last_scan") or sh.get("last_scan") or ""
@@ -298,27 +298,27 @@ def build_universe_snapshot() -> list[dict]:
         # Source
         source = p.get("source") if p else (r.get("source") if r else "constitutional_registry" if c else ("signal_history" if has_scan_history else "NO_HISTORY"))
 
-        status     = _derive_status(ticker, r2, score, in_timeline, return_pct, has_scan_history)
-        reason     = _derive_waiting_for(r2, score, has_scan_history, status)
-        action     = _derive_action(status, return_pct)
-        memory     = 1 if in_timeline else 0
+        status               = _derive_status(ticker, r2, score, in_timeline, return_pct, has_scan_history)
+        waiting_for_reason   = _derive_waiting_for(r2, score, has_scan_history, status)
+        action               = _derive_action(status, return_pct)
+        constitutional_memory = 1 if in_timeline else 0
 
         rows.append({
-            "ticker":            ticker,
-            "current_price":     current_price,
-            "status":            status,
-            "entry_zone":        entry_price,
-            "distance":          distance,
-            "reason":            reason,
-            "action":            action,
-            "memory":            memory,
-            "r2_score":          r2,
-            "final_score":       score,
-            "last_scan":         last_scan,
-            "generated_at":      now_str,
-            "source":            source,
-            "last_price_update": last_price_update,
-            "return_pct":        return_pct,
+            "ticker":                   ticker,
+            "current_price":            current_price,
+            "status":                   status,
+            "constitutional_entry_price": constitutional_entry_price,
+            "distance":                 distance,
+            "waiting_for_reason":       waiting_for_reason,
+            "action":                   action,
+            "constitutional_memory":    constitutional_memory,
+            "candidate_r2":             r2,
+            "expected_reward_score":    score,
+            "last_scan":                last_scan,
+            "generated_at":             now_str,
+            "source":                   source,
+            "last_price_update":        last_price_update,
+            "return_pct":               return_pct,
         })
 
     # Write to DB
@@ -328,13 +328,13 @@ def build_universe_snapshot() -> list[dict]:
             ticker TEXT PRIMARY KEY,
             current_price REAL,
             status TEXT,
-            entry_zone REAL,
+            constitutional_entry_price REAL,
             distance REAL,
-            reason TEXT,
+            waiting_for_reason TEXT,
             action TEXT,
-            memory INTEGER DEFAULT 0,
-            r2_score REAL,
-            final_score REAL,
+            constitutional_memory INTEGER DEFAULT 0,
+            candidate_r2 REAL,
+            expected_reward_score REAL,
             last_scan TEXT,
             generated_at TEXT,
             source TEXT,
@@ -345,11 +345,13 @@ def build_universe_snapshot() -> list[dict]:
     conn.execute("DELETE FROM universe_snapshot")
     conn.executemany(
         """INSERT INTO universe_snapshot
-           (ticker, current_price, status, entry_zone, distance, reason, action,
-            memory, r2_score, final_score, last_scan, generated_at, source,
+           (ticker, current_price, status, constitutional_entry_price, distance,
+            waiting_for_reason, action, constitutional_memory, candidate_r2,
+            expected_reward_score, last_scan, generated_at, source,
             last_price_update, return_pct)
-           VALUES (:ticker, :current_price, :status, :entry_zone, :distance, :reason,
-                   :action, :memory, :r2_score, :final_score, :last_scan, :generated_at,
+           VALUES (:ticker, :current_price, :status, :constitutional_entry_price, :distance,
+                   :waiting_for_reason, :action, :constitutional_memory, :candidate_r2,
+                   :expected_reward_score, :last_scan, :generated_at,
                    :source, :last_price_update, :return_pct)""",
         rows
     )
@@ -375,5 +377,5 @@ def load_universe_snapshot() -> list[dict]:
 if __name__ == "__main__":
     rows = build_universe_snapshot()
     for r in rows:
-        print(f"  {r['ticker']:<12} {r['status']:<15} R2={r['r2_score'] or 0:.1f}  "
+        print(f"  {r['ticker']:<12} {r['status']:<15} R2={r['candidate_r2'] or 0:.1f}  "
               f"Price={r['current_price'] or 0:.2f}  Return={r['return_pct'] or 0:.1f}%")

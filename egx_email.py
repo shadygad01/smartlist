@@ -312,7 +312,7 @@ def _what_happened_yesterday(snap: PresentationSnapshot) -> str:
                 f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:11px;'
                 f'font-weight:700;color:{tc};">{_type_lbl(e["event_type"])}</td>'
                 f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:12px;">'
-                f'{float(e["entry_price"]):.2f} EGP</td>'
+                f'{float(e["constitutional_entry_price"]):.2f} EGP</td>'
                 f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:11px;'
                 f'color:{_MUTED};">{e.get("sector","")}</td>'
                 f'<td style="padding:7px 10px;font-family:Arial,sans-serif;font-size:11px;'
@@ -396,7 +396,7 @@ def _new_since_yesterday(snap: PresentationSnapshot) -> str:
                 f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:11px;'
                 f'font-weight:700;color:{tc};">{_type_lbl(e["event_type"])}</td>'
                 f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:12px;">'
-                f'{float(e.get("entry_price",0)):.2f} EGP</td>'
+                f'{float(e.get("constitutional_entry_price",0)):.2f} EGP</td>'
                 f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:11px;'
                 f'color:{_MUTED};">{e.get("event_date","")}</td>'
                 f'</tr>'
@@ -436,7 +436,7 @@ def _near_constitutional_entry(snap: PresentationSnapshot, dna: dict) -> str:
         dist   = e["distance_to_constitutional"]
         need   = e["need_move_pct"]
         cur_s  = f'{e["current_price"]:.2f}' if e["current_price"] else "&#8212;"
-        ez_s   = f'{e["entry_price"]:.2f} EGP' if e["entry_price"] else "&#8212;"
+        ez_s   = f'{e["candidate_entry_zone"]:.2f} EGP' if e.get("candidate_entry_zone") else "&#8212;"
         r2_s   = f'{60 - dist:.1f}/60 (&#8722;{dist:.1f})'
         zone_s = "AT ZONE" if need < 0.5 else f'+{need:.1f}% above'
         wait_s = f'&#8722;{dist:.1f} pts to R2'
@@ -501,7 +501,7 @@ def _active_opportunities(snap: PresentationSnapshot, dna: dict) -> str:
         action = a.get("action", "")
         act_c  = _G if action.startswith("HOLD") else (_A if action.startswith("MONITOR") else _MUTED)
         mem    = _mem_badge(dna.get(a["ticker"]))
-        ez     = a.get("entry_zone") or 0
+        ez     = a.get("constitutional_entry_price") or 0
         cp     = a.get("current_price") or 0
 
         rows += (
@@ -557,7 +557,7 @@ def _re_accumulation_events(snap: PresentationSnapshot, dna: dict) -> str:
         ret  = e.get("return_pct") or 0
         rc   = _ret_c(ret)
         idx  = e.get("event_index", 1)
-        ep   = e.get("entry_price") or 0
+        ep   = e.get("constitutional_entry_price") or 0
         cp   = e.get("current_price") or 0
         mem  = _mem_badge(dna.get(e["ticker"]))
 
@@ -668,7 +668,7 @@ def _constitutional_timeline(snap: PresentationSnapshot) -> str:
         tc  = _type_c(e["event_type"])
         ret = e.get("return_pct") or 0
         rc  = _ret_c(ret)
-        ep  = e.get("entry_price") or 0
+        ep  = e.get("constitutional_entry_price") or 0
         cp  = e.get("current_price") or 0
 
         rows += (

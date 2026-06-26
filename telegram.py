@@ -30,7 +30,7 @@ def _opp_line(e: dict) -> str:
     etype = "🟢 FIRST BUY" if e["event_type"] == "FIRST_BUY" else "🔵 RE-ACCUM"
     return (
         f"   {etype}  *{e['ticker']}*"
-        f"  Entry={e['entry_price']:.2f}"
+        f"  Entry={e['constitutional_entry_price']:.2f}"
         f"  Now={e['current_price']:.2f}"
         f"  {_sign(e['return_pct'])}{e['return_pct']:.1f}%"
     )
@@ -61,7 +61,7 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
             dist = e["distance_to_constitutional"]
             urg  = "🔥" if dist <= 0.3 else ("⚠️" if dist <= 1.0 else "📍")
             lines.append(
-                f"   {urg} *{e['ticker']}*  –{dist:.1f} pts  Zone {e['entry_price']:.2f} EGP"
+                f"   {urg} *{e['ticker']}*  –{dist:.1f} pts  Zone {e['candidate_entry_zone']:.2f} EGP"
             )
         lines.append("")
 
@@ -93,7 +93,7 @@ def send_alert(event: dict, snap: PresentationSnapshot | None = None) -> None:
     """
     ticker  = event.get("ticker", "")
     etype   = event.get("event_type", "FIRST_BUY")
-    entry   = float(event.get("entry_price", 0))
+    entry   = float(event.get("constitutional_entry_price", 0))
     cur     = float(event.get("current_price", 0))
     ret     = float(event.get("return_pct", 0))
     date_s  = event.get("event_date", "")

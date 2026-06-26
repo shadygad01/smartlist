@@ -11,7 +11,7 @@ Constitution:
   - Storage   : candidate_pool.db  (SQLite, append-only)
                 candidate_pool.json
                 candidate_pool.parquet
-  - Identity  : candidate_id = SHA-256(ticker|signal_date|entry_price)
+  - Identity  : candidate_id = SHA-256(ticker|signal_date|candidate_entry_zone)
   - Policy    : allocator_status = 'NEW' on creation
 """
 
@@ -68,16 +68,16 @@ CREATE TABLE IF NOT EXISTS candidate_pool (
     candidate_id      TEXT PRIMARY KEY,
     ticker            TEXT NOT NULL,
     signal_date       TEXT NOT NULL,
-    entry_price       REAL NOT NULL,
-    current_price     REAL,
-    r2_score          REAL,
-    r3_score          REAL,
-    r4_score          REAL,
-    r5_score          REAL,
-    r6_score          REAL,
-    r7_score          REAL,
-    r8_score          REAL,
-    final_score       REAL,
+    candidate_entry_zone REAL NOT NULL,
+    current_price        REAL,
+    candidate_r2         REAL,
+    r3_score             REAL,
+    r4_score             REAL,
+    r5_score             REAL,
+    r6_score             REAL,
+    r7_score             REAL,
+    r8_score             REAL,
+    expected_reward_score REAL,
     sector            TEXT,
     industry          TEXT,
     market_cap        REAL,
@@ -99,8 +99,8 @@ CREATE INDEX IF NOT EXISTS idx_cp_status ON candidate_pool(allocator_status);
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-def _make_candidate_id(ticker: str, signal_date: str, entry_price: float) -> str:
-    raw = f"{ticker}|{signal_date}|{entry_price:.6f}"
+def _make_candidate_id(ticker: str, signal_date: str, candidate_entry_zone: float) -> str:
+    raw = f"{ticker}|{signal_date}|{candidate_entry_zone:.6f}"
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
@@ -229,19 +229,19 @@ def build_candidate_pool(
             cid = _make_candidate_id(sym, str(sig_date)[:10], close)
 
             row = {
-                "candidate_id":    cid,
-                "ticker":          sym,
-                "signal_date":     str(sig_date)[:10],
-                "entry_price":     round(close, 4),
-                "current_price":   round(cur_price, 4),
-                "r2_score":        round(r2_score, 4),
-                "r3_score":        round(r3_score, 4),
-                "r4_score":        round(r4_score, 4),
-                "r5_score":        round(r5_score, 4),
-                "r6_score":        round(r6_score, 4),
-                "r7_score":        round(r7_score, 4),
-                "r8_score":        round(r8_score, 4),
-                "final_score":     round(final, 4),
+                "candidate_id":        cid,
+                "ticker":              sym,
+                "signal_date":         str(sig_date)[:10],
+                "candidate_entry_zone": round(close, 4),
+                "current_price":       round(cur_price, 4),
+                "candidate_r2":        round(r2_score, 4),
+                "r3_score":            round(r3_score, 4),
+                "r4_score":            round(r4_score, 4),
+                "r5_score":            round(r5_score, 4),
+                "r6_score":            round(r6_score, 4),
+                "r7_score":            round(r7_score, 4),
+                "r8_score":            round(r8_score, 4),
+                "expected_reward_score": round(final, 4),
                 "sector":          SECTOR_MAP.get(sym, "Unknown"),
                 "industry":        SECTOR_MAP.get(sym, "Unknown"),
                 "market_cap":      round(mkt_cap, 2),
@@ -258,15 +258,15 @@ def build_candidate_pool(
 
             conn.execute("""
                 INSERT OR IGNORE INTO candidate_pool (
-                    candidate_id, ticker, signal_date, entry_price, current_price,
-                    r2_score, r3_score, r4_score, r5_score, r6_score, r7_score, r8_score,
-                    final_score, sector, industry, market_cap, avg_volume,
+                    candidate_id, ticker, signal_date, candidate_entry_zone, current_price,
+                    candidate_r2, r3_score, r4_score, r5_score, r6_score, r7_score, r8_score,
+                    expected_reward_score, sector, industry, market_cap, avg_volume,
                     atr20, volatility20, discount_depth, distance_from_eq,
                     correlation_group, allocator_status, snapshot_ts
                 ) VALUES (
-                    :candidate_id, :ticker, :signal_date, :entry_price, :current_price,
-                    :r2_score, :r3_score, :r4_score, :r5_score, :r6_score, :r7_score, :r8_score,
-                    :final_score, :sector, :industry, :market_cap, :avg_volume,
+                    :candidate_id, :ticker, :signal_date, :candidate_entry_zone, :current_price,
+                    :candidate_r2, :r3_score, :r4_score, :r5_score, :r6_score, :r7_score, :r8_score,
+                    :expected_reward_score, :sector, :industry, :market_cap, :avg_volume,
                     :atr20, :volatility20, :discount_depth, :distance_from_eq,
                     :correlation_group, :allocator_status, :snapshot_ts
                 )
@@ -306,7 +306,7 @@ def validate_pool(df: pd.DataFrame) -> dict:
     results["no_lookahead"]         = True   # enforced by hist = df[df['Date'] <= sig_date]
 
     results["duplicate_ids"]        = int(df["candidate_id"].duplicated().sum())
-    results["missing_r2"]           = int(df["r2_score"].isna().sum())
+    results["missing_r2"]           = int(df["candidate_r2"].isna().sum())
     results["missing_sector"]       = int(df["sector"].isna().sum() + (df["sector"] == "").sum())
     results["missing_volatility"]   = int(df["volatility20"].isna().sum())
     results["missing_atr"]          = int(df["atr20"].isna().sum())
@@ -344,12 +344,12 @@ def generate_statistics(df: pd.DataFrame) -> dict:
     stats["candidates_per_symbol"]     = by_sym
 
     for col, label in [
-        ("r2_score",        "avg_r2"),
-        ("volatility20",    "avg_volatility20"),
-        ("atr20",           "avg_atr20"),
-        ("discount_depth",  "avg_discount_depth"),
-        ("final_score",     "avg_final_score"),
-        ("distance_from_eq","avg_distance_from_eq"),
+        ("candidate_r2",          "avg_r2"),
+        ("volatility20",          "avg_volatility20"),
+        ("atr20",                 "avg_atr20"),
+        ("discount_depth",        "avg_discount_depth"),
+        ("expected_reward_score", "avg_final_score"),
+        ("distance_from_eq",      "avg_distance_from_eq"),
     ]:
         stats[label] = round(float(df[col].mean()), 4)
 

@@ -236,11 +236,11 @@ def _to_cairo(ts_str: str) -> str:
 
 def _conviction_score(e: dict, leader: dict, an: dict) -> float:
     """Composite signal conviction: R2(35%) + Score(25%) + WinRate(20%) + AvgReturn(15%) + Discount(5%)."""
-    r2      = e.get("buy_r2",  0.0) or 0.0
-    score   = e.get("buy_score", 0.0) or 0.0
+    r2      = e.get("constitutional_r2",  0.0) or 0.0
+    score   = e.get("constitutional_score", 0.0) or 0.0
     wr      = leader.get("win_rate", 0.0) or 0.0
     avg_ret = an.get("avg_return_pct", 0.0) or 0.0
-    entry_p = e.get("entry_price", 0.0) or 0.0
+    entry_p = e.get("constitutional_entry_price", 0.0) or 0.0
     cur_p   = e.get("current_price", 0.0) or 0.0
     disc    = max(0.0, (entry_p - cur_p) / entry_p * 100.0) if entry_p else 0.0
     return r2 * 0.35 + score * 0.25 + wr * 20.0 + avg_ret * 0.15 + disc * 0.25
@@ -346,21 +346,21 @@ def _s_buy_signals(snap) -> tuple:
     # ── 2. Live re-accumulation candidates from universe_snapshot ─────────────
     reaccum_hist = []
     for row in (snap.universe_snapshot or []):
-        r2    = row.get("r2_score") or 0.0
-        score = row.get("final_score") or 0.0
+        r2    = row.get("candidate_r2") or 0.0
+        score = row.get("expected_reward_score") or 0.0
         cp    = row.get("current_price") or 0.0
-        ep    = row.get("entry_zone") or 0.0
+        ep    = row.get("constitutional_entry_price") or 0.0
         if r2 >= 60 and score >= 35 and ep > 0 and cp <= ep:
             ticker = row["ticker"]
             if ticker in today_tickers:
                 continue
             reaccum_hist.append({
-                "ticker":        ticker,
-                "event_type":    "RE_ACCUMULATION",
-                "entry_price":   ep,
-                "current_price": cp,
-                "buy_r2":        r2,
-                "buy_score":     score,
+                "ticker":                  ticker,
+                "event_type":              "RE_ACCUMULATION",
+                "constitutional_entry_price": ep,
+                "current_price":           cp,
+                "constitutional_r2":       r2,
+                "constitutional_score":    score,
                 "event_date":    snap.generated_at[:10],
                 "return_pct":    row.get("return_pct", 0),
                 "sector":        row.get("sector", ""),
@@ -420,10 +420,10 @@ def _s_buy_signals(snap) -> tuple:
         ticker     = e["ticker"]
         etype      = e["event_type"]
         is_new_buy = etype == "FIRST_BUY"
-        entry_p    = e["entry_price"]
+        entry_p    = e["constitutional_entry_price"]
         cur_p      = e["current_price"]
-        r2         = e.get("buy_r2", 0.0) or 0.0
-        score      = e.get("buy_score", 0.0) or 0.0
+        r2         = e.get("constitutional_r2", 0.0) or 0.0
+        score      = e.get("constitutional_score", 0.0) or 0.0
         ev_date    = e.get("event_date", "")
         sector     = e.get("sector", "")
         days_held  = e.get("days_active", 0)
@@ -593,10 +593,10 @@ def _s_buy_signals(snap) -> tuple:
         ticker     = e["ticker"]
         etype      = e["event_type"]
         is_new_buy = etype == "FIRST_BUY"
-        entry_p    = e["entry_price"]
+        entry_p    = e["constitutional_entry_price"]
         cur_p      = e["current_price"]
-        r2         = e.get("buy_r2", 0.0) or 0.0
-        score      = e.get("buy_score", 0.0) or 0.0
+        r2         = e.get("constitutional_r2", 0.0) or 0.0
+        score      = e.get("constitutional_score", 0.0) or 0.0
         sector     = e.get("sector", "")
         discount_pct = round((entry_p - cur_p) / entry_p * 100, 2) if entry_p and cur_p < entry_p else 0.0
 
@@ -779,7 +779,7 @@ def _s_near_entry(snap, excluded: frozenset = frozenset()) -> str:
     for e in candidates:
         ticker    = e["ticker"]
         cur       = e["current_price"]
-        ez        = e["entry_price"]
+        ez        = e["candidate_entry_zone"]
         dist_pts  = e["distance_to_constitutional"]
         need_pct  = e["need_move_pct"]
         cur_s     = f'{cur:.2f}' if cur else "—"
@@ -833,7 +833,7 @@ def _s_future_opportunities(snap, excluded: frozenset = frozenset()) -> str:
 
     candidates = sorted(
         [r for r in uni if _qualifies(r)],
-        key=lambda r: (60 - (r.get("r2_score") or 0))
+        key=lambda r: (60 - (r.get("candidate_r2") or 0))
     )
 
     if not candidates:
@@ -843,9 +843,9 @@ def _s_future_opportunities(snap, excluded: frozenset = frozenset()) -> str:
     for r in candidates:
         ticker  = r["ticker"]
         cur     = r.get("current_price")
-        ez      = r.get("entry_zone")
-        r2      = r.get("r2_score") or 0.0
-        score   = r.get("final_score") or 0.0
+        ez      = r.get("constitutional_entry_price")
+        r2      = r.get("candidate_r2") or 0.0
+        score   = r.get("expected_reward_score") or 0.0
         cur_s   = f'{cur:.2f}' if cur else "—"
         if ez:
             ez_s = f'{ez:.2f}'
@@ -859,8 +859,8 @@ def _s_future_opportunities(snap, excluded: frozenset = frozenset()) -> str:
             need_s = "—"
         r2_s    = f'{r2:.1f}' if r2 else "—"
         score_s = f'{score:.1f}' if score else "—"
-        reason  = r.get("reason") or "—"
-        mem_s   = "&#9733;" if r.get("memory") else ""
+        reason  = r.get("waiting_for_reason") or "—"
+        mem_s   = "&#9733;" if r.get("constitutional_memory") else ""
         rows += f"""
 <tr>
   <td style="font-weight:700;color:{B};font-size:13px;">{ticker}</td>
@@ -919,16 +919,16 @@ def _s_universe_status(snap) -> str:
          "BELOW_THRESHOLD": 4, "NO_DATA": 5, "NO_HISTORY": 6}.get(x["status"], 9)
     )):
         cur     = f'{r["current_price"]:.2f}' if r.get("current_price") else "—"
-        ez      = f'{r["entry_zone"]:.2f}' if r.get("entry_zone") else "Awaiting EZ"
+        ez      = f'{r["constitutional_entry_price"]:.2f}' if r.get("constitutional_entry_price") else "Awaiting EZ"
         dist    = f'{r["distance"]:+.1f}%' if r.get("distance") is not None else "—"
         ret     = r.get("return_pct")
         ret_html = (
             f'<span class="{_rc(ret)}">{_sign(ret)}{ret:.1f}%</span>'
             if ret is not None else "—"
         )
-        reason  = r.get("reason") or ""
+        reason  = r.get("waiting_for_reason") or ""
         action  = r.get("action") or "—"
-        mem     = "&#9733;" if r.get("memory") else ""
+        mem     = "&#9733;" if r.get("constitutional_memory") else ""
         upd     = (r.get("last_price_update") or "")[:10]
         rows_html += f"""
 <tr>
@@ -1002,7 +1002,7 @@ def _s_market_map(snap, dna):
 <tr>
   <td style="font-weight:700;color:{B};font-size:14px;">{ticker}</td>
   <td><span class="badge" style="background:{sc}22;color:{sc};">{lbl}</span></td>
-  <td style="color:{W};font-weight:700;">{e['entry_price']:.2f} EGP</td>
+  <td style="color:{W};font-weight:700;">{e['constitutional_entry_price']:.2f} EGP</td>
   <td style="color:{FG};">{e['current_price']:.2f}</td>
   <td class="{_rc(ret)}">{_sign(ret)}{ret:.1f}%</td>
   <td>{_action(ret)}</td>
@@ -1042,7 +1042,7 @@ def _s_stock_dna(snap, dna):
     for ticker, events in sorted(by_ticker.items()):
         ev_sorted  = sorted(events, key=lambda e: e["event_date"])
         first_buy  = next((e for e in ev_sorted if e["event_type"] == "FIRST_BUY"), ev_sorted[0])
-        prices     = [e["entry_price"] for e in ev_sorted if e["entry_price"]]
+        prices     = [e["constitutional_entry_price"] for e in ev_sorted if e["constitutional_entry_price"]]
         returns    = [e["return_pct"] for e in ev_sorted]
         avg_entry  = sum(prices) / len(prices) if prices else 0.0
         avg_ret    = sum(returns) / len(returns) if returns else 0.0
@@ -1080,7 +1080,7 @@ def _s_stock_dna(snap, dna):
             ev_lines += (
                 f'<div style="font-size:12px;color:{DIM};margin-top:3px;">'
                 f'<span style="color:{et_c};font-weight:700;">{et_lbl}</span>'
-                f' {ev["event_date"]} @ {ev["entry_price"]:.2f} EGP'
+                f' {ev["event_date"]} @ {ev["constitutional_entry_price"]:.2f} EGP'
                 f' → <span class="{_rc(ret)}">{_sign(ret)}{ret:.1f}%</span>'
                 f'</div>'
             )
@@ -1109,7 +1109,7 @@ def _s_stock_dna(snap, dna):
     <div style="font-size:12px;color:{DIM};">{sector}</div>
   </div>
   <div class="dna-meta">
-    <span style="color:{FG};">First BUY:</span> {first_buy['event_date']} @ {first_buy['entry_price']:.2f} EGP
+    <span style="color:{FG};">First BUY:</span> {first_buy['event_date']} @ {first_buy['constitutional_entry_price']:.2f} EGP
     &nbsp;·&nbsp; <span style="color:{FG};">Avg Entry:</span> {avg_entry:.2f} EGP
     &nbsp;·&nbsp; <span style="color:{FG};">Current:</span> {current:.2f}
     &nbsp;·&nbsp; <span class="{_rc(avg_ret)}">Avg Return: {_sign(avg_ret)}{avg_ret:.1f}%</span>
@@ -1148,7 +1148,7 @@ def _s_timeline(snap):
 <tr>
   <td style="font-weight:700;color:{B};font-size:13px;">{e['ticker']}</td>
   <td>{_type_badge(e['event_type'])}</td>
-  <td style="color:{W};font-weight:700;">{e['entry_price']:.2f} EGP</td>
+  <td style="color:{W};font-weight:700;">{e['constitutional_entry_price']:.2f} EGP</td>
   <td style="color:{FG};">{e['current_price']:.2f}</td>
   <td class="{_rc(e['return_pct'])}">{_sign(e['return_pct'])}{e['return_pct']:.1f}%</td>
   <td style="color:{DIM};font-size:11px;">{e['event_date']}</td>
@@ -1516,8 +1516,8 @@ if __name__ == "__main__":
     write_presentation_snapshot_json(snap_check, build_hash=build_hash)
     uni = snap_check.universe_snapshot or []
     snap_check = snap_check  # already assigned above
-    near = [r["ticker"] for r in uni if (60-(r.get("r2_score") or 0))<=10
-            and not (r.get("current_price") and r.get("entry_zone") and r["current_price"] > r["entry_zone"])]
+    near = [r["ticker"] for r in uni if (60-(r.get("candidate_r2") or 0))<=10
+            and not (r.get("current_price") and r.get("constitutional_entry_price") and r["current_price"] > r["constitutional_entry_price"])]
     bad = [t for t in ["COMI.CA","ORHD.CA","HELI.CA","EMFD.CA","JUFO.CA","PHDC.CA","ARCC.CA"] if t in near]
     print(f"[Dashboard V7] Near Entry tickers: {near}")
     print(f"[Dashboard V7] Removed tickers in Near Entry (MUST BE EMPTY): {bad}")

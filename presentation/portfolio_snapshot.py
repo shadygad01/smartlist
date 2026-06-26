@@ -58,7 +58,7 @@ class PortfolioSnapshot:
     health_narrative: str
 
     # Holdings
-    held_positions: list[dict]          # [{ticker, sector, entry_price, current_price, return_pct, r2_score}]
+    held_positions: list[dict]          # [{ticker, sector, candidate_entry_zone, current_price, return_pct, candidate_r2}]
     held_count: int
 
     # Opportunities from advisor

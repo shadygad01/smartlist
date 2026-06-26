@@ -73,10 +73,10 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
         lines.append(SEP)
         lines.append("🎯 *Near Constitutional Entry*\n")
         for r in near_items:
-            r2   = r.get("r2_score", 0)
+            r2   = r.get("candidate_r2", 0)
             dist = r.get("distance_to_constitutional", 0)
             cp   = r.get("current_price") or 0
-            ep   = r.get("entry_price") or 0
+            ep   = r.get("candidate_entry_zone") or 0
             lines.append(
                 f"• *{r['ticker']}*  R2 {r2:.1f}  ({dist:.1f} pts to gate)"
             )
@@ -110,8 +110,8 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
         lines.append(SEP)
         lines.append("🔍 *Future Watch List*\n")
         for u in fut_show:
-            r2 = u.get("r2_score") or 0
-            ez = u.get("entry_zone")
+            r2 = u.get("candidate_r2") or 0
+            ez = u.get("constitutional_entry_price")
             ez_s = f"{ez:.2f}" if ez else "No entry zone"
             lines.append(f"• *{u['ticker']}*  R2 {r2:.1f}  Entry {ez_s}")
         lines.append("")

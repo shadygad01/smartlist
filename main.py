@@ -1293,13 +1293,13 @@ def _build_report_v1(holiday_mode=False, last_trading=None, _cached_results=None
         ret = p.get("return_pct", 0) or 0
         ret_col = "#155724" if ret >= 0 else "#721c24"
         ret_str = f'+{ret:.1f}%' if ret >= 0 else f'{ret:.1f}%'
-        entry_quality = p.get("r2_score", 0) or 0
+        entry_quality = p.get("candidate_r2", 0) or 0
         quality_str = f"{entry_quality:.0f}" if entry_quality else "—"
         pos_rows += f"""
 <tr style="border-bottom:1px solid #e8f0f8;">
   <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:#1a3a5c;">{p.get("ticker","")}</td>
   <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#666;">{p.get("sector","")}</td>
-  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#444;">{p.get("entry_price",0):.2f} EGP</td>
+  <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#444;">{p.get("candidate_entry_zone",0):.2f} EGP</td>
   <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#444;">{p.get("current_price",0):.2f} EGP</td>
   <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:{ret_col};">{ret_str}</td>
   <td style="padding:8px 12px;font-family:Arial,sans-serif;font-size:12px;color:#666;">{quality_str}</td>
@@ -2306,10 +2306,10 @@ def detect_signal_changes(snap) -> list[dict]:
 
     for u in current_universe:
         ticker      = u.get("ticker", "")
-        r2          = float(u.get("r2_score") or 0)
-        score       = float(u.get("final_score") or 0)
+        r2          = float(u.get("candidate_r2") or 0)
+        score       = float(u.get("expected_reward_score") or 0)
         cur_price   = float(u.get("current_price") or 0)
-        entry_price = float(u.get("entry_zone") or 0)
+        entry_price = float(u.get("constitutional_entry_price") or 0)
 
         if not ticker:
             continue
@@ -2339,10 +2339,10 @@ def detect_signal_changes(snap) -> list[dict]:
                 "ticker":        ticker,
                 "event_type":    event_type,
                 "event_date":    event_date,
-                "entry_price":   entry_price if entry_price > 0 else cur_price,
-                "current_price": cur_price,
-                "buy_r2":        r2,
-                "buy_score":     score,
+                "constitutional_entry_price": entry_price if entry_price > 0 else cur_price,
+                "current_price":             cur_price,
+                "constitutional_r2":         r2,
+                "constitutional_score":      score,
                 "sector":        u.get("sector", ""),
                 "return_pct":    u.get("return_pct", 0.0),
                 "status":        u.get("status", ""),
@@ -2366,10 +2366,10 @@ def send_change_email(changed_events):
             event = {
                 "ticker":        event["stock"],
                 "event_type":    "FIRST_BUY" if sig == "Buy" else "RE_ACCUMULATION",
-                "entry_price":   event.get("target", 0.0),
-                "current_price": event.get("price", 0.0),
-                "sector":        event.get("ctx_label", ""),
-                "buy_score":     event.get("score", 0),
+                "constitutional_entry_price": event.get("target", 0.0),
+                "current_price":             event.get("price", 0.0),
+                "sector":                    event.get("ctx_label", ""),
+                "constitutional_score":      event.get("score", 0),
             }
         subject, html = build_alert_email(event)
         ok = _send_email_raw(subject=subject, html=html, to=EMAIL)
@@ -2392,8 +2392,8 @@ def _normalize_change_item(item: dict) -> dict:
     sig    = "Buy" if etype == "FIRST_BUY" else "RE-ACCUMULATION"
     stock  = item["ticker"]
     price  = item.get("current_price", "N/A")
-    entry  = item.get("entry_price", "N/A")
-    score  = item.get("buy_score", 0)
+    entry  = item.get("constitutional_entry_price", "N/A")
+    score  = item.get("constitutional_score", 0)
     return {
         "stock":            stock,
         "from":             "Prior",
@@ -2442,9 +2442,9 @@ def send_change_alert(changed_events: list[dict]) -> None:
         ticker     = event.get("ticker", "?")
         etype      = event.get("event_type", "RE_ACCUMULATION")
         cur_price  = event.get("current_price", "N/A")
-        entry      = event.get("entry_price", "N/A")
-        score      = event.get("buy_score", 0)
-        r2         = event.get("buy_r2", 0)
+        entry      = event.get("constitutional_entry_price", "N/A")
+        score      = event.get("constitutional_score", 0)
+        r2         = event.get("constitutional_r2", 0)
         wl_tag     = "  ⭐ _Watchlist_" if ticker in WHITELIST else ""
 
         try:

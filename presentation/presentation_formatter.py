@@ -127,7 +127,7 @@ class TelegramFormatter:
 
         lines = [
             f"📌 *{pos.symbol}*  {pos.name}",
-            f"   Entry   {pos.entry_price:.2f} EGP",
+            f"   Entry   {pos.candidate_entry_zone:.2f} EGP",
             f"   Now     {cur_str}",
             f"   Target  *{pos.target:.2f} EGP*",
         ]

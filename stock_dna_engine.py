@@ -46,8 +46,8 @@ def build_stock_dna() -> None:
         for row in load_universe_snapshot():
             if row.get("current_price"):
                 snap_prices[row["ticker"]] = row["current_price"]
-            if row.get("entry_zone"):
-                snap_entries[row["ticker"]] = row["entry_zone"]
+            if row.get("constitutional_entry_price"):
+                snap_entries[row["ticker"]] = row["constitutional_entry_price"]
     except Exception:
         pass
 
@@ -60,7 +60,7 @@ def build_stock_dna() -> None:
             first   = events[0]
             buys    = [e for e in events if e["event_type"] == "FIRST_BUY"]
             re_acc  = [e for e in events if e["event_type"] == "RE_ACCUMULATION"]
-            prices  = [e["entry_price"] for e in events if e.get("entry_price")]
+            prices  = [e["constitutional_entry_price"] for e in events if e.get("constitutional_entry_price")]
             returns = [e["return_pct"] for e in events if "return_pct" in e]
 
             avg_entry = mean(prices) if prices else 0.0
@@ -71,7 +71,7 @@ def build_stock_dna() -> None:
 
             buy_count = len(buys)
             re_count  = len(re_acc)
-            mem_hits  = len(events)
+            constitutional_memory_hits  = len(events)
 
             if buy_count >= 3:
                 confidence = "STRONG"
@@ -87,7 +87,7 @@ def build_stock_dna() -> None:
             dna_rows.append((
                 ticker,
                 first["event_date"],
-                first["entry_price"],
+                first["constitutional_entry_price"],
                 buy_count,
                 re_count,
                 round(avg_entry, 4),
@@ -96,7 +96,7 @@ def build_stock_dna() -> None:
                 round(best_ret, 4),
                 round(zone_low, 4),
                 round(zone_high, 4),
-                mem_hits,
+                constitutional_memory_hits,
                 confidence,
                 now_str,
             ))
@@ -116,8 +116,8 @@ def build_stock_dna() -> None:
                 0.0,            # best_return_pct
                 entry_price,    # historical_buy_zone_low
                 entry_price,    # historical_buy_zone_high
-                0,              # memory_hits
-                "MONITORING",   # memory_confidence
+                0,              # constitutional_memory_hits
+                "MONITORING",   # constitutional_memory_confidence
                 now_str,
             ))
 
@@ -135,8 +135,8 @@ def build_stock_dna() -> None:
             best_return_pct REAL,
             historical_buy_zone_low REAL,
             historical_buy_zone_high REAL,
-            memory_hits INTEGER,
-            memory_confidence TEXT,
+            constitutional_memory_hits INTEGER,
+            constitutional_memory_confidence TEXT,
             last_updated TEXT
         )
     """)

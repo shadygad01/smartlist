@@ -67,7 +67,7 @@ for db in hash_dbs:
 print("\nUNIVERSE CHECK:")
 golden_universe = json.loads((GOLDEN / "universe_27.json").read_text())
 current_universe = qdb(BASE / "universe_snapshot.db",
-    "SELECT ticker,status,current_price,entry_zone,reason,r2_score,final_score,return_pct FROM universe_snapshot ORDER BY ticker")
+    "SELECT ticker,status,current_price,constitutional_entry_price,waiting_for_reason,candidate_r2,expected_reward_score,return_pct FROM universe_snapshot ORDER BY ticker")
 
 check("Universe size", len(current_universe) == len(golden_universe),
       f"{len(current_universe)} vs {len(golden_universe)}")
@@ -87,7 +87,7 @@ for ticker in sorted(golden_by_ticker):
 print("\nFIRST BUY REGISTRY CHECK:")
 golden_fb = json.loads((GOLDEN / "first_buy_registry.json").read_text())
 current_fb = qdb(BASE / "constitutional_buy_registry.db",
-    "SELECT ticker,buy_date,buy_price,buy_r2,buy_score FROM constitutional_buy_registry ORDER BY ticker,buy_date")
+    "SELECT ticker,buy_date,constitutional_entry_price,constitutional_r2,constitutional_score FROM constitutional_buy_registry ORDER BY ticker,buy_date")
 check("FIRST BUY count", len(current_fb) == len(golden_fb),
       f"{len(current_fb)} vs {len(golden_fb)}")
 
@@ -95,12 +95,12 @@ check("FIRST BUY count", len(current_fb) == len(golden_fb),
 print("\nCANDIDATE POOL CHECK:")
 golden_pool = json.loads((GOLDEN / "candidate_pool_full.json").read_text())
 current_pool = qdb(BASE / "candidate_pool.db",
-    "SELECT ticker,signal_date,r2_score,final_score,entry_price,current_price,snapshot_ts FROM candidate_pool ORDER BY ticker,signal_date")
+    "SELECT ticker,signal_date,candidate_r2,expected_reward_score,candidate_entry_zone,current_price,snapshot_ts FROM candidate_pool ORDER BY ticker,signal_date")
 check("Candidate pool row count", len(current_pool) == len(golden_pool),
       f"{len(current_pool)} vs {len(golden_pool)}")
 
-golden_pass = [r for r in golden_pool if (r["r2_score"] or 0) >= 60 and (r["final_score"] or 0) >= 35]
-current_pass = [r for r in current_pool if (r["r2_score"] or 0) >= 60 and (r["final_score"] or 0) >= 35]
+golden_pass = [r for r in golden_pool if (r["candidate_r2"] or 0) >= 60 and (r["expected_reward_score"] or 0) >= 35]
+current_pass = [r for r in current_pool if (r["candidate_r2"] or 0) >= 60 and (r["expected_reward_score"] or 0) >= 35]
 check("Constitutional pass rows", len(current_pass) == len(golden_pass),
       f"{len(current_pass)} vs {len(golden_pass)}")
 
@@ -144,9 +144,9 @@ dup_ttd = scalar(COE_DB,
 check("timeline:no_duplicate_ticker_type_date", (dup_ttd or 0) == 0,
       f"duplicate (ticker,type,date)={dup_ttd}")
 
-# Constitutional threshold: all signals qualified at R2>=60, score>=35
+# Constitutional threshold: all signals qualified at constitutional_r2>=60, constitutional_score>=35
 thresh_violations = scalar(COE_DB,
-    "SELECT COUNT(*) FROM constitutional_opportunity_events WHERE buy_r2 < 60 OR buy_score < 35")
+    "SELECT COUNT(*) FROM constitutional_opportunity_events WHERE constitutional_r2 < 60 OR constitutional_score < 35")
 check("timeline:constitutional_threshold", (thresh_violations or 0) == 0,
       f"threshold violations={thresh_violations}")
 
@@ -180,14 +180,14 @@ if COE_DB.exists():
 else:
     check("timeline:v1_event_ids_preserved", False, "DB_NOT_FOUND")
 
-# v1 cluster_days consistency: must equal calendar span (end - start + 1)
+# v1 event_cluster_days consistency: must equal calendar span (end - start + 1)
 v1_cd_bad = scalar(COE_DB, """
     SELECT COUNT(*) FROM constitutional_opportunity_events
     WHERE signal_version='v1'
-      AND cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
+      AND event_cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
 """)
 check("timeline:v1_cluster_days_consistent", (v1_cd_bad or 0) == 0,
-      f"mismatched cluster_days={v1_cd_bad}")
+      f"mismatched event_cluster_days={v1_cd_bad}")
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 print(f"\n{'='*50}")

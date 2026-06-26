@@ -165,6 +165,7 @@ def _load_timeline() -> dict[str, dict]:
 def _derive_status(ticker: str, r2: float | None, score: float | None,
                    in_timeline: bool, return_pct: float | None,
                    has_scan_history: bool = False) -> str:
+    """Return PREMIUM/ACTIVE/UNDER_REVIEW/APPROACHING/BELOW_THRESHOLD/NO_HISTORY status label."""
     if in_timeline and return_pct is not None:
         if return_pct >= 50:
             return "PREMIUM"
@@ -182,6 +183,7 @@ def _derive_status(ticker: str, r2: float | None, score: float | None,
 def _derive_waiting_for(r2: float | None, score: float | None,
                         has_scan_history: bool = False,
                         status: str = "") -> str:
+    """Return human-readable reason string for why ticker is waiting for constitutional entry."""
     if r2 is None or r2 == 0:
         if has_scan_history:
             return "R1=0 — Price Zone not met (score=0)"
@@ -205,6 +207,7 @@ def _derive_waiting_for(r2: float | None, score: float | None,
 
 
 def _derive_action(status: str, return_pct: float | None) -> str:
+    """Return actionable instruction string (HOLD/MONITOR/WATCH) for a given status."""
     if status == "PREMIUM":
         return "HOLD — TARGET HIT"
     elif status == "ACTIVE":
@@ -246,6 +249,7 @@ def build_universe_snapshot() -> list[dict]:
 
         # R2 + score — use explicit None checks to avoid treating 0 as missing
         def _first_not_none(*vals):
+            """Return first non-None value from args, or None if all are None."""
             for v in vals:
                 if v is not None:
                     return v

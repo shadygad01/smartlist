@@ -50,6 +50,7 @@ def _semantic_ok(db_path: Path, sem: dict) -> tuple[bool, list[str]]:
     errs: list[str] = []
 
     def scalar(sql: str, params: tuple = ()):
+        """Execute sql against db_path and return first column of first row."""
         conn = sqlite3.connect(str(db_path))
         row = conn.execute(sql, params).fetchone()
         conn.close()

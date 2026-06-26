@@ -97,6 +97,16 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             "CREATE UNIQUE INDEX IF NOT EXISTS ux_coe_ticker_type_date "
             "ON constitutional_opportunity_events(ticker, event_type, event_date)"
         )
+    # One-time repair: normalise cluster_days to calendar span for all v1 events.
+    # Older rows stored qualifying trading-day counts (from migrate's len(dates)),
+    # or incremental +1 counts (from pre-fix run_daily).  Calendar span is the
+    # correct, idempotent, reproducible value: (end - start).days + 1.
+    conn.execute("""
+        UPDATE constitutional_opportunity_events
+        SET cluster_days = (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
+        WHERE signal_version = 'v1'
+          AND cluster_days != (CAST(julianday(event_end_date) - julianday(event_date) AS INTEGER) + 1)
+    """)
     conn.commit()
 
 
@@ -188,6 +198,10 @@ def migrate() -> dict:
                 total_skipped += 1
                 continue
 
+            # cluster_days = calendar span (end - start + 1), same formula used by
+            # run_daily() and register_alert_events(), so the value is always
+            # deterministic and idempotent regardless of qualifying trading days.
+            calendar_span = (cl["end"] - cl["start"]).days + 1
             tl.execute("""
                 INSERT INTO constitutional_opportunity_events
                 (event_id, ticker, event_type, event_index, event_date, event_end_date,
@@ -197,7 +211,7 @@ def migrate() -> dict:
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, (
                 eid, ticker, etype, idx,
-                cl["start"].isoformat(), cl["end"].isoformat(), len(cl["dates"]),
+                cl["start"].isoformat(), cl["end"].isoformat(), calendar_span,
                 cl["entry"], cl["r2"], cl["score"],
                 cl["r3"], cl["r4"], cl["r5"], cl["r6"], cl["r7"], cl["r8"],
                 cl["sector"], "v1", now_ts,
@@ -540,12 +554,16 @@ def run_daily() -> dict:
             last_end_dt = date.fromisoformat(last_end)
             today_dt    = date.fromisoformat(today)
             if (today_dt - last_end_dt).days <= GAP_DAYS:
-                # Extend existing cluster — update end date and days
-                tl.execute("""
-                    UPDATE constitutional_opportunity_events
-                    SET event_end_date=?, cluster_days=cluster_days+1
-                    WHERE ticker=? AND event_index=? AND signal_version='v1'
-                """, (today, t, int(existing)))
+                # Extend existing cluster — only advance when date is actually new
+                # cluster_days uses calendar span formula so repeated calls produce
+                # the same value (idempotent regardless of how many times run_daily runs)
+                if today > last_end:
+                    tl.execute("""
+                        UPDATE constitutional_opportunity_events
+                        SET event_end_date=?,
+                            cluster_days=(CAST(julianday(?) - julianday(event_date) AS INTEGER) + 1)
+                        WHERE ticker=? AND event_index=? AND signal_version='v1'
+                    """, (today, today, t, int(existing)))
                 continue
             else:
                 idx   = int(existing) + 1

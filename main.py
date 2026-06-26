@@ -145,10 +145,12 @@ TV_HEADERS = {
 # =========================================
 
 def get_dow_jones_status():
+    """Fetch the most recent Dow Jones closing price and change via yfinance, or return None on failure."""
     try:
         import threading as _thr
         _dji_result = [pd.DataFrame()]
         def _dji_fetch():
+            """Fetch DJI history in a background thread and store in _dji_result."""
             try:
                 t = yf.Ticker("^DJI")
                 _dji_result[0] = t.history(period="5d", interval="1d", auto_adjust=False)
@@ -187,6 +189,7 @@ def get_dow_jones_status():
 
 
 def build_dow_banner(dj):
+    """Return the HTML Dow Jones pre-market banner block, or empty string if data unavailable."""
     if not dj:
         return ""
     return f"""
@@ -258,6 +261,7 @@ EGX_HOLIDAYS = {
 _HOLIDAY_CAL_WARN_AFTER = date(2027, 10, 6)  # update calendar when approaching this date
 
 def is_egx_trading_day(d=None):
+    """Return True if the given date (default: today Cairo) is an EGX trading day."""
     if d is None:
         d = datetime.now(CAIRO).date()
     if d.weekday() in (4, 5):
@@ -267,6 +271,7 @@ def is_egx_trading_day(d=None):
     return d not in EGX_HOLIDAYS
 
 def most_recent_trading_day(from_date=None):
+    """Return the most recent EGX trading day on or before from_date (default: today Cairo)."""
     d = from_date or datetime.now(CAIRO).date()
     for _ in range(14):
         if is_egx_trading_day(d):
@@ -274,9 +279,15 @@ def most_recent_trading_day(from_date=None):
         d -= timedelta(days=1)
     return d
 
-def now_cairo():  return datetime.now(CAIRO)
-def today_cairo(): return now_cairo().date()
-def fmt_cairo(fmt="%A, %d %B %Y  |  %H:%M"): return now_cairo().strftime(fmt)
+def now_cairo():
+    """Return the current datetime in Cairo timezone."""
+    return datetime.now(CAIRO)
+def today_cairo():
+    """Return today's date in Cairo timezone."""
+    return now_cairo().date()
+def fmt_cairo(fmt="%A, %d %B %Y  |  %H:%M"):
+    """Return the current Cairo time formatted with the given strftime format string."""
+    return now_cairo().strftime(fmt)
 
 # =========================================
 # TRADINGVIEW SCANNER — single stock quote
@@ -405,6 +416,7 @@ def _patch_today_from_tv(df, symbol):
 
 
 def download_data(symbol, days=110):
+    """Download OHLCV data for symbol: tries CSV cache → yfinance → Yahoo API → TradingView patch."""
     # ── All stocks: CSV → yfinance → Yahoo API → TradingView patch for today ──
     # Priority 1: local committed CSVs (always available, no network, no hang)
     # Priority 2: yfinance (blocked in GitHub Actions — wrapped with 30s timeout)
@@ -452,6 +464,7 @@ def download_data(symbol, days=110):
         import threading
         _yf_result = [pd.DataFrame()]
         def _yf_fetch():
+            """Fetch yfinance history in a background thread and store in _yf_result."""
             try:
                 ticker = yf.Ticker(yf_symbol)
                 _df = ticker.history(period=period, interval="1d", auto_adjust=False, repair=True)

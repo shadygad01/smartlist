@@ -41,12 +41,14 @@ STATUS_UNDER_REVIEW       = "UNDER_REVIEW"      # return < 0%
 # ── Schema ────────────────────────────────────────────────────────────────────
 
 def _open(path: Path) -> sqlite3.Connection:
+    """Open SQLite connection with Row factory enabled."""
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def _create_schema(conn: sqlite3.Connection) -> None:
+    """Create constitutional_opportunity_events table, indexes, and apply one-time repairs."""
     conn.execute("""
         CREATE TABLE IF NOT EXISTS constitutional_opportunity_events (
             event_id         TEXT PRIMARY KEY,
@@ -111,6 +113,7 @@ def _create_schema(conn: sqlite3.Connection) -> None:
 
 
 def _event_id(ticker: str, idx: int) -> str:
+    """Return deterministic event primary key for ticker at event index."""
     return f"{ticker}_E{idx:02d}"
 
 
@@ -281,6 +284,7 @@ def _peak_after(price_index: dict, ticker: str, from_date: str) -> float:
 
 
 def _status(return_pct: float) -> str:
+    """Map return_pct to PREMIUM_NOW / ACTIVE_OPPORTUNITY / UNDER_REVIEW status label."""
     if return_pct >= 50.0:
         return STATUS_PREMIUM_NOW
     if return_pct >= 0.0:
@@ -363,6 +367,7 @@ def get_timeline(production_only: bool = False) -> list[dict]:
 
 
 def get_new_events_today() -> list[dict]:
+    """Return constitutional events whose event_date is today (for morning-brief new-signal section)."""
     today = date.today().isoformat()
     return [e for e in get_timeline() if e["event_date"] == today]
 

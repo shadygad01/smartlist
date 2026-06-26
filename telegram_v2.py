@@ -19,6 +19,7 @@ MAX_CHARS = 4000
 
 
 def _health_icon(stars: str) -> str:
+    """Return colored circle emoji representing portfolio health star rating."""
     n = stars.count("★")
     if n >= 4: return "🟢"
     if n == 3: return "🟡"
@@ -26,14 +27,17 @@ def _health_icon(stars: str) -> str:
 
 
 def _near(snap: PresentationSnapshot) -> list[dict]:
+    """Return tickers approaching constitutional entry zone."""
     return snap.approaching_entries
 
 
 def _active(snap: PresentationSnapshot) -> list[dict]:
+    """Return universe rows with ACTIVE, PREMIUM, or UNDER_REVIEW status."""
     return [u for u in snap.universe_snapshot if u["status"] in ("ACTIVE", "PREMIUM", "UNDER_REVIEW")]
 
 
 def _future(snap: PresentationSnapshot) -> list[dict]:
+    """Return universe rows not yet near entry and not active — future pipeline."""
     near_t   = {e["ticker"] for e in snap.approaching_entries}
     active_t = {u["ticker"] for u in snap.universe_snapshot
                 if u["status"] in ("ACTIVE", "PREMIUM", "UNDER_REVIEW")}
@@ -42,6 +46,7 @@ def _future(snap: PresentationSnapshot) -> list[dict]:
 
 
 def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
+    """Build and return the v2 Telegram morning brief message for the given snapshot."""
     lines = [
         TG_HEADER,
         f"*{date_str}*",
@@ -142,6 +147,7 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
 
 
 def _chunk(text: str) -> list[str]:
+    """Split text into Telegram-safe chunks of at most MAX_CHARS characters."""
     chunks, current = [], ""
     for line in text.split("\n"):
         if len(current) + len(line) + 1 > MAX_CHARS:

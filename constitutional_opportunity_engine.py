@@ -28,12 +28,14 @@ STATE_FIRST_BUY             = "FIRST_BUY"             # immutable tag on registr
 
 
 def _open(path: Path) -> sqlite3.Connection:
+    """Open SQLite connection with Row factory enabled."""
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def _create_schema(conn: sqlite3.Connection) -> None:
+    """Create constitutional_buy_registry table and indexes if not present."""
     conn.execute("""
         CREATE TABLE IF NOT EXISTS constitutional_buy_registry (
             registry_id              TEXT PRIMARY KEY,
@@ -60,6 +62,7 @@ def _create_schema(conn: sqlite3.Connection) -> None:
 
 
 def _registry_id(ticker: str, buy_date: str) -> str:
+    """Return deterministic registry primary key for ticker+date."""
     return f"{ticker}_{buy_date}"
 
 
@@ -176,6 +179,7 @@ def register_new_buy(ticker: str, buy_date: str, constitutional_entry_price: flo
 
 
 def _opportunity_status(return_pct: float) -> str:
+    """Map return_pct to PREMIUM_NOW / ACTIVE_OPPORTUNITY / UNDER_REVIEW status label."""
     if return_pct >= 50.0:
         return STATE_PREMIUM_NOW
     if return_pct >= 0.0:

@@ -100,11 +100,13 @@ CREATE INDEX IF NOT EXISTS idx_cp_status ON candidate_pool(allocator_status);
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _make_candidate_id(ticker: str, signal_date: str, candidate_entry_zone: float) -> str:
+    """Return deterministic SHA-256 candidate ID from ticker, signal date, and entry zone."""
     raw = f"{ticker}|{signal_date}|{candidate_entry_zone:.6f}"
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
 def _atr20(highs, lows, closes):
+    """Return 20-period Average True Range from raw OHLC arrays."""
     h = np.array(highs[-21:], dtype=float)
     l = np.array(lows[-21:],  dtype=float)
     c = np.array(closes[-21:], dtype=float)
@@ -116,6 +118,7 @@ def _atr20(highs, lows, closes):
 
 
 def _vol20(closes):
+    """Return 20-period log-return volatility (standard deviation) from close prices."""
     c = np.array(closes[-21:], dtype=float)
     if len(c) < 2:
         return 0.0

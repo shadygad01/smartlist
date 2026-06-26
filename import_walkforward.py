@@ -260,6 +260,7 @@ def import_to_constitutional_timeline(signals: list[dict]) -> tuple[int, int]:
 # ── Step 3: Rebuild stock DNA ──────────────────────────────────────────────────
 
 def rebuild_dna() -> None:
+    """Rebuild stock_dna.db from the enriched constitutional timeline after import."""
     try:
         from stock_dna_engine import build_stock_dna
         build_stock_dna()
@@ -271,6 +272,7 @@ def rebuild_dna() -> None:
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    """Parse walk-forward report and import signals to hist_signals and constitutional timeline."""
     print("[Import] Parsing walk-forward validation report...")
     signals = _parse_signals()
     print(f"[Import] Parsed {len(signals)} signals.")

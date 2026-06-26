@@ -32,6 +32,7 @@ RETURN_EVOLUTION_THRESHOLD = 75.0   # positions with >75% gain noted in evolutio
 
 # Signal Quality — based on R2 score (entry discount quality)
 def _signal_quality_stars(r2: float) -> tuple[str, str]:
+    """Map R2 score to (star string, quality label) for signal quality display."""
     if r2 >= 75:   return "★★★★★", "Exceptional"
     if r2 >= 65:   return "★★★★☆", "Strong"
     if r2 >= 55:   return "★★★☆☆", "Good"
@@ -46,6 +47,7 @@ def _portfolio_fit_stars(
     max_corr: float,
     held_count: int,
 ) -> tuple[str, str]:
+    """Map sector concentration, correlation, and capacity to (star string, fit label)."""
     penalty = 0
     if sector_pct >= SECTOR_PREFERRED_MAX * 1.5:  penalty += 2   # seriously elevated
     elif sector_pct > SECTOR_PREFERRED_MAX:        penalty += 1   # mildly elevated
@@ -62,6 +64,7 @@ def _portfolio_fit_stars(
 
 # Portfolio Health — based on sector concentration + correlation + fill rate
 def _portfolio_health(health: dict, sector_alloc: dict) -> tuple[str, str, list[str]]:
+    """Evaluate portfolio health and return (stars, label, observation narratives)."""
     observations = []
     penalty = 0
 
@@ -119,6 +122,7 @@ def _portfolio_health(health: dict, sector_alloc: dict) -> tuple[str, str, list[
 # ---------------------------------------------------------------------------
 
 def _init_advisor_db(conn: sqlite3.Connection):
+    """Create advisor_recommendations and advisor_reports tables if not present."""
     conn.executescript("""
     CREATE TABLE IF NOT EXISTS advisor_recommendations (
         rec_id              TEXT PRIMARY KEY,
@@ -156,6 +160,7 @@ def _init_advisor_db(conn: sqlite3.Connection):
 
 
 def _rec_id(report_date: str, ticker: str, category: str) -> str:
+    """Return deterministic 16-char hex ID for a recommendation record."""
     return hashlib.sha256(f"{report_date}|{ticker}|{category}".encode()).hexdigest()[:16]
 
 
@@ -164,6 +169,7 @@ def _rec_id(report_date: str, ticker: str, category: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _load_latest_snapshot(mgr_conn: sqlite3.Connection) -> dict:
+    """Return the most recent portfolio_snapshots row as a dict with JSON fields parsed."""
     row = mgr_conn.execute(
         "SELECT * FROM portfolio_snapshots ORDER BY rowid DESC LIMIT 1"
     ).fetchone()
@@ -180,6 +186,7 @@ def _load_latest_snapshot(mgr_conn: sqlite3.Connection) -> dict:
 
 
 def _load_candidate_states(mgr_conn: sqlite3.Connection) -> list[dict]:
+    """Return all candidate_states rows as a list of dicts with canonical field names."""
     rows = mgr_conn.execute(
         "SELECT ticker, state, candidate_r2, sector, decision_reason, "
         "portfolio_impact, suggested_action, candidate_entry_zone "
@@ -191,6 +198,7 @@ def _load_candidate_states(mgr_conn: sqlite3.Connection) -> list[dict]:
 
 
 def _load_best_pool_entry(pool_conn: sqlite3.Connection, ticker: str) -> Optional[dict]:
+    """Return highest-R2 candidate_pool row for ticker, or None if absent."""
     row = pool_conn.execute(
         "SELECT ticker, signal_date, candidate_entry_zone, candidate_r2, r3_score, r4_score, "
         "r5_score, r6_score, r7_score, r8_score, expected_reward_score, sector, "
@@ -220,6 +228,7 @@ def _classify_held(
     all_held_tickers: list[str],
     pool_conn: sqlite3.Connection,
 ) -> dict:
+    """Classify a held position and return its advisory recommendation dict."""
     ticker = holding["ticker"]
     ret = holding.get("return_pct", 0.0)
     sector = holding.get("sector", "Unknown")
@@ -347,6 +356,7 @@ def _classify_candidate(
     all_held_tickers: list[str],
     held_count: int,
 ) -> dict:
+    """Classify a BUY_RESERVE/PRIMARY_BUY/WATCH candidate and return its advisory recommendation dict."""
     ticker = cand.get("ticker", "?")
     r2 = cand.get("candidate_r2", 0.0)
     sector = cand.get("sector", "Unknown")
@@ -424,6 +434,7 @@ def _build_report(
     recs: list[dict],
     snapshot: dict,
 ) -> str:
+    """Render the full plain-text portfolio intelligence report from classified recommendations."""
     health = snapshot.get("portfolio_health_json", {})
     sector_alloc = snapshot.get("sector_alloc_json", {})
     held_count = health.get("held_positions", 0)
@@ -643,6 +654,7 @@ def run_portfolio_advisor(
     pool_db: str = POOL_DB,
     advisor_db: str = ADVISOR_DB,
 ) -> dict:
+    """Run the full portfolio advisor pipeline and return report dict with recommendations."""
     if report_date is None:
         report_date = date.today().isoformat()
 

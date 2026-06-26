@@ -17,16 +17,19 @@ SEP = "━━━━━━━━━━━━━━━━━━━━━"
 
 
 def _sign(r: float) -> str:
+    """Return '+' prefix for non-negative return values."""
     return "+" if r >= 0 else ""
 
 
 def _market_icon(status: str) -> str:
+    """Return colored circle emoji for market status (OPEN/PRE/CLOSED)."""
     if "OPEN" in status and "PRE" not in status: return "🟢"
     if "PRE" in status: return "🟡"
     return "⚫"
 
 
 def _opp_line(e: dict) -> str:
+    """Format one constitutional opportunity event as a Telegram message line."""
     etype = "🟢 FIRST BUY" if e["event_type"] == "FIRST_BUY" else "🔵 RE-ACCUM"
     return (
         f"   {etype}  *{e['ticker']}*"
@@ -37,6 +40,7 @@ def _opp_line(e: dict) -> str:
 
 
 def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
+    """Build and return the Telegram morning brief message for the given snapshot."""
     cairo_t    = _now_cairo().strftime("%H:%M")
     micon      = _market_icon(snap.market_status)
     scan_s     = snap.last_scan_ts[:16].replace("T", " ") if snap.last_scan_ts else "--"

@@ -121,18 +121,22 @@ CREATE INDEX IF NOT EXISTS idx_sh_ts     ON state_history(ts);
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _now() -> str:
+    """Return current UTC timestamp as ISO string."""
     return _dt.utcnow().isoformat()
 
 
 def _snap_id(snap_date: str) -> str:
+    """Return a short deterministic ID for a portfolio snapshot."""
     return hashlib.sha256(f"snap|{snap_date}|{_now()}".encode()).hexdigest()[:16]
 
 
 def _state_id(candidate_id: str) -> str:
+    """Return a deterministic state primary key for a candidate."""
     return hashlib.sha256(f"state|{candidate_id}".encode()).hexdigest()[:24]
 
 
 def _conn(db_path: str = MGR_DB) -> sqlite3.Connection:
+    """Open portfolio_manager.db connection with Row factory."""
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
@@ -186,6 +190,7 @@ def _build_correlation_cache(as_of: str, conn: sqlite3.Connection):
 
 
 def _get_corr(ticker_a: str, ticker_b: str, conn: sqlite3.Connection) -> float:
+    """Return cached pairwise correlation between two tickers (1.0 if same ticker)."""
     if ticker_a == ticker_b:
         return 1.0
     key = "|".join(sorted([ticker_a, ticker_b]))
@@ -196,6 +201,7 @@ def _get_corr(ticker_a: str, ticker_b: str, conn: sqlite3.Connection) -> float:
 
 
 def _max_corr_with_held(ticker: str, held_tickers: list, conn: sqlite3.Connection) -> float:
+    """Return maximum pairwise correlation between ticker and any currently held position."""
     if not held_tickers:
         return 0.0
     return max(_get_corr(ticker, h, conn) for h in held_tickers)
@@ -222,6 +228,7 @@ def _latest_candidates(pool_conn: sqlite3.Connection) -> pd.DataFrame:
 # ── State machine ─────────────────────────────────────────────────────────────
 
 def _record_transition(conn, candidate_id, ticker, from_state, to_state, reason):
+    """Append a state-machine transition record to state_history."""
     conn.execute(
         "INSERT INTO state_history (candidate_id,ticker,from_state,to_state,reason,ts)"
         " VALUES (?,?,?,?,?,?)",
@@ -230,6 +237,7 @@ def _record_transition(conn, candidate_id, ticker, from_state, to_state, reason)
 
 
 def _upsert_state(conn, row: dict):
+    """Insert or update a candidate state row in candidate_states."""
     conn.execute(
         """
         INSERT INTO candidate_states
@@ -269,6 +277,7 @@ def _sector_weights(held: list) -> dict:
 
 
 def _sector_full(sector: str, held: list) -> bool:
+    """Return True if sector weight among held positions meets or exceeds the cap."""
     w = _sector_weights(held)
     return w.get(sector, 0.0) >= MAX_SECTOR_PCT
 
@@ -385,6 +394,7 @@ def _assign_states(candidates: pd.DataFrame, held_tickers: list,
 
 def _portfolio_health(df_states: pd.DataFrame, held_tickers: list,
                       mgr_conn: sqlite3.Connection) -> dict:
+    """Compute portfolio health metrics: capacity, sector weights, max correlation."""
     n_held   = len(held_tickers)
     sec_w    = _sector_weights(held_tickers)
     max_sec  = max(sec_w.values()) if sec_w else 0.0
@@ -430,8 +440,10 @@ def _corr_matrix_subset(tickers: list, mgr_conn: sqlite3.Connection) -> dict:
 def _build_daily_report(df_states: pd.DataFrame, held_tickers: list,
                          snap_date: str, mgr_conn: sqlite3.Connection,
                          pool_conn: sqlite3.Connection) -> dict:
+    """Build full daily portfolio report dict with held detail, states, health, and correlations."""
 
     def state_rows(state_name):
+        """Return sorted list of state row dicts for the given state name."""
         sub = df_states[df_states["state"] == state_name].copy()
         sub = sub.sort_values("replacement_rank" if state_name == "BUY_RESERVE"
                               else "candidate_r2", ascending=(state_name == "BUY_RESERVE"))
@@ -571,11 +583,13 @@ def run_portfolio_manager(
 
 
 def print_daily_report(report: dict):
+    """Print formatted daily portfolio report to stdout."""
     W = 72
     sep = "=" * W
     dash = "-" * W
 
     def section(title):
+        """Print a section header separator with title."""
         print(f"\n{sep}")
         print(f"  {title}")
         print(sep)

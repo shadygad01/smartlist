@@ -390,20 +390,6 @@ def _s_buy_signals(snap) -> tuple:
 
     # ── Empty state ───────────────────────────────────────────────────────────
     if not all_signals:
-        tl = snap.timeline or []
-        if tl:
-            last = max(tl, key=lambda e: e["event_date"])
-            last_html = f"""
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px;">
-  <div class="signal-box"><div class="signal-box-lbl">Last Ticker</div>
-    <div class="signal-box-val" style="color:{B};">{last['ticker']}</div></div>
-  <div class="signal-box"><div class="signal-box-lbl">Last Signal Date</div>
-    <div class="signal-box-val" style="font-size:14px;">{last['event_date']}</div></div>
-  <div class="signal-box"><div class="signal-box-lbl">Return Since Signal</div>
-    <div class="signal-box-val" class="{_rc(last['return_pct'])}">{_sign(last['return_pct'])}{last['return_pct']:.1f}%</div></div>
-</div>"""
-        else:
-            last_html = f'<div style="color:{DIM};font-size:13px;">No constitutional events recorded yet.</div>'
         return (f"""
 <div class="card" style="border:2px solid {BOR}66;border-radius:12px;
   background:linear-gradient(135deg,{BG1} 0%,{BG2} 100%);padding:22px;">
@@ -416,7 +402,6 @@ def _s_buy_signals(snap) -> tuple:
     <div style="font-size:32px;margin-bottom:10px;">&#128274;</div>
     <div style="font-size:16px;font-weight:700;color:{DIM};margin-bottom:4px;">No Constitutional Buy Signals Available</div>
     <div style="font-size:12px;color:{DIM};margin-bottom:16px;">No tickers currently meet R2&#8805;60 + Score&#8805;35 + Price&#8804;Entry simultaneously.</div>
-    {last_html}
   </div>
 </div>""", frozenset())
 

@@ -157,6 +157,31 @@ jobs:
       - name: Cross-layer consistency (gate == dashboard == email == snapshot)
         run: python3 audit/assert_cross_layer_consistency.py
 
+      - name: Rebuild dashboard HTML for assertion validation
+        # assert_rendered_output.py compares dashboard.html against the freshly-built
+        # production_decision_snapshot.json. The committed dashboard.html is always
+        # stale (it was generated in the previous run's dashboard_deploy job).
+        # We must regenerate it here from the current snapshot before asserting.
+        # This step intentionally does NOT commit dashboard.html — the deploy job
+        # (dashboard_deploy) owns that artifact and publishes it to GitHub Pages.
+        run: |
+          python3 - <<'PYEOF'
+          import hashlib, subprocess, sys
+          sys.path.insert(0, '.')
+          from dashboard import build_dashboard
+          try:
+              commit = subprocess.check_output(
+                  ['git', 'rev-parse', '--short', 'HEAD'], stderr=subprocess.DEVNULL
+              ).decode().strip()
+          except Exception:
+              commit = 'unknown'
+          html = build_dashboard().replace('$COMMIT_MARKER$', commit)
+          build_hash = hashlib.sha256(html.encode()).hexdigest()[:16]
+          html = html.replace('data-hash=""', f'data-hash="{build_hash}"')
+          open('dashboard.html', 'w').write(html)
+          print(f'[scan_core] dashboard.html rebuilt from current snapshot ({len(html)//1024} KB)')
+          PYEOF
+
       - name: Rendered output validation (dashboard matches production snapshot)
         run: python3 audit/assert_rendered_output.py
 

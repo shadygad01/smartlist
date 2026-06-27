@@ -49,9 +49,11 @@ def _extract_buy_section(html: str) -> str:
     # the next dashboard section.  End-markers are taken verbatim from the
     # dashboard.py section-title strings (confirmed against dashboard.html).
     markers_end = [
-        "RE-ACCUMULATION SIGNALS",     # historical section — not current buy signals
-        "RE_ACCUMULATION SIGNALS",
-        "NEAR CONSTITUTIONAL ENTRY",   # actual next section title
+        # NOTE: "RE-ACCUMULATION SIGNALS" is intentionally EXCLUDED.
+        # It appears as the Block 2 header INSIDE the BUY SIGNALS card (dashboard.py _s_buy_signals).
+        # Using it as an end-marker would cut the section before Block 2, causing eligible
+        # RE_ACCUMULATION and FIRST_BUY (reaccum_hist) tickers to be reported as MISSING.
+        "NEAR CONSTITUTIONAL ENTRY",   # actual next section title (always present)
         "NEAR CONSTITUTIONAL",         # partial fallback
         "NEAR ENTRY",
         "NEAR-CONSTITUTIONAL",

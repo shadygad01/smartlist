@@ -71,20 +71,35 @@ def _sector_map() -> dict[str, str]:
     return sectors
 
 
-def _timeline_tickers() -> set[str]:
-    """Return tickers with any v1 production event."""
+def _timeline_event_types() -> dict[str, str]:
+    """
+    Return the event_type of each ticker's most recent v1 constitutional cluster.
+
+    The timeline engine assigns event_type at write time using the cluster-index
+    logic: event_index=0 → FIRST_BUY, event_index>0 → RE_ACCUMULATION. That
+    assignment is authoritative and immutable. Reading it directly here avoids
+    the re-derivation bug where a presence-only check would see a freshly-written
+    FIRST_BUY event and misclassify it as RE_ACCUMULATION.
+    """
     if not _TIMELINE_DB.exists():
-        return set()
+        return {}
     try:
         con = sqlite3.connect(str(_TIMELINE_DB))
+        # MAX(event_index) gives the most recent cluster's index for each ticker.
+        # index=0 means first-ever → FIRST_BUY; index>0 → RE_ACCUMULATION.
         rows = con.execute(
-            "SELECT DISTINCT ticker FROM constitutional_opportunity_events "
-            "WHERE signal_version='v1' OR signal_version IS NULL"
+            "SELECT ticker, MAX(event_index) as max_idx "
+            "FROM constitutional_opportunity_events "
+            "WHERE signal_version='v1' OR signal_version IS NULL "
+            "GROUP BY ticker"
         ).fetchall()
         con.close()
-        return {r[0] for r in rows}
+        return {
+            r[0]: ("FIRST_BUY" if (r[1] or 0) == 0 else "RE_ACCUMULATION")
+            for r in rows
+        }
     except Exception:
-        return set()
+        return {}
 
 
 def _sync_eligible_to_timeline(decisions: list[dict]) -> None:
@@ -202,10 +217,10 @@ def build_production_decision_snapshot() -> dict:
     db_rows = con.execute("SELECT * FROM universe_snapshot ORDER BY ticker").fetchall()
     con.close()
 
-    sectors   = _sector_map()
-    in_tl     = _timeline_tickers()
-    gen_at    = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    decisions = []
+    sectors      = _sector_map()
+    tl_etype_map = _timeline_event_types()   # ticker → event_type from timeline
+    gen_at       = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    decisions    = []
 
     for row in db_rows:
         r      = dict(row)
@@ -218,8 +233,10 @@ def build_production_decision_snapshot() -> dict:
         eligible = is_constitutional_buy(r2, score, cp, ep)
         if not eligible:
             event_type = "NONE"
-        elif ticker in in_tl:
-            event_type = "RE_ACCUMULATION"
+        elif ticker in tl_etype_map:
+            # Use the event_type the timeline engine already assigned at write time.
+            # event_index=0 → FIRST_BUY; event_index>0 → RE_ACCUMULATION.
+            event_type = tl_etype_map[ticker]
         else:
             event_type = "FIRST_BUY"
 

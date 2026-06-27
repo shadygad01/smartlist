@@ -383,15 +383,14 @@ def build_presentation_snapshot() -> PresentationSnapshot:
     # candidates — a ticker that previously had a re-accum event may be
     # approaching the constitutional gate again and must be visible.
     try:
-        live_constitutional_tickers = {
-            r["ticker"] for r in snap.universe_snapshot
-            if _is_constitutional_buy(
-                r.get("candidate_r2") or 0.0,
-                r.get("expected_reward_score") or 0.0,
-                r.get("current_price") or 0.0,
-                r.get("constitutional_entry_price") or 0.0,
-            )
-        }
+        _prod_snap_path = BASE / "production_decision_snapshot.json"
+        live_constitutional_tickers: set[str] = set()
+        if _prod_snap_path.exists():
+            import json as _json_ps
+            _prod = _json_ps.loads(_prod_snap_path.read_text())
+            live_constitutional_tickers = {
+                d["ticker"] for d in _prod.get("decisions", []) if d.get("eligible")
+            }
         signal_tickers = {
             e["ticker"] for e in (snap.new_events_today or [])
         } | live_constitutional_tickers
@@ -488,6 +487,7 @@ def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: s
         "future_candidates":   future_candidates,
         "watchlist":           watchlist,
         "universe_snapshot":   snap.universe_snapshot,
+        "new_events_today":    list(snap.new_events_today),
         "statistics": {
             "total_timeline_events":    snap.total_events,
             "total_tickers_in_timeline": snap.total_tickers,

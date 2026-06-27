@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-26",
+  "generated_at": "2026-06-27",
   "engine_version": "2.1",
   "n_signals": 1204,
   "health_score": 50,
@@ -12,20 +12,7 @@
     "mfe": 0.1273,
     "mae": -0.0727
   },
-  "top3": [
-    {
-      "id": "IMP-2",
-      "name": "Mandatory Sweep Gate (sweep_detected=1)",
-      "model_score": 83,
-      "delta_ret": 0.0082,
-      "delta_mfe": 0.0043,
-      "pf": 2.99,
-      "wf_consistent": true,
-      "overfitted": false,
-      "n_retained": 535,
-      "retention": 0.444
-    }
-  ],
+  "top3": [],
   "all_improvements": [
     {
       "id": "IMP-1",
@@ -38,17 +25,17 @@
     {
       "id": "IMP-2",
       "name": "Mandatory Sweep Gate (sweep_detected=1)",
-      "model_score": 83,
-      "delta_ret": 0.0082,
-      "retention": 0.444,
-      "wf_consistent": true
+      "model_score": 63,
+      "delta_ret": 0.0083,
+      "retention": 0.443,
+      "wf_consistent": false
     },
     {
       "id": "IMP-3",
       "name": "HTF Scoring Inversion Fix (HH+HL → 0 pts, HL-only → full pts)",
       "model_score": 41,
-      "delta_ret": -0.0017,
-      "retention": 0.855,
+      "delta_ret": -0.0018,
+      "retention": 0.852,
       "wf_consistent": false
     },
     {
@@ -63,7 +50,7 @@
       "id": "IMP-5",
       "name": "HVN + HTF_HH Super-Bonus Tier",
       "model_score": 100,
-      "delta_ret": 0.0222,
+      "delta_ret": 0.0205,
       "retention": 0.086,
       "wf_consistent": true
     },
@@ -72,7 +59,7 @@
       "name": "Combined Fix (OB remove + HTF inversion + Demand inversion)",
       "model_score": 43,
       "delta_ret": -0.0004,
-      "retention": 0.718,
+      "retention": 0.715,
       "wf_consistent": false
     }
   ],
@@ -92,8 +79,8 @@
       "rank": 3,
       "driver": "HTF Scoring Inversion (HH+HL rewarded over HL-only)",
       "severity": 80,
-      "freq_pct": 14.5,
-      "avg_impact": 0.0052
+      "freq_pct": 14.8,
+      "avg_impact": 0.0066
     },
     {
       "rank": 1,
@@ -114,7 +101,7 @@
       "driver": "Demand Zone Paradox (SV+HVN = worst outcome)",
       "severity": 65,
       "freq_pct": 0.9,
-      "avg_impact": 0.0296
+      "avg_impact": 0.0301
     },
     {
       "rank": 5,

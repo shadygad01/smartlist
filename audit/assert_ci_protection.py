@@ -11,13 +11,15 @@ Exit codes:
 from __future__ import annotations
 
 import json
-import os
 import sys
 from pathlib import Path
 
 BASE = Path(__file__).parent.parent
+sys.path.insert(0, str(BASE))
 
-_IN_CI: bool = bool(os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"))
+from audit.audit_status import AuditStatus, is_ci
+
+_IN_CI: bool = is_ci()
 
 failures  = []
 warnings  = []
@@ -26,7 +28,7 @@ warnings  = []
 snap_path = BASE / "presentation_snapshot.json"
 if not snap_path.exists():
     print("SKIPPED: presentation_snapshot.json missing — run build_presentation_snapshot() first")
-    sys.exit(2)
+    sys.exit(AuditStatus.SKIPPED)
 
 snap = json.loads(snap_path.read_text())
 
@@ -154,7 +156,7 @@ if failures:
     for f in failures:
         print(f"  ✗ {f}")
     print("\nCI GATE FAILED — do not deploy.")
-    sys.exit(1)
+    sys.exit(AuditStatus.FAIL)
 
 print("\nCI GATE PASSED — all invariants satisfied.")
-sys.exit(0)
+sys.exit(AuditStatus.PASS)

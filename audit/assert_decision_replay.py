@@ -31,6 +31,7 @@ BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
 from constitutional_gate import is_constitutional_buy
+from audit.audit_status import AuditStatus
 
 PROD_SNAP = BASE / "production_decision_snapshot.json"
 UNI_DB    = BASE / "universe_snapshot.db"
@@ -116,7 +117,7 @@ def _csv_price(ticker: str) -> tuple[float | None, str]:
 def main() -> int:
     if not PROD_SNAP.exists():
         print("SKIPPED: production_decision_snapshot.json not found — run build_production_decision_snapshot.py first")
-        return 2
+        return AuditStatus.SKIPPED
 
     prod      = json.loads(PROD_SNAP.read_text())
     decisions = prod.get("decisions", [])
@@ -217,10 +218,10 @@ def main() -> int:
         for f in failures:
             print(f"  ✗ {f}")
         print("\nASSERTION FAILED — gate replay differs from production.")
-        return 1
+        return AuditStatus.FAIL
 
     print("ASSERTION PASSED — all gate replays match production.")
-    return 0
+    return AuditStatus.PASS
 
 
 if __name__ == "__main__":

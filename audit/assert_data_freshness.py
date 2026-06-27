@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import csv as _csv
 import json
-import os
 import sqlite3
 import sys
 from datetime import datetime, timezone
@@ -25,10 +24,9 @@ from pathlib import Path
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
-# Detect CI execution context.
-# GitHub Actions sets CI=true and GITHUB_ACTIONS=true.
-# Only enforce stale-data failures when running in CI.
-_IN_CI: bool = bool(os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"))
+from audit.audit_status import AuditStatus, is_ci
+
+_IN_CI: bool = is_ci()
 
 HIST_DIR = BASE / "historical_data" / "historical_data"
 
@@ -244,17 +242,17 @@ def main() -> int:
             print(f"  ⚠ {e}")
         if not hard_failures:
             print("\nASSERTION EXPECTED — data is stale for a dev/manual run (not a production failure).")
-            return 3
+            return AuditStatus.EXPECTED
 
     if hard_failures:
         print("\nFRESHNESS FAILURES:")
         for f in hard_failures:
             print(f"  ✗ {f}")
         print("\nASSERTION FAILED — stale production data detected.")
-        return 1
+        return AuditStatus.FAIL
 
     print("ASSERTION PASSED — all required data sources are fresh.")
-    return 0
+    return AuditStatus.PASS
 
 
 if __name__ == "__main__":

@@ -26,6 +26,8 @@ from pathlib import Path
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
+from audit.audit_status import AuditStatus
+
 NOTIF_DB    = BASE / "notification_delivery.db"
 TIMELINE_DB = BASE / "constitutional_opportunity_events.db"
 PRES_SNAP   = BASE / "presentation_snapshot.json"
@@ -197,10 +199,10 @@ def main() -> int:
         for f in failures:
             print(f"  ✗ {f}")
         print("\nASSERTION FAILED — event chain is broken.")
-        return 1
+        return AuditStatus.FAIL
 
     print(f"ASSERTION PASSED — {len(transitions)} event chain(s) intact.")
-    return 0
+    return AuditStatus.PASS
 
 
 if __name__ == "__main__":

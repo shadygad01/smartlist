@@ -1,0 +1,85 @@
+{
+  "generated_at": "2026-06-27T07:10:34+00:00",
+  "mode": "dev/manual",
+  "verdict": "PASS",
+  "assertions": [
+    {
+      "label": "Decision Consistency",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 constitutional gate.is_constitutional_buy is single s"
+    },
+    {
+      "label": "Full Universe Replay",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 all 27 tickers replay identically."
+    },
+    {
+      "label": "Cross Layer Consistency",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 all layers agree on constitutional decisions."
+    },
+    {
+      "label": "Rendered Output",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 rendered dashboard consistent with production snapsho"
+    },
+    {
+      "label": "Event Chain Integrity",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 no transitions to validate."
+    },
+    {
+      "label": "Data Freshness",
+      "status": "EXPECTED",
+      "status_code": 3,
+      "brief": "ASSERTION EXPECTED \u2014 data is stale for a dev/manual run (not a productio"
+    },
+    {
+      "label": "Workflow Completeness",
+      "status": "EXPECTED",
+      "status_code": 3,
+      "brief": "ASSERTION EXPECTED \u2014 dev/manual run has expected staleness or ordering g"
+    },
+    {
+      "label": "Decision Replay",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 all gate replays match production."
+    },
+    {
+      "label": "Regression Suite",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 all regression tests pass."
+    },
+    {
+      "label": "Presentation Consistency",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 presentation_snapshot.json is internally consistent."
+    },
+    {
+      "label": "Price Consistency",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 all sections show identical current prices."
+    },
+    {
+      "label": "Ci Protection",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "CI GATE PASSED \u2014 all invariants satisfied."
+    }
+  ],
+  "summary": {
+    "pass": 10,
+    "fail": 0,
+    "expected": 2,
+    "skipped": 0
+  }
+}

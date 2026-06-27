@@ -22,6 +22,7 @@ BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
 from constitutional_gate import is_constitutional_buy
+from audit.audit_status import AuditStatus
 
 PROD_SNAP = BASE / "production_decision_snapshot.json"
 PRES_SNAP = BASE / "presentation_snapshot.json"
@@ -43,7 +44,7 @@ def _near(a: float, b: float, tol: float) -> bool:
 def main() -> int:
     if not PROD_SNAP.exists():
         print("SKIPPED: production_decision_snapshot.json not found — run build_production_decision_snapshot.py first")
-        return 2
+        return AuditStatus.SKIPPED
 
     prod      = json.loads(PROD_SNAP.read_text())
     prod_by_t = {d["ticker"]: d for d in prod.get("decisions", [])}
@@ -175,10 +176,10 @@ def main() -> int:
         for f in failures:
             print(f"  ✗ {f}")
         print("\nASSERTION FAILED — presentation layers produce inconsistent decisions.")
-        return 1
+        return AuditStatus.FAIL
 
     print("\nASSERTION PASSED — all layers agree on constitutional decisions.")
-    return 0
+    return AuditStatus.PASS
 
 
 if __name__ == "__main__":

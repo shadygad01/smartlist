@@ -19,6 +19,7 @@ BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
 from constitutional_gate import is_constitutional_buy, CONST_R2_MIN, CONST_SCORE_MIN
+from audit.audit_status import AuditStatus
 
 failures: list[str] = []
 
@@ -121,7 +122,7 @@ if failures:
     for f in failures:
         print(f"  ✗ {f}")
     print("\nASSERTION FAILED — constitutional gate is not the single source of truth.")
-    sys.exit(1)
+    sys.exit(AuditStatus.FAIL)
 
 print("\nASSERTION PASSED — constitutional gate.is_constitutional_buy is single source of truth.")
-sys.exit(0)
+sys.exit(AuditStatus.PASS)

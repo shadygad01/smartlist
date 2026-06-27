@@ -15,11 +15,15 @@ import json, sys
 from pathlib import Path
 
 BASE = Path(__file__).parent.parent
+sys.path.insert(0, str(BASE))
+
+from audit.audit_status import AuditStatus
+
 snap_path = BASE / "presentation_snapshot.json"
 
 if not snap_path.exists():
     print("SKIPPED: presentation_snapshot.json missing — run build_presentation_snapshot() first")
-    sys.exit(2)
+    sys.exit(AuditStatus.SKIPPED)
 
 data = json.loads(snap_path.read_text())
 
@@ -66,7 +70,7 @@ if failures:
     for f in failures:
         print(f"  ✗ {f}")
     print("\nASSERTION FAILED — presentation layers would produce inconsistent output.")
-    sys.exit(1)
+    sys.exit(AuditStatus.FAIL)
 
 print("\nASSERTION PASSED — presentation_snapshot.json is internally consistent.")
-sys.exit(0)
+sys.exit(AuditStatus.PASS)

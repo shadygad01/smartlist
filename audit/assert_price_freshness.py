@@ -9,6 +9,9 @@ from pathlib import Path
 from datetime import datetime, date, timedelta
 
 BASE = Path(__file__).parent.parent
+sys.path.insert(0, str(BASE))
+
+from audit.audit_status import AuditStatus
 
 def _latest_signal_date() -> str:
     sh_path = BASE / "signal_history.json"
@@ -43,7 +46,7 @@ print(f"Latest signal_history date : {latest_signal_date or 'UNKNOWN'}")
 snap_path = BASE / "universe_snapshot.db"
 if not snap_path.exists():
     print("SKIPPED: universe_snapshot.db missing — run build_universe_snapshot() first")
-    sys.exit(2)
+    sys.exit(AuditStatus.SKIPPED)
 
 conn = sqlite3.connect(str(snap_path))
 conn.row_factory = sqlite3.Row
@@ -107,7 +110,7 @@ if failures:
     for f in failures:
         print(f"  ✗ {f}")
     print("\nASSERTION FAILED — prices are stale. Do NOT deploy.")
-    sys.exit(1)
+    sys.exit(AuditStatus.FAIL)
 
 print("\nASSERTION PASSED — all prices are current.")
-sys.exit(0)
+sys.exit(AuditStatus.PASS)

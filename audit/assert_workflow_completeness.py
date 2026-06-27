@@ -17,7 +17,6 @@ Exit codes:
 """
 from __future__ import annotations
 
-import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,7 +24,9 @@ from pathlib import Path
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
-_IN_CI: bool = bool(os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"))
+from audit.audit_status import AuditStatus, is_ci
+
+_IN_CI: bool = is_ci()
 
 # (stage_label, rel_path_or_dir, max_age_hours, required, is_dir)
 STAGES = [
@@ -143,14 +144,14 @@ def main() -> int:
         for f in hard_failures:
             print(f"  ✗ {f}")
         print("\nASSERTION FAILED — pipeline did not complete all required stages.")
-        return 1
+        return AuditStatus.FAIL
 
     if expected_issues and not _IN_CI:
         print("\nASSERTION EXPECTED — dev/manual run has expected staleness or ordering gaps.")
-        return 3
+        return AuditStatus.EXPECTED
 
     print("ASSERTION PASSED — all required pipeline stages completed.")
-    return 0
+    return AuditStatus.PASS
 
 
 if __name__ == "__main__":

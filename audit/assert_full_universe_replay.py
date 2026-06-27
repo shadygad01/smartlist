@@ -24,6 +24,7 @@ BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
 from constitutional_gate import evaluate, is_constitutional_buy
+from audit.audit_status import AuditStatus
 
 PROD_SNAP = BASE / "production_decision_snapshot.json"
 UNI_DB    = BASE / "universe_snapshot.db"
@@ -45,7 +46,7 @@ def _float_eq(a: float, b: float, tol: float = FLOAT_TOL) -> bool:
 def main() -> int:
     if not PROD_SNAP.exists():
         print("SKIPPED: production_decision_snapshot.json not found — run build_production_decision_snapshot.py first")
-        return 2
+        return AuditStatus.SKIPPED
 
     prod     = json.loads(PROD_SNAP.read_text())
     stored   = {d["ticker"]: d for d in prod.get("decisions", [])}
@@ -53,7 +54,7 @@ def main() -> int:
 
     if not stored:
         print("SKIPPED: production_decision_snapshot.json has no decisions")
-        return 2
+        return AuditStatus.SKIPPED
 
     # Load universe_snapshot.db — authoritative inputs
     uni_by_t: dict[str, dict] = {}
@@ -184,10 +185,10 @@ def main() -> int:
         for f in failures:
             print(f"  ✗ {f}")
         print("\nASSERTION FAILED — full universe replay diverged from production snapshot.")
-        return 1
+        return AuditStatus.FAIL
 
     print(f"ASSERTION PASSED — all {len(stored)} tickers replay identically.")
-    return 0
+    return AuditStatus.PASS
 
 
 if __name__ == "__main__":

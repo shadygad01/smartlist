@@ -31,6 +31,8 @@ from pathlib import Path
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
+from audit.audit_status import AuditStatus
+
 PROD_SNAP  = BASE / "production_decision_snapshot.json"
 DASH_HTML  = BASE / "dashboard.html"
 PRES_SNAP  = BASE / "presentation_snapshot.json"
@@ -106,10 +108,10 @@ def _entry_price_near_ticker(html: str, ticker: str) -> float | None:
 def main() -> int:
     if not PROD_SNAP.exists():
         print("SKIPPED: production_decision_snapshot.json not found — run build_production_decision_snapshot.py first")
-        return 2
+        return AuditStatus.SKIPPED
     if not DASH_HTML.exists():
         print("SKIPPED: dashboard.html not found — run dashboard.py first")
-        return 2
+        return AuditStatus.SKIPPED
 
     prod       = json.loads(PROD_SNAP.read_text())
     decisions  = {d["ticker"]: d for d in prod.get("decisions", [])}
@@ -211,10 +213,10 @@ def main() -> int:
         for f in failures:
             print(f"  ✗ {f}")
         print("\nASSERTION FAILED — rendered dashboard diverges from production snapshot.")
-        return 1
+        return AuditStatus.FAIL
 
     print("ASSERTION PASSED — rendered dashboard consistent with production snapshot.")
-    return 0
+    return AuditStatus.PASS
 
 
 if __name__ == "__main__":

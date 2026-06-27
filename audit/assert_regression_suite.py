@@ -1,5 +1,5 @@
 """
-Regression Suite — Phase 8 Constitutional Hardening.
+Regression Suite — Phase 8 / Architecture Certification.
 
 Every bug previously fixed becomes a permanent regression test.
 Any future code change that reintroduces a fixed bug will fail CI here.
@@ -18,6 +18,12 @@ Tests (each numbered for traceability):
   R-11  No orphan timeline events (every timeline ticker is in the universe)
   R-12  main.py and dashboard.py import from constitutional_gate
   R-13  production_decision_snapshot.json exists and has decisions
+  R-14  Only build_production_decision_snapshot.py writes production snapshot
+  R-15  No renderer-side inline gate logic in email/presentation files
+  R-16  No orphan CONSTITUTIONAL_BUY notifications without timeline entry
+  R-17  constitutional_timeline_engine and opportunity_engine import constitutional_gate
+  R-18  AuditStatus class defined only in audit/audit_status.py (Contract 8)
+  R-19  is_constitutional_buy() defined only in constitutional_gate.py (Contract 1)
 
 Exits 1 on any violation.
 """
@@ -31,6 +37,8 @@ from pathlib import Path
 
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
+
+from audit.audit_status import AuditStatus
 
 failures: dict[str, list[str]] = {}
 
@@ -310,6 +318,40 @@ for _rel in _ENGINE_FILES:
         _fail("R-17", f"{_rel} does not import from constitutional_gate "
               "(engine files must not hardcode constitutional thresholds)")
 
+# ── R-18: AuditStatus class defined only in audit/audit_status.py ─────────────
+_AUDIT_STATUS_MOD = BASE / "audit" / "audit_status.py"
+_AUDIT_STATUS_PAT = re.compile(r"class\s+AuditStatus\s*\(")
+for _fp in sorted(BASE.glob("**/*.py")):
+    if _fp == _AUDIT_STATUS_MOD:
+        continue
+    _rel = str(_fp.relative_to(BASE))
+    if _rel.startswith("archive/") or _rel.startswith("."):
+        continue
+    try:
+        _t = _fp.read_text()
+        for _m in _AUDIT_STATUS_PAT.finditer(_t):
+            _ln = _t[:_m.start()].count("\n") + 1
+            _fail("R-18", f"{_rel}:{_ln} defines AuditStatus class (must use audit/audit_status.py)")
+    except Exception:
+        pass
+
+# ── R-19: is_constitutional_buy() defined only in constitutional_gate.py ──────
+_IS_BUY_PAT = re.compile(r"def\s+is_constitutional_buy\s*\(")
+for _fp in sorted(BASE.glob("**/*.py")):
+    if _fp == _GATE:
+        continue
+    _rel = str(_fp.relative_to(BASE))
+    if _rel.startswith("archive/") or _rel.startswith("."):
+        continue
+    try:
+        _t = _fp.read_text()
+        for _m in _IS_BUY_PAT.finditer(_t):
+            _ln = _t[:_m.start()].count("\n") + 1
+            _fail("R-19", f"{_rel}:{_ln} defines is_constitutional_buy() "
+                  "(must only exist in constitutional_gate.py)")
+    except Exception:
+        pass
+
 # ── Report ─────────────────────────────────────────────────────────────────────
 print("Regression Suite")
 print()
@@ -331,7 +373,9 @@ _TESTS = [
     ("R-14", "Only build_production_decision_snapshot.py writes production snapshot"),
     ("R-15", "No renderer-side inline gate logic in email/presentation files"),
     ("R-16", "No orphan CONSTITUTIONAL_BUY notifications without timeline entry"),
-    ("R-17", "egx_email.py and scan_orchestrator import constitutional_gate"),
+    ("R-17", "Engine files import constitutional_gate"),
+    ("R-18", "AuditStatus defined only in audit/audit_status.py (Contract 8)"),
+    ("R-19", "is_constitutional_buy() defined only in constitutional_gate.py (Contract 1)"),
 ]
 
 total  = len(_TESTS)
@@ -350,7 +394,7 @@ print(f"Results: {passed}/{total} regression tests passed")
 
 if failures:
     print("\nASSERTION FAILED — regression(s) detected.")
-    sys.exit(1)
+    sys.exit(AuditStatus.FAIL)
 
 print("ASSERTION PASSED — all regression tests pass.")
-sys.exit(0)
+sys.exit(AuditStatus.PASS)

@@ -16,6 +16,7 @@ Input mismatch (DB vs snapshot) is a warning (pool/db may have been refreshed mi
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -92,8 +93,14 @@ def main() -> int:
 
         # Derive stored entry_price from snapshot — inverse of evaluate():
         # constitutional_entry_price = entry_price if ep>0 else current_price
+        # When cep == cp, the original ep could be 0 (→ cep=cp) or cp (→ cep=cp).
+        # Parse the stored reason's "Entry=X" field to disambiguate.
         stored_cep = float(s.get("constitutional_entry_price") or 0)
-        stored_ep  = stored_cep if (stored_cep != stored_cp or stored_cp == 0) else 0.0
+        if stored_cep != stored_cp or stored_cp == 0:
+            stored_ep = stored_cep
+        else:
+            m = re.search(r"Entry=([\d.]+)", s.get("reason", ""))
+            stored_ep = float(m.group(1)) if m else 0.0
 
         if not _float_eq(db_r2, stored_r2):
             warnings.append(f"{ticker}: DB R2={db_r2:.4f} vs stored R2={stored_r2:.4f} (DB may have refreshed)")

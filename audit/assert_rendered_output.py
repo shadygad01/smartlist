@@ -55,6 +55,8 @@ def _extract_buy_section(html: str) -> str:
         "id=\"near",
         "id=\"future",
         "id=\"waiting",
+        "RE-ACCUMULATION SIGNALS",  # historical section — not current buy signals
+        "RE_ACCUMULATION SIGNALS",
     ]
     start_m = re.search(r"CONSTITUTIONAL BUY SIGNALS", html)
     if not start_m:

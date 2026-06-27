@@ -81,22 +81,28 @@ def main() -> int:
     print(f"  CONSTITUTIONAL_BUY transitions today: {len(transitions)}")
 
     # ── Load supporting layers ────────────────────────────────────────────────
+    # Build per-ticker active-cluster lookup: a v1 event is "active today" if
+    # event_date <= today <= event_end_date (clusters span multiple days).
+    # Newly-created events also pass because event_date = event_end_date = today.
     tl_today: dict[str, dict] = {}
     if TIMELINE_DB.exists():
         try:
             con = sqlite3.connect(str(TIMELINE_DB))
             con.row_factory = sqlite3.Row
-            rows = con.execute(
-                "SELECT * FROM constitutional_opportunity_events "
-                "WHERE event_date=? AND (signal_version='v1' OR signal_version IS NULL) "
-                "ORDER BY created_at DESC",
-                (today,)
-            ).fetchall()
+            active_tickers = {tr["ticker"] for tr in transitions}
+            for t in active_tickers:
+                rows = con.execute(
+                    "SELECT * FROM constitutional_opportunity_events "
+                    "WHERE ticker=? "
+                    "  AND event_date <= ? "
+                    "  AND (event_end_date IS NULL OR event_end_date >= ?) "
+                    "  AND (signal_version='v1' OR signal_version IS NULL) "
+                    "ORDER BY event_date DESC LIMIT 1",
+                    (t, today, today)
+                ).fetchall()
+                if rows:
+                    tl_today[t] = dict(rows[0])
             con.close()
-            for r in rows:
-                t = r["ticker"]
-                if t not in tl_today:
-                    tl_today[t] = dict(r)
         except Exception as e:
             warnings.append(f"timeline DB read error: {e}")
 
@@ -140,7 +146,10 @@ def main() -> int:
         print(f"    ✓ Timeline: event_type={tl_type}  r2={tl_r2:.1f}  score={tl_score:.1f}  entry={tl_ep:.4f}")
 
         # Link 2: timeline → production_decision_snapshot (eligible=True)
-        if ticker in prod_by_t:
+        # Only enforce for NEW buy signals (not self-maintenance CONSTITUTIONAL_BUY→CONSTITUTIONAL_BUY).
+        # Self-transitions are logged for tracking; eligible may temporarily drop while state persists.
+        is_new_transition = tr.get("from_state") != "CONSTITUTIONAL_BUY"
+        if ticker in prod_by_t and is_new_transition:
             prod = prod_by_t[ticker]
             if not prod["eligible"]:
                 failures.append(f"{ticker}: signal fired today but production_decision_snapshot.eligible=False")
@@ -155,6 +164,8 @@ def main() -> int:
                     print(f"    ✗ Production: entry_price MISMATCH {tl_ep} != {prod_ep}")
                 else:
                     print(f"    ✓ Production: eligible=True  entry={prod_ep:.4f}")
+        elif not is_new_transition:
+            print(f"    ⚠ Production: self-transition (ongoing signal, snapshot check skipped)")
         else:
             warnings.append(f"{ticker}: not in production_decision_snapshot (may be from earlier pipeline run)")
             print(f"    ⚠ Production: not in snapshot (earlier run?)")

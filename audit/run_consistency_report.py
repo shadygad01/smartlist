@@ -47,6 +47,9 @@ ASSERTIONS = [
     "assert_production_invariants.py",
     "assert_no_direct_notify_calls.py",
     "assert_fault_injection.py",
+    "assert_scan_id_consistency.py",
+    "assert_schema_compliance.py",
+    "assert_e2e_constitutional_audit.py",
 ]
 
 _STATUS_LABELS = {

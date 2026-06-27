@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-27T15:24:01+00:00",
+  "generated_at": "2026-06-27T15:39:48+00:00",
   "mode": "dev/manual",
   "verdict": "PASS",
   "assertions": [
@@ -31,7 +31,7 @@
       "label": "Event Chain Integrity",
       "status": "PASS",
       "status_code": 0,
-      "brief": "ASSERTION PASSED \u2014 2 event chain(s) intact."
+      "brief": "ASSERTION PASSED \u2014 1 event chain(s) intact."
     },
     {
       "label": "Data Freshness",
@@ -92,10 +92,28 @@
       "status": "PASS",
       "status_code": 0,
       "brief": "ASSERTION PASSED \u2014 all fault injection tests confirm:"
+    },
+    {
+      "label": "Scan Id Consistency",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 scan_id propagated consistently across all artifacts."
+    },
+    {
+      "label": "Schema Compliance",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 all artifacts comply with their JSON Schema contracts"
+    },
+    {
+      "label": "E2E Constitutional Audit",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "CONSTITUTIONAL INTEGRITY: PASS"
     }
   ],
   "summary": {
-    "pass": 15,
+    "pass": 18,
     "fail": 0,
     "expected": 0,
     "skipped": 0

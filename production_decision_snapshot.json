@@ -1,7 +1,31 @@
 {
-  "generated_at": "2026-06-27T15:23:53+00:00",
+  "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+  "generated_at": "2026-06-27T15:39:38+00:00",
   "ticker_count": 27,
   "eligible_count": 1,
+  "gate_version": "cff742390944766e",
+  "git_commit": "26eae55",
+  "workflow_run": "28289544273",
+  "_lineage": {
+    "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+    "producer": "build_production_decision_snapshot.py",
+    "parent_artifacts": [
+      "universe_snapshot.db",
+      "constitutional_opportunity_events.db",
+      "candidate_pool.db",
+      "constitutional_gate.py"
+    ],
+    "generation_timestamp": "2026-06-27T15:39:38+00:00",
+    "git_commit": "26eae55",
+    "gate_version": "cff742390944766e",
+    "workflow_run": "28289544273",
+    "source_fingerprints": {
+      "universe_snapshot.db": "3260c8590e451dba",
+      "constitutional_opportunity_events.db": "6da000c06856d64c",
+      "candidate_pool.db": "28a1ce4e8fdb0cc7",
+      "constitutional_gate.py": "602aed5c03d3e747"
+    }
+  },
   "decisions": [
     {
       "ticker": "ABUK.CA",
@@ -16,7 +40,37 @@
       "event_date": "",
       "return_pct": 0.0,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 82.54,
+          "pass": true
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 37.16,
+          "pass": true
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 69.05,
+          "entry_price": 69.05,
+          "pct_vs_entry": 0.0,
+          "pass": true,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "ADIB.CA",
@@ -31,7 +85,37 @@
       "event_date": "",
       "return_pct": 0.0,
       "status": "BELOW_THRESHOLD",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 44.65,
+          "entry_price": 0.0,
+          "pct_vs_entry": null,
+          "pass": true,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "ARCC.CA",
@@ -46,7 +130,37 @@
       "event_date": "",
       "return_pct": 24.53,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 55.44,
+          "entry_price": 44.521,
+          "pct_vs_entry": 24.5255,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "BTFH.CA",
@@ -61,7 +175,37 @@
       "event_date": "",
       "return_pct": 1.34,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 52.69,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 58.9,
+          "pass": true
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 3.03,
+          "entry_price": 2.99,
+          "pct_vs_entry": 1.3378,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "CCAP.CA",
@@ -76,7 +220,37 @@
       "event_date": "",
       "return_pct": 0.0,
       "status": "BELOW_THRESHOLD",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 78.0,
+          "pass": true
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 4.88,
+          "entry_price": 0.0,
+          "pct_vs_entry": null,
+          "pass": true,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "COMI.CA",
@@ -91,7 +265,37 @@
       "event_date": "",
       "return_pct": 38.31,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 132.5,
+          "entry_price": 95.7993,
+          "pct_vs_entry": 38.31,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "EAST.CA",
@@ -106,7 +310,37 @@
       "event_date": "",
       "return_pct": -0.15,
       "status": "UNDER_REVIEW",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 33.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 38.5,
+          "entry_price": 38.557,
+          "pct_vs_entry": -0.1478,
+          "pass": true,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "EFID.CA",
@@ -121,7 +355,37 @@
       "event_date": "",
       "return_pct": 9.4,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 49.92,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 38.93,
+          "pass": true
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 26.8,
+          "entry_price": 24.4978,
+          "pct_vs_entry": 9.3976,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "EFIH.CA",
@@ -136,7 +400,37 @@
       "event_date": "",
       "return_pct": 11.12,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 20.78,
+          "entry_price": 18.7,
+          "pct_vs_entry": 11.123,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "EGAL.CA",
@@ -151,7 +445,37 @@
       "event_date": "",
       "return_pct": 0.0,
       "status": "BELOW_THRESHOLD",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 281.82,
+          "entry_price": 0.0,
+          "pct_vs_entry": null,
+          "pass": true,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "EMFD.CA",
@@ -166,7 +490,37 @@
       "event_date": "",
       "return_pct": 26.77,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 11.84,
+          "entry_price": 9.34,
+          "pct_vs_entry": 26.7666,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "ETEL.CA",
@@ -181,7 +535,37 @@
       "event_date": "",
       "return_pct": 3.87,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 49.0,
+          "pass": true
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 93.65,
+          "entry_price": 90.16,
+          "pct_vs_entry": 3.8709,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "FWRY.CA",
@@ -196,7 +580,37 @@
       "event_date": "",
       "return_pct": 8.85,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 54.25,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 67.76,
+          "pass": true
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 18.7,
+          "entry_price": 17.18,
+          "pct_vs_entry": 8.8475,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "GBCO.CA",
@@ -211,7 +625,37 @@
       "event_date": "",
       "return_pct": 23.43,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 68.0,
+          "pass": true
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 31.5,
+          "entry_price": 25.52,
+          "pct_vs_entry": 23.4326,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "HELI.CA",
@@ -226,7 +670,37 @@
       "event_date": "",
       "return_pct": 106.27,
       "status": "PREMIUM",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 68.0,
+          "pass": true
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 6.53,
+          "entry_price": 3.1657,
+          "pct_vs_entry": 106.2735,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "HRHO.CA",
@@ -241,7 +715,37 @@
       "event_date": "",
       "return_pct": -0.56,
       "status": "UNDER_REVIEW",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 51.44,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 53.33,
+          "pass": true
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 26.86,
+          "entry_price": 27.01,
+          "pct_vs_entry": -0.5553,
+          "pass": true,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "ISPH.CA",
@@ -256,7 +760,37 @@
       "event_date": "",
       "return_pct": 17.92,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 2.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 66.0,
+          "pass": true
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 12.05,
+          "entry_price": 10.2186,
+          "pct_vs_entry": 17.9222,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "JUFO.CA",
@@ -271,7 +805,37 @@
       "event_date": "",
       "return_pct": 18.78,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 30.46,
+          "entry_price": 25.6451,
+          "pct_vs_entry": 18.7751,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "MCQE.CA",
@@ -286,7 +850,37 @@
       "event_date": "",
       "return_pct": 0.39,
       "status": "APPROACHING",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 74.07,
+          "pass": true
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 37.31,
+          "pass": true
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 167.99,
+          "entry_price": 167.34,
+          "pct_vs_entry": 0.3884,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "OIH.CA",
@@ -301,7 +895,37 @@
       "event_date": "",
       "return_pct": 3.68,
       "status": "APPROACHING",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 55.46,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 38.94,
+          "pass": true
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 1.41,
+          "entry_price": 1.36,
+          "pct_vs_entry": 3.6765,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "ORAS.CA",
@@ -316,7 +940,37 @@
       "event_date": "",
       "return_pct": 0.0,
       "status": "BELOW_THRESHOLD",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 734.0,
+          "entry_price": 0.0,
+          "pct_vs_entry": null,
+          "pass": true,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "ORHD.CA",
@@ -331,7 +985,37 @@
       "event_date": "",
       "return_pct": 57.68,
       "status": "PREMIUM",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 38.82,
+          "entry_price": 24.62,
+          "pct_vs_entry": 57.6767,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "ORWE.CA",
@@ -346,7 +1030,37 @@
       "event_date": "",
       "return_pct": 11.01,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 22.84,
+          "entry_price": 20.5745,
+          "pct_vs_entry": 11.0112,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "PHDC.CA",
@@ -361,7 +1075,37 @@
       "event_date": "",
       "return_pct": 75.93,
       "status": "PREMIUM",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 15.13,
+          "entry_price": 8.6,
+          "pct_vs_entry": 75.9302,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "RAYA.CA",
@@ -376,7 +1120,37 @@
       "event_date": "",
       "return_pct": 0.0,
       "status": "BELOW_THRESHOLD",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 7.4,
+          "entry_price": 0.0,
+          "pct_vs_entry": null,
+          "pass": true,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "RMDA.CA",
@@ -391,7 +1165,37 @@
       "event_date": "",
       "return_pct": 50.57,
       "status": "PREMIUM",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 69.0,
+          "pass": true
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 4.94,
+          "entry_price": 3.2808,
+          "pct_vs_entry": 50.573,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     },
     {
       "ticker": "TMGH.CA",
@@ -406,7 +1210,37 @@
       "event_date": "",
       "return_pct": 21.73,
       "status": "ACTIVE",
-      "generated_at": "2026-06-27T15:23:53+00:00"
+      "generated_at": "2026-06-27T15:39:38+00:00",
+      "scan_id": "a601d2c4-4a30-4fcc-8e5f-1bebdab344c2",
+      "gate_version": "cff742390944766e",
+      "git_commit": "26eae55",
+      "workflow_run": "28289544273",
+      "rules_evaluated": [
+        {
+          "rule": "r2_gate",
+          "name": "Discount Quality (R2)",
+          "threshold": 60.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "score_gate",
+          "name": "Expected Reward Score",
+          "threshold": 35.0,
+          "value": 0.0,
+          "pass": false
+        },
+        {
+          "rule": "price_gate",
+          "name": "Price At/Below Entry Zone",
+          "expression": "current_price <= entry_price  (or entry_price <= 0)",
+          "current_price": 95.86,
+          "entry_price": 78.7479,
+          "pct_vs_entry": 21.7302,
+          "pass": false,
+          "note": "gate passes when entry_price <= 0 (entry zone not yet established)"
+        }
+      ]
     }
   ]
 }

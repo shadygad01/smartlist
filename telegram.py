@@ -6,12 +6,28 @@ telegram_debounce.json replaced by telegram_delivery SQLite table (exactly-once)
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from presentation.presentation_snapshot import PresentationSnapshot, build_presentation_snapshot
 from notifications.notification_router import (
     route as _route,
     MORNING_BRIEF, FIRST_BUY, NEAR_CONSTITUTIONAL,
 )
 from time_authority import now_cairo as _now_cairo
+
+_BASE = Path(__file__).parent
+
+
+def _load_eligible() -> list[dict]:
+    """Return eligible decisions from production_decision_snapshot.json."""
+    p = _BASE / "production_decision_snapshot.json"
+    if not p.exists():
+        return []
+    try:
+        return [d for d in json.loads(p.read_text()).get("decisions", []) if d.get("eligible")]
+    except Exception:
+        return []
 
 SEP = "━━━━━━━━━━━━━━━━━━━━━"
 
@@ -53,6 +69,19 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
         f"*{date_str}* | {cairo_t} Cairo | {micon} {snap.market_status}",
         "",
     ]
+
+    eligible = _load_eligible()
+    if eligible:
+        lines.append(f"🟢 *CONSTITUTIONAL BUY SIGNALS ({len(eligible)} active)*")
+        for d in sorted(eligible, key=lambda x: -(x.get("constitutional_r2") or 0)):
+            ep  = float(d.get("constitutional_entry_price") or 0)
+            cp  = float(d.get("current_price") or 0)
+            r2  = float(d.get("constitutional_r2") or 0)
+            lines.append(
+                f"   ✅ *{d['ticker']}*  BUY LIMIT @ {ep:.2f} EGP  "
+                f"(Now: {cp:.2f}  R2: {r2:.1f})"
+            )
+        lines.append("")
 
     if snap.new_events_today:
         lines.append(f"⚡ *NEW TODAY ({len(snap.new_events_today)})*")

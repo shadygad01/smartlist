@@ -93,6 +93,9 @@ jobs:
           sys.exit(0 if ok is not False else 1)
           "
 
+      - name: Initialize scan context (scan UUID for this run)
+        run: python3 scan_context.py --init --force
+
       - name: Refresh historical CSV data
         run: python backfill_egx30.py --download-only || true
 
@@ -218,7 +221,8 @@ jobs:
                   production_decision_snapshot.json constitutional_fingerprint.json \
                   architecture_fingerprint.json consistency_report.json \
                   heartbeat.json operations_state.json \
-                  scan_execution.db notification_delivery.db || true
+                  scan_execution.db notification_delivery.db \
+                  scan_context.json || true
           git add operations/incidents.json operations/sla.json \
                   operations/knowledge.json operations/sent_alerts.json || true
           git add historical_data/historical_data/*.csv || true

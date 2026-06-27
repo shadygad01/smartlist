@@ -46,17 +46,22 @@ warnings: list[str] = []
 def _extract_buy_section(html: str) -> str:
     """Extract the portion of HTML that is the BUY SIGNALS section."""
     # The BUY section starts at "CONSTITUTIONAL BUY SIGNALS" and ends before
-    # the NEAR ENTRY section or the universe table section.
+    # the next dashboard section.  End-markers are taken verbatim from the
+    # dashboard.py section-title strings (confirmed against dashboard.html).
     markers_end = [
+        "RE-ACCUMULATION SIGNALS",     # historical section — not current buy signals
+        "RE_ACCUMULATION SIGNALS",
+        "NEAR CONSTITUTIONAL ENTRY",   # actual next section title
+        "NEAR CONSTITUTIONAL",         # partial fallback
         "NEAR ENTRY",
         "NEAR-CONSTITUTIONAL",
+        "FUTURE CONSTITUTIONAL",       # section after near-entry
+        "Universe Status",             # universe table section
         "universe-table",
         "near-entry",
         "id=\"near",
         "id=\"future",
         "id=\"waiting",
-        "RE-ACCUMULATION SIGNALS",  # historical section — not current buy signals
-        "RE_ACCUMULATION SIGNALS",
     ]
     start_m = re.search(r"CONSTITUTIONAL BUY SIGNALS", html)
     if not start_m:
@@ -153,7 +158,7 @@ def main() -> int:
             if ticker in in_buy:
                 # Check 3: Entry price rendered correctly
                 stored_ep = float(decisions[ticker].get("constitutional_entry_price") or 0)
-                rendered_ep = _entry_price_near_ticker(html, ticker)
+                rendered_ep = _entry_price_near_ticker(buy_section, ticker)
                 if rendered_ep is not None and stored_ep > 0:
                     if abs(rendered_ep - stored_ep) > PRICE_TOL:
                         failures.append(

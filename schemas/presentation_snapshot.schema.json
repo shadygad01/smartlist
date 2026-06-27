@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "presentation_snapshot",
+  "title": "Constitutional Presentation Snapshot",
+  "description": "Pre-computed presentation state consumed by dashboard, email, telegram, and audit scripts.",
+  "type": "object",
+  "required": ["generated_at", "universe_snapshot"],
+  "additionalProperties": true,
+  "properties": {
+    "scan_id": {
+      "type": "string",
+      "description": "UUID4 — optional (backfill: artifacts pre-Phase 3 may omit)"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 10
+    },
+    "price_data_as_of": {
+      "type": "string"
+    },
+    "market_status": {
+      "type": "string"
+    },
+    "build_hash": {
+      "type": "string"
+    },
+    "commit": {
+      "type": "string"
+    },
+    "universe_snapshot": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per universe ticker",
+      "items": {
+        "type": "object",
+        "required": ["ticker"],
+        "additionalProperties": true,
+        "properties": {
+          "ticker": { "type": "string", "minLength": 1 },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "PREMIUM", "UNDER_REVIEW", "APPROACHING",
+                     "BELOW_THRESHOLD", "NO_HISTORY"]
+          },
+          "current_price": { "type": ["number", "null"] },
+          "candidate_r2": { "type": ["number", "null"] },
+          "expected_reward_score": { "type": ["number", "null"] }
+        }
+      }
+    },
+    "near_constitutional": {
+      "type": "array",
+      "items": { "type": "object", "required": ["ticker"] }
+    },
+    "active": {
+      "type": "array",
+      "items": { "type": "object", "required": ["ticker"] }
+    },
+    "re_accumulation": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "future_candidates": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "new_events_today": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "statistics": {
+      "type": "object",
+      "properties": {
+        "universe_size": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

@@ -59,9 +59,14 @@ def main() -> int:
     if NOTIF_DB.exists():
         try:
             con = sqlite3.connect(str(NOTIF_DB))
+            # Only validate NEW transitions into CONSTITUTIONAL_BUY (state changes).
+            # from_state='CONSTITUTIONAL_BUY' entries are "re-confirmed" holdings — not
+            # new transitions — and do not require a fresh timeline entry for today.
             rows = con.execute(
                 "SELECT ticker, from_state, to_state, notified_email, notified_tg, created_at "
-                "FROM signal_event_log WHERE event_date=? AND to_state='CONSTITUTIONAL_BUY'",
+                "FROM signal_event_log "
+                "WHERE event_date=? AND to_state='CONSTITUTIONAL_BUY' "
+                "AND (from_state IS NULL OR from_state != 'CONSTITUTIONAL_BUY')",
                 (today,)
             ).fetchall()
             con.close()

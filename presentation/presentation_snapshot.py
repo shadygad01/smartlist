@@ -460,13 +460,28 @@ def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: s
     except Exception:
         commit = ""
 
+    try:
+        from scan_context import get_scan_id, build_lineage as _build_lineage
+        _scan_id = get_scan_id()
+        _lineage = _build_lineage(
+            producer=__file__,
+            parents=[BASE / "constitutional_opportunity_events.db",
+                     BASE / "universe_snapshot.db",
+                     BASE / "candidate_pool.db"],
+        )
+    except Exception:
+        _scan_id = ""
+        _lineage = {}
+
     data = {
+        "scan_id":             _scan_id,
         "generated_at":        snap.generated_at,
         "price_data_as_of":    snap.price_data_as_of,
         "market_date":         snap.generated_at[:10],
         "market_status":       snap.market_status,
         "build_hash":          build_hash,
         "commit":              commit,
+        "_lineage":            _lineage,
         "near_constitutional": snap.approaching_entries,
         "active":              active,
         "re_accumulation":     snap.re_accumulations,

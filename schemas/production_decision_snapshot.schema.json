@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "production_decision_snapshot",
+  "title": "Constitutional Production Decision Snapshot",
+  "description": "Immutable record of every constitutional eligibility decision for the current scan. Single source of truth for all downstream renderers.",
+  "type": "object",
+  "required": ["scan_id", "generated_at", "ticker_count", "eligible_count", "gate_version", "decisions"],
+  "additionalProperties": true,
+  "properties": {
+    "scan_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "UUID4 linking this snapshot to the scan that produced it"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 10,
+      "description": "ISO-8601 UTC timestamp of snapshot generation"
+    },
+    "ticker_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Total number of universe tickers evaluated"
+    },
+    "eligible_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of tickers meeting all constitutional gate conditions"
+    },
+    "gate_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Fingerprint of is_constitutional_buy + evaluate function bodies"
+    },
+    "decisions": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One decision record per universe ticker",
+      "items": {
+        "type": "object",
+        "required": ["ticker", "eligible", "constitutional_r2", "constitutional_score",
+                     "current_price", "constitutional_entry_price", "reason", "scan_id",
+                     "rules_evaluated"],
+        "additionalProperties": true,
+        "properties": {
+          "ticker": { "type": "string", "minLength": 1 },
+          "eligible": { "type": "boolean" },
+          "scan_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Must match snapshot-level scan_id"
+          },
+          "constitutional_r2": { "type": "number" },
+          "constitutional_score": { "type": "number" },
+          "current_price": { "type": "number", "minimum": 0 },
+          "constitutional_entry_price": { "type": "number", "minimum": 0 },
+          "reason": { "type": "string", "minLength": 1 },
+          "event_type": {
+            "type": "string",
+            "enum": ["FIRST_BUY", "RE_ACCUMULATION", "NONE"]
+          },
+          "gate_version": { "type": "string" },
+          "git_commit": { "type": "string" },
+          "rules_evaluated": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Per-rule audit trail: r2_gate, score_gate, price_gate",
+            "items": {
+              "type": "object",
+              "required": ["rule", "pass"],
+              "properties": {
+                "rule": {
+                  "type": "string",
+                  "enum": ["r2_gate", "score_gate", "price_gate"]
+                },
+                "pass": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

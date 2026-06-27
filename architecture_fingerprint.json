@@ -1,35 +1,41 @@
 {
-  "generated_at": "2026-06-27T07:09:29+00:00",
-  "composite_hash": "e0f2c7a302f1bb317eb2d82d02b8540ff8aa1f823b7aca3e4b2af4c35eb13717",
+  "generated_at": "2026-06-27T12:45:16+00:00",
+  "composite_hash": "dacb4b1620af689c8ad788c3797e7e2fa36e2d0144edc40926b5b0b9dccda27c",
   "file_hashes": {
     ".github/workflows/backfill.yml": "c0c47c395665886189dd624bcde2b6b8a250692153ddeea88fddff336f22c088",
     ".github/workflows/dashboard_refresh.yml": "ece91d8bd65c2efe2a0bd74af2f0ed33ab2089ee00bc055acff6172641b3b564",
     ".github/workflows/external_dispatch.yml": "88326b8a0e91b2671fc305d26ae4b3162b90bec95031224f2add4c874cf5f6e6",
-    ".github/workflows/full_production_scan.yml": "95a4058527fc5094b58e48137eca3bf73a3ce8ee530a0b17becf9c2327632c1b",
+    ".github/workflows/full_production_scan.yml": "a223a7ad6c188d7d0d5ce32a96ee99c1cd08c64d42ecfe9809ccdb9227fc5527",
     ".github/workflows/historical_backtest.yml": "26b084225fa95ac6289054031197d85e3f053ca660834883d1663388e6fda45e",
     ".github/workflows/market_notifications.yml": "b9ffd4b0c14cae13cc2f9fdaa53d4383c73b5eec6785933dc5f53cb13ccee6be",
-    ".github/workflows/morning_email.yml": "4f3bf472ea48eeeff3d40a5cfd99897440ae78fa1b4024f29f40b160a31e049f",
+    ".github/workflows/morning_email.yml": "f32683d0108ffd33fbfec67b28157f11f9fa71bdcf102e66ec19bad4130de3ed",
     ".github/workflows/watchdog.yml": "23006ba551acebb5323beb98d2606ce7978ee6f86244b87b2e1e8066e3527692",
     "audit/audit_status.py": "5e6c4dd3e44b39b3f2041e2a0f0da9e69d112e514149cb968a8397d805eca4df",
-    "audit/run_consistency_report.py": "350f71500dff718abdb86baf9298a17a45c4e225dae082dcaeb751338345c46b",
+    "audit/run_consistency_report.py": "c54cd0e6a825ee5a1f491b659c0b6032b46130eb2b8f5d1968c6b90af4aa7333",
     "constitutional_gate.py": "602aed5c03d3e747455432339d8a8b407c934187fb9907cee80a1d3d0743a189",
     "constitutional_opportunity_engine.py": "3a8c78aa67ce54fea6567b561e1773e02f33e81f1862a2c28bf7efd3c41db867",
     "constitutional_timeline_engine.py": "75c61977ab59a1b31271e801f463689a8193c259310e486019232b6abe565421",
-    "dashboard.py": "2bcc34498dc6e380c1674ff170a76f877e5bb211593eccfdb81021a0ac0cbed6",
-    "egx_email.py": "290ff5aae08f3c701cecef676fb60b036c81c74e4dcc8a30179992d4dab42a03",
+    "dashboard.py": "0308e7da8c67831ca6270493781a7b0ee7bd8010c5bbf5c8977d0ae2c644f487",
+    "egx_email.py": "84293cf8c834bb47544b99ca59232da392d3f7f86fa215113c73bfff188f1aad",
     "main.py": "9183508e9ec7103996a108b961b79ee0f7e7eaffe6b0cc591c6d34e36b715517",
     "notifications/scan_orchestrator.py": "5e4011b634f48d44eec2cfb061c32d98b9c968a792fe431144fb4e9b51411f72",
-    "presentation/presentation_snapshot.py": "bd56acd0682328e7cb14e826a9eae205d26776556c8ef691dec7d4eb0dbec3d6",
+    "presentation/presentation_snapshot.py": "6ffec60a17ea0a3e17618c8fd8c6fc74ff6b09e149d5d276ade6a0a54759991a",
     "universe_snapshot.py": "2fc36eaed68162a5fadbd4c570a03349598a56024711fb5f3d1cfe7c5b3c7dca"
   },
   "schemas": {
     "production_decision_snapshot.json": [
+      "_lineage",
       "decisions",
       "eligible_count",
+      "gate_version",
       "generated_at",
-      "ticker_count"
+      "git_commit",
+      "scan_id",
+      "ticker_count",
+      "workflow_run"
     ],
     "presentation_snapshot.json": [
+      "_lineage",
       "active",
       "build_hash",
       "commit",
@@ -45,6 +51,7 @@
       "price_data_as_of",
       "re_accumulation",
       "research_insights",
+      "scan_id",
       "statistics",
       "universe_snapshot",
       "watchlist"

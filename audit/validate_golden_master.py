@@ -2,6 +2,18 @@
 Golden Master Validator — Constitutional Cleanup Phase 1
 Compares current DB state against golden master snapshots.
 Exits 0 if all checks pass, 1 on any failure.
+
+Golden Master Policy:
+  Static (exact hash)   : constitutional_buy_registry.db — immutable first-buy records
+  Structural (size)     : universe_snapshot (27 tickers, same ticker set)
+  Monotonic (>=)        : candidate_pool rows and constitutional_pass count
+                          (append-only: pool can only grow, never shrink)
+  Semantic (invariants) : timeline events (no duplicates, thresholds, ordering)
+  Exact count           : first_buy registry, DNA rows
+
+Market-driven fields (status, price, r2, score) are NOT validated for exact equality
+because they change every trading session. Those are validated by separate freshness
+and consistency assertions (assert_data_freshness, assert_price_consistency).
 """
 from __future__ import annotations
 import hashlib, json, sqlite3, sys
@@ -9,6 +21,9 @@ from pathlib import Path
 
 BASE   = Path(__file__).parent.parent
 GOLDEN = Path(__file__).parent / "golden_master"
+
+sys.path.insert(0, str(BASE))
+from constitutional_gate import CONST_R2_MIN, CONST_SCORE_MIN
 
 PASS = "\033[92mPASS\033[0m"
 FAIL = "\033[91mFAIL\033[0m"
@@ -52,10 +67,14 @@ timeline_sem  = json.loads((GOLDEN / "timeline_semantic.json").read_text())
 
 print("\n=== CONSTITUTIONAL GOLDEN MASTER VALIDATION ===\n")
 
-# ── Hash checks (static DBs only — not append-only event stores) ──────────────
-print("DB HASH CHECKS:")
+# ── Hash checks — STATIC DBs only ────────────────────────────────────────────
+# Only include DBs whose content must never change without explicit human approval.
+# constitutional_buy_registry.db: first-buy records are immutable — once a ticker
+# receives its first constitutional buy, that record is permanent.
+# candidate_pool.db is EXCLUDED: append-only, grows every daily rebuild. Use
+# monotonic row-count assertion (below) instead of brittle hash.
+print("DB HASH CHECKS (static immutable DBs only):")
 hash_dbs = [
-    "candidate_pool.db",
     "constitutional_buy_registry.db",
 ]
 for db in hash_dbs:
@@ -63,27 +82,27 @@ for db in hash_dbs:
     expected = golden_hashes.get(db, "MISSING")
     check(db, current == expected, f"current={current[:16]}… expected={expected[:16]}…")
 
-# ── Universe check ───────────────────────────────────────────────────────────
+# ── Universe check ────────────────────────────────────────────────────────────
+# Validates: 27 tickers present, same ticker set as golden master.
+# Market-driven fields (status, price, r2, score) are NOT compared here —
+# they change every trading session. Those are validated by assert_data_freshness
+# and assert_price_consistency which run in the main CI certification.
 print("\nUNIVERSE CHECK:")
 golden_universe = json.loads((GOLDEN / "universe_27.json").read_text())
 current_universe = qdb(BASE / "universe_snapshot.db",
-    "SELECT ticker,status,current_price,constitutional_entry_price,waiting_for_reason,candidate_r2,expected_reward_score,return_pct FROM universe_snapshot ORDER BY ticker")
+    "SELECT ticker FROM universe_snapshot ORDER BY ticker")
 
 check("Universe size", len(current_universe) == len(golden_universe),
       f"{len(current_universe)} vs {len(golden_universe)}")
 
-golden_by_ticker = {r["ticker"]: r for r in golden_universe}
-current_by_ticker = {r["ticker"]: r for r in current_universe}
-for ticker in sorted(golden_by_ticker):
-    if ticker not in current_by_ticker:
-        check(f"  {ticker} present", False, "MISSING from current")
-        continue
-    g = golden_by_ticker[ticker]
-    c = current_by_ticker[ticker]
-    check(f"  {ticker} status", g["status"] == c["status"],
-          f"'{g['status']}' vs '{c['status']}'")
+golden_tickers  = {r["ticker"] for r in golden_universe}
+current_tickers = {r["ticker"] for r in current_universe}
+for t in sorted(golden_tickers - current_tickers):
+    check(f"  Ticker {t} present", False, "MISSING from current universe_snapshot")
+for t in sorted(current_tickers - golden_tickers):
+    check(f"  Ticker {t} unexpected", False, "not in golden master universe")
 
-# ── FIRST BUY registry ───────────────────────────────────────────────────────
+# ── FIRST BUY registry ────────────────────────────────────────────────────────
 print("\nFIRST BUY REGISTRY CHECK:")
 golden_fb = json.loads((GOLDEN / "first_buy_registry.json").read_text())
 current_fb = qdb(BASE / "constitutional_buy_registry.db",
@@ -91,18 +110,32 @@ current_fb = qdb(BASE / "constitutional_buy_registry.db",
 check("FIRST BUY count", len(current_fb) == len(golden_fb),
       f"{len(current_fb)} vs {len(golden_fb)}")
 
-# ── Candidate pool ───────────────────────────────────────────────────────────
+# ── Candidate pool — MONOTONIC assertions ─────────────────────────────────────
+# candidate_pool.db is append-only: rows can only be ADDED, never deleted.
+# Exact equality would break every daily rebuild. Instead:
+#   rows >= golden baseline       (deletion or corruption → FAIL)
+#   constitutional_pass >= golden (losing qualifying rows → FAIL)
+#   new rows growing the pool → always PASS
 print("\nCANDIDATE POOL CHECK:")
-golden_pool = json.loads((GOLDEN / "candidate_pool_full.json").read_text())
-current_pool = qdb(BASE / "candidate_pool.db",
-    "SELECT ticker,signal_date,candidate_r2,expected_reward_score,candidate_entry_zone,current_price,snapshot_ts FROM candidate_pool ORDER BY ticker,signal_date")
-check("Candidate pool row count", len(current_pool) == len(golden_pool),
-      f"{len(current_pool)} vs {len(golden_pool)}")
+golden_pool   = json.loads((GOLDEN / "candidate_pool_full.json").read_text())
+current_pool  = qdb(BASE / "candidate_pool.db",
+    "SELECT ticker, signal_date, candidate_r2, expected_reward_score FROM candidate_pool")
 
-golden_pass = [r for r in golden_pool if (r["candidate_r2"] or 0) >= 60 and (r["expected_reward_score"] or 0) >= 35]
-current_pass = [r for r in current_pool if (r["candidate_r2"] or 0) >= 60 and (r["expected_reward_score"] or 0) >= 35]
-check("Constitutional pass rows", len(current_pass) == len(golden_pass),
-      f"{len(current_pass)} vs {len(golden_pass)}")
+g_rows = len(golden_pool)
+c_rows = len(current_pool)
+check("Candidate pool rows (monotonic ≥ baseline)",
+      c_rows >= g_rows,
+      f"current={c_rows} baseline={g_rows}")
+
+g_pass = sum(1 for r in golden_pool
+             if (r["candidate_r2"] or 0) >= CONST_R2_MIN
+             and (r["expected_reward_score"] or 0) >= CONST_SCORE_MIN)
+c_pass = sum(1 for r in current_pool
+             if (r["candidate_r2"] or 0) >= CONST_R2_MIN
+             and (r["expected_reward_score"] or 0) >= CONST_SCORE_MIN)
+check("Constitutional pass rows (monotonic ≥ baseline)",
+      c_pass >= g_pass,
+      f"current={c_pass} baseline={g_pass}")
 
 # ── DNA ───────────────────────────────────────────────────────────────────────
 print("\nDNA CHECK:")
@@ -144,9 +177,9 @@ dup_ttd = scalar(COE_DB,
 check("timeline:no_duplicate_ticker_type_date", (dup_ttd or 0) == 0,
       f"duplicate (ticker,type,date)={dup_ttd}")
 
-# Constitutional threshold: all signals qualified at constitutional_r2>=60, constitutional_score>=35
+# Constitutional threshold: all signals qualified at CONST_R2_MIN / CONST_SCORE_MIN
 thresh_violations = scalar(COE_DB,
-    "SELECT COUNT(*) FROM constitutional_opportunity_events WHERE constitutional_r2 < 60 OR constitutional_score < 35")
+    f"SELECT COUNT(*) FROM constitutional_opportunity_events WHERE constitutional_r2 < {CONST_R2_MIN} OR constitutional_score < {CONST_SCORE_MIN}")
 check("timeline:constitutional_threshold", (thresh_violations or 0) == 0,
       f"threshold violations={thresh_violations}")
 

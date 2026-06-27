@@ -15,6 +15,7 @@ GOLDEN = AUDIT / "golden_master"
 DAILY.mkdir(exist_ok=True)
 
 from time_authority import now_cairo
+from constitutional_gate import CONST_R2_MIN, CONST_SCORE_MIN
 TODAY  = now_cairo().strftime("%Y-%m-%d")
 TS     = now_cairo().isoformat()
 
@@ -56,8 +57,10 @@ def check(label: str, ok: bool, expected=None, actual=None):
     if not ok:
         failures.append(entry)
 
-# ── Hash checks (static DBs only — not append-only event stores) ──────────────
-for db in ["candidate_pool.db", "constitutional_buy_registry.db"]:
+# ── Hash checks — STATIC immutable DBs only ──────────────────────────────────
+# candidate_pool.db EXCLUDED: append-only, grows every daily rebuild.
+# Use monotonic row-count assertion below. Exact hash would break daily.
+for db in ["constitutional_buy_registry.db"]:
     cur = sha256(BASE / db)
     exp = golden_hashes.get(db, "MISSING")
     check(f"hash:{db}", cur == exp, exp[:16], cur[:16])
@@ -84,15 +87,22 @@ for i, (g, c) in enumerate(zip(golden_fb, current_fb)):
     check(f"first_buy:{g['ticker']}:price", g["constitutional_entry_price"] == c["constitutional_entry_price"],
           g["constitutional_entry_price"], c["constitutional_entry_price"])
 
-# ── Candidate pool ───────────────────────────────────────────────────────────
-golden_pool = json.loads((GOLDEN / "candidate_pool_full.json").read_text())
+# ── Candidate pool — MONOTONIC assertions ────────────────────────────────────
+# append-only pool: rows can only be ADDED, never deleted.
+# Exact equality breaks every daily rebuild. Use floor assertions instead:
+#   rows >= baseline     (deletion/corruption → FAIL; new signals → PASS)
+#   const_pass >= baseline  (losing qualifying rows → FAIL; new qualifying rows → PASS)
+golden_pool  = json.loads((GOLDEN / "candidate_pool_full.json").read_text())
 current_pool = qdb(BASE / "candidate_pool.db",
-    "SELECT ticker,signal_date,candidate_r2,expected_reward_score,candidate_entry_zone,current_price,snapshot_ts FROM candidate_pool ORDER BY ticker,signal_date")
-check("candidate_pool:rows", len(current_pool) == len(golden_pool), len(golden_pool), len(current_pool))
+    "SELECT ticker, signal_date, candidate_r2, expected_reward_score FROM candidate_pool")
 
-g_pass = len([r for r in golden_pool  if (r["candidate_r2"] or 0) >= 60 and (r["expected_reward_score"] or 0) >= 35])
-c_pass = len([r for r in current_pool if (r["candidate_r2"] or 0) >= 60 and (r["expected_reward_score"] or 0) >= 35])
-check("candidate_pool:constitutional_pass", c_pass == g_pass, g_pass, c_pass)
+g_rows = len(golden_pool)
+c_rows = len(current_pool)
+check("candidate_pool:rows_min", c_rows >= g_rows, f">={g_rows}", c_rows)
+
+g_pass = sum(1 for r in golden_pool  if (r["candidate_r2"] or 0) >= CONST_R2_MIN and (r["expected_reward_score"] or 0) >= CONST_SCORE_MIN)
+c_pass = sum(1 for r in current_pool if (r["candidate_r2"] or 0) >= CONST_R2_MIN and (r["expected_reward_score"] or 0) >= CONST_SCORE_MIN)
+check("candidate_pool:constitutional_pass_min", c_pass >= g_pass, f">={g_pass}", c_pass)
 
 # ── DNA ───────────────────────────────────────────────────────────────────────
 golden_dna = json.loads((GOLDEN / "stock_dna.json").read_text())

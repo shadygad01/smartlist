@@ -364,9 +364,14 @@ def generate_statistics(df: pd.DataFrame) -> dict:
 
 if __name__ == "__main__":
     import hashlib as _h
+    import sys as _sys
 
-    START = "2026-01-01"
+    # --today  : fast daily refresh — only last 7 calendar days (for morning email)
+    # --full   : full rebuild from START (default)
+    _today_only = "--today" in _sys.argv
+
     END   = str(_date.today())
+    START = str(_date.today() - __import__("datetime").timedelta(days=7)) if _today_only else "2026-01-01"
 
     print("=" * 72)
     print("CONSTITUTIONAL CANDIDATE POOL BUILDER V1")

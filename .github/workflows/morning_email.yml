@@ -70,6 +70,11 @@ jobs:
       - name: Refresh historical CSV data
         run: python backfill_egx30.py --download-only || true
 
+      - name: Rebuild candidate pool (today's signals — fast daily refresh)
+        # Ensures constitutional R2 data is fresh before detect_signal_changes() runs.
+        # Uses --today flag: only scans the last 7 calendar days (< 60s for 27 symbols).
+        run: python candidate_pool_builder.py --today || true
+
       - name: Send Morning Email + Telegram Brief
         env:
           EMAIL_USER:       ${{ secrets.EMAIL_USER }}

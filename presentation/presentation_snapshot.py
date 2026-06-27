@@ -271,6 +271,20 @@ def build_presentation_snapshot() -> PresentationSnapshot:
                 snap.last_scan_ts = _hb.get("last_scan") or latest_ts or ""
             except Exception:
                 snap.last_scan_ts = latest_ts or ""
+
+            # Staleness guard: pool > 5 days old must not drive approaching-entry display.
+            _pool_stale = False
+            _latest_sig = pool.execute(
+                "SELECT MAX(signal_date) FROM candidate_pool WHERE snapshot_ts=?", (latest_ts,)
+            ).fetchone()[0]
+            if _latest_sig:
+                from datetime import date as _dt_date
+                _days_stale = (_dt_date.today() - _dt_date.fromisoformat(_latest_sig)).days
+                if _days_stale > 5:
+                    print(f"[PresentationSnapshot] Pool stale ({_days_stale}d) — "
+                          f"skipping approaching entries from stale pool.")
+                    _pool_stale = True
+
             universe_cnt = pool.execute(
                 "SELECT COUNT(DISTINCT ticker) FROM candidate_pool WHERE snapshot_ts=?",
                 (latest_ts,)
@@ -280,7 +294,7 @@ def build_presentation_snapshot() -> PresentationSnapshot:
             # Best R2 per ticker in latest snapshot, approaching range
             # Only include tickers where price is AT or BELOW the entry zone
             # (i.e., the discount condition is met — only R2 gate remains)
-            rows = pool.execute("""
+            rows = [] if _pool_stale else pool.execute("""
                 SELECT ticker, candidate_r2, expected_reward_score,
                        candidate_entry_zone, current_price, sector
                 FROM (

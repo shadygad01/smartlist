@@ -96,6 +96,9 @@ jobs:
       - name: Refresh historical CSV data
         run: python backfill_egx30.py --download-only || true
 
+      - name: Rebuild candidate pool (today's signals — fast daily refresh)
+        run: python candidate_pool_builder.py --today || true
+
       - name: Prepare research database
         run: |
           python backfill_research_db.py || true

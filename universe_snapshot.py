@@ -1,13 +1,17 @@
 """
-Universe Snapshot — V6.1
+Universe Snapshot — V6.2
 Builds a unified 27-ticker snapshot from all available data sources.
 Writes to universe_snapshot.db. Read-only on candidate_pool.db.
+
+Pool freshness: candidate_pool.db is the primary source of constitutional R2.
+If pool is stale (latest signal_date > POOL_STALENESS_DAYS old), it is rebuilt
+automatically via build_candidate_pool() before snapshot construction.
 """
 from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, date as _date, timezone, timedelta
 from pathlib import Path
 from time_authority import now_cairo as _now_cairo_ta
 
@@ -21,11 +25,67 @@ _SNAP_DB      = BASE / "universe_snapshot.db"
 
 _CAIRO_TZ = _now_cairo_ta().tzinfo
 
+# Pool older than this many calendar days is considered stale.
+# 5 days = tolerate a full work week gap (e.g. holiday), but reject anything older.
+_POOL_STALENESS_DAYS = 5
+
+
+def _pool_latest_signal_date() -> str | None:
+    """Return the MAX(signal_date) across the latest snapshot_ts, or None."""
+    if not _POOL_DB.exists():
+        return None
+    conn = sqlite3.connect(str(_POOL_DB))
+    try:
+        row = conn.execute(
+            """SELECT MAX(signal_date) FROM candidate_pool
+               WHERE snapshot_ts = (SELECT MAX(snapshot_ts) FROM candidate_pool)"""
+        ).fetchone()
+        return row[0] if row else None
+    finally:
+        conn.close()
+
+
+def _rebuild_pool_if_stale() -> bool:
+    """
+    Rebuild candidate_pool for the last 3 calendar days if the pool is missing or stale.
+    Returns True if a rebuild was triggered, False otherwise.
+    Uses INSERT OR IGNORE so rebuilds are safe to call repeatedly.
+    """
+    latest_sig = _pool_latest_signal_date()
+    today_str  = _date.today().isoformat()
+
+    if latest_sig is None:
+        needs_rebuild = True
+    else:
+        days_stale = (_date.today() - _date.fromisoformat(latest_sig)).days
+        needs_rebuild = days_stale > _POOL_STALENESS_DAYS
+
+    if not needs_rebuild:
+        return False
+
+    print(f"[UniverseSnapshot] Pool stale (latest signal_date={latest_sig}) — rebuilding...")
+    try:
+        from candidate_pool_builder import build_candidate_pool
+        start = (_date.today() - timedelta(days=7)).isoformat()
+        build_candidate_pool(start_date=start, end_date=today_str)
+        print(f"[UniverseSnapshot] Pool rebuilt for {start} to {today_str}.")
+        return True
+    except Exception as e:
+        print(f"[UniverseSnapshot] Pool rebuild non-fatal: {e}")
+        return False
+
 
 # ── Source loaders ─────────────────────────────────────────────────────────────
 
 def _load_pool() -> dict[str, dict]:
-    """Latest snapshot per ticker from candidate_pool.db (READ ONLY)."""
+    """
+    Latest signal per ticker from candidate_pool.db (READ ONLY).
+
+    Returns the most recent signal_date row per ticker from the latest snapshot.
+    Returns {} if pool is missing or stale (latest signal_date > _POOL_STALENESS_DAYS old).
+    Stale pool data must not drive constitutional signal detection — callers should
+    trigger _rebuild_pool_if_stale() before calling this.
+    """
     if not _POOL_DB.exists():
         return {}
     conn = sqlite3.connect(str(_POOL_DB))
@@ -36,25 +96,38 @@ def _load_pool() -> dict[str, dict]:
         ).fetchone()[0]
         if not latest_ts:
             return {}
+
+        # Staleness guard: reject pool data older than _POOL_STALENESS_DAYS.
+        # Stale R2 values from candidate_pool would drive false constitutional signals.
+        latest_sig = conn.execute(
+            "SELECT MAX(signal_date) FROM candidate_pool WHERE snapshot_ts=?", (latest_ts,)
+        ).fetchone()[0]
+        if latest_sig:
+            days_stale = (_date.today() - _date.fromisoformat(latest_sig)).days
+            if days_stale > _POOL_STALENESS_DAYS:
+                print(f"[UniverseSnapshot] Pool stale ({days_stale}d, latest={latest_sig}) — "
+                      f"skipping pool for R2 sourcing.")
+                return {}
+
+        # Most recent signal_date per ticker — avoids serving historical high-R2 rows
+        # from past qualifying windows as if they represent today's market state.
         rows = conn.execute(
-            """SELECT ticker, candidate_r2, expected_reward_score, candidate_entry_zone, current_price, snapshot_ts
+            """SELECT ticker, candidate_r2, expected_reward_score, candidate_entry_zone,
+                      current_price, snapshot_ts, signal_date
                FROM candidate_pool WHERE snapshot_ts=? AND candidate_entry_zone > 0
-               ORDER BY ticker,
-                 ABS(candidate_r2 - 60) ASC,
-                 candidate_r2 DESC""",
+               ORDER BY ticker, signal_date DESC, candidate_r2 DESC""",
             (latest_ts,)
         ).fetchall()
         result = {}
         for r in rows:
-            # First row per ticker = zone where price is closest to entry (most relevant)
             if r["ticker"] not in result:
                 result[r["ticker"]] = {
                     "candidate_r2":          r["candidate_r2"],
                     "expected_reward_score": r["expected_reward_score"],
                     "candidate_entry_zone":  r["candidate_entry_zone"],
-                    "current_price":       r["current_price"],
-                    "last_scan":           (r["snapshot_ts"] or "")[:10],
-                    "source":              "candidate_pool",
+                    "current_price":         r["current_price"],
+                    "last_scan":             (r["signal_date"] or "")[:10],
+                    "source":                "candidate_pool",
                 }
         return result
     finally:
@@ -226,6 +299,10 @@ def build_universe_snapshot() -> list[dict]:
     """Build and persist full 27-ticker snapshot. Returns list of row dicts."""
     from config.scanner_config import get_constitutional_universe
     universe = get_constitutional_universe()
+
+    # Auto-rebuild pool if stale so constitutional R2 reflects current market state.
+    # Runs before all other source loaders so _load_pool() sees fresh data.
+    _rebuild_pool_if_stale()
 
     pool      = _load_pool()
     research  = _load_research()

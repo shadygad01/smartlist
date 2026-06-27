@@ -28,6 +28,7 @@ from research_report import maybe_run_weekly_report
 from datetime import datetime, timedelta, date
 from zoneinfo import ZoneInfo
 from notifications.email_sender import send as _send_email_raw
+from constitutional_gate import is_constitutional_buy
 from notifications.notification_router import (
     route as _tg_route,
     MORNING_BRIEF, SIGNAL_CHANGE, FIRST_BUY, TARGET_UPDATE,
@@ -2355,11 +2356,7 @@ def detect_signal_changes(snap) -> list[dict]:
         if not ticker:
             continue
 
-        # Constitutional gate: R2 >= 60 AND score >= 35 AND price at/below entry zone
-        in_buy_zone = (
-            r2 >= 60.0 and score >= 35.0 and
-            (entry_price == 0 or cur_price <= entry_price * 1.02)
-        )
+        in_buy_zone = is_constitutional_buy(r2, score, cur_price, entry_price)
         current_state = STATE_CONST_BUY if in_buy_zone else STATE_NONE
 
         from_state = get_current_state(ticker)

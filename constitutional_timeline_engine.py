@@ -23,9 +23,7 @@ BASE         = Path(__file__).parent
 TIMELINE_DB  = BASE / "constitutional_opportunity_events.db"
 POOL_DB      = BASE / "candidate_pool.db"
 
-# Constitutional thresholds (DO NOT MODIFY)
-CONST_R2_MIN    = 60.0
-CONST_SCORE_MIN = 35.0
+from constitutional_gate import CONST_R2_MIN, CONST_SCORE_MIN
 
 # Clustering: gap in calendar days that separates two distinct events
 GAP_DAYS = 7

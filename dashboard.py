@@ -13,6 +13,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from presentation.presentation_snapshot import PresentationSnapshot, build_presentation_snapshot
+from constitutional_gate import is_constitutional_buy
 
 BASE = Path(__file__).parent
 sys.path.insert(0, str(BASE))
@@ -358,7 +359,7 @@ def _s_buy_signals(snap) -> tuple:
         score = row.get("expected_reward_score") or 0.0
         cp    = row.get("current_price") or 0.0
         ep    = row.get("constitutional_entry_price") or 0.0
-        if r2 >= 60 and score >= 35 and ep > 0 and cp <= ep:
+        if is_constitutional_buy(r2, score, cp, ep):
             ticker = row["ticker"]
             if ticker in today_tickers:
                 continue

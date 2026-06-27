@@ -138,6 +138,9 @@ jobs:
       - name: CI Protection Gate
         run: python3 audit/assert_ci_protection.py
 
+      - name: Constitutional decision consistency (ONE gate = ONE decision)
+        run: python3 audit/assert_decision_consistency.py
+
       - name: Constitutional Golden Master Validation
         run: |
           python3 audit/run_daily_validation.py

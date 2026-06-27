@@ -16,9 +16,7 @@ BASE        = Path(__file__).parent
 REGISTRY_DB = BASE / "constitutional_buy_registry.db"
 POOL_DB     = BASE / "candidate_pool.db"
 
-# Constitutional thresholds (DO NOT MODIFY)
-CONST_R2_MIN    = 60.0
-CONST_SCORE_MIN = 35.0
+from constitutional_gate import CONST_R2_MIN, CONST_SCORE_MIN
 
 # Display state labels
 STATE_PREMIUM_NOW           = "PREMIUM_NOW"           # return > 50%

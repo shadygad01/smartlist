@@ -130,6 +130,9 @@ jobs:
       - name: Signal idempotency assertion (10 scans = 1 notification)
         run: python3 audit/assert_signal_idempotency.py
 
+      - name: Constitutional decision consistency (ONE gate = ONE decision)
+        run: python3 audit/assert_decision_consistency.py
+
       - name: Update public status
         run: |
           python - <<'PYEOF'

@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-06-27T15:58:06+00:00",
-  "composite_hash": "f4cf563eab862894a3a601ba88c1560ff18bb33807139ff82b31d0621534f127",
+  "generated_at": "2026-06-27T16:11:01+00:00",
+  "composite_hash": "f75d844a7fd31dd63fa3cde2d257fb9abb56ffa60dfa6355c23d4f11132948ec",
   "file_hashes": {
     ".github/workflows/backfill.yml": "c0c47c395665886189dd624bcde2b6b8a250692153ddeea88fddff336f22c088",
     ".github/workflows/dashboard_refresh.yml": "ece91d8bd65c2efe2a0bd74af2f0ed33ab2089ee00bc055acff6172641b3b564",
     ".github/workflows/external_dispatch.yml": "88326b8a0e91b2671fc305d26ae4b3162b90bec95031224f2add4c874cf5f6e6",
-    ".github/workflows/full_production_scan.yml": "2c529788660a847af0c0a32329a3d7a906175f3a2924667669857baf88d78ce8",
+    ".github/workflows/full_production_scan.yml": "a40e74935d9bda776b42003945dca46faa0004ee23e5f14b6fe75961151fed58",
     ".github/workflows/historical_backtest.yml": "26b084225fa95ac6289054031197d85e3f053ca660834883d1663388e6fda45e",
     ".github/workflows/market_notifications.yml": "b9ffd4b0c14cae13cc2f9fdaa53d4383c73b5eec6785933dc5f53cb13ccee6be",
-    ".github/workflows/morning_email.yml": "f32683d0108ffd33fbfec67b28157f11f9fa71bdcf102e66ec19bad4130de3ed",
+    ".github/workflows/morning_email.yml": "aedf3bea4ce3a22ba83b43c1ab17ba14e77ae3768291fcb8bfc28f94b98121fe",
     ".github/workflows/watchdog.yml": "23006ba551acebb5323beb98d2606ce7978ee6f86244b87b2e1e8066e3527692",
     "audit/audit_status.py": "5e6c4dd3e44b39b3f2041e2a0f0da9e69d112e514149cb968a8397d805eca4df",
-    "audit/run_consistency_report.py": "07e474fe38d000ba89e3e2ffa191237693a877ae7414bce364f85a5342e7a082",
+    "audit/run_consistency_report.py": "a84ce24146e54670beed30476333a9e1167424c11edc0a3d73f99358f7cd91e6",
     "constitutional_gate.py": "602aed5c03d3e747455432339d8a8b407c934187fb9907cee80a1d3d0743a189",
     "constitutional_opportunity_engine.py": "3a8c78aa67ce54fea6567b561e1773e02f33e81f1862a2c28bf7efd3c41db867",
     "constitutional_timeline_engine.py": "75c61977ab59a1b31271e801f463689a8193c259310e486019232b6abe565421",
@@ -25,11 +25,13 @@
   "schemas": {
     "production_decision_snapshot.json": [
       "_lineage",
+      "architecture_version",
       "decisions",
       "eligible_count",
       "gate_version",
       "generated_at",
       "git_commit",
+      "producer_version",
       "scan_id",
       "ticker_count",
       "workflow_run"

@@ -101,13 +101,13 @@ def record_transition(
         rid = str(uuid.uuid4())
         now = _now()
 
-        con.execute(
+        cur = con.execute(
             """INSERT OR IGNORE INTO signal_event_log
                (id, ticker, from_state, to_state, event_date, created_at)
                VALUES (?,?,?,?,?,?)""",
             (rid, ticker, from_state, to_state, event_date, now),
         )
-        is_new = con.total_changes > 0
+        is_new = cur.rowcount > 0  # rowcount is per-statement; total_changes is connection-wide
 
         # Always keep signal_state_current up to date (non-NONE states only)
         if to_state != STATE_NONE:

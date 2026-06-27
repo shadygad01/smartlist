@@ -30,7 +30,7 @@ BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
 from constitutional_gate import evaluate, is_constitutional_buy, CONST_R2_MIN, CONST_SCORE_MIN
-from scan_context import build_lineage, read_scan_context
+from scan_context import build_lineage, read_scan_context, compute_producer_version
 
 _SNAP_DB     = BASE / "universe_snapshot.db"
 _TIMELINE_DB = BASE / "constitutional_opportunity_events.db"
@@ -189,11 +189,13 @@ def build_production_decision_snapshot() -> dict:
         print("WARN: universe_snapshot.db missing — production_decision_snapshot.json not built")
         return {}
 
-    scan_ctx  = read_scan_context()
-    scan_id   = scan_ctx.get("scan_id", "unknown")
-    gate_ver  = scan_ctx.get("gate_version", "unknown")
-    git_commit = scan_ctx.get("git_commit", "unknown")
-    workflow  = scan_ctx.get("workflow_run", "local")
+    scan_ctx      = read_scan_context()
+    scan_id       = scan_ctx.get("scan_id", "unknown")
+    gate_ver      = scan_ctx.get("gate_version", "unknown")
+    arch_ver      = scan_ctx.get("architecture_version", "unknown")
+    git_commit    = scan_ctx.get("git_commit", "unknown")
+    workflow      = scan_ctx.get("workflow_run", "local")
+    producer_ver  = compute_producer_version(__file__)
 
     con = sqlite3.connect(str(_SNAP_DB))
     con.row_factory = sqlite3.Row
@@ -235,12 +237,14 @@ def build_production_decision_snapshot() -> dict:
         )
         d = decision.as_dict()
 
-        # Phase 1 — Decision Provenance
-        d["scan_id"]          = scan_id
-        d["gate_version"]     = gate_ver
-        d["git_commit"]       = git_commit
-        d["workflow_run"]     = workflow
-        d["rules_evaluated"]  = _build_rules_evaluated(r2, score, cp, ep)
+        # Phase 1 + Phase 3 — Decision Provenance + Versioning
+        d["scan_id"]              = scan_id
+        d["gate_version"]         = gate_ver
+        d["architecture_version"] = arch_ver
+        d["producer_version"]     = producer_ver
+        d["git_commit"]           = git_commit
+        d["workflow_run"]         = workflow
+        d["rules_evaluated"]      = _build_rules_evaluated(r2, score, cp, ep)
 
         decisions.append(d)
 
@@ -250,15 +254,17 @@ def build_production_decision_snapshot() -> dict:
         parents=[_SNAP_DB, _TIMELINE_DB, _POOL_DB, BASE / "constitutional_gate.py"],
     )
     snapshot = {
-        "scan_id":       scan_id,
-        "generated_at":  gen_at,
-        "ticker_count":  len(decisions),
-        "eligible_count": eligible_count,
-        "gate_version":  gate_ver,
-        "git_commit":    git_commit,
-        "workflow_run":  workflow,
-        "_lineage":      lineage,
-        "decisions":     decisions,
+        "scan_id":              scan_id,
+        "generated_at":         gen_at,
+        "ticker_count":         len(decisions),
+        "eligible_count":       eligible_count,
+        "gate_version":         gate_ver,
+        "architecture_version": arch_ver,
+        "producer_version":     producer_ver,
+        "git_commit":           git_commit,
+        "workflow_run":         workflow,
+        "_lineage":             lineage,
+        "decisions":            decisions,
     }
     OUTPUT_PATH.write_text(json.dumps(snapshot, indent=2))
     eligible_tickers = sorted(d["ticker"] for d in decisions if d["eligible"])

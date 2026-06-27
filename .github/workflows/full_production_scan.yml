@@ -178,6 +178,9 @@ jobs:
       - name: Build architecture fingerprint
         run: python3 audit/build_architecture_fingerprint.py || true
 
+      - name: Build scan manifest (immutable per-scan artifact record)
+        run: python3 audit/build_scan_manifest.py
+
       - name: Constitutional Golden Master Validation
         run: |
           python3 audit/run_daily_validation.py
@@ -223,7 +226,8 @@ jobs:
                   egx_research.db research_results.json \
                   changed_symbols.json presentation_snapshot.json \
                   production_decision_snapshot.json constitutional_fingerprint.json \
-                  architecture_fingerprint.json consistency_report.json \
+                  architecture_fingerprint.json scan_manifest.json \
+                  consistency_report.json \
                   heartbeat.json operations_state.json \
                   scan_execution.db notification_delivery.db \
                   scan_context.json || true

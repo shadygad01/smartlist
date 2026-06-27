@@ -1933,6 +1933,13 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
         print(f"  [EarlyBuy] skipped: {_eb_err}")
     changes = detect_signal_changes(snap)
     if changes:
+        try:
+            from constitutional_timeline_engine import register_alert_events
+            _registered = register_alert_events(changes)
+            if _registered:
+                print(f"  [Timeline] Registered alert events: {_registered}")
+        except Exception as _reg_err:
+            print(f"  [Timeline] alert event registration non-fatal: {_reg_err}")
         send_change_alert(changes)
 
     # Discount Reversal Engine — daily scan

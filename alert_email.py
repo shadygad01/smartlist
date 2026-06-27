@@ -98,11 +98,11 @@ def build_alert_email(event: dict) -> tuple[str, str]:
     subject = f"{'⚡' if is_buy else '♻️'} [{ticker}] CONSTITUTIONAL {type_label} — {event_date}"
 
     dna            = _load_dna(ticker)
-    has_memory     = bool(dna and dna.get("memory_hits", 0) >= 1)
-    mem_hits       = dna.get("memory_hits", 0) if dna else 0
+    has_memory     = bool(dna and dna.get("constitutional_memory_hits", 0) >= 1)
+    mem_hits       = dna.get("constitutional_memory_hits", 0) if dna else 0
     mem_avg        = dna.get("avg_return_pct", 0.0) if dna else 0.0
     mem_best       = dna.get("best_return_pct", 0.0) if dna else 0.0
-    mem_conf       = dna.get("memory_confidence", "DEVELOPING") if dna else "DEVELOPING"
+    mem_conf       = dna.get("constitutional_memory_confidence", "DEVELOPING") if dna else "DEVELOPING"
     zone_l         = dna.get("historical_buy_zone_low", 0.0) if dna else 0.0
     zone_h         = dna.get("historical_buy_zone_high", 0.0) if dna else 0.0
     first_buy_date = dna.get("first_buy_date", "") if dna else ""

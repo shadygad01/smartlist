@@ -329,8 +329,24 @@ def _s_stats(snap):
 </div>"""
 
 
+# ── MPI Behavior Insight Renderer ────────────────────────────────────────────
+
+def _mpi_behavior_block(ticker: str, mpi_snaps: dict | None) -> str:
+    """Render MPI Behavior Insight block for a signal card. Returns '' if unavailable."""
+    if not mpi_snaps:
+        return ""
+    snap = mpi_snaps.get(ticker)
+    if not snap:
+        return ""
+    try:
+        from mpi_engine import render_behavior_insight_html
+        return render_behavior_insight_html(snap, theme="dark")
+    except Exception:
+        return ""
+
+
 # ── Constitutional Buy Signals ────────────────────────────────────────────────
-def _s_buy_signals(snap) -> tuple:
+def _s_buy_signals(snap, mpi_snaps: dict | None = None) -> tuple:
     """
     HIGHEST PRIORITY section. Returns (html_str, signal_tickers_frozenset).
     Callers pass signal_tickers_frozenset to _s_near_entry and _s_future_opportunities
@@ -583,6 +599,7 @@ def _s_buy_signals(snap) -> tuple:
       <div class="signal-box-sub">Similar setups</div>
     </div>
   </div>
+{_mpi_behavior_block(ticker, mpi_snaps)}
 </div>"""
 
     # ── Top Opportunity card ──────────────────────────────────────────────────
@@ -758,7 +775,7 @@ def _s_buy_signals(snap) -> tuple:
 # Single source of truth: snap.approaching_entries (from PresentationSnapshot).
 # Criteria: R2 50–59.9, current_price ≤ entry_price, final_score ≥ 35.
 # buy_signal_tickers excluded — those already appear in the buy signals section.
-def _s_near_entry(snap, excluded: frozenset = frozenset()) -> str:
+def _s_near_entry(snap, excluded: frozenset = frozenset(), mpi_snaps: dict | None = None) -> str:
     """Return the HTML 'Near Constitutional Entry' dashboard section."""
     candidates = sorted(
         [e for e in snap.approaching_entries if e["ticker"] not in excluded],
@@ -786,6 +803,11 @@ def _s_near_entry(snap, excluded: frozenset = frozenset()) -> str:
         zone_s    = "AT ZONE" if need_pct < 0.5 else f'+{need_pct:.1f}% above current'
         waiting   = f"−{dist_pts:.1f} pts to R2 gate"
         urg_c     = G if dist_pts <= 2 else (A if dist_pts <= 5 else DIM)
+        mpi_html = _mpi_behavior_block(ticker, mpi_snaps)
+        mpi_row = (
+            f'<tr><td colspan="6" style="padding:0 0 8px 12px;">{mpi_html}</td></tr>'
+            if mpi_html else ""
+        )
         rows += f"""
 <tr>
   <td style="font-weight:700;color:{B};font-size:14px;">{ticker}</td>
@@ -794,7 +816,7 @@ def _s_near_entry(snap, excluded: frozenset = frozenset()) -> str:
   <td style="color:{urg_c};font-weight:700;">{60-dist_pts:.1f} / 60 &nbsp;(&#8722;{dist_pts:.1f})</td>
   <td style="color:{A};font-size:12px;">{zone_s}</td>
   <td style="color:{DIM};font-size:11px;max-width:200px;">{waiting}</td>
-</tr>"""
+</tr>{mpi_row}"""
 
     return f"""
 <div class="card" style="border-color:{A}44;">
@@ -1442,11 +1464,20 @@ def build_dashboard(build_hash: str = "") -> str:
 
     _assert_sections(snap)
 
-    buy_html, buy_tickers = _s_buy_signals(snap)
+    # Load MPI behavioral snapshots (read-only, non-fatal)
+    _mpi_snaps: dict = {}
+    try:
+        from mpi_engine import get_snapshots_for_date as _mpi_get
+        from time_authority import today_iso as _today_iso
+        _mpi_snaps = _mpi_get(_today_iso())
+    except Exception as _mpi_err:
+        print(f"[Dashboard] MPI load non-fatal: {_mpi_err}")
+
+    buy_html, buy_tickers = _s_buy_signals(snap, _mpi_snaps)
     body = (
         _s_stats(snap) +
         buy_html +
-        _s_near_entry(snap, buy_tickers) +
+        _s_near_entry(snap, buy_tickers, _mpi_snaps) +
         _s_future_opportunities(snap, buy_tickers) +
         _s_universe_status(snap) +
         _s_market_map(snap, dna) +

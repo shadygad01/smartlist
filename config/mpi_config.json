@@ -1,0 +1,67 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-06-27",
+
+  "confidence": {
+    "display_threshold": 0.45,
+    "high_threshold": 0.70,
+    "medium_threshold": 0.45,
+    "low_threshold": 0.20
+  },
+
+  "evidence_weights": {
+    "sweep_detected":  0.20,
+    "sv_hit":          0.20,
+    "hvn_hit":         0.15,
+    "ob_quality_high": 0.10,
+    "rsi_div":         0.10,
+    "macd_div":        0.10,
+    "htf_uptrend":     0.10,
+    "historical_match": 0.05
+  },
+
+  "historical_comparison": {
+    "min_similarity": 0.50,
+    "min_sample_size": 3,
+    "max_lookback_days": 730,
+    "r_score_weights": {
+      "r1": 0.10,
+      "r2": 0.15,
+      "r3": 0.20,
+      "r4": 0.10,
+      "r5": 0.10,
+      "r6": 0.15,
+      "r7": 0.10,
+      "r8": 0.10
+    },
+    "behavioral_feature_weights": {
+      "sweep_detected": 0.20,
+      "sv_hit":         0.20,
+      "hvn_hit":        0.15,
+      "rsi_div":        0.10,
+      "macd_div":       0.10,
+      "htf_hh":         0.125,
+      "htf_hl":         0.125
+    },
+    "r_score_blend": 0.70,
+    "behavioral_blend": 0.30
+  },
+
+  "phase_thresholds": {
+    "ob_quality_high_cutoff": 60.0,
+    "macd_positive_cutoff":   0.0,
+    "htf_uptrend_r4_cutoff":  0.5
+  },
+
+  "explanation": {
+    "max_words": 120,
+    "compact_max_lines": 4
+  },
+
+  "display": {
+    "dashboard_enabled": true,
+    "email_enabled":     true,
+    "telegram_enabled":  true,
+    "debug_mode":        false
+  }
+}

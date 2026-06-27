@@ -1949,6 +1949,14 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
     tx.step(Phase.PERSIST, "save_scan_results",    save_scan_results,    results)
     tx.step(Phase.PERSIST, "save_signal_history",  save_signal_history,  results)
     tx.step(Phase.PERSIST, "save_rank_history",    save_rank_history,    results)
+
+    # MPI: behavioral analysis after all signals and data are persisted
+    try:
+        from mpi_engine import run_for_current_signals as _mpi_run
+        _mpi_run(results, snap)
+    except Exception as _mpi_err:
+        print(f"  [MPI] non-fatal: {_mpi_err}")
+
     tx.complete(Phase.PERSIST)
 
     # ── VALIDATE ───────────────────────────────────────────────────────────────
@@ -2229,6 +2237,13 @@ def continuous_scan():
 
     save_scan_results(current_results)
     save_signal_history(current_results)
+
+    # ── MPI: Behavioral analysis (after all signals finalized) ────────────────
+    try:
+        from mpi_engine import run_for_current_signals as _mpi_run
+        _mpi_run(current_results, snap)
+    except Exception as _mpi_err:
+        print(f"  [MPI] non-fatal: {_mpi_err}")
 
     if changes:
         print(f"🚨 Found {len(changes)} new constitutional event(s) today!")

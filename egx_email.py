@@ -480,7 +480,8 @@ def _constitutional_buy_signals(dna: dict) -> str:
 
 # ── SECTION 4: NEAR CONSTITUTIONAL ENTRY ─────────────────────────────────────
 
-def _near_constitutional_entry(snap: PresentationSnapshot, dna: dict) -> str:
+def _near_constitutional_entry(snap: PresentationSnapshot, dna: dict,
+                               mpi_snaps: dict | None = None) -> str:
     """Return HTML for the 'Near Constitutional Entry' email section."""
     entries = snap.approaching_entries or []
 
@@ -511,6 +512,20 @@ def _near_constitutional_entry(snap: PresentationSnapshot, dna: dict) -> str:
         urg_c  = _G if dist <= 2 else (_A if dist <= 5 else _MUTED)
         hv     = _hist_val_badge(dna.get(e["ticker"]))
 
+        mpi_insight = ""
+        if mpi_snaps:
+            try:
+                from mpi_engine import render_behavior_insight_html
+                mpi_insight = render_behavior_insight_html(
+                    mpi_snaps.get(e["ticker"]), theme="light"
+                )
+            except Exception:
+                pass
+        mpi_row = (
+            f'<tr><td colspan="7" style="padding:2px 10px 10px 10px;">{mpi_insight}</td></tr>'
+            if mpi_insight else ""
+        )
+
         rows += (
             f'<tr style="border-bottom:1px solid #f0e8c0;">'
             f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:13px;'
@@ -527,6 +542,7 @@ def _near_constitutional_entry(snap: PresentationSnapshot, dna: dict) -> str:
             f'color:{urg_c};font-weight:700;">{wait_s}</td>'
             f'<td style="padding:8px 10px;">{hv}</td>'
             f'</tr>'
+            f'{mpi_row}'
         )
 
     return (
@@ -898,6 +914,15 @@ def build_email(snap: PresentationSnapshot | None = None) -> str:
     now      = _now_cairo()
     date_str = now.strftime("%A, %d %B %Y")
 
+    # Load MPI behavioral snapshots (read-only, non-fatal)
+    _mpi_snaps: dict = {}
+    try:
+        from mpi_engine import get_snapshots_for_date as _mpi_get
+        from time_authority import today_iso as _today_iso
+        _mpi_snaps = _mpi_get(_today_iso())
+    except Exception as _mpi_err:
+        print(f"[Email] MPI load non-fatal: {_mpi_err}")
+
     buy_signals_html = _constitutional_buy_signals(dna)
     sections = [
         _hdr(snap, date_str),
@@ -910,7 +935,7 @@ def build_email(snap: PresentationSnapshot | None = None) -> str:
         _new_since_yesterday(snap),
         *([_divider(), buy_signals_html] if buy_signals_html else []),
         _divider(),
-        _near_constitutional_entry(snap, dna),
+        _near_constitutional_entry(snap, dna, _mpi_snaps),
         _divider(),
         _active_opportunities(snap, dna),
         _divider(),

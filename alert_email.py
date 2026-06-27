@@ -79,6 +79,20 @@ def _load_nearest_cluster(ticker: str) -> str:
         return ""
 
 
+def _mpi_alert_block(ticker: str, signal_type: str) -> str:
+    """Return HTML table row containing MPI Behavior Insight for an alert email."""
+    try:
+        from mpi_engine import get_snapshot_for_ticker, render_behavior_insight_html
+        from time_authority import today_iso as _today_iso
+        snap = get_snapshot_for_ticker(ticker, _today_iso(), signal_type=signal_type)
+        html = render_behavior_insight_html(snap, theme="light")
+        if not html:
+            return ""
+        return f'<tr><td style="padding:0 28px;">{html}</td></tr>'
+    except Exception:
+        return ""
+
+
 def build_alert_email(event: dict) -> tuple[str, str]:
     """Returns (subject, html_body) for a single constitutional event."""
     ticker     = event.get("ticker", "TICKER")
@@ -359,6 +373,9 @@ def build_alert_email(event: dict) -> tuple[str, str]:
       {reason_block}
     </td>
   </tr>
+
+  <!-- Behavior Insight (MPI) -->
+  {_mpi_alert_block(ticker, etype)}
 
   <!-- Fibonacci Targets -->
   <tr>

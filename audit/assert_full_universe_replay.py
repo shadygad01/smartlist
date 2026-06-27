@@ -44,16 +44,16 @@ def _float_eq(a: float, b: float, tol: float = FLOAT_TOL) -> bool:
 
 def main() -> int:
     if not PROD_SNAP.exists():
-        print("SKIP: production_decision_snapshot.json not found — full universe replay skipped")
-        return 0
+        print("SKIPPED: production_decision_snapshot.json not found — run build_production_decision_snapshot.py first")
+        return 2
 
     prod     = json.loads(PROD_SNAP.read_text())
     stored   = {d["ticker"]: d for d in prod.get("decisions", [])}
     gen_at   = prod.get("generated_at", "")
 
     if not stored:
-        print("SKIP: production_decision_snapshot.json has no decisions")
-        return 0
+        print("SKIPPED: production_decision_snapshot.json has no decisions")
+        return 2
 
     # Load universe_snapshot.db — authoritative inputs
     uni_by_t: dict[str, dict] = {}

@@ -42,8 +42,8 @@ print(f"Latest signal_history date : {latest_signal_date or 'UNKNOWN'}")
 # Load universe_snapshot
 snap_path = BASE / "universe_snapshot.db"
 if not snap_path.exists():
-    print("FAIL: universe_snapshot.db missing")
-    sys.exit(1)
+    print("SKIPPED: universe_snapshot.db missing — run build_universe_snapshot() first")
+    sys.exit(2)
 
 conn = sqlite3.connect(str(snap_path))
 conn.row_factory = sqlite3.Row

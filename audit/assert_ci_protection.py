@@ -2,14 +2,22 @@
 CI Protection Gate — Phase 13.
 Fails immediately if any constitutional invariant is violated.
 Called from GitHub Actions before deployment.
+
+Exit codes:
+  0 = PASS     — all invariants satisfied
+  1 = FAIL     — invariant violation detected
+  2 = SKIPPED  — required prerequisite missing (cannot run assertion)
 """
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
 BASE = Path(__file__).parent.parent
+
+_IN_CI: bool = bool(os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"))
 
 failures  = []
 warnings  = []
@@ -17,8 +25,8 @@ warnings  = []
 # ── 1. presentation_snapshot.json ─────────────────────────────────────────────
 snap_path = BASE / "presentation_snapshot.json"
 if not snap_path.exists():
-    failures.append("presentation_snapshot.json missing")
-    print("\n".join(failures)); sys.exit(1)
+    print("SKIPPED: presentation_snapshot.json missing — run build_presentation_snapshot() first")
+    sys.exit(2)
 
 snap = json.loads(snap_path.read_text())
 

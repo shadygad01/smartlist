@@ -5,12 +5,18 @@ Verifies that all production data sources are within their freshness thresholds.
 Stale data silently produces false constitutional decisions — this gate prevents that.
 
 Displays exact age of every dataset.
-Exits 1 if any required dataset exceeds its maximum age.
+
+Exit codes:
+  0 = PASS     — all required sources are within threshold
+  1 = FAIL     — required source is stale or missing, running in CI mode
+  3 = EXPECTED — required source is stale, running outside CI (dev/manual run);
+                 this same condition is a FAIL in production CI
 """
 from __future__ import annotations
 
 import csv as _csv
 import json
+import os
 import sqlite3
 import sys
 from datetime import datetime, timezone
@@ -18,6 +24,11 @@ from pathlib import Path
 
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
+
+# Detect CI execution context.
+# GitHub Actions sets CI=true and GITHUB_ACTIONS=true.
+# Only enforce stale-data failures when running in CI.
+_IN_CI: bool = bool(os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"))
 
 HIST_DIR = BASE / "historical_data" / "historical_data"
 
@@ -32,7 +43,9 @@ THRESHOLDS: dict[str, tuple[float, bool]] = {
     "csv_prices":            ( 72.0,  False),  # 3 days — weekends OK
 }
 
-failures: list[str] = []
+hard_failures: list[str] = []   # blocking in CI
+expected_issues: list[str] = [] # EXPECTED in non-CI (would be FAIL in CI)
+soft_warnings: list[str] = []   # always non-blocking (optional datasets)
 table: list[tuple[str, str, str]] = []   # (label, age_str, status)
 
 
@@ -75,25 +88,40 @@ def _fmt_age(h: float) -> str:
 def _check(label: str, age_h: float | None) -> None:
     max_h, required = THRESHOLDS[label]
     if age_h is None:
-        status = "MISSING" if required else "UNKNOWN"
         if required:
-            failures.append(f"{label}: MISSING (required)")
+            if _IN_CI:
+                status = "FAIL"
+                hard_failures.append(f"{label}: MISSING (required in CI)")
+            else:
+                status = "EXPECTED"
+                expected_issues.append(f"{label}: MISSING — not yet built (expected outside CI)")
+        else:
+            status = "MISSING"
         table.append((label, "—", status))
         return
     age_str = _fmt_age(age_h)
     if age_h <= max_h:
         table.append((label, age_str, "PASS"))
     else:
-        status = "FAIL" if required else "STALE"
-        table.append((label, age_str, status))
         if required:
-            failures.append(f"{label}: {age_str} old (max {_fmt_age(max_h)})")
+            if _IN_CI:
+                status = "FAIL"
+                hard_failures.append(f"{label}: {age_str} old (max {_fmt_age(max_h)}) — stale in CI")
+            else:
+                status = "EXPECTED"
+                expected_issues.append(
+                    f"{label}: {age_str} old (max {_fmt_age(max_h)}) "
+                    f"— stale outside CI (would FAIL in production)"
+                )
         else:
-            failures.append(f"{label}: {age_str} old (max {_fmt_age(max_h)}) — WARNING")
+            status = "STALE"
+            soft_warnings.append(f"{label}: {age_str} old (max {_fmt_age(max_h)}) — optional, non-blocking")
+        table.append((label, age_str, status))
 
 
 def main() -> int:
     print("Data Freshness Assertion")
+    print(f"  execution mode: {'CI' if _IN_CI else 'dev/manual (stale data → EXPECTED, not FAIL)'}")
     print()
 
     # 1. candidate_pool.db
@@ -104,8 +132,8 @@ def main() -> int:
             row = con.execute("SELECT MAX(signal_date) FROM candidate_pool").fetchone()
             con.close()
             _check("candidate_pool", _age_from_date(row[0] if row and row[0] else None))
-        except Exception as e:
-            table.append(("candidate_pool", f"ERR", "WARN"))
+        except Exception:
+            table.append(("candidate_pool", "ERR", "WARN"))
     else:
         _check("candidate_pool", None)
 
@@ -117,7 +145,7 @@ def main() -> int:
             row = con.execute("SELECT MAX(generated_at) FROM universe_snapshot").fetchone()
             con.close()
             _check("universe_snapshot", _age_from_iso(row[0] if row and row[0] else None))
-        except Exception as e:
+        except Exception:
             table.append(("universe_snapshot", "ERR", "WARN"))
     else:
         _check("universe_snapshot", None)
@@ -191,23 +219,36 @@ def main() -> int:
 
     # ── Print table ───────────────────────────────────────────────────────────
     print(f"  {'Dataset':<26} {'Age':<10} Status")
-    print(f"  {'-'*26} {'-'*10} {'-'*6}")
+    print(f"  {'-'*26} {'-'*10} {'-'*8}")
     for label, age_str, status in table:
-        icon = "✓" if status == "PASS" else ("✗" if status in ("FAIL", "MISSING") else "⚠")
+        if status == "PASS":
+            icon = "✓"
+        elif status in ("FAIL", "MISSING"):
+            icon = "✗" if _IN_CI else "⚠"
+        elif status == "EXPECTED":
+            icon = "⚠"
+        else:
+            icon = "·"
         print(f"  {icon} {label:<24} {age_str:<10} {status}")
 
     print()
-    hard = [f for f in failures if "WARNING" not in f]
-    soft = [f for f in failures if "WARNING" in f]
 
-    if soft:
-        print("STALE DATA (non-blocking):")
-        for f in soft:
-            print(f"  ⚠ {f}")
+    if soft_warnings:
+        print("STALE OPTIONAL DATA (non-blocking):")
+        for w in soft_warnings:
+            print(f"  · {w}")
 
-    if hard:
+    if expected_issues and not _IN_CI:
+        print("\nEXPECTED LIMITATIONS (dev/manual mode — would FAIL in CI):")
+        for e in expected_issues:
+            print(f"  ⚠ {e}")
+        if not hard_failures:
+            print("\nASSERTION EXPECTED — data is stale for a dev/manual run (not a production failure).")
+            return 3
+
+    if hard_failures:
         print("\nFRESHNESS FAILURES:")
-        for f in hard:
+        for f in hard_failures:
             print(f"  ✗ {f}")
         print("\nASSERTION FAILED — stale production data detected.")
         return 1

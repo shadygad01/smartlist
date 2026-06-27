@@ -105,11 +105,11 @@ def _entry_price_near_ticker(html: str, ticker: str) -> float | None:
 
 def main() -> int:
     if not PROD_SNAP.exists():
-        print("SKIP: production_decision_snapshot.json not found")
-        return 0
+        print("SKIPPED: production_decision_snapshot.json not found — run build_production_decision_snapshot.py first")
+        return 2
     if not DASH_HTML.exists():
-        print("SKIP: dashboard.html not found")
-        return 0
+        print("SKIPPED: dashboard.html not found — run dashboard.py first")
+        return 2
 
     prod       = json.loads(PROD_SNAP.read_text())
     decisions  = {d["ticker"]: d for d in prod.get("decisions", [])}

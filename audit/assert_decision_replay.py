@@ -115,8 +115,8 @@ def _csv_price(ticker: str) -> tuple[float | None, str]:
 
 def main() -> int:
     if not PROD_SNAP.exists():
-        print("SKIP: production_decision_snapshot.json not found — replay skipped")
-        return 0
+        print("SKIPPED: production_decision_snapshot.json not found — run build_production_decision_snapshot.py first")
+        return 2
 
     prod      = json.loads(PROD_SNAP.read_text())
     decisions = prod.get("decisions", [])

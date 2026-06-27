@@ -4,7 +4,11 @@ Verifies that presentation_snapshot.json is internally consistent:
 - near ∩ future == empty
 - active ∩ future == empty
 - universe count matches expected
-Exits 1 on any violation.
+
+Exit codes:
+  0 = PASS     — all checks pass
+  1 = FAIL     — inconsistency detected
+  2 = SKIPPED  — presentation_snapshot.json missing (cannot run assertion)
 """
 from __future__ import annotations
 import json, sys
@@ -14,8 +18,8 @@ BASE = Path(__file__).parent.parent
 snap_path = BASE / "presentation_snapshot.json"
 
 if not snap_path.exists():
-    print("FAIL: presentation_snapshot.json missing — was write_presentation_snapshot_json() called?")
-    sys.exit(1)
+    print("SKIPPED: presentation_snapshot.json missing — run build_presentation_snapshot() first")
+    sys.exit(2)
 
 data = json.loads(snap_path.read_text())
 

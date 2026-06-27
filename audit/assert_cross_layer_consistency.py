@@ -42,8 +42,8 @@ def _near(a: float, b: float, tol: float) -> bool:
 
 def main() -> int:
     if not PROD_SNAP.exists():
-        print("SKIP: production_decision_snapshot.json not found — run build_production_decision_snapshot.py first")
-        return 0
+        print("SKIPPED: production_decision_snapshot.json not found — run build_production_decision_snapshot.py first")
+        return 2
 
     prod      = json.loads(PROD_SNAP.read_text())
     prod_by_t = {d["ticker"]: d for d in prod.get("decisions", [])}

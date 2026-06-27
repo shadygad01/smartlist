@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-27T07:10:34+00:00",
+  "generated_at": "2026-06-27T13:35:59+00:00",
   "mode": "dev/manual",
   "verdict": "PASS",
   "assertions": [
@@ -31,13 +31,13 @@
       "label": "Event Chain Integrity",
       "status": "PASS",
       "status_code": 0,
-      "brief": "ASSERTION PASSED \u2014 no transitions to validate."
+      "brief": "ASSERTION PASSED \u2014 1 event chain(s) intact."
     },
     {
       "label": "Data Freshness",
-      "status": "EXPECTED",
-      "status_code": 3,
-      "brief": "ASSERTION EXPECTED \u2014 data is stale for a dev/manual run (not a productio"
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 all required data sources are fresh."
     },
     {
       "label": "Workflow Completeness",
@@ -74,12 +74,30 @@
       "status": "PASS",
       "status_code": 0,
       "brief": "CI GATE PASSED \u2014 all invariants satisfied."
+    },
+    {
+      "label": "Scan Id Consistency",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 scan_id propagated consistently across all artifacts."
+    },
+    {
+      "label": "Schema Compliance",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 all artifacts comply with their JSON Schema contracts"
+    },
+    {
+      "label": "E2E Constitutional Audit",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "CONSTITUTIONAL INTEGRITY: PASS"
     }
   ],
   "summary": {
-    "pass": 10,
+    "pass": 14,
     "fail": 0,
-    "expected": 2,
+    "expected": 1,
     "skipped": 0
   }
 }

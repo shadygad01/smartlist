@@ -75,6 +75,65 @@ def _timeline_tickers() -> set[str]:
         return set()
 
 
+def _sync_eligible_to_timeline(decisions: list[dict]) -> None:
+    """
+    Register eligible tickers in constitutional_opportunity_events.db via
+    the register_alert_events pathway.
+
+    daily_scan() is the normal entry point for this pathway.  When the
+    production build pipeline rebuilds universe_snapshot and candidate_pool
+    without running daily_scan() (e.g. after a manual refresh mid-day), newly-
+    eligible tickers pass the constitutional gate and appear in
+    production_decision_snapshot.json but are never written to the timeline DB.
+    This function closes that gap.
+
+    Idempotent: signal_state_store.record_transition() uses INSERT OR IGNORE
+    on UNIQUE(ticker, event_date, to_state); register_alert_events() uses
+    INSERT OR IGNORE on PRIMARY KEY and UNIQUE INDEX.
+    """
+    from constitutional_timeline_engine import register_alert_events
+    from notifications.signal_state_store import (
+        get_current_state, record_transition,
+        STATE_CONST_BUY,
+    )
+
+    try:
+        from time_authority import today_cairo
+        event_date = today_cairo().isoformat()
+    except Exception:
+        from datetime import date as _date
+        event_date = _date.today().isoformat()
+
+    alert_events: list[dict] = []
+    for d in decisions:
+        if not d.get("eligible"):
+            continue
+        ticker     = d["ticker"]
+        from_state = get_current_state(ticker)
+        is_new     = record_transition(ticker, from_state, STATE_CONST_BUY, event_date)
+        if is_new:
+            alert_events.append({
+                "ticker":                     ticker,
+                "event_type":                 d.get("event_type", "FIRST_BUY"),
+                "event_date":                 event_date,
+                "constitutional_entry_price": float(d.get("constitutional_entry_price") or 0),
+                "constitutional_r2":          float(d.get("constitutional_r2") or 0),
+                "constitutional_score":       float(d.get("constitutional_score") or 0),
+                "sector":                     d.get("sector", ""),
+            })
+
+    if alert_events:
+        registered = register_alert_events(alert_events)
+        if registered:
+            print(f"  Timeline synced (new): {registered}")
+        else:
+            print(f"  Timeline sync: {len(alert_events)} event(s) already registered (idempotent)")
+    else:
+        eligible_in = [d["ticker"] for d in decisions if d.get("eligible")]
+        if eligible_in:
+            print(f"  Timeline sync: state already current for {eligible_in}")
+
+
 def build_production_decision_snapshot() -> dict:
     """Build and write production_decision_snapshot.json. Returns snapshot dict."""
     if not _SNAP_DB.exists():
@@ -133,6 +192,9 @@ def build_production_decision_snapshot() -> dict:
     print(f"production_decision_snapshot.json  tickers={len(decisions)}  eligible={eligible_count}")
     if eligible_tickers:
         print(f"  Eligible: {eligible_tickers}")
+
+    _sync_eligible_to_timeline(decisions)
+
     return snapshot
 
 

@@ -43,6 +43,9 @@ ASSERTIONS = [
     "assert_presentation_consistency.py",
     "assert_price_consistency.py",
     "assert_ci_protection.py",
+    "assert_scan_id_consistency.py",
+    "assert_schema_compliance.py",
+    "assert_e2e_constitutional_audit.py",
 ]
 
 _STATUS_LABELS = {
@@ -137,7 +140,7 @@ def _write_report_json(
 
 def main() -> int:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    mode = "CI (strict)" if _IN_CI else "dev/manual"
+    mode = "CI/strict" if _IN_CI else "dev/manual"
 
     print("=" * 72)
     print("  CONSTITUTIONAL PRODUCTION CERTIFICATION")

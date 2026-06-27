@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "consistency_report",
+  "title": "Constitutional Consistency Report",
+  "description": "Output of run_consistency_report.py. Consumed by assert_ci_protection.",
+  "type": "object",
+  "required": ["generated_at", "mode", "verdict", "assertions", "summary"],
+  "additionalProperties": true,
+  "properties": {
+    "generated_at": { "type": "string", "minLength": 10 },
+    "mode": {
+      "type": "string",
+      "enum": ["CI/strict", "dev/manual"]
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["PASS", "FAIL"]
+    },
+    "scan_id": {
+      "type": "string",
+      "description": "Scan UUID from the artifacts evaluated in this report"
+    },
+    "assertions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["label", "status"],
+        "additionalProperties": true,
+        "properties": {
+          "label": { "type": "string", "minLength": 1 },
+          "status": {
+            "type": "string",
+            "enum": ["PASS", "FAIL", "EXPECTED", "SKIPPED"]
+          },
+          "status_code": { "type": "integer" },
+          "brief": { "type": "string" }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["pass", "fail"],
+      "properties": {
+        "pass":     { "type": "integer", "minimum": 0 },
+        "fail":     { "type": "integer", "minimum": 0 },
+        "expected": { "type": "integer", "minimum": 0 },
+        "skipped":  { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

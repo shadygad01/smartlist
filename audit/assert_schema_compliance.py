@@ -64,8 +64,9 @@ def main() -> int:
         import jsonschema
         from jsonschema import validate as _jv
     except ImportError:
-        print("SKIPPED: jsonschema not installed — run: pip install jsonschema")
-        return AuditStatus.SKIPPED
+        print("FAIL: jsonschema not installed — it is a mandatory production dependency.")
+        print("  Fix: add jsonschema>=4.0.0 to requirements.txt and re-run pip install.")
+        return AuditStatus.FAIL
 
     print("Schema Compliance Assertion")
     print(f"  schema directory: {SCHEMA_DIR.relative_to(BASE)}")

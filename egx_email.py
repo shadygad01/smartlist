@@ -425,6 +425,59 @@ def _new_since_yesterday(snap: PresentationSnapshot) -> str:
     return _section_hdr(3, f"NEW SINCE YESTERDAY ({count})") + body
 
 
+# ── SECTION 3b: CONSTITUTIONAL BUY SIGNALS (from production snapshot) ─────────
+
+def _constitutional_buy_signals(dna: dict) -> str:
+    """Return HTML for live constitutional BUY SIGNALS from production_decision_snapshot."""
+    snap_path = BASE / "production_decision_snapshot.json"
+    if not snap_path.exists():
+        return ""
+    try:
+        prod = json.loads(snap_path.read_text())
+        eligible = [d for d in prod.get("decisions", []) if d.get("eligible")]
+    except Exception:
+        return ""
+
+    if not eligible:
+        return ""
+
+    rows = ""
+    for d in sorted(eligible, key=lambda x: -(x.get("constitutional_r2") or 0)):
+        ticker = d["ticker"]
+        ep     = float(d.get("constitutional_entry_price") or 0)
+        cp     = float(d.get("current_price") or 0)
+        r2     = float(d.get("constitutional_r2") or 0)
+        score  = float(d.get("constitutional_score") or 0)
+        reason = d.get("reason", "")
+        hv     = _hist_val_badge(dna.get(ticker))
+        rows += (
+            f'<tr style="border-bottom:1px solid #c3e6cb;">'
+            f'<td style="padding:10px;font-family:Arial,sans-serif;font-size:14px;'
+            f'font-weight:700;color:{_NAVY};">{ticker}</td>'
+            f'<td style="padding:10px;font-family:Arial,sans-serif;font-size:12px;">'
+            f'{cp:.2f} EGP</td>'
+            f'<td style="padding:10px;font-family:Arial,sans-serif;font-size:12px;'
+            f'font-weight:700;color:{_G};">BUY LIMIT @ {ep:.2f} EGP</td>'
+            f'<td style="padding:10px;font-family:Arial,sans-serif;font-size:11px;'
+            f'color:{_BLUE};">{r2:.1f}/100 &bull; Score {score:.1f}</td>'
+            f'<td style="padding:10px;">{hv}</td>'
+            f'</tr>'
+        )
+
+    count = len(eligible)
+    return (
+        _section_hdr(3, f"&#128994; CONSTITUTIONAL BUY SIGNALS ({count} active)") +
+        f'<div style="background:#f0fff4;border:2px solid {_G};border-radius:6px;">'
+        f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+        f'{_th("Ticker","Current Price","Entry Zone","R2 / Score","Hist. Val.")}'
+        f'{rows}</table>'
+        f'<div style="font-family:Arial,sans-serif;font-size:10px;color:{_MUTED};'
+        f'padding:8px 12px;">Source: production_decision_snapshot — R2&#8805;60 &bull; '
+        f'Score&#8805;35 &bull; Price&#8804;Entry</div>'
+        f'</div>'
+    )
+
+
 # ── SECTION 4: NEAR CONSTITUTIONAL ENTRY ─────────────────────────────────────
 
 def _near_constitutional_entry(snap: PresentationSnapshot, dna: dict) -> str:
@@ -845,6 +898,7 @@ def build_email(snap: PresentationSnapshot | None = None) -> str:
     now      = _now_cairo()
     date_str = now.strftime("%A, %d %B %Y")
 
+    buy_signals_html = _constitutional_buy_signals(dna)
     sections = [
         _hdr(snap, date_str),
         '<div style="padding:0 24px 8px 24px;">',
@@ -854,6 +908,7 @@ def build_email(snap: PresentationSnapshot | None = None) -> str:
         _last_week_summary(snap),
         _divider(),
         _new_since_yesterday(snap),
+        *([_divider(), buy_signals_html] if buy_signals_html else []),
         _divider(),
         _near_constitutional_entry(snap, dna),
         _divider(),

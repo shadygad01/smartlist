@@ -118,7 +118,8 @@ def send_morning_brief(date_str: str, snap: PresentationSnapshot | None = None) 
     if snap is None:
         snap = build_presentation_snapshot()
     full_msg = build_morning_brief(snap, date_str)
-    _route(MORNING_BRIEF, full_msg, symbol="", event_date=date_str[:10] if len(date_str) >= 10 else None)
+    from time_authority import today_iso as _today_iso
+    _route(MORNING_BRIEF, full_msg, symbol="", event_date=_today_iso())
 
 
 def send_alert(event: dict, snap: PresentationSnapshot | None = None) -> None:

@@ -52,6 +52,7 @@ def _conn() -> sqlite3.Connection:
             sent_at      TEXT,
             status       TEXT NOT NULL DEFAULT 'pending',
             message_hash TEXT,
+            message_text TEXT,
             retry_count  INTEGER NOT NULL DEFAULT 0,
             error        TEXT
         )
@@ -60,6 +61,12 @@ def _conn() -> sqlite3.Connection:
         CREATE UNIQUE INDEX IF NOT EXISTS ux_tg_delivery_once
         ON telegram_delivery(event_type, symbol, event_date)
     """)
+    # Migrate existing DBs that pre-date the message_text column
+    try:
+        con.execute("ALTER TABLE telegram_delivery ADD COLUMN message_text TEXT")
+        con.commit()
+    except Exception:
+        pass  # column already exists
     con.commit()
     return con
 
@@ -135,8 +142,8 @@ def route(
     try:
         con = _conn()
         con.execute(
-            "UPDATE telegram_delivery SET status=?, sent_at=?, message_hash=? WHERE id=?",
-            ("sent" if ok else "failed", _now(), _msg_hash(message), rid),
+            "UPDATE telegram_delivery SET status=?, sent_at=?, message_hash=?, message_text=? WHERE id=?",
+            ("sent" if ok else "failed", _now(), _msg_hash(message), message, rid),
         )
         con.commit()
         con.close()

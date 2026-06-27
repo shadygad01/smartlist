@@ -250,7 +250,11 @@ def _retry_failed_notification(row: dict) -> bool:
                 return False  # credentials not set — skip, not a real failure
             from notifications.notification_router import route
             event_type = row.get("event_type", "MORNING_BRIEF")
-            ok = route(event_type, row.get("message_hash", "retry")[:3900],
+            msg_text = row.get("message_text") or ""
+            if not msg_text:
+                _log(f"retry_failed_notification: no message_text for {event_type} {row.get('id')} — skip")
+                return False
+            ok = route(event_type, msg_text[:3900],
                        symbol=row.get("symbol", ""), check_duplicate=False)
             table = "telegram_delivery"
         else:

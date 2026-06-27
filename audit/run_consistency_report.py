@@ -43,6 +43,10 @@ ASSERTIONS = [
     "assert_presentation_consistency.py",
     "assert_price_consistency.py",
     "assert_ci_protection.py",
+    # Phase 11 — Partial Execution Hardening
+    "assert_production_invariants.py",
+    "assert_no_direct_notify_calls.py",
+    "assert_fault_injection.py",
     "assert_scan_id_consistency.py",
     "assert_schema_compliance.py",
     "assert_e2e_constitutional_audit.py",

@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-06-27T12:45:16+00:00",
-  "mode": "CI/strict",
+  "generated_at": "2026-06-27T15:39:48+00:00",
+  "mode": "dev/manual",
   "verdict": "PASS",
   "assertions": [
     {
@@ -76,6 +76,24 @@
       "brief": "CI GATE PASSED \u2014 all invariants satisfied."
     },
     {
+      "label": "Production Invariants",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 no Partial Execution invariant violations detected."
+    },
+    {
+      "label": "No Direct Notify Calls",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 all notification calls are routed through ProductionT"
+    },
+    {
+      "label": "Fault Injection",
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 all fault injection tests confirm:"
+    },
+    {
       "label": "Scan Id Consistency",
       "status": "PASS",
       "status_code": 0,
@@ -95,7 +113,7 @@
     }
   ],
   "summary": {
-    "pass": 15,
+    "pass": 18,
     "fail": 0,
     "expected": 0,
     "skipped": 0

@@ -49,10 +49,19 @@ def _extract_buy_section(html: str) -> str:
     # the next dashboard section.  End-markers are taken verbatim from the
     # dashboard.py section-title strings (confirmed against dashboard.html).
     markers_end = [
+        "RE-ACCUMULATION SIGNALS",     # historical section — not current buy signals
+        "RE_ACCUMULATION SIGNALS",
         "NEAR CONSTITUTIONAL ENTRY",   # actual next section title
         "NEAR CONSTITUTIONAL",         # partial fallback
+        "NEAR ENTRY",
+        "NEAR-CONSTITUTIONAL",
         "FUTURE CONSTITUTIONAL",       # section after near-entry
         "Universe Status",             # universe table section
+        "universe-table",
+        "near-entry",
+        "id=\"near",
+        "id=\"future",
+        "id=\"waiting",
     ]
     start_m = re.search(r"CONSTITUTIONAL BUY SIGNALS", html)
     if not start_m:

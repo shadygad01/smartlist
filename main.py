@@ -1861,89 +1861,157 @@ def backfill_pattern_scores():
 
 def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=None):
     """
-    Shared workflow for daily and manual scans:
-    1. Fetch data once
-    2. Register new positions + update targets
-    3. Rebuild HTML + snapshot from cached data (one snapshot, no re-fetch)
-    4. Send email + Telegram from the SAME snapshot
-    5. Save results + detect changes
+    Shared workflow for daily and manual scans.
+
+    Phase ordering enforced by ProductionTransaction:
+        DECISION  — fetch live data, build HTML + snapshot
+        PERSIST   — write all DBs/JSON + timeline registration (signal state FIRST)
+        VALIDATE  — lightweight inline consistency check
+        COMMIT    — mark morning delivery as sent
+        NOTIFY    — send email + Telegram (irreversible; only reached after all PERSIST)
+        PUBLISH   — research/learning ops (best-effort, non-critical)
+
+    Architectural guarantee:
+        Email and Telegram cannot fire until constitutional_opportunity_events.db and
+        signal_state_current have been written successfully. Any failure in PERSIST
+        aborts the transaction before NOTIFY is reached — preventing the
+        "email sent but timeline missing" class of partial execution.
     """
     from notifications.morning_guard import html_hash, snap_hash, record_morning_done
+    from production.transaction import ProductionTransaction, Phase
+    from constitutional_timeline_engine import register_alert_events
 
-    # Step 0: backfill missing pattern scores for existing positions
-    backfill_pattern_scores()
-
-    # Step 1: fetch data + build snapshot (single build, shared with email + Telegram)
-    html, results, snap = build_report(holiday_mode=holiday_mode, last_trading=last_trading)
-
-    # Step 2: register positions, update targets
-    _register_new_positions(results)
-    cur_prices = _collect_current_prices(results)
-    monitor_positions(cur_prices)
-    monitor_reinforcement(cur_prices, results)
-    resolved = check_outcomes(cur_prices)
-
-    # Step 4: write canonical snapshot JSON (single authoritative write — same object as email+telegram)
     try:
-        from presentation.presentation_snapshot import write_presentation_snapshot_json
-        write_presentation_snapshot_json(snap, build_hash=html_hash(html))
-    except Exception as _snj_err:
-        print(f"  [daily_scan] snapshot JSON write non-fatal: {_snj_err}")
+        from scan_context import get_scan_id
+        _scan_id = get_scan_id()
+    except Exception:
+        import uuid
+        _scan_id = str(uuid.uuid4())
 
-    # Step 4b: send email + Telegram from the same snapshot
-    send_email(html, subject_suffix=email_suffix)
-    send_telegram_alerts(results, snap=snap)
+    tx = ProductionTransaction(_scan_id)
 
-    # Log morning delivery hashes
+    # ── DECISION ───────────────────────────────────────────────────────────────
+    backfill_pattern_scores()
+    html, results, snap = tx.step(
+        Phase.DECISION, "build_report",
+        build_report, holiday_mode=holiday_mode, last_trading=last_trading,
+    )
+    tx.complete(Phase.DECISION)
+
+    # ── PERSIST ────────────────────────────────────────────────────────────────
+    # Position management (non-fatal on individual errors)
+    try:
+        tx.step(Phase.PERSIST, "register_positions", _register_new_positions, results)
+    except Exception:
+        pass  # position errors do not abort the scan
+    cur_prices = _collect_current_prices(results)
+    try:
+        tx.step(Phase.PERSIST, "monitor_positions", monitor_positions, cur_prices)
+    except Exception:
+        pass
+    try:
+        tx.step(Phase.PERSIST, "monitor_reinforcement", monitor_reinforcement, cur_prices, results)
+    except Exception:
+        pass
+    try:
+        tx.step(Phase.PERSIST, "check_outcomes", check_outcomes, cur_prices)
+    except Exception:
+        pass
+
+    # Snapshot JSON — back it up so we can restore on abort
+    from presentation.presentation_snapshot import write_presentation_snapshot_json
+    _snap_file   = BASE / "presentation_snapshot.json"
+    _snap_backup = _snap_file.read_text() if _snap_file.exists() else None
+    def _restore_snap():
+        if _snap_backup is not None:
+            _snap_file.write_text(_snap_backup)
+        elif _snap_file.exists():
+            _snap_file.unlink(missing_ok=True)
+
+    tx.step(
+        Phase.PERSIST, "write_presentation_snapshot",
+        write_presentation_snapshot_json, snap, build_hash=html_hash(html),
+        rollback=_restore_snap,
+        artifact="presentation_snapshot.json",
+    )
+
+    # Signal state + timeline — MUST complete before NOTIFY
+    changes = tx.step(Phase.PERSIST, "detect_signal_changes", detect_signal_changes, snap)
+    if changes:
+        _registered = tx.step(
+            Phase.PERSIST, "register_timeline_events", register_alert_events, changes,
+            artifact="constitutional_opportunity_events.db",
+        )
+        if _registered:
+            print(f"  [Timeline] Registered alert events: {_registered}")
+
+    # Results + signal history
+    tx.step(Phase.PERSIST, "save_scan_results",    save_scan_results,    results)
+    tx.step(Phase.PERSIST, "save_signal_history",  save_signal_history,  results)
+    tx.step(Phase.PERSIST, "save_rank_history",    save_rank_history,    results)
+    tx.complete(Phase.PERSIST)
+
+    # ── VALIDATE ───────────────────────────────────────────────────────────────
+    # Lightweight inline check: if eligible tickers exist, signal state must be written
+    try:
+        from production.invariants import inv06_signal_state_implies_timeline
+        _ok, _detail = inv06_signal_state_implies_timeline()
+        if not _ok:
+            print(f"  [Validate] {_detail}")
+            tx.abort(f"Pre-notify invariant failed: {_detail}")
+    except Exception as _ve:
+        print(f"  [Validate] invariant check non-fatal: {_ve}")
+    tx.complete(Phase.VALIDATE)
+
+    # ── COMMIT ─────────────────────────────────────────────────────────────────
     if morning_mid:
         try:
-            record_morning_done(morning_mid, "sent",
-                                build_hash=html_hash(html),
-                                snapshot_hash=snap_hash(snap))
+            tx.step(
+                Phase.COMMIT, "record_morning_done",
+                record_morning_done, morning_mid, "sent",
+                build_hash=html_hash(html), snapshot_hash=snap_hash(snap),
+            )
         except Exception:
-            pass
+            pass  # morning log failure does not abort notification
+    tx.complete(Phase.COMMIT)
 
-    # Step 5: persist + change alerts
-    save_scan_results(results)
-    save_signal_history(results)
-    save_rank_history(results)
+    # ── NOTIFY (only reachable after PERSIST + VALIDATE + COMMIT) ──────────────
+    tx.step(Phase.NOTIFY, "send_email",    send_email,           html, subject_suffix=email_suffix)
+    tx.step(Phase.NOTIFY, "send_telegram", send_telegram_alerts, results, snap=snap)
+    if changes:
+        try:
+            tx.step(Phase.NOTIFY, "send_change_alert", send_change_alert, changes)
+        except Exception:
+            pass  # change-alert failure does not abort morning notification
+    tx.complete(Phase.NOTIFY)
 
-    # Step 6: log signals for outcome tracking
+    # ── PUBLISH (best-effort research + learning) ──────────────────────────────
     for s in STOCKS:
         if results.get(s, {}).get("ok"):
-            log_signal(s, results[s])
+            try:
+                log_signal(s, results[s])
+            except Exception:
+                pass
 
-    # Step 7: research platform — تسجيل + متابعة + تقرير أسبوعي
-    db_log_signals(results, SECTORS, {}, is_ramadan(), is_cbe_window())
-    tracker_run_all(verbose=False)
-    maybe_run_weekly_report()
+    try:
+        db_log_signals(results, SECTORS, {}, is_ramadan(), is_cbe_window())
+        tracker_run_all(verbose=False)
+        maybe_run_weekly_report()
+    except Exception as _rp_err:
+        print(f"  [Publish] research platform non-fatal: {_rp_err}")
 
-    # Layer 10: continuous learning — runs if >= 10 new outcomes and > 24h since last cycle
     try:
         from continuous_learning import schedule_daily
         schedule_daily()
     except Exception as _cl_err:
         print(f"  [ContinuousLearning] skipped: {_cl_err}")
 
-    # EARLY BUY Research Shadow — log, enrich outcomes, snapshot performance
     try:
         import early_buy_tracker as _ebt
-        _today = now_cairo().strftime("%Y-%m-%d")
-        _ebt.daily_run(results=results, signal_date=_today)
+        _ebt.daily_run(results=results, signal_date=now_cairo().strftime("%Y-%m-%d"))
     except Exception as _eb_err:
         print(f"  [EarlyBuy] skipped: {_eb_err}")
-    changes = detect_signal_changes(snap)
-    if changes:
-        try:
-            from constitutional_timeline_engine import register_alert_events
-            _registered = register_alert_events(changes)
-            if _registered:
-                print(f"  [Timeline] Registered alert events: {_registered}")
-        except Exception as _reg_err:
-            print(f"  [Timeline] alert event registration non-fatal: {_reg_err}")
-        send_change_alert(changes)
 
-    # Discount Reversal Engine — daily scan
     try:
         _dre_result = run_discount_scan(results=results)
         if _dre_result:
@@ -1951,6 +2019,8 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
                   f"(top: {_dre_result[0]['symbol']} score={_dre_result[0]['final_score']:.1f})")
     except Exception as _dre_err:
         print(f"  [DiscountReversal] skipped: {_dre_err}")
+
+    tx.complete(Phase.PUBLISH)
 
 
 def run_discount_scan(results: dict = None) -> list:

@@ -33,6 +33,21 @@ BASE         = Path(__file__).parent
 CTX_FILE     = BASE / "scan_context.json"
 GATE_FILE    = BASE / "constitutional_gate.py"
 
+# Production code files whose composite hash forms the architecture_version.
+# Any change to these files produces a new architecture_version, making
+# architectural drift detectable via the scan_manifest and decision snapshot.
+_ARCH_FILES = [
+    "constitutional_gate.py",
+    "main.py",
+    "notifications/scan_orchestrator.py",
+    "universe_snapshot.py",
+    "presentation/presentation_snapshot.py",
+    "audit/build_production_decision_snapshot.py",
+    "constitutional_timeline_engine.py",
+    "production/transaction.py",
+    "production/invariants.py",
+]
+
 
 # ── Git helpers ───────────────────────────────────────────────────────────────
 
@@ -61,34 +76,63 @@ def compute_gate_version() -> str:
     if not GATE_FILE.exists():
         return "unknown"
     text = GATE_FILE.read_text()
-    # Extract the two critical functions + constant definitions
     import re
-    relevant = "\n".join(
-        m.group(0)
-        for pattern in [
-            r"CONST_R2_MIN\s*=.*",
-            r"CONST_SCORE_MIN\s*=.*",
-            r"PRICE_TOLERANCE\s*=.*",
-            r"def is_constitutional_buy\(.*?(?=\ndef |\Z)",
-            r"def evaluate\(.*?(?=\ndef |\Z)",
-        ]
-        for m in re.finditer(pattern, text, re.DOTALL)
-    )
+    parts = []
+    for pattern in [
+        r"CONST_R2_MIN\s*=.*",
+        r"CONST_SCORE_MIN\s*=.*",
+        r"PRICE_TOLERANCE\s*=.*",
+        r"def is_constitutional_buy\(.*?(?=\ndef |\Z)",
+        r"def evaluate\(.*?(?=\ndef |\Z)",
+    ]:
+        parts.extend(m.group(0) for m in re.finditer(pattern, text, re.DOTALL))
+    if not parts:
+        # Pattern match failed — hash the entire file to avoid silent miss
+        return hashlib.sha256(text.encode()).hexdigest()[:16]
+    relevant = "\n".join(parts)
     return hashlib.sha256(relevant.encode()).hexdigest()[:16]
+
+
+def compute_architecture_version() -> str:
+    """
+    Return a short hash of the composite of all core production code files.
+    Changes when ANY tracked production file changes. Stored in scan_context
+    and embedded in production_decision_snapshot.json so every decision can be
+    traced back to the exact code version that produced it.
+    """
+    digests: list[str] = []
+    for rel in _ARCH_FILES:
+        fp = BASE / rel
+        if fp.exists():
+            digests.append(f"{rel}:{hashlib.sha256(fp.read_bytes()).hexdigest()}")
+        else:
+            digests.append(f"{rel}:MISSING")
+    composite = "\n".join(sorted(digests))
+    return hashlib.sha256(composite.encode()).hexdigest()[:16]
 
 
 # ── Context generation ────────────────────────────────────────────────────────
 
+def compute_producer_version(producer_file: str | Path) -> str:
+    """Return SHA256[:16] of a specific producer script."""
+    fp = Path(producer_file)
+    if not fp.exists():
+        # Try relative to BASE
+        fp = BASE / fp
+    return hashlib.sha256(fp.read_bytes()).hexdigest()[:16] if fp.exists() else "unknown"
+
+
 def generate_scan_context() -> dict[str, Any]:
     """Generate a fresh scan context with a new UUID4. Does NOT write to disk."""
     return {
-        "scan_id":          str(uuid.uuid4()),
-        "git_commit":       _git_commit(),
-        "workflow_run":     os.environ.get("GITHUB_RUN_ID", "local"),
-        "workflow_job":     os.environ.get("GITHUB_JOB", "local"),
-        "gate_version":     compute_gate_version(),
-        "initiated_at":     datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "gate_file_sha":    _file_sha256(GATE_FILE),
+        "scan_id":              str(uuid.uuid4()),
+        "git_commit":           _git_commit(),
+        "workflow_run":         os.environ.get("GITHUB_RUN_ID", "local"),
+        "workflow_job":         os.environ.get("GITHUB_JOB", "local"),
+        "gate_version":         compute_gate_version(),
+        "architecture_version": compute_architecture_version(),
+        "initiated_at":         datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "gate_file_sha":        _file_sha256(GATE_FILE),
     }
 
 
@@ -107,13 +151,14 @@ def init_scan_context(force: bool = False) -> dict[str, Any]:
 def read_scan_context() -> dict[str, Any]:
     """
     Read scan context from scan_context.json.
-    If the file doesn't exist, generates an ephemeral context (not written to disk).
+    If the file doesn't exist or is malformed, generates an ephemeral context
+    (not written to disk). Logs parse failures so they are never silently swallowed.
     """
     if CTX_FILE.exists():
         try:
             return json.loads(CTX_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[scan_context] WARN: scan_context.json unreadable ({e}); generating ephemeral context")
     return generate_scan_context()
 
 

@@ -50,6 +50,8 @@ ASSERTIONS = [
     "assert_scan_id_consistency.py",
     "assert_schema_compliance.py",
     "assert_e2e_constitutional_audit.py",
+    # Phase 4 — Scan Manifest
+    "assert_scan_manifest.py",
 ]
 
 _STATUS_LABELS = {

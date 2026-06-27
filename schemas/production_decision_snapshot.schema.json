@@ -4,7 +4,7 @@
   "title": "Constitutional Production Decision Snapshot",
   "description": "Immutable record of every constitutional eligibility decision for the current scan. Single source of truth for all downstream renderers.",
   "type": "object",
-  "required": ["scan_id", "generated_at", "ticker_count", "eligible_count", "gate_version", "decisions"],
+  "required": ["scan_id", "generated_at", "ticker_count", "eligible_count", "gate_version", "architecture_version", "producer_version", "decisions"],
   "additionalProperties": true,
   "properties": {
     "scan_id": {
@@ -32,6 +32,16 @@
       "minLength": 1,
       "description": "Fingerprint of is_constitutional_buy + evaluate function bodies"
     },
+    "architecture_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Composite SHA256[:16] of all core production code files at scan time"
+    },
+    "producer_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "SHA256[:16] of build_production_decision_snapshot.py itself"
+    },
     "decisions": {
       "type": "array",
       "minItems": 1,
@@ -40,7 +50,7 @@
         "type": "object",
         "required": ["ticker", "eligible", "constitutional_r2", "constitutional_score",
                      "current_price", "constitutional_entry_price", "reason", "scan_id",
-                     "rules_evaluated"],
+                     "gate_version", "architecture_version", "producer_version", "rules_evaluated"],
         "additionalProperties": true,
         "properties": {
           "ticker": { "type": "string", "minLength": 1 },
@@ -59,7 +69,21 @@
             "type": "string",
             "enum": ["FIRST_BUY", "RE_ACCUMULATION", "NONE"]
           },
-          "gate_version": { "type": "string" },
+          "gate_version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Must match snapshot-level gate_version"
+          },
+          "architecture_version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Must match snapshot-level architecture_version"
+          },
+          "producer_version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Must match snapshot-level producer_version"
+          },
           "git_commit": { "type": "string" },
           "rules_evaluated": {
             "type": "array",

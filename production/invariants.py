@@ -179,10 +179,31 @@ def inv02_telegram_implies_timeline(today: Optional[str] = None) -> tuple[bool, 
     return True, f"INV-02: PASS — Telegram sent, timeline consistent for {sorted(eligible)}"
 
 
+def _signal_state_tickers(state: str) -> set[str]:
+    """Return tickers in signal_state_current with the given state."""
+    con = _notif_con()
+    if con is None:
+        return set()
+    try:
+        rows = con.execute(
+            "SELECT ticker FROM signal_state_current WHERE state=?", (state,)
+        ).fetchall()
+        return {r[0] for r in rows}
+    except Exception:
+        return set()
+    finally:
+        con.close()
+
+
 def inv03_timeline_implies_production_snapshot(today: Optional[str] = None) -> tuple[bool, str]:
     """
-    INV-03: Every v1 timeline event for today must have a corresponding eligible=True
-    decision in production_decision_snapshot.json.
+    INV-03: Every v1 timeline event for today must correspond to a CONSTITUTIONAL_BUY
+    in signal_state_current (the live source of truth kept in sync by continuous_scan).
+
+    Note: production_decision_snapshot.json is built by the CI audit pipeline
+    (build_production_decision_snapshot.py), not by continuous_scan. In a multi-scan
+    day, a later intraday scan can add timeline events that are not yet reflected in
+    the snapshot. Signal_state_current is authoritative for live state.
     """
     today = today or _today()
     tl_con = _timeline_con()
@@ -203,17 +224,26 @@ def inv03_timeline_implies_production_snapshot(today: Optional[str] = None) -> t
     if not tl_tickers:
         return True, "INV-03: SKIP (no v1 timeline events for today)"
 
-    eligible = _eligible_tickers()
-    missing  = tl_tickers - eligible
-    if missing:
+    # Primary check: every timeline ticker must be CONSTITUTIONAL_BUY in live state store
+    live_buys = _signal_state_tickers("CONSTITUTIONAL_BUY")
+    missing_live = tl_tickers - live_buys
+    if missing_live:
         return False, (
-            f"INV-03: FAIL — timeline has v1 events for {missing} but "
-            f"production_decision_snapshot.json does not mark them eligible. "
-            f"Decision snapshot and timeline are inconsistent (Partial Execution)."
+            f"INV-03: FAIL — timeline has v1 events for {missing_live} but "
+            f"signal_state_current does not have CONSTITUTIONAL_BUY for them. "
+            f"Live state and timeline are inconsistent (Partial Execution)."
         )
+
+    # Advisory: note if production_decision_snapshot is lagging (CI rebuild needed)
+    eligible = _eligible_tickers()
+    lagging  = tl_tickers - eligible
+    lagging_note = (
+        f" [Advisory: {sorted(lagging)} not yet in production_decision_snapshot — "
+        f"rebuild required to sync CI artifact]" if lagging else ""
+    )
     return True, (
         f"INV-03: PASS — all timeline tickers {sorted(tl_tickers)} "
-        f"present in production snapshot as eligible"
+        f"confirmed CONSTITUTIONAL_BUY in live state{lagging_note}"
     )
 
 
@@ -244,16 +274,22 @@ def inv04_snapshot_freshness(today: Optional[str] = None) -> tuple[bool, str]:
     try:
         t_prod = datetime.fromisoformat(prod_ts.replace("Z", "+00:00"))
         t_pres = datetime.fromisoformat(pres_ts.replace("Z", "+00:00"))
-        delta  = abs((t_prod - t_pres).total_seconds())
+        # Only directional staleness matters: presentation must NOT be older than
+        # production decisions. If presentation is newer (continuous_scan ran more
+        # recently than the CI audit rebuild), that is normal and not a failure.
+        staleness = (t_prod - t_pres).total_seconds()
     except Exception as e:
         return True, f"INV-04: SKIP (timestamp parse error: {e})"
 
-    if delta > 600:
+    if staleness > 600:
         return False, (
-            f"INV-04: FAIL — presentation_snapshot.json is {delta:.0f}s apart from "
-            f"production_decision_snapshot.json (>10 min). Dashboard may show stale data."
+            f"INV-04: FAIL — presentation_snapshot.json is {staleness:.0f}s older than "
+            f"production_decision_snapshot.json (>10 min stale). Dashboard shows old data."
         )
-    return True, f"INV-04: PASS — snapshot freshness delta={delta:.0f}s (<600s)"
+    return True, (
+        f"INV-04: PASS — presentation_snapshot freshness ok "
+        f"(prod_ahead={staleness:.0f}s, threshold=600s)"
+    )
 
 
 def inv05_notify_requires_all_persist_success(scan_id: Optional[str] = None) -> tuple[bool, str]:

@@ -285,6 +285,46 @@ def _confidence_label(c: float) -> str:
 
 # ── Historical Comparison ──────────────────────────────────────────────────────
 
+_ROWS_LABEL_TO_KEY = {
+    "Price Position":      "r1_price",
+    "Order Block Quality": "r2_ob",
+    "Liquidity Context":   "r3_liquidity",
+    "Higher Timeframe":    "r4_htf",
+    "Anchored VWAP":       "r5_avwap",
+    "MACD vs Zero":        "r6_macd",
+    "Divergence":          "r7_div",
+    "Demand Zone (SV+VP)": "r8_demand",
+}
+
+
+def _extract_r_scores_from_feat(feat: dict) -> dict:
+    """
+    Extract R1-R8 scores from the scan result dict.
+
+    analyze() in main.py stores only `r1` as a named key; r2-r8 live in
+    `rows` as (label, score, weight, desc) tuples. This function reads
+    `rows` and returns a flat dict keyed by r1_price..r8_demand so that
+    MPI has a complete R-score vector even when only `rows` is present.
+
+    The `r1` shorthand (= r1_price) is also accepted as a fallback.
+    """
+    out: dict[str, float] = {}
+    rows = feat.get("rows") or []
+    for entry in rows:
+        if len(entry) >= 2:
+            label = entry[0]
+            score = entry[1]
+            key   = _ROWS_LABEL_TO_KEY.get(label)
+            if key and score is not None:
+                out[key] = float(score)
+    # Fallback: r1 shorthand if rows didn't provide it
+    if "r1_price" not in out:
+        r1 = feat.get("r1_price") or feat.get("r1")
+        if r1 is not None:
+            out["r1_price"] = float(r1)
+    return out
+
+
 def _behavioral_cosine(cur_b: dict, hist_b: dict, b_weights: dict) -> float:
     """
     Weighted cosine similarity on binary behavioral features.
@@ -370,15 +410,19 @@ def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
     r_blend = float(hist_cfg.get("r_score_blend", 0.70))
     b_blend = float(hist_cfg.get("behavioral_blend", 0.30))
 
+    # Build complete R-score vector.
+    # analyze() in main.py only puts r1 as a named key; r2-r8 are in the
+    # `rows` list. _extract_r_scores_from_feat() recovers all 8 values.
+    _extracted = _extract_r_scores_from_feat(feat)
     cur_r = {
-        "r1": float(feat.get("r1_price") or feat.get("r1") or 0),
-        "r2": float(feat.get("r2_ob") or feat.get("r2") or 0),
-        "r3": float(feat.get("r3_liquidity") or feat.get("r3") or 0),
-        "r4": float(feat.get("r4_htf") or feat.get("r4") or 0),
-        "r5": float(feat.get("r5_avwap") or feat.get("r5") or 0),
-        "r6": float(feat.get("r6_macd") or feat.get("r6") or 0),
-        "r7": float(feat.get("r7_div") or feat.get("r7") or 0),
-        "r8": float(feat.get("r8_demand") or feat.get("r8") or 0),
+        "r1": float(_extracted.get("r1_price") or feat.get("r1_price") or feat.get("r1") or 0),
+        "r2": float(_extracted.get("r2_ob")       or feat.get("r2_ob")       or feat.get("r2") or 0),
+        "r3": float(_extracted.get("r3_liquidity") or feat.get("r3_liquidity") or feat.get("r3") or 0),
+        "r4": float(_extracted.get("r4_htf")       or feat.get("r4_htf")       or feat.get("r4") or 0),
+        "r5": float(_extracted.get("r5_avwap")     or feat.get("r5_avwap")     or feat.get("r5") or 0),
+        "r6": float(_extracted.get("r6_macd")      or feat.get("r6_macd")      or feat.get("r6") or 0),
+        "r7": float(_extracted.get("r7_div")       or feat.get("r7_div")       or feat.get("r7") or 0),
+        "r8": float(_extracted.get("r8_demand")    or feat.get("r8_demand")    or feat.get("r8") or 0),
     }
 
     cur_b = {
@@ -698,14 +742,7 @@ def analyze_ticker(
             "htf_hh":         feat.get("htf_hh", False),
             "htf_hl":         feat.get("htf_hl", False),
             "r_scores": {
-                "r1": float(feat.get("r1_price") or feat.get("r1") or 0),
-                "r2": float(feat.get("r2_ob") or feat.get("r2") or 0),
-                "r3": float(feat.get("r3_liquidity") or feat.get("r3") or 0),
-                "r4": float(feat.get("r4_htf") or feat.get("r4") or 0),
-                "r5": float(feat.get("r5_avwap") or feat.get("r5") or 0),
-                "r6": float(feat.get("r6_macd") or feat.get("r6") or 0),
-                "r7": float(feat.get("r7_div") or feat.get("r7") or 0),
-                "r8": float(feat.get("r8_demand") or feat.get("r8") or 0),
+                k: v for k, v in _extract_r_scores_from_feat(feat).items()
             },
             "historical_analogs": hist,
             "analysis_ms": round((time.monotonic() - t0) * 1000, 1),
@@ -906,6 +943,61 @@ def get_snapshots_for_date(date_str: str, db_path: Optional[str] = None) -> dict
 
 # ── HTML Helpers (consumed by dashboard + email) ──────────────────────────────
 
+def render_historical_context_html(snap: Optional[dict], theme: str = "dark") -> str:
+    """
+    Render a compact Historical Context block when behavioral confidence is
+    below the display threshold but historical similarity is still meaningful.
+
+    This block is strictly informational — no behavioral phase, no conclusions.
+    Shown only when: historical_cases >= min_cases AND similarity >= min_similarity.
+    """
+    if not snap:
+        return ""
+    hist_n   = int(snap.get("historical_cases", 0))
+    sim      = float(snap.get("similarity_score", 0.0))
+    avg_mfe  = float(snap.get("avg_mfe40", 0.0))
+    avg_dd   = float(snap.get("avg_drawdown", 0.0))
+    avg_days = float(snap.get("avg_holding_days", 0.0))
+
+    ctx_cfg  = _cfg().get("historical_context", {})
+    min_n    = int(ctx_cfg.get("min_cases", 3))
+    min_sim  = float(ctx_cfg.get("min_similarity", 0.60))
+
+    if hist_n < min_n or sim < min_sim:
+        return ""
+
+    if theme == "dark":
+        border = "#252645"
+        bg     = "#0e0f28"
+        title  = "#6b6f88"
+        fg     = "#9095b0"
+        val_c  = "#c0c4d8"
+    else:
+        border = "#d8dde8"
+        bg     = "#f8fafd"
+        title  = "#999999"
+        fg     = "#666666"
+        val_c  = "#333333"
+
+    sim_pct = int(round(sim * 100))
+    days_s  = f" · Avg hold: {avg_days:.0f}d" if avg_days > 0 else ""
+
+    return (
+        f'<div style="background:{bg};border:1px solid {border};border-radius:6px;'
+        f'padding:8px 12px;margin-top:8px;">'
+        f'<div style="font-size:9px;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.6px;color:{title};margin-bottom:4px;">📊 Historical Context</div>'
+        f'<div style="font-size:11px;color:{fg};line-height:1.5;">'
+        f'<strong style="color:{val_c};">{hist_n}</strong> comparable constitutional signals '
+        f'({sim_pct}% structural similarity) &nbsp;·&nbsp; '
+        f'Avg MFE40: <strong style="color:{val_c};">{avg_mfe:+.0f}%</strong> &nbsp;·&nbsp; '
+        f'Avg drawdown: <strong style="color:{val_c};">{avg_dd:.0f}%</strong>'
+        f'{days_s}'
+        f'</div>'
+        f'</div>'
+    )
+
+
 def render_behavior_insight_html(snap: Optional[dict], theme: str = "dark") -> str:
     """
     Render a self-contained Behavior Insight HTML block.
@@ -918,7 +1010,7 @@ def render_behavior_insight_html(snap: Optional[dict], theme: str = "dark") -> s
 
     explanation = snap.get("explanation", "")
     if not explanation or explanation == _UNAVAILABLE_EXPLANATION:
-        return ""
+        return render_historical_context_html(snap, theme=theme)
 
     phase      = snap.get("phase", "")
     conf_label = snap.get("confidence_label", "")
@@ -980,11 +1072,26 @@ def render_behavior_insight_html(snap: Optional[dict], theme: str = "dark") -> s
 def render_behavior_insight_telegram(snap: Optional[dict]) -> str:
     """
     Render compact Telegram Behavior Insight block (≤4 lines).
-    Returns empty string if snap is None or explanation unavailable.
+    Falls back to compact Historical Context line when confidence is below threshold
+    but historical data is meaningful (cases ≥ min and similarity ≥ 0.60).
+    Returns empty string if snap is None or no meaningful data available.
     """
     if not snap:
         return ""
     compact = snap.get("explanation_compact", "")
-    if not compact or compact == _UNAVAILABLE_COMPACT:
+    if compact and compact != _UNAVAILABLE_COMPACT:
+        return f"🧠 *Behavior*\n{compact}"
+
+    # Fallback: compact historical context
+    ctx_cfg = _cfg().get("historical_context", {})
+    if not ctx_cfg.get("telegram_enabled", True):
         return ""
-    return f"🧠 *Behavior*\n{compact}"
+    hist_n  = int(snap.get("historical_cases", 0))
+    sim     = float(snap.get("similarity_score", 0.0))
+    avg_mfe = float(snap.get("avg_mfe40", 0.0))
+    min_n   = int(ctx_cfg.get("min_cases", 3))
+    min_sim = float(ctx_cfg.get("min_similarity", 0.60))
+    if hist_n < min_n or sim < min_sim:
+        return ""
+    sim_pct = int(round(sim * 100))
+    return f"📊 *Historical* ({hist_n} signals, {sim_pct}% similarity · MFE40 {avg_mfe:+.0f}%)"

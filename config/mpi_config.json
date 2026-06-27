@@ -63,5 +63,15 @@
     "email_enabled":     true,
     "telegram_enabled":  true,
     "debug_mode":        false
+  },
+
+  "historical_context": {
+    "min_cases":       3,
+    "min_similarity":  0.60,
+    "telegram_enabled": true
+  },
+
+  "_notes": {
+    "ob_quality": "ob_quality is computed by the scanner but has never been non-null in either the current scan output or the historical signals table (0/681 rows). The ob_quality_high evidence path is therefore inactive. No R-score or constitutional logic depends on it — it is additive evidence only. To activate: the scanner must begin populating ob_quality in the signals table."
   }
 }

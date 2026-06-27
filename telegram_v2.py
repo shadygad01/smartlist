@@ -75,6 +75,15 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
     )
     lines.append("")
 
+    # Load MPI snapshots once (non-fatal)
+    _mpi_snaps: dict = {}
+    try:
+        from mpi_engine import get_snapshots_for_date as _mpi_get, render_behavior_insight_telegram as _mpi_tg
+        from time_authority import today_iso as _today_iso
+        _mpi_snaps = _mpi_get(_today_iso())
+    except Exception:
+        _mpi_tg = lambda snap: ""  # noqa: E731
+
     # Near Constitutional Entry
     if near_items:
         lines.append(SEP)
@@ -88,6 +97,11 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
                 f"• *{r['ticker']}*  R2 {r2:.1f}  ({dist:.1f} pts to gate)"
             )
             lines.append(f"   Price {cp:.2f} / Entry {ep:.2f} EGP")
+            mpi_snap = _mpi_snaps.get(r["ticker"])
+            if mpi_snap:
+                tg_insight = _mpi_tg(mpi_snap)
+                if tg_insight:
+                    lines.append(f"   {tg_insight.replace(chr(10), chr(10) + '   ')}")
         lines.append("")
 
     # Active Positions
@@ -109,6 +123,12 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
         lines.append(SEP)
         chips = "  ·  ".join(f"*{e['ticker']}*" for e in re_candidates)
         lines.append(f"🔄 *Re-Accumulation:* {chips}")
+        for e in re_candidates[:2]:
+            mpi_snap = _mpi_snaps.get(e["ticker"])
+            if mpi_snap:
+                tg_insight = _mpi_tg(mpi_snap)
+                if tg_insight:
+                    lines.append(f"   {tg_insight.replace(chr(10), chr(10) + '   ')}")
         lines.append("")
 
     # Future / Watch

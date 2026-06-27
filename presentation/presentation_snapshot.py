@@ -257,6 +257,46 @@ def build_presentation_snapshot() -> PresentationSnapshot:
     except Exception:
         pass
 
+    # ── Filter new_events_today by current eligibility ────────────────────────
+    # production_decision_snapshot is the authoritative eligibility source.
+    # new_events_today must be a subset of currently eligible tickers so that
+    # all consumers (dashboard, email, Telegram, audit assertions) see a
+    # consistent signal set. The dashboard already applies this filter at render
+    # time; applying it here ensures the snapshot itself agrees with the gate.
+    # When the production snapshot does not yet exist (first run in a pipeline)
+    # this block is skipped and the reconciliation step rebuilds the snapshot
+    # after the production snapshot is written.
+    _prod_snap_path = BASE / "production_decision_snapshot.json"
+    if _prod_snap_path.exists() and snap.new_events_today:
+        try:
+            import json as _json_prod_filter
+            _prod_filter_data = _json_prod_filter.loads(_prod_snap_path.read_text())
+            _prod_eligible_set = {
+                d["ticker"]
+                for d in _prod_filter_data.get("decisions", [])
+                if d.get("eligible")
+            }
+            _before = len(snap.new_events_today)
+            snap.new_events_today = [
+                e for e in snap.new_events_today
+                if e["ticker"] in _prod_eligible_set
+            ]
+            snap.new_buys_today = [
+                e for e in snap.new_events_today
+                if e["event_type"] == "FIRST_BUY"
+            ]
+            _filtered = _before - len(snap.new_events_today)
+            if _filtered:
+                print(
+                    f"[PresentationSnapshot] new_events_today: excluded {_filtered} "
+                    f"ineligible ticker(s) via production_decision_snapshot"
+                )
+        except Exception as _prod_filt_err:
+            print(
+                f"[PresentationSnapshot] new_events_today eligibility filter "
+                f"non-fatal: {_prod_filt_err}"
+            )
+
     # ── 1. Approaching Constitutional Entry (candidate_pool) ──────────────────
     pool = _db(_POOL_DB)
     if pool:

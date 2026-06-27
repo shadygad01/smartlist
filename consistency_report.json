@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-06-27T16:14:47+00:00",
-  "mode": "CI/strict",
-  "verdict": "PASS",
+  "generated_at": "2026-06-27T22:16:27+00:00",
+  "mode": "dev/manual",
+  "verdict": "FAIL",
   "assertions": [
     {
       "label": "Decision Consistency",
@@ -31,7 +31,7 @@
       "label": "Event Chain Integrity",
       "status": "PASS",
       "status_code": 0,
-      "brief": "ASSERTION PASSED \u2014 1 event chain(s) intact."
+      "brief": "ASSERTION PASSED \u2014 no transitions to validate."
     },
     {
       "label": "Data Freshness",
@@ -41,9 +41,9 @@
     },
     {
       "label": "Workflow Completeness",
-      "status": "PASS",
-      "status_code": 0,
-      "brief": "ASSERTION PASSED \u2014 all required pipeline stages completed."
+      "status": "EXPECTED",
+      "status_code": 3,
+      "brief": "ASSERTION EXPECTED \u2014 dev/manual run has expected staleness or ordering g"
     },
     {
       "label": "Decision Replay",
@@ -101,9 +101,9 @@
     },
     {
       "label": "Schema Compliance",
-      "status": "PASS",
-      "status_code": 0,
-      "brief": "ASSERTION PASSED \u2014 all artifacts comply with their JSON Schema contracts"
+      "status": "FAIL",
+      "status_code": 1,
+      "brief": "FAIL: jsonschema not installed \u2014 it is a mandatory production dependency"
     },
     {
       "label": "E2E Constitutional Audit",
@@ -119,9 +119,9 @@
     }
   ],
   "summary": {
-    "pass": 19,
-    "fail": 0,
-    "expected": 0,
+    "pass": 17,
+    "fail": 1,
+    "expected": 1,
     "skipped": 0
   }
 }

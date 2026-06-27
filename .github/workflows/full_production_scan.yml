@@ -151,6 +151,22 @@ jobs:
       - name: Build production decision snapshot
         run: python3 audit/build_production_decision_snapshot.py
 
+      - name: Reconcile presentation snapshot with production decision snapshot
+        # After the production_decision_snapshot is built with fresh prices,
+        # rebuild presentation_snapshot.json so that new_events_today is filtered
+        # to only eligible tickers. This prevents assert_rendered_output and
+        # assert_cross_layer_consistency from failing when a ticker was written
+        # to the timeline DB during the scan but is no longer gate-positive
+        # (e.g. price moved above entry between the CSV refresh and universe
+        # snapshot rebuild steps).
+        run: |
+          python3 - <<'PYEOF'
+          from presentation.presentation_snapshot import build_presentation_snapshot, write_presentation_snapshot_json
+          snap = build_presentation_snapshot()
+          write_presentation_snapshot_json(snap)
+          print('[scan_core] presentation_snapshot.json reconciled with production_decision_snapshot.')
+          PYEOF
+
       - name: Full universe replay (all tickers — gate is reproducible)
         run: python3 audit/assert_full_universe_replay.py
 

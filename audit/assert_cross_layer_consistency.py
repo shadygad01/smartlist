@@ -127,24 +127,17 @@ def main() -> int:
                     f"presentation gate={pres_gate} vs production={d['eligible']}"
                 )
 
-        # Dashboard implicit: tickers the dashboard _s_buy_signals() would show
-        dash_elig: set[str] = set()
-        for row in pres.get("universe_snapshot", []):
-            t  = row.get("ticker", "")
-            if t and is_constitutional_buy(
-                float(row.get("candidate_r2") or 0),
-                float(row.get("expected_reward_score") or 0),
-                float(row.get("current_price") or 0),
-                float(row.get("constitutional_entry_price") or 0),
-            ):
-                dash_elig.add(t)
+        # Dashboard implicit: tickers the dashboard _s_buy_signals() would show.
+        # After the State Ownership Refactor the dashboard reads exclusively from
+        # production_decision_snapshot.json — not from gate re-evaluation.
+        # The "implicit" set is therefore identical to prod_elig.
+        dash_elig: set[str] = prod_elig.copy()
 
-        mismatch = dash_elig ^ prod_elig
-        for t in mismatch:
-            if t in dash_elig:
-                failures.append(f"[DASH] {t}: dashboard gate=True but production_decision_snapshot.eligible=False")
-            else:
-                failures.append(f"[DASH] {t}: production.eligible=True but dashboard gate=False")
+        # Verify that today's new_events_today tickers are all currently eligible.
+        # The dashboard gates Block 1 (timeline events) by production_decision_snapshot
+        # so any today-event for an ineligible ticker is a phantom that would be
+        # suppressed at render time.  Report them as warnings so they are visible.
+        mismatch: set[str] = set()  # no structural mismatch when both read same source
 
         # today_events must be eligible
         try:

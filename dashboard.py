@@ -362,19 +362,49 @@ def _s_buy_signals(snap, mpi_snaps: dict | None = None) -> tuple:
     market_pre   = "PRE" in snap.market_status
     gen_cairo    = _to_cairo(snap.generated_at)
 
-    # ── 1. Today's confirmed events ───────────────────────────────────────────
-    today_events  = list(snap.new_events_today or [])
-    today_tickers = {e["ticker"] for e in today_events}
-    today_new_buy  = [e for e in today_events if e["event_type"] == "FIRST_BUY"]
-    today_re_today = [e for e in today_events if e["event_type"] != "FIRST_BUY"]
-
-    # ── 2. Re-accumulation candidates from production_decision_snapshot.json ──
-    # Read from the single authoritative source; never re-evaluate the gate here.
-    reaccum_hist = []
+    # ── 1. Today's confirmed events — gated by production_decision_snapshot ──────
+    # Load eligible set from the authoritative snapshot first.
+    # Timeline events for a ticker that is no longer eligible (price moved up
+    # after the event was written) must not render in the BUY section.
+    _prod_eligible:  set[str]   = set()
+    _prod_etype:     dict[str, str] = {}
+    _prod_decisions: list[dict] = []
     try:
         _prod_snap_path = BASE / "production_decision_snapshot.json"
         if _prod_snap_path.exists():
             _prod_decisions = _json.loads(_prod_snap_path.read_text()).get("decisions", [])
+            for _pd in _prod_decisions:
+                if _pd.get("eligible"):
+                    _prod_eligible.add(_pd["ticker"])
+                    _prod_etype[_pd["ticker"]] = _pd.get("event_type", "FIRST_BUY")
+    except Exception as _pe_err:
+        print(f"[dashboard] production_decision_snapshot pre-load failed: {_pe_err}")
+
+    # Keep only timeline events whose ticker is currently eligible.
+    # Also use production_decision_snapshot.event_type as the authoritative
+    # event_type — the timeline records the first historical cluster type
+    # (always FIRST_BUY for event_index=0) but the production snapshot
+    # correctly reflects the current cycle type (FIRST_BUY or RE_ACCUMULATION).
+    _raw_today = list(snap.new_events_today or [])
+    today_events: list[dict] = []
+    for _ev in _raw_today:
+        _t = _ev["ticker"]
+        if _t not in _prod_eligible:
+            continue  # ineligible — do not render in BUY section
+        _ev = dict(_ev)  # copy before mutating
+        _ev["event_type"] = _prod_etype.get(_t, _ev["event_type"])
+        today_events.append(_ev)
+
+    today_tickers  = {e["ticker"] for e in today_events}
+    today_new_buy  = [e for e in today_events if e["event_type"] == "FIRST_BUY"]
+    today_re_today = [e for e in today_events if e["event_type"] != "FIRST_BUY"]
+
+    # ── 2. Re-accumulation candidates from production_decision_snapshot.json ──
+    # Eligible tickers not already shown in Block 1 (today_tickers).
+    # Reuse the decisions already loaded above; no second file read needed.
+    reaccum_hist = []
+    try:
+        if _prod_decisions:
             for d in _prod_decisions:
                 if d.get("eligible") and d["ticker"] not in today_tickers:
                     reaccum_hist.append({
@@ -390,7 +420,7 @@ def _s_buy_signals(snap, mpi_snaps: dict | None = None) -> tuple:
                         "days_active":                0,
                     })
     except Exception as _dash_ps_err:
-        print(f"[dashboard] production_decision_snapshot read non-fatal: {_dash_ps_err}")
+        print(f"[dashboard] production_decision_snapshot reaccum build failed: {_dash_ps_err}")
 
     # ── 3. Build blocks with conviction ranking ───────────────────────────────
     def _conv(e: dict) -> float:

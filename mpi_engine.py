@@ -285,18 +285,66 @@ def _confidence_label(c: float) -> str:
 
 # ── Historical Comparison ──────────────────────────────────────────────────────
 
+def _behavioral_cosine(cur_b: dict, hist_b: dict, b_weights: dict) -> float:
+    """
+    Weighted cosine similarity on binary behavioral features.
+    Binary features are treated as 0/1 floats; weights handle scaling.
+    """
+    import math
+    dot = norm_cur = norm_hist = 0.0
+    for k, w in b_weights.items():
+        c = float(bool(cur_b.get(k, False))) * w
+        h = float(bool(hist_b.get(k, False))) * w
+        dot       += c * h
+        norm_cur  += c * c
+        norm_hist += h * h
+    if norm_cur <= 0 or norm_hist <= 0:
+        return 0.0
+    return dot / (math.sqrt(norm_cur) * math.sqrt(norm_hist))
+
+
+def _r_score_cosine(cur_r: dict, hist_r: dict, r_weights: dict) -> float:
+    """
+    Weighted cosine similarity on R1-R8 continuous scores.
+    R scores are already normalized [0,100]; cosine handles relative alignment.
+    """
+    import math
+    dot = norm_cur = norm_hist = 0.0
+    for k, w in r_weights.items():
+        c = cur_r.get(k, 0.0) * w
+        h = hist_r.get(k, 0.0) * w
+        dot       += c * h
+        norm_cur  += c * c
+        norm_hist += h * h
+    if norm_cur <= 0 or norm_hist <= 0:
+        return 0.0
+    return dot / (math.sqrt(norm_cur) * math.sqrt(norm_hist))
+
+
 def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
     """
-    Search egx_research.db for similar behavioral situations.
-    Similarity based on R-score vector distance.
+    Search egx_research.db for historical signals with similar behavioral profiles.
+
+    Similarity vector = blended score of two components:
+      1. R-score cosine  (R1-R8 weighted by r_score_weights in config)  — 70% blend
+      2. Behavioral cosine (sv_hit, hvn_hit, sweep_detected, rsi_div,
+                           macd_div, htf_hh, htf_hl weighted by
+                           behavioral_feature_weights in config)          — 30% blend
+
+    Outcome metric: mfe_40d and mae_40d from bottom_quality table.
+    avg_holding_days: derived from days_to_peak in bottom_quality.
     Returns stats dict. Never uses future data.
     """
+    import math
+
     db_path = BASE / "egx_research.db"
     if not db_path.exists():
         return {"cases": 0, "similarity": 0.0, "avg_mfe40": 0.0,
                 "avg_drawdown": 0.0, "avg_holding_days": 0.0, "confidence": "LOW"}
 
-    r_weights_cfg = _cfg().get("historical_comparison", {}).get("r_score_weights", {})
+    hist_cfg = _cfg().get("historical_comparison", {})
+
+    r_weights_cfg = hist_cfg.get("r_score_weights", {})
     r_weights = {
         "r1": r_weights_cfg.get("r1", 0.10),
         "r2": r_weights_cfg.get("r2", 0.15),
@@ -307,6 +355,20 @@ def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
         "r7": r_weights_cfg.get("r7", 0.10),
         "r8": r_weights_cfg.get("r8", 0.10),
     }
+
+    b_weights_cfg = hist_cfg.get("behavioral_feature_weights", {})
+    b_weights = {
+        "sweep_detected": b_weights_cfg.get("sweep_detected", 0.20),
+        "sv_hit":         b_weights_cfg.get("sv_hit",         0.20),
+        "hvn_hit":        b_weights_cfg.get("hvn_hit",        0.15),
+        "rsi_div":        b_weights_cfg.get("rsi_div",        0.10),
+        "macd_div":       b_weights_cfg.get("macd_div",       0.10),
+        "htf_hh":         b_weights_cfg.get("htf_hh",         0.125),
+        "htf_hl":         b_weights_cfg.get("htf_hl",         0.125),
+    }
+
+    r_blend = float(hist_cfg.get("r_score_blend", 0.70))
+    b_blend = float(hist_cfg.get("behavioral_blend", 0.30))
 
     cur_r = {
         "r1": float(feat.get("r1_price") or feat.get("r1") or 0),
@@ -319,9 +381,19 @@ def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
         "r8": float(feat.get("r8_demand") or feat.get("r8") or 0),
     }
 
-    min_sim = float(_cfg().get("historical_comparison", {}).get("min_similarity", 0.50))
-    min_n   = int(_cfg().get("historical_comparison", {}).get("min_sample_size", 3))
-    max_days = int(_cfg().get("historical_comparison", {}).get("max_lookback_days", 730))
+    cur_b = {
+        "sweep_detected": feat.get("sweep_detected", False),
+        "sv_hit":         feat.get("sv_hit", False),
+        "hvn_hit":        feat.get("hvn_hit", False),
+        "rsi_div":        feat.get("rsi_div", False),
+        "macd_div":       feat.get("macd_div", False),
+        "htf_hh":         feat.get("htf_hh", False),
+        "htf_hl":         feat.get("htf_hl", False),
+    }
+
+    min_sim  = float(hist_cfg.get("min_similarity", 0.50))
+    min_n    = int(hist_cfg.get("min_sample_size", 3))
+    max_days = int(hist_cfg.get("max_lookback_days", 730))
 
     try:
         conn = sqlite3.connect(str(db_path))
@@ -331,7 +403,9 @@ def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
             """
             SELECT s.r1_price, s.r2_ob, s.r3_liquidity, s.r4_htf,
                    s.r5_avwap, s.r6_macd, s.r7_div, s.r8_demand,
-                   b.mfe_20d, b.mae_20d
+                   s.sv_hit, s.hvn_hit, s.sweep_detected,
+                   s.rsi_div, s.macd_div, s.htf_hh, s.htf_hl,
+                   b.mfe_40d, b.mae_40d, b.days_to_peak
             FROM signals s
             LEFT JOIN bottom_quality b ON b.signal_id = s.id
             WHERE s.signal_date >= ?
@@ -344,8 +418,9 @@ def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
         return {"cases": 0, "similarity": 0.0, "avg_mfe40": 0.0,
                 "avg_drawdown": 0.0, "avg_holding_days": 0.0, "confidence": "LOW"}
 
-    matched_mfe: list[float] = []
-    matched_dd:  list[float] = []
+    matched_mfe:  list[float] = []
+    matched_dd:   list[float] = []
+    matched_days: list[float] = []
     similarity_sum = 0.0
 
     for row in rows:
@@ -359,38 +434,41 @@ def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
             "r7": float(row["r7_div"] or 0),
             "r8": float(row["r8_demand"] or 0),
         }
+        hist_b = {
+            "sweep_detected": bool(row["sweep_detected"]),
+            "sv_hit":         bool(row["sv_hit"]),
+            "hvn_hit":        bool(row["hvn_hit"]),
+            "rsi_div":        bool(row["rsi_div"]),
+            "macd_div":       bool(row["macd_div"]),
+            "htf_hh":         bool(row["htf_hh"]),
+            "htf_hl":         bool(row["htf_hl"]),
+        }
 
-        # Weighted cosine-style similarity on normalized R vectors
-        dot, norm_cur, norm_hist = 0.0, 0.0, 0.0
-        for k, w in r_weights.items():
-            c = cur_r[k] * w
-            h = hist_r[k] * w
-            dot      += c * h
-            norm_cur += c * c
-            norm_hist += h * h
+        r_sim = _r_score_cosine(cur_r, hist_r, r_weights)
+        b_sim = _behavioral_cosine(cur_b, hist_b, b_weights)
+        sim   = r_blend * r_sim + b_blend * b_sim
 
-        if norm_cur <= 0 or norm_hist <= 0:
-            continue
-
-        import math
-        sim = dot / (math.sqrt(norm_cur) * math.sqrt(norm_hist))
         if sim < min_sim:
             continue
 
         similarity_sum += sim
-        mfe = float(row["mfe_20d"] or 0)
-        mae = float(row["mae_20d"] or 0)
+        mfe = float(row["mfe_40d"] or 0)
+        mae = float(row["mae_40d"] or 0)
+        dtp = row["days_to_peak"]
         matched_mfe.append(mfe)
         matched_dd.append(mae)
+        if dtp is not None:
+            matched_days.append(float(dtp))
 
     n = len(matched_mfe)
     if n < min_n:
         return {"cases": 0, "similarity": 0.0, "avg_mfe40": 0.0,
                 "avg_drawdown": 0.0, "avg_holding_days": 0.0, "confidence": "LOW"}
 
-    avg_sim = similarity_sum / n
-    avg_mfe = sum(matched_mfe) / n * 100  # convert fraction to %
-    avg_dd  = abs(sum(matched_dd) / n * 100) if matched_dd else 0.0
+    avg_sim  = similarity_sum / n
+    avg_mfe  = sum(matched_mfe) / n * 100  # fraction → %
+    avg_dd   = abs(sum(matched_dd) / n * 100) if matched_dd else 0.0
+    avg_days = sum(matched_days) / len(matched_days) if matched_days else 0.0
 
     if n >= 10 and avg_sim >= 0.75:
         hist_conf = "HIGH"
@@ -400,12 +478,12 @@ def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
         hist_conf = "LOW"
 
     return {
-        "cases":          n,
-        "similarity":     round(avg_sim, 4),
-        "avg_mfe40":      round(avg_mfe, 1),
-        "avg_drawdown":   round(avg_dd, 1),
-        "avg_holding_days": 0.0,
-        "confidence":     hist_conf,
+        "cases":            n,
+        "similarity":       round(avg_sim, 4),
+        "avg_mfe40":        round(avg_mfe, 1),
+        "avg_drawdown":     round(avg_dd, 1),
+        "avg_holding_days": round(avg_days, 1),
+        "confidence":       hist_conf,
     }
 
 

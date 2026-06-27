@@ -488,6 +488,7 @@ def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: s
         "future_candidates":   future_candidates,
         "watchlist":           watchlist,
         "universe_snapshot":   snap.universe_snapshot,
+        "new_events_today":    list(snap.new_events_today),
         "statistics": {
             "total_timeline_events":    snap.total_events,
             "total_tickers_in_timeline": snap.total_tickers,

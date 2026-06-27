@@ -18,6 +18,7 @@ import csv as _csv
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 from time_authority import now_cairo, now_iso, today_cairo, is_trading_day as _is_trading_day, _EET as _CAIRO_TZ, market_state as _market_state_ta, _MARKET_OPEN_H, _MARKET_OPEN_M
+from constitutional_gate import is_constitutional_buy as _is_constitutional_buy
 
 _ADVISOR_DB  = BASE / "portfolio_advisor.db"
 _KB_DB       = BASE / "research" / "knowledge" / "knowledge_base.db"
@@ -384,10 +385,12 @@ def build_presentation_snapshot() -> PresentationSnapshot:
     try:
         live_constitutional_tickers = {
             r["ticker"] for r in snap.universe_snapshot
-            if (r.get("candidate_r2") or 0.0) >= 60
-            and (r.get("expected_reward_score") or 0.0) >= 35
-            and (r.get("constitutional_entry_price") or 0.0) > 0
-            and (r.get("current_price") or 0.0) <= (r.get("constitutional_entry_price") or 0.0)
+            if _is_constitutional_buy(
+                r.get("candidate_r2") or 0.0,
+                r.get("expected_reward_score") or 0.0,
+                r.get("current_price") or 0.0,
+                r.get("constitutional_entry_price") or 0.0,
+            )
         }
         signal_tickers = {
             e["ticker"] for e in (snap.new_events_today or [])

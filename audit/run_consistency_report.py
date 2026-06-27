@@ -21,7 +21,9 @@ AUDIT  = Path(__file__).parent
 # blocking=False → failure is logged but does not fail the overall report
 ASSERTIONS = [
     ("Constitutional Gate",         "assert_decision_consistency.py",       True),
+    ("Full Universe Replay",        "assert_full_universe_replay.py",       True),
     ("Cross-Layer Consistency",     "assert_cross_layer_consistency.py",    True),
+    ("Rendered Output",             "assert_rendered_output.py",            True),
     ("Event Chain Integrity",       "assert_event_chain_integrity.py",      True),
     ("Data Freshness",              "assert_data_freshness.py",             True),
     ("Workflow Completeness",       "assert_workflow_completeness.py",      False),

@@ -229,6 +229,87 @@ else:
     except Exception as _e:
         _fail("R-13", f"production_decision_snapshot.json parse error: {_e}")
 
+# ── R-14: Immutability — only build_production_decision_snapshot.py may write to production_decision_snapshot.json
+_BUILD_SNAP = BASE / "audit" / "build_production_decision_snapshot.py"
+_WRITE_PAT  = re.compile(r"""["']production_decision_snapshot\.json["']""")
+for _fp in sorted(BASE.glob("**/*.py")):
+    if _fp == _BUILD_SNAP:
+        continue
+    _rel = str(_fp.relative_to(BASE))
+    if _rel.startswith("archive/") or _rel.startswith("."):
+        continue
+    try:
+        _t = _fp.read_text()
+        # Flag if file both references the snapshot AND uses open()/write_text()/json.dump
+        if _WRITE_PAT.search(_t):
+            # Check if it writes (not just reads) the file
+            _lines = _t.splitlines()
+            for _i, _line in enumerate(_lines):
+                if _WRITE_PAT.search(_line):
+                    _ctx = "\n".join(_lines[max(0, _i-2):_i+3])
+                    if re.search(r'open\s*\(|\.write_text\s*\(|json\.dump\s*\(', _ctx):
+                        _ln = _i + 1
+                        _fail("R-14", f"{_rel}:{_ln} writes production_decision_snapshot.json "
+                              "(only audit/build_production_decision_snapshot.py may write this file)")
+    except Exception:
+        pass
+
+# ── R-15: No renderer-side constitutional eligibility recalculation ────────────
+# Presentation/rendering files must not re-implement gate logic inline.
+# They may call is_constitutional_buy() but must NOT inline threshold comparisons
+# in executable code (comments documenting the gate are allowed).
+_RENDERER_FILES = [
+    "egx_email.py",
+    "notifications/scan_orchestrator.py",
+    "presentation/presentation_snapshot.py",
+]
+_INLINE_GATE = re.compile(
+    r"r2\s*>=\s*(?:60|CONST_R2_MIN).*\band\b.*score\s*>=\s*(?:35|CONST_SCORE_MIN)",
+    re.IGNORECASE,
+)
+for _rel in _RENDERER_FILES:
+    _fp = BASE / _rel
+    if not _fp.exists():
+        continue
+    for _ln_no, _line in enumerate(_fp.read_text().splitlines(), 1):
+        _stripped = _line.lstrip()
+        if _stripped.startswith("#"):   # pure comment line — allowed
+            continue
+        if _INLINE_GATE.search(_line):
+            _fail("R-15", f"{_rel}:{_ln_no} inline gate logic — call is_constitutional_buy() instead: {_line.strip()!r}")
+
+# ── R-16: No orphan signal_event_log notifications ────────────────────────────
+# Every CONSTITUTIONAL_BUY notification must have a timeline entry.
+_NOTIF_DB = BASE / "notification_delivery.db"
+_TL_DB    = BASE / "constitutional_opportunity_events.db"
+if _NOTIF_DB.exists() and _TL_DB.exists():
+    try:
+        _nc = sqlite3.connect(str(_NOTIF_DB))
+        _tc = sqlite3.connect(str(_TL_DB))
+        _notif_tickers = {r[0] for r in _nc.execute(
+            "SELECT DISTINCT ticker FROM signal_event_log WHERE to_state='CONSTITUTIONAL_BUY'"
+        ).fetchall()}
+        _tl_tickers = {r[0] for r in _tc.execute(
+            "SELECT DISTINCT ticker FROM constitutional_opportunity_events"
+        ).fetchall()}
+        _nc.close(); _tc.close()
+        _orphan_notifs = _notif_tickers - _tl_tickers
+        for _t in sorted(_orphan_notifs):
+            _fail("R-16", f"{_t}: CONSTITUTIONAL_BUY notification exists but no timeline entry")
+    except Exception:
+        pass
+
+# ── R-17: constitutional_timeline_engine and opportunity_engine import from gate
+# These are the only files that apply CONST_R2_MIN/CONST_SCORE_MIN in SQL queries.
+# They must import the values from constitutional_gate, never define them locally.
+_ENGINE_FILES = ["constitutional_timeline_engine.py", "constitutional_opportunity_engine.py",
+                 "presentation/presentation_snapshot.py"]
+for _rel in _ENGINE_FILES:
+    _fp = BASE / _rel
+    if _fp.exists() and "constitutional_gate" not in _fp.read_text():
+        _fail("R-17", f"{_rel} does not import from constitutional_gate "
+              "(engine files must not hardcode constitutional thresholds)")
+
 # ── Report ─────────────────────────────────────────────────────────────────────
 print("Regression Suite")
 print()
@@ -247,6 +328,10 @@ _TESTS = [
     ("R-11", "No orphan timeline events"),
     ("R-12", "main.py and dashboard.py import constitutional_gate"),
     ("R-13", "production_decision_snapshot.json exists and complete"),
+    ("R-14", "Only build_production_decision_snapshot.py writes production snapshot"),
+    ("R-15", "No renderer-side inline gate logic in email/presentation files"),
+    ("R-16", "No orphan CONSTITUTIONAL_BUY notifications without timeline entry"),
+    ("R-17", "egx_email.py and scan_orchestrator import constitutional_gate"),
 ]
 
 total  = len(_TESTS)

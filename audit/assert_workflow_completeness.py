@@ -78,15 +78,27 @@ def main() -> int:
         req_tag = "" if required else " (opt)"
         table.append(("✓" if status == "OK" else "✗", label, age_str, status + req_tag))
 
-    # Extra: production_decision must be newer than presentation_snapshot
-    pres = BASE / "presentation_snapshot.json"
-    prod = BASE / "production_decision_snapshot.json"
-    if pres.is_file() and prod.is_file():
-        if prod.stat().st_mtime < pres.stat().st_mtime - 60:
-            failures.append(
-                "production_decision_snapshot.json is older than presentation_snapshot.json — "
-                "build_production_decision_snapshot.py must run AFTER presentation is built"
-            )
+    # ── Dependency ordering: each artifact must be newer than its upstream ──────
+    # Allows 300s slack for artifacts built in the same pipeline step.
+    _ORDER_SLACK = 300  # seconds
+    _deps = [
+        ("candidate_pool.db",                "universe_snapshot.db",
+         "universe_snapshot.db must be built after candidate_pool.db"),
+        ("universe_snapshot.db",             "presentation_snapshot.json",
+         "presentation_snapshot.json must be built after universe_snapshot.db"),
+        ("presentation_snapshot.json",       "production_decision_snapshot.json",
+         "production_decision_snapshot.json must be built after presentation_snapshot.json"),
+        ("production_decision_snapshot.json", "dashboard.html",
+         "dashboard.html must be built after production_decision_snapshot.json"),
+    ]
+    for upstream_rel, downstream_rel, msg in _deps:
+        up   = BASE / upstream_rel
+        down = BASE / downstream_rel
+        if up.is_file() and down.is_file():
+            if down.stat().st_mtime < up.stat().st_mtime - _ORDER_SLACK:
+                failures.append(f"Dependency order: {msg} — "
+                                 f"{downstream_rel} mtime={down.stat().st_mtime:.0f} "
+                                 f"< {upstream_rel} mtime={up.stat().st_mtime:.0f}")
 
     for icon, label, age_str, status in table:
         print(f"  {icon} {label:<35} {age_str:<10} {status}")

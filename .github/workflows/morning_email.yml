@@ -70,6 +70,11 @@ jobs:
       - name: Refresh historical CSV data
         run: python backfill_egx30.py --download-only || true
 
+      - name: Rebuild candidate pool (today's signals — fast daily refresh)
+        # Ensures constitutional R2 data is fresh before detect_signal_changes() runs.
+        # Uses --today flag: only scans the last 7 calendar days (< 60s for 27 symbols).
+        run: python candidate_pool_builder.py --today || true
+
       - name: Send Morning Email + Telegram Brief
         env:
           EMAIL_USER:       ${{ secrets.EMAIL_USER }}
@@ -125,6 +130,42 @@ jobs:
       - name: Signal idempotency assertion (10 scans = 1 notification)
         run: python3 audit/assert_signal_idempotency.py
 
+      - name: Constitutional decision consistency (ONE gate = ONE decision)
+        run: python3 audit/assert_decision_consistency.py
+
+      - name: Build production decision snapshot
+        run: python3 audit/build_production_decision_snapshot.py
+
+      - name: Full universe replay (all tickers — gate is reproducible)
+        run: python3 audit/assert_full_universe_replay.py
+
+      - name: Cross-layer consistency (gate == dashboard == email == snapshot)
+        run: python3 audit/assert_cross_layer_consistency.py
+
+      - name: Rendered output validation (dashboard matches production snapshot)
+        run: python3 audit/assert_rendered_output.py
+
+      - name: Event chain integrity (signal → timeline → presentation)
+        run: python3 audit/assert_event_chain_integrity.py
+
+      - name: Data freshness (no stale sources)
+        run: python3 audit/assert_data_freshness.py
+
+      - name: Decision replay (5 tickers — gate is reproducible)
+        run: python3 audit/assert_decision_replay.py
+
+      - name: Regression suite (all previously fixed bugs)
+        run: python3 audit/assert_regression_suite.py
+
+      - name: Build constitutional fingerprint
+        run: python3 audit/build_constitutional_fingerprint.py || true
+
+      - name: Build architecture fingerprint
+        run: python3 audit/build_architecture_fingerprint.py || true
+
+      - name: Constitutional consistency report (final)
+        run: python3 audit/run_consistency_report.py
+
       - name: Update public status
         run: |
           python - <<'PYEOF'
@@ -147,8 +188,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git add heartbeat.json operations_state.json operations/public_status.json \
                   scan_execution.db notification_delivery.db \
-                  presentation_snapshot.json version.json dashboard.html \
-                  signal_history.json || true
+                  presentation_snapshot.json production_decision_snapshot.json \
+                  constitutional_fingerprint.json architecture_fingerprint.json \
+                  consistency_report.json \
+                  version.json dashboard.html signal_history.json || true
           git add historical_data/historical_data/*.csv || true
           git diff --staged --quiet || git commit -m "Morning email: full state update [skip ci]"
           git push || true

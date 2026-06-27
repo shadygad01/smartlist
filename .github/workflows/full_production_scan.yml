@@ -96,6 +96,9 @@ jobs:
       - name: Refresh historical CSV data
         run: python backfill_egx30.py --download-only || true
 
+      - name: Rebuild candidate pool (today's signals — fast daily refresh)
+        run: python candidate_pool_builder.py --today || true
+
       - name: Prepare research database
         run: |
           python backfill_research_db.py || true
@@ -135,10 +138,46 @@ jobs:
       - name: CI Protection Gate
         run: python3 audit/assert_ci_protection.py
 
+      - name: Constitutional decision consistency (ONE gate = ONE decision)
+        run: python3 audit/assert_decision_consistency.py
+
+      - name: Build production decision snapshot
+        run: python3 audit/build_production_decision_snapshot.py
+
+      - name: Full universe replay (all tickers — gate is reproducible)
+        run: python3 audit/assert_full_universe_replay.py
+
+      - name: Cross-layer consistency (gate == dashboard == email == snapshot)
+        run: python3 audit/assert_cross_layer_consistency.py
+
+      - name: Rendered output validation (dashboard matches production snapshot)
+        run: python3 audit/assert_rendered_output.py
+
+      - name: Event chain integrity (signal → timeline → presentation)
+        run: python3 audit/assert_event_chain_integrity.py
+
+      - name: Data freshness (no stale sources)
+        run: python3 audit/assert_data_freshness.py
+
+      - name: Decision replay (5 tickers — gate is reproducible)
+        run: python3 audit/assert_decision_replay.py
+
+      - name: Regression suite (all previously fixed bugs)
+        run: python3 audit/assert_regression_suite.py
+
+      - name: Build constitutional fingerprint
+        run: python3 audit/build_constitutional_fingerprint.py || true
+
+      - name: Build architecture fingerprint
+        run: python3 audit/build_architecture_fingerprint.py || true
+
       - name: Constitutional Golden Master Validation
         run: |
           python3 audit/run_daily_validation.py
           echo "Validation passed — constitutional output identical to golden master."
+
+      - name: Constitutional consistency report (final — all layers)
+        run: python3 audit/run_consistency_report.py
 
       - name: Record heartbeat + scan slot audit
         run: |
@@ -176,6 +215,8 @@ jobs:
                   signal_history.json signal_log.json learned_weights.json \
                   egx_research.db research_results.json \
                   changed_symbols.json presentation_snapshot.json \
+                  production_decision_snapshot.json constitutional_fingerprint.json \
+                  architecture_fingerprint.json consistency_report.json \
                   heartbeat.json operations_state.json \
                   scan_execution.db notification_delivery.db || true
           git add operations/incidents.json operations/sla.json \

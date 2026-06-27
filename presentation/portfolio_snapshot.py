@@ -21,12 +21,14 @@ _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def _db(path: str) -> sqlite3.Connection:
+    """Open SQLite connection with Row factory enabled."""
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def _scalar(db_path: str, sql: str, params=()):
+    """Return single scalar from parameterized query, or None on error."""
     try:
         with _db(db_path) as c:
             row = c.execute(sql, params).fetchone()
@@ -36,6 +38,7 @@ def _scalar(db_path: str, sql: str, params=()):
 
 
 def _rows(db_path: str, sql: str, params=()):
+    """Return all rows from parameterized query as list of dicts, or [] on error."""
     try:
         with _db(db_path) as c:
             return [dict(r) for r in c.execute(sql, params).fetchall()]
@@ -44,6 +47,7 @@ def _rows(db_path: str, sql: str, params=()):
 
 
 def _one(db_path: str, sql: str, params=()):
+    """Return first row from parameterized query as dict, or {} if not found."""
     rows = _rows(db_path, sql, params)
     return rows[0] if rows else {}
 
@@ -58,7 +62,7 @@ class PortfolioSnapshot:
     health_narrative: str
 
     # Holdings
-    held_positions: list[dict]          # [{ticker, sector, entry_price, current_price, return_pct, r2_score}]
+    held_positions: list[dict]          # [{ticker, sector, candidate_entry_zone, current_price, return_pct, candidate_r2}]
     held_count: int
 
     # Opportunities from advisor
@@ -89,6 +93,7 @@ class PortfolioSnapshot:
 # ── Assembler ─────────────────────────────────────────────────────────────────
 
 def build_portfolio_snapshot() -> PortfolioSnapshot:
+    """Build PortfolioSnapshot from advisor.db, portfolio_manager.db, and knowledge_base.db."""
     advisor_db  = os.path.join(_BASE, "portfolio_advisor.db")
     manager_db  = os.path.join(_BASE, "portfolio_manager.db")
     kb_db       = os.path.join(_BASE, "research", "knowledge", "knowledge_base.db")

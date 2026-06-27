@@ -33,6 +33,7 @@ class TelegramFormatter:
         return self._chunk("\n".join(lines))
 
     def _build_lines(self, brief: DailyBriefModel) -> list[str]:
+        """Build the full list of Telegram message lines from the brief model."""
         lines = [
             f"📋 *{PLATFORM_NAME}*",
             f"*{brief.date_str}*",
@@ -77,6 +78,7 @@ class TelegramFormatter:
         return lines
 
     def _format_signal(self, sig: SignalPresentation) -> list[str]:
+        """Format a single constitutional signal into Telegram message lines."""
         portfolio_tag = "  🔵 _In Portfolio_" if sig.is_in_portfolio else ""
         quality_line  = f"   Signal Quality  *{sig.signal_quality_stars}* {sig.signal_quality_label}" if sig.signal_quality_stars else ""
 
@@ -116,6 +118,7 @@ class TelegramFormatter:
         return lines
 
     def _format_position(self, pos: PositionPresentation) -> list[str]:
+        """Format a held portfolio position into Telegram message lines."""
         if pos.current_price is not None:
             pnl_str = (
                 f"+{pos.pnl_pct:.1f}%" if (pos.pnl_pct or 0) >= 0
@@ -127,7 +130,7 @@ class TelegramFormatter:
 
         lines = [
             f"📌 *{pos.symbol}*  {pos.name}",
-            f"   Entry   {pos.entry_price:.2f} EGP",
+            f"   Entry   {pos.candidate_entry_zone:.2f} EGP",
             f"   Now     {cur_str}",
             f"   Target  *{pos.target:.2f} EGP*",
         ]
@@ -141,6 +144,7 @@ class TelegramFormatter:
         return lines
 
     def _format_early_buy(self, sig: SignalPresentation) -> list[str]:
+        """Format a pre-confirmation research signal into Telegram message lines."""
         return [
             TG_DIVIDER,
             f"🔬 *{sig.name}*  `{sig.symbol}`",
@@ -152,6 +156,7 @@ class TelegramFormatter:
 
     @staticmethod
     def _chunk(text: str, max_len: int = 4000) -> list[str]:
+        """Split text into Telegram-safe chunks of at most max_len characters."""
         chunks, current = [], ""
         for line in text.split("\n"):
             if len(current) + len(line) + 1 > max_len:
@@ -172,6 +177,7 @@ class EmailFormatter:
     """Formats DailyBriefModel into an HTML email string."""
 
     def subject(self, brief: DailyBriefModel) -> str:
+        """Return the email subject line for the given daily brief."""
         suffix = f" — {brief.buy_count} Entr{'y' if brief.buy_count == 1 else 'ies'}" if brief.buy_count else ""
         return f"{EMAIL_SUBJECT_PREFIX} · {brief.date_str}{suffix}"
 
@@ -193,6 +199,7 @@ class EmailFormatter:
         )
 
     def _header(self, brief: DailyBriefModel) -> str:
+        """Return the HTML header block for the email."""
         summary = (
             f"{brief.buy_count} constitutional entr{'y' if brief.buy_count == 1 else 'ies'}"
             if brief.buy_count
@@ -210,6 +217,7 @@ class EmailFormatter:
 </table>"""
 
     def _footer(self) -> str:
+        """Return the HTML footer block for the email."""
         return f"""
 <table width="100%" cellpadding="0" cellspacing="0" border="0"
        style="margin-top:40px;border-top:1px solid {ET.BORDER_COLOR};">
@@ -220,6 +228,7 @@ class EmailFormatter:
 </table>"""
 
     def portfolio_health_block(self, health: PortfolioHealthPresentation) -> str:
+        """Return an HTML portfolio health summary block for the email."""
         return f"""
 <div style="background:#f4f8ff;border:1px solid #c8daf5;border-radius:6px;
             padding:16px 20px;margin:16px 0;">
@@ -232,6 +241,7 @@ class EmailFormatter:
 </div>"""
 
     def signal_badge_html(self, label: str, score: float) -> str:
+        """Return an inline HTML badge span for a signal label and score."""
         tc, tbg, tbr = signal_badge_colors(score)
         return (
             f'<span style="display:inline-block;padding:4px 12px;border-radius:12px;'
@@ -240,6 +250,7 @@ class EmailFormatter:
         )
 
     def ranking_header(self) -> str:
+        """Return the HTML section header div for the signal ranking section."""
         return f"""
 <div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;
             color:{ET.SECTION_TITLE};margin:20px 0 8px 0;letter-spacing:0.5px;">
@@ -247,6 +258,7 @@ class EmailFormatter:
 </div>"""
 
     def open_positions_header(self) -> str:
+        """Return the HTML section header div for the open positions section."""
         return f"""
 <div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;
             color:{ET.SECTION_TITLE};margin:20px 0 6px 0;letter-spacing:0.5px;">
@@ -277,6 +289,7 @@ class DashboardFormatter:
     }
 
     def section_header(self, key: str, icon: str = "") -> str:
+        """Return an HTML section header div for the given section key."""
         title = self.SECTION_TITLES.get(key, key.replace("_", " ").title())
         return self.section_header_raw(title, icon)
 
@@ -290,7 +303,9 @@ class DashboardFormatter:
         )
 
     def platform_title(self) -> str:
+        """Return the canonical platform title string."""
         return "EGX Constitutional Investment Platform"
 
     def platform_subtitle(self) -> str:
+        """Return the canonical platform subtitle string."""
         return "Research-Driven · Constitutionally Governed · 27-Symbol Universe"

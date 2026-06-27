@@ -19,6 +19,8 @@ from pathlib import Path
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 
+from audit.audit_status import AuditStatus
+
 TOLERANCE_PCT = 0.01  # prices must match within 0.01% (floating point only)
 
 failures: list[str] = []
@@ -140,7 +142,7 @@ if failures:
     for f in failures:
         print(f"  ✗ {f}")
     print("\nASSERTION FAILED — multiple current prices exist for the same ticker.")
-    sys.exit(1)
+    sys.exit(AuditStatus.FAIL)
 
 print("\nASSERTION PASSED — all sections show identical current prices.")
-sys.exit(0)
+sys.exit(AuditStatus.PASS)

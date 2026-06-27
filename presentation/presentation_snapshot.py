@@ -18,6 +18,7 @@ import csv as _csv
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
 from time_authority import now_cairo, now_iso, today_cairo, is_trading_day as _is_trading_day, _EET as _CAIRO_TZ, market_state as _market_state_ta, _MARKET_OPEN_H, _MARKET_OPEN_M
+from constitutional_gate import is_constitutional_buy as _is_constitutional_buy
 
 _ADVISOR_DB  = BASE / "portfolio_advisor.db"
 _KB_DB       = BASE / "research" / "knowledge" / "knowledge_base.db"
@@ -73,6 +74,7 @@ def _csv_data_as_of() -> str:
 
 
 def _db(path: Path) -> sqlite3.Connection | None:
+    """Open SQLite connection with Row factory, or return None if path does not exist."""
     if not path.exists():
         return None
     conn = sqlite3.connect(str(path))
@@ -81,6 +83,7 @@ def _db(path: Path) -> sqlite3.Connection | None:
 
 
 def _clean_reason(text: str) -> str:
+    """Strip raw R-score annotations from reason strings for clean display."""
     if not text:
         return text
     text = re.sub(r'\(\s*R\d+=[\d.]+\s*\)', '', text)
@@ -179,6 +182,7 @@ class PresentationSnapshot:
 
 
 def build_presentation_snapshot() -> PresentationSnapshot:
+    """Build PresentationSnapshot from constitutional timeline, pool, advisor, and universe sources."""
     snap = PresentationSnapshot(
         generated_at=now_iso(),
         market_status=_market_status(),
@@ -268,6 +272,20 @@ def build_presentation_snapshot() -> PresentationSnapshot:
                 snap.last_scan_ts = _hb.get("last_scan") or latest_ts or ""
             except Exception:
                 snap.last_scan_ts = latest_ts or ""
+
+            # Staleness guard: pool > 5 days old must not drive approaching-entry display.
+            _pool_stale = False
+            _latest_sig = pool.execute(
+                "SELECT MAX(signal_date) FROM candidate_pool WHERE snapshot_ts=?", (latest_ts,)
+            ).fetchone()[0]
+            if _latest_sig:
+                from datetime import date as _dt_date
+                _days_stale = (_dt_date.today() - _dt_date.fromisoformat(_latest_sig)).days
+                if _days_stale > 5:
+                    print(f"[PresentationSnapshot] Pool stale ({_days_stale}d) — "
+                          f"skipping approaching entries from stale pool.")
+                    _pool_stale = True
+
             universe_cnt = pool.execute(
                 "SELECT COUNT(DISTINCT ticker) FROM candidate_pool WHERE snapshot_ts=?",
                 (latest_ts,)
@@ -277,16 +295,24 @@ def build_presentation_snapshot() -> PresentationSnapshot:
             # Best R2 per ticker in latest snapshot, approaching range
             # Only include tickers where price is AT or BELOW the entry zone
             # (i.e., the discount condition is met — only R2 gate remains)
-            rows = pool.execute("""
-                SELECT ticker, MAX(r2_score) as r2_score, MAX(final_score) as max_score,
-                       entry_price, current_price, sector
-                FROM candidate_pool
-                WHERE snapshot_ts=?
-                  AND r2_score BETWEEN 50.0 AND 59.9
-                  AND current_price <= entry_price
-                GROUP BY ticker
-                HAVING max_score >= 35
-                ORDER BY r2_score DESC
+            rows = [] if _pool_stale else pool.execute("""
+                SELECT ticker, candidate_r2, expected_reward_score,
+                       candidate_entry_zone, current_price, sector
+                FROM (
+                    SELECT ticker, candidate_r2, expected_reward_score,
+                           candidate_entry_zone, current_price, sector,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY ticker
+                               ORDER BY candidate_r2 DESC, expected_reward_score DESC
+                           ) AS rn
+                    FROM candidate_pool
+                    WHERE snapshot_ts=?
+                      AND candidate_r2 BETWEEN 50.0 AND 59.9
+                      AND expected_reward_score >= 35
+                      AND current_price <= candidate_entry_zone
+                )
+                WHERE rn = 1
+                ORDER BY candidate_r2 DESC
                 LIMIT 15
             """, (latest_ts,)).fetchall()
             # Load PriceAuthority prices once for all tickers
@@ -298,7 +324,7 @@ def build_presentation_snapshot() -> PresentationSnapshot:
 
             entries = []
             for r in rows:
-                entry_price = r["entry_price"]
+                candidate_entry_zone = r["candidate_entry_zone"]
                 # PriceAuthority is the single source of truth for current price.
                 # Fallback: CSV price, then candidate_pool price.
                 ticker = r["ticker"]
@@ -308,23 +334,23 @@ def build_presentation_snapshot() -> PresentationSnapshot:
                     csv_price, _ = _latest_csv_price(ticker)
                     current_price = csv_price if csv_price is not None else r["current_price"]
                 # Re-apply constitutional gate with authoritative price
-                if current_price > entry_price:
+                if current_price > candidate_entry_zone:
                     continue
                 entries.append(dict(
                     ticker=ticker,
-                    r2_score=r["r2_score"],
-                    final_score=r["max_score"],
-                    entry_price=entry_price,
+                    candidate_r2=r["candidate_r2"],
+                    expected_reward_score=r["expected_reward_score"],
+                    candidate_entry_zone=candidate_entry_zone,
                     current_price=current_price,
                     sector=r["sector"] or "",
-                    distance_to_constitutional=round(60.0 - r["r2_score"], 1),
+                    distance_to_constitutional=round(60.0 - r["candidate_r2"], 1),
                     need_move_pct=round(
-                        (entry_price - current_price) / entry_price * 100, 1
-                    ) if entry_price else 0.0,
+                        (candidate_entry_zone - current_price) / current_price * 100, 1
+                    ) if candidate_entry_zone and current_price else 0.0,
                 ))
             snap.approaching_entries = entries
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"[PresentationSnapshot] candidate pool query failed: {exc}")
         pool.close()
 
     # ── 2. Portfolio Advisor (health narrative only — shown in System Diagnostics)
@@ -352,17 +378,19 @@ def build_presentation_snapshot() -> PresentationSnapshot:
 
     # ── Approaching Entry exclusivity (must run after universe_snapshot is loaded) ─
     # Exclude tickers that are CURRENTLY live constitutional buy/re-accum signals.
-    # "Live" means: R2>=60 AND score>=35 AND price<=entry_zone right now.
+    # "Live" means: R2>=60 AND score>=35 AND price<=constitutional_entry_price right now.
     # Historical RE_ACCUMULATION events must NOT suppress current Near Entry
     # candidates — a ticker that previously had a re-accum event may be
     # approaching the constitutional gate again and must be visible.
     try:
         live_constitutional_tickers = {
             r["ticker"] for r in snap.universe_snapshot
-            if (r.get("r2_score") or 0.0) >= 60
-            and (r.get("final_score") or 0.0) >= 35
-            and (r.get("entry_zone") or 0.0) > 0
-            and (r.get("current_price") or 0.0) <= (r.get("entry_zone") or 0.0)
+            if _is_constitutional_buy(
+                r.get("candidate_r2") or 0.0,
+                r.get("expected_reward_score") or 0.0,
+                r.get("current_price") or 0.0,
+                r.get("constitutional_entry_price") or 0.0,
+            )
         }
         signal_tickers = {
             e["ticker"] for e in (snap.new_events_today or [])
@@ -372,8 +400,8 @@ def build_presentation_snapshot() -> PresentationSnapshot:
                 e for e in snap.approaching_entries
                 if e["ticker"] not in signal_tickers
             ]
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"[PresentationSnapshot] approaching-entry exclusivity failed: {exc}")
 
     # ── 3. Knowledge Base ─────────────────────────────────────────────────────
     kb = _db(_KB_DB)

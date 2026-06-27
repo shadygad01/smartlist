@@ -32,6 +32,7 @@ RETURN_EVOLUTION_THRESHOLD = 75.0   # positions with >75% gain noted in evolutio
 
 # Signal Quality — based on R2 score (entry discount quality)
 def _signal_quality_stars(r2: float) -> tuple[str, str]:
+    """Map R2 score to (star string, quality label) for signal quality display."""
     if r2 >= 75:   return "★★★★★", "Exceptional"
     if r2 >= 65:   return "★★★★☆", "Strong"
     if r2 >= 55:   return "★★★☆☆", "Good"
@@ -46,6 +47,7 @@ def _portfolio_fit_stars(
     max_corr: float,
     held_count: int,
 ) -> tuple[str, str]:
+    """Map sector concentration, correlation, and capacity to (star string, fit label)."""
     penalty = 0
     if sector_pct >= SECTOR_PREFERRED_MAX * 1.5:  penalty += 2   # seriously elevated
     elif sector_pct > SECTOR_PREFERRED_MAX:        penalty += 1   # mildly elevated
@@ -62,6 +64,7 @@ def _portfolio_fit_stars(
 
 # Portfolio Health — based on sector concentration + correlation + fill rate
 def _portfolio_health(health: dict, sector_alloc: dict) -> tuple[str, str, list[str]]:
+    """Evaluate portfolio health and return (stars, label, observation narratives)."""
     observations = []
     penalty = 0
 
@@ -119,6 +122,7 @@ def _portfolio_health(health: dict, sector_alloc: dict) -> tuple[str, str, list[
 # ---------------------------------------------------------------------------
 
 def _init_advisor_db(conn: sqlite3.Connection):
+    """Create advisor_recommendations and advisor_reports tables if not present."""
     conn.executescript("""
     CREATE TABLE IF NOT EXISTS advisor_recommendations (
         rec_id              TEXT PRIMARY KEY,
@@ -135,7 +139,7 @@ def _init_advisor_db(conn: sqlite3.Connection):
         portfolio_impact    TEXT NOT NULL,
         suggested_action    TEXT NOT NULL,
         expected_benefit    TEXT NOT NULL,
-        r2_score            REAL,
+        candidate_r2        REAL,
         current_return_pct  REAL,
         sector              TEXT,
         created_at          TEXT NOT NULL
@@ -156,6 +160,7 @@ def _init_advisor_db(conn: sqlite3.Connection):
 
 
 def _rec_id(report_date: str, ticker: str, category: str) -> str:
+    """Return deterministic 16-char hex ID for a recommendation record."""
     return hashlib.sha256(f"{report_date}|{ticker}|{category}".encode()).hexdigest()[:16]
 
 
@@ -164,13 +169,14 @@ def _rec_id(report_date: str, ticker: str, category: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _load_latest_snapshot(mgr_conn: sqlite3.Connection) -> dict:
+    """Return the most recent portfolio_snapshots row as a dict with JSON fields parsed."""
     row = mgr_conn.execute(
         "SELECT * FROM portfolio_snapshots ORDER BY rowid DESC LIMIT 1"
     ).fetchone()
     if not row:
         return {}
     cols = [d[1] for d in mgr_conn.execute("PRAGMA table_info(portfolio_snapshots)")]
-    snap = dict(zip(cols, row))
+    snap = dict(zip(cols, row, strict=True))
     for key in ("holdings_json", "reserve_json", "watch_json",
                 "sector_alloc_json", "replacement_queue_json",
                 "portfolio_health_json", "corr_matrix_json"):
@@ -180,33 +186,35 @@ def _load_latest_snapshot(mgr_conn: sqlite3.Connection) -> dict:
 
 
 def _load_candidate_states(mgr_conn: sqlite3.Connection) -> list[dict]:
+    """Return all candidate_states rows as a list of dicts with canonical field names."""
     rows = mgr_conn.execute(
-        "SELECT ticker, state, r2_score, sector, decision_reason, "
-        "portfolio_impact, suggested_action, entry_price "
+        "SELECT ticker, state, candidate_r2, sector, decision_reason, "
+        "portfolio_impact, suggested_action, candidate_entry_zone "
         "FROM candidate_states"
     ).fetchall()
-    cols = ["ticker", "state", "r2_score", "sector", "decision_reason",
-            "portfolio_impact", "suggested_action", "entry_price"]
-    return [dict(zip(cols, r)) for r in rows]
+    cols = ["ticker", "state", "candidate_r2", "sector", "decision_reason",
+            "portfolio_impact", "suggested_action", "candidate_entry_zone"]
+    return [dict(zip(cols, r, strict=True)) for r in rows]
 
 
 def _load_best_pool_entry(pool_conn: sqlite3.Connection, ticker: str) -> Optional[dict]:
+    """Return highest-R2 candidate_pool row for ticker, or None if absent."""
     row = pool_conn.execute(
-        "SELECT ticker, signal_date, entry_price, r2_score, r3_score, r4_score, "
-        "r5_score, r6_score, r7_score, r8_score, final_score, sector, "
+        "SELECT ticker, signal_date, candidate_entry_zone, candidate_r2, r3_score, r4_score, "
+        "r5_score, r6_score, r7_score, r8_score, expected_reward_score, sector, "
         "discount_depth, distance_from_eq, atr20, volatility20 "
         "FROM candidate_pool "
         "WHERE ticker = ? "
-        "ORDER BY r2_score DESC, signal_date DESC LIMIT 1",
+        "ORDER BY candidate_r2 DESC, signal_date DESC LIMIT 1",
         (ticker,)
     ).fetchone()
     if not row:
         return None
-    cols = ["ticker", "signal_date", "entry_price", "r2_score", "r3_score",
+    cols = ["ticker", "signal_date", "candidate_entry_zone", "candidate_r2", "r3_score",
             "r4_score", "r5_score", "r6_score", "r7_score", "r8_score",
-            "final_score", "sector", "discount_depth", "distance_from_eq",
+            "expected_reward_score", "sector", "discount_depth", "distance_from_eq",
             "atr20", "volatility20"]
-    return dict(zip(cols, row))
+    return dict(zip(cols, row, strict=True))
 
 
 # ---------------------------------------------------------------------------
@@ -220,13 +228,14 @@ def _classify_held(
     all_held_tickers: list[str],
     pool_conn: sqlite3.Connection,
 ) -> dict:
+    """Classify a held position and return its advisory recommendation dict."""
     ticker = holding["ticker"]
     ret = holding.get("return_pct", 0.0)
     sector = holding.get("sector", "Unknown")
     sector_pct = sector_alloc.get(sector, 0.0)
 
     pool_entry = _load_best_pool_entry(pool_conn, ticker)
-    r2 = pool_entry["r2_score"] if pool_entry else holding.get("r2_score", 0.0)
+    r2 = pool_entry["candidate_r2"] if pool_entry else holding.get("candidate_r2", 0.0)
 
     corr_row = corr_matrix.get(ticker, {})
     peers = [t for t in all_held_tickers if t != ticker]
@@ -275,7 +284,7 @@ def _classify_held(
         "portfolio_impact": impact,
         "suggested_action": action,
         "expected_benefit": benefit,
-        "r2_score": r2,
+        "candidate_r2": r2,
         "current_return_pct": ret,
         "sector": sector,
     }
@@ -347,8 +356,9 @@ def _classify_candidate(
     all_held_tickers: list[str],
     held_count: int,
 ) -> dict:
+    """Classify a BUY_RESERVE/PRIMARY_BUY/WATCH candidate and return its advisory recommendation dict."""
     ticker = cand.get("ticker", "?")
-    r2 = cand.get("r2_score", 0.0)
+    r2 = cand.get("candidate_r2", 0.0)
     sector = cand.get("sector", "Unknown")
     sector_pct = sector_alloc.get(sector, 0.0)
 
@@ -406,7 +416,7 @@ def _classify_candidate(
         "portfolio_impact": portfolio_impact,
         "suggested_action": action,
         "expected_benefit": benefit,
-        "r2_score": r2,
+        "candidate_r2": r2,
         "current_return_pct": None,
         "sector": sector,
     }
@@ -424,6 +434,7 @@ def _build_report(
     recs: list[dict],
     snapshot: dict,
 ) -> str:
+    """Render the full plain-text portfolio intelligence report from classified recommendations."""
     health = snapshot.get("portfolio_health_json", {})
     sector_alloc = snapshot.get("sector_alloc_json", {})
     held_count = health.get("held_positions", 0)
@@ -471,7 +482,7 @@ def _build_report(
         L.append("-" * 68)
         L.append(f"  HIGH CONVICTION BUY  ({len(hcb)})")
         L.append("-" * 68)
-        for r in sorted(hcb, key=lambda x: -(x.get("r2_score") or 0)):
+        for r in sorted(hcb, key=lambda x: -(x.get("candidate_r2") or 0)):
             L.append(f"  {r['ticker']}")
             L.append(f"    Signal Quality   {r['signal_quality_stars']}  {r['signal_quality_label']}")
             L.append(f"    Portfolio Fit    {r['portfolio_fit_stars']}  {r['portfolio_fit_label']}")
@@ -488,7 +499,7 @@ def _build_report(
         L.append("-" * 68)
         L.append(f"  BUY WITH DIVERSIFICATION AWARENESS  ({len(bwa)})")
         L.append("-" * 68)
-        for r in sorted(bwa, key=lambda x: -(x.get("r2_score") or 0)):
+        for r in sorted(bwa, key=lambda x: -(x.get("candidate_r2") or 0)):
             L.append(f"  {r['ticker']}")
             L.append(f"    Signal Quality   {r['signal_quality_stars']}  {r['signal_quality_label']}")
             L.append(f"    Portfolio Fit    {r['portfolio_fit_stars']}  {r['portfolio_fit_label']}")
@@ -503,10 +514,10 @@ def _build_report(
         L.append("-" * 68)
         L.append(f"  WATCH — DEVELOPING SETUPS  ({len(watch)})")
         L.append("-" * 68)
-        for r in sorted(watch, key=lambda x: -(x.get("r2_score") or 0)):
+        for r in sorted(watch, key=lambda x: -(x.get("candidate_r2") or 0)):
             L.append(
                 f"  {r['ticker']:<10}  Signal: {r['signal_quality_stars']} {r['signal_quality_label']:<12}  "
-                f"R2={r.get('r2_score', 0):.1f}"
+                f"R2={r.get('candidate_r2', 0):.1f}"
             )
         L.append("")
 
@@ -542,7 +553,7 @@ def _build_report(
         L.append("  FUTURE OPPORTUNITIES")
         L.append("  If capacity becomes available, priority order by Signal Quality:")
         L.append("-" * 68)
-        for i, r in enumerate(sorted(future, key=lambda x: -(x.get("r2_score") or 0)), 1):
+        for i, r in enumerate(sorted(future, key=lambda x: -(x.get("candidate_r2") or 0)), 1):
             L.append(f"  Priority {i}   {r['ticker']}")
             L.append(f"    Signal Quality   {r['signal_quality_stars']}  {r['signal_quality_label']}")
             L.append(f"    Portfolio Fit    {r['portfolio_fit_stars']}  {r['portfolio_fit_label']}")
@@ -643,6 +654,7 @@ def run_portfolio_advisor(
     pool_db: str = POOL_DB,
     advisor_db: str = ADVISOR_DB,
 ) -> dict:
+    """Run the full portfolio advisor pipeline and return report dict with recommendations."""
     if report_date is None:
         report_date = date.today().isoformat()
 
@@ -693,14 +705,14 @@ def run_portfolio_advisor(
                     signal_quality_stars, signal_quality_label,
                     portfolio_fit_stars, portfolio_fit_label,
                     confidence, reason, portfolio_impact, suggested_action,
-                    expected_benefit, r2_score, current_return_pct, sector, created_at)
+                    expected_benefit, candidate_r2, current_return_pct, sector, created_at)
                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (rec["rec_id"], rec["report_date"], rec["ticker"], rec["category"],
                  rec["decision"], rec.get("signal_quality_stars"), rec.get("signal_quality_label"),
                  rec.get("portfolio_fit_stars"), rec.get("portfolio_fit_label"),
                  rec["confidence"], rec["reason"], rec["portfolio_impact"],
                  rec["suggested_action"], rec["expected_benefit"],
-                 rec.get("r2_score"), rec.get("current_return_pct"), rec.get("sector"), now)
+                 rec.get("candidate_r2"), rec.get("current_return_pct"), rec.get("sector"), now)
             )
 
         report_text = _build_report(

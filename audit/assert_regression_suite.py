@@ -86,7 +86,10 @@ for _rel in _ELIG_FILES:
         _ln = _t[:_m.start()].count("\n") + 1
         _fail("R-02", f"{_rel}:{_ln} 2% price buffer: {_m.group()!r}")
 
-# ── R-03: dashboard._s_buy_signals must use is_constitutional_buy ──────────────
+# ── R-03: dashboard._s_buy_signals must read from production_decision_snapshot ─
+# Re-evaluating is_constitutional_buy() independently in the dashboard is the
+# architectural defect (State Ownership violation). The dashboard must be a
+# read-only consumer of the single authoritative snapshot.
 _DASH = BASE / "dashboard.py"
 if _DASH.exists():
     _t  = _DASH.read_text()
@@ -94,9 +97,12 @@ if _DASH.exists():
     if _fn:
         _body = _fn.group(0)
         if re.search(r"r2\s*>=\s*60.*\band\b.*score\s*>=\s*35|score\s*>=\s*35.*\band\b.*r2\s*>=\s*60", _body, re.IGNORECASE):
-            _fail("R-03", "dashboard._s_buy_signals() contains inline R2+score AND gate — use is_constitutional_buy()")
-        if "is_constitutional_buy" not in _body:
-            _fail("R-03", "dashboard._s_buy_signals() does not call is_constitutional_buy()")
+            _fail("R-03", "dashboard._s_buy_signals() contains inline R2+score AND gate — use production_decision_snapshot.json")
+        if re.search(r"is_constitutional_buy\s*\(", _body):
+            # Allow is_constitutional_buy import at module level, but not called inside _s_buy_signals
+            _fail("R-03", "dashboard._s_buy_signals() calls is_constitutional_buy() — must read from production_decision_snapshot.json instead")
+        if "production_decision_snapshot" not in _body:
+            _fail("R-03", "dashboard._s_buy_signals() does not read from production_decision_snapshot.json")
     else:
         _fail("R-03", "dashboard.py: _s_buy_signals() function not found")
 

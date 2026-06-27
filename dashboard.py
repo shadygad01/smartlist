@@ -368,29 +368,29 @@ def _s_buy_signals(snap, mpi_snaps: dict | None = None) -> tuple:
     today_new_buy  = [e for e in today_events if e["event_type"] == "FIRST_BUY"]
     today_re_today = [e for e in today_events if e["event_type"] != "FIRST_BUY"]
 
-    # ── 2. Live re-accumulation candidates from universe_snapshot ─────────────
+    # ── 2. Re-accumulation candidates from production_decision_snapshot.json ──
+    # Read from the single authoritative source; never re-evaluate the gate here.
     reaccum_hist = []
-    for row in (snap.universe_snapshot or []):
-        r2    = row.get("candidate_r2") or 0.0
-        score = row.get("expected_reward_score") or 0.0
-        cp    = row.get("current_price") or 0.0
-        ep    = row.get("constitutional_entry_price") or 0.0
-        if is_constitutional_buy(r2, score, cp, ep):
-            ticker = row["ticker"]
-            if ticker in today_tickers:
-                continue
-            reaccum_hist.append({
-                "ticker":                  ticker,
-                "event_type":              "RE_ACCUMULATION",
-                "constitutional_entry_price": ep,
-                "current_price":           cp,
-                "constitutional_r2":       r2,
-                "constitutional_score":    score,
-                "event_date":    snap.generated_at[:10],
-                "return_pct":    row.get("return_pct", 0),
-                "sector":        row.get("sector", ""),
-                "days_active":   0,
-            })
+    try:
+        _prod_snap_path = BASE / "production_decision_snapshot.json"
+        if _prod_snap_path.exists():
+            _prod_decisions = _json.loads(_prod_snap_path.read_text()).get("decisions", [])
+            for d in _prod_decisions:
+                if d.get("eligible") and d["ticker"] not in today_tickers:
+                    reaccum_hist.append({
+                        "ticker":                     d["ticker"],
+                        "event_type":                 d.get("event_type", "RE_ACCUMULATION"),
+                        "constitutional_entry_price": d.get("constitutional_entry_price", 0),
+                        "current_price":              d.get("current_price", 0),
+                        "constitutional_r2":          d.get("constitutional_r2", 0),
+                        "constitutional_score":       d.get("constitutional_score", 0),
+                        "event_date":                 d.get("event_date", ""),
+                        "return_pct":                 d.get("return_pct", 0),
+                        "sector":                     d.get("sector", ""),
+                        "days_active":                0,
+                    })
+    except Exception as _dash_ps_err:
+        print(f"[dashboard] production_decision_snapshot read non-fatal: {_dash_ps_err}")
 
     # ── 3. Build blocks with conviction ranking ───────────────────────────────
     def _conv(e: dict) -> float:

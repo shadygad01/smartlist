@@ -1928,14 +1928,7 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
         elif _snap_file.exists():
             _snap_file.unlink(missing_ok=True)
 
-    tx.step(
-        Phase.PERSIST, "write_presentation_snapshot",
-        write_presentation_snapshot_json, snap, build_hash=html_hash(html),
-        rollback=_restore_snap,
-        artifact="presentation_snapshot.json",
-    )
-
-    # Signal state + timeline — MUST complete before NOTIFY
+    # Signal state + timeline — MUST complete before snapshot write
     changes = tx.step(Phase.PERSIST, "detect_signal_changes", detect_signal_changes, snap)
     if changes:
         _registered = tx.step(
@@ -1944,6 +1937,27 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
         )
         if _registered:
             print(f"  [Timeline] Registered alert events: {_registered}")
+            # Refresh new_events_today so the snapshot includes today's events
+            try:
+                from constitutional_timeline_engine import get_new_events_today
+                snap.new_events_today = get_new_events_today()
+            except Exception as _lte_err:
+                print(f"  [Timeline] new_events_today refresh non-fatal: {_lte_err}")
+
+    # Rebuild production decision snapshot so downstream consumers read current state
+    try:
+        from audit.build_production_decision_snapshot import build_production_decision_snapshot as _build_prod_snap
+        _build_prod_snap()
+        print("  [ProdSnap] production_decision_snapshot.json rebuilt")
+    except Exception as _ps_err:
+        print(f"  [ProdSnap] rebuild non-fatal: {_ps_err}")
+
+    tx.step(
+        Phase.PERSIST, "write_presentation_snapshot",
+        write_presentation_snapshot_json, snap, build_hash=html_hash(html),
+        rollback=_restore_snap,
+        artifact="presentation_snapshot.json",
+    )
 
     # Results + signal history
     tx.step(Phase.PERSIST, "save_scan_results",    save_scan_results,    results)
@@ -2226,8 +2240,22 @@ def continuous_scan():
             _registered = register_alert_events(changes)
             if _registered:
                 print(f"  [Timeline] Registered alert events: {_registered}")
+                # Refresh new_events_today so snapshot includes today's new events
+                try:
+                    from constitutional_timeline_engine import get_new_events_today
+                    snap.new_events_today = get_new_events_today()
+                except Exception as _lte_err:
+                    print(f"  [continuous_scan] new_events_today refresh non-fatal: {_lte_err}")
         except Exception as _reg_err:
             print(f"  [continuous_scan] alert event registration non-fatal: {_reg_err}")
+
+    # Rebuild production decision snapshot before writing presentation snapshot
+    try:
+        from audit.build_production_decision_snapshot import build_production_decision_snapshot as _build_prod_snap
+        _build_prod_snap()
+        print("  [ProdSnap] production_decision_snapshot.json rebuilt")
+    except Exception as _ps_err:
+        print(f"  [continuous_scan] production snapshot rebuild non-fatal: {_ps_err}")
 
     try:
         from presentation.presentation_snapshot import write_presentation_snapshot_json

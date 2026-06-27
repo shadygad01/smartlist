@@ -133,6 +133,27 @@ jobs:
       - name: Constitutional decision consistency (ONE gate = ONE decision)
         run: python3 audit/assert_decision_consistency.py
 
+      - name: Build production decision snapshot
+        run: python3 audit/build_production_decision_snapshot.py
+
+      - name: Cross-layer consistency (gate == dashboard == email == snapshot)
+        run: python3 audit/assert_cross_layer_consistency.py
+
+      - name: Event chain integrity (signal → timeline → presentation)
+        run: python3 audit/assert_event_chain_integrity.py
+
+      - name: Data freshness (no stale sources)
+        run: python3 audit/assert_data_freshness.py
+
+      - name: Decision replay (5 tickers — gate is reproducible)
+        run: python3 audit/assert_decision_replay.py
+
+      - name: Regression suite (all previously fixed bugs)
+        run: python3 audit/assert_regression_suite.py
+
+      - name: Constitutional consistency report (final)
+        run: python3 audit/run_consistency_report.py
+
       - name: Update public status
         run: |
           python - <<'PYEOF'
@@ -155,8 +176,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git add heartbeat.json operations_state.json operations/public_status.json \
                   scan_execution.db notification_delivery.db \
-                  presentation_snapshot.json version.json dashboard.html \
-                  signal_history.json || true
+                  presentation_snapshot.json production_decision_snapshot.json \
+                  version.json dashboard.html signal_history.json || true
           git add historical_data/historical_data/*.csv || true
           git diff --staged --quiet || git commit -m "Morning email: full state update [skip ci]"
           git push || true

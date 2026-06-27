@@ -55,6 +55,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Initialize scan context (scan UUID for this run)
+        # MUST run first — generates the scan_id used by ALL subsequent steps.
+        # The ScanOrchestrator (next step) calls get_scan_id() which reads this file.
+        # Artifacts built later (production_decision_snapshot, presentation_snapshot)
+        # also call get_scan_id() — all must read the SAME UUID for traceability.
+        run: python3 scan_context.py --init --force
+
       - name: Operations startup check
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
@@ -92,9 +99,6 @@ jobs:
           ok = ScanOrchestrator().dispatch_from_env()
           sys.exit(0 if ok is not False else 1)
           "
-
-      - name: Initialize scan context (scan UUID for this run)
-        run: python3 scan_context.py --init --force
 
       - name: Refresh historical CSV data
         run: python backfill_egx30.py --download-only || true

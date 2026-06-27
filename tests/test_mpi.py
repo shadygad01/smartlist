@@ -370,10 +370,28 @@ class TestHTMLRenderer:
         from mpi_engine import render_behavior_insight_html
         assert render_behavior_insight_html(None) == ""
 
-    def test_render_empty_when_unavailable(self):
+    def test_render_empty_when_unavailable_and_no_history(self):
+        """No history → empty string even when explanation unavailable."""
         from mpi_engine import render_behavior_insight_html, _UNAVAILABLE_EXPLANATION
-        snap = {"explanation": _UNAVAILABLE_EXPLANATION}
+        snap = {"explanation": _UNAVAILABLE_EXPLANATION, "historical_cases": 0, "similarity_score": 0.0}
         assert render_behavior_insight_html(snap) == ""
+
+    def test_render_historical_context_when_unavailable_but_history_present(self):
+        """Low-confidence with meaningful history → historical context block, not empty."""
+        from mpi_engine import render_behavior_insight_html, _UNAVAILABLE_EXPLANATION
+        snap = {
+            "explanation":      _UNAVAILABLE_EXPLANATION,
+            "historical_cases": 64,
+            "similarity_score": 0.66,
+            "avg_mfe40":        16.6,
+            "avg_drawdown":     7.5,
+            "avg_holding_days": 176.8,
+        }
+        html = render_behavior_insight_html(snap, theme="dark")
+        assert html != ""
+        assert "Historical Context" in html
+        assert "64" in html
+        assert "MFE40" in html or "+17" in html or "+16" in html
 
     def test_render_contains_phase(self):
         from mpi_engine import render_behavior_insight_html
@@ -398,10 +416,68 @@ class TestHTMLRenderer:
         assert tg != ""
         assert tg.count("\n") <= 4
 
-    def test_render_telegram_empty_if_unavailable(self):
+    def test_render_telegram_empty_if_unavailable_and_no_history(self):
         from mpi_engine import render_behavior_insight_telegram, _UNAVAILABLE_COMPACT
-        snap = {"explanation_compact": _UNAVAILABLE_COMPACT}
+        snap = {"explanation_compact": _UNAVAILABLE_COMPACT, "historical_cases": 0, "similarity_score": 0.0}
         assert render_behavior_insight_telegram(snap) == ""
+
+    def test_render_telegram_historical_context_when_available(self):
+        """Low-confidence Telegram falls back to compact historical context line."""
+        from mpi_engine import render_behavior_insight_telegram, _UNAVAILABLE_COMPACT
+        snap = {
+            "explanation_compact": _UNAVAILABLE_COMPACT,
+            "historical_cases":    64,
+            "similarity_score":    0.66,
+            "avg_mfe40":           16.6,
+        }
+        tg = render_behavior_insight_telegram(snap)
+        assert tg != ""
+        assert "Historical" in tg or "historical" in tg or "📊" in tg
+
+
+# ── R-score extraction tests ──────────────────────────────────────────────────
+
+class TestRScoreExtraction:
+    def test_extract_from_rows_list(self):
+        """R-scores stored in `rows` tuples are correctly extracted."""
+        from mpi_engine import _extract_r_scores_from_feat
+        feat = {
+            "r1": 3,
+            "rows": [
+                ("Price Position",      3,  30, "Price ok"),
+                ("Liquidity Context",   18, 20, "Liq ok"),
+                ("Demand Zone (SV+VP)", 9,  15, "Demand ok"),
+                ("Order Block Quality", 4,  10, "OB ok"),
+                ("Higher Timeframe",    5,  10, "HTF ok"),
+                ("Anchored VWAP",       6,  8,  "AVWAP ok"),
+                ("MACD vs Zero",        2,  4,  "MACD ok"),
+                ("Divergence",          0,  3,  "No div"),
+            ],
+        }
+        r = _extract_r_scores_from_feat(feat)
+        assert r["r1_price"]    == 3.0
+        assert r["r2_ob"]       == 4.0
+        assert r["r3_liquidity"]== 18.0
+        assert r["r4_htf"]      == 5.0
+        assert r["r5_avwap"]    == 6.0
+        assert r["r6_macd"]     == 2.0
+        assert r["r7_div"]      == 0.0
+        assert r["r8_demand"]   == 9.0
+
+    def test_extract_named_keys_when_no_rows(self):
+        """r1_price falls through to r1 shorthand; r2-r8 named keys are handled by _fetch_historical_analogs."""
+        from mpi_engine import _extract_r_scores_from_feat
+        # When rows is absent and r1_price is present, only r1_price is extracted
+        feat = {"r1_price": 20}
+        r = _extract_r_scores_from_feat(feat)
+        assert r.get("r1_price") == 20.0
+
+    def test_extract_r1_shorthand_fallback(self):
+        """r1 shorthand fills r1_price when rows is absent."""
+        from mpi_engine import _extract_r_scores_from_feat
+        feat = {"r1": 5}
+        r = _extract_r_scores_from_feat(feat)
+        assert r.get("r1_price") == 5.0
 
 
 # ── Run ───────────────────────────────────────────────────────────────────────

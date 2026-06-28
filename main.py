@@ -11,6 +11,7 @@ import yfinance as yf
 import requests
 import traceback
 import time
+from pathlib import Path
 
 # yfinance لا يدعم timeout مباشرة — نضع حداً لكل socket operations
 socket.setdefaulttimeout(60)
@@ -37,6 +38,7 @@ from notifications.notification_router import (
 )
 
 CAIRO = ZoneInfo("Africa/Cairo")
+BASE  = Path(__file__).parent
 
 _tv_quote_cache: dict = {}   # populated by tv_prefetch_all_quotes() at the top of each scan
 
@@ -1937,12 +1939,6 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
         )
         if _registered:
             print(f"  [Timeline] Registered alert events: {_registered}")
-            # Refresh new_events_today so the snapshot includes today's events
-            try:
-                from constitutional_timeline_engine import get_new_events_today
-                snap.new_events_today = get_new_events_today()
-            except Exception as _lte_err:
-                print(f"  [Timeline] new_events_today refresh non-fatal: {_lte_err}")
 
     # Rebuild production decision snapshot so downstream consumers read current state
     try:
@@ -1952,9 +1948,13 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
     except Exception as _ps_err:
         print(f"  [ProdSnap] rebuild non-fatal: {_ps_err}")
 
+    # Rebuild presentation snapshot AFTER production snapshot — Option B: pure renderer
+    # new_events_today is gated by production_decision_snapshot eligible set (not raw timeline)
+    from presentation.presentation_snapshot import build_presentation_snapshot, write_presentation_snapshot_json as _write_pres_snap
+    _fresh_snap = build_presentation_snapshot()
     tx.step(
         Phase.PERSIST, "write_presentation_snapshot",
-        write_presentation_snapshot_json, snap, build_hash=html_hash(html),
+        _write_pres_snap, _fresh_snap, build_hash=html_hash(html),
         rollback=_restore_snap,
         artifact="presentation_snapshot.json",
     )
@@ -2240,12 +2240,6 @@ def continuous_scan():
             _registered = register_alert_events(changes)
             if _registered:
                 print(f"  [Timeline] Registered alert events: {_registered}")
-                # Refresh new_events_today so snapshot includes today's new events
-                try:
-                    from constitutional_timeline_engine import get_new_events_today
-                    snap.new_events_today = get_new_events_today()
-                except Exception as _lte_err:
-                    print(f"  [continuous_scan] new_events_today refresh non-fatal: {_lte_err}")
         except Exception as _reg_err:
             print(f"  [continuous_scan] alert event registration non-fatal: {_reg_err}")
 
@@ -2257,9 +2251,11 @@ def continuous_scan():
     except Exception as _ps_err:
         print(f"  [continuous_scan] production snapshot rebuild non-fatal: {_ps_err}")
 
+    # Rebuild presentation snapshot AFTER production snapshot — Option B: pure renderer
     try:
-        from presentation.presentation_snapshot import write_presentation_snapshot_json
-        write_presentation_snapshot_json(snap)
+        from presentation.presentation_snapshot import build_presentation_snapshot, write_presentation_snapshot_json
+        _fresh_snap = build_presentation_snapshot()
+        write_presentation_snapshot_json(_fresh_snap)
     except Exception as _snj_err:
         print(f"  [continuous_scan] snapshot JSON write non-fatal: {_snj_err}")
 

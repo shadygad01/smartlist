@@ -139,8 +139,9 @@ def _detect_phase(feat: dict) -> tuple[str, list[str]]:
             evidence.append("ob_quality_high")
         return "Confidence Building", evidence
 
-    # Early Markup: HTF uptrend without demand zone confirmation
-    if htf_up and r4 > 0:
+    # Early Markup: HTF uptrend with meaningful HTF score (above config cutoff)
+    htf_r4_th = float(_cfg().get("phase_thresholds", {}).get("htf_uptrend_r4_cutoff", 0.5))
+    if htf_up and r4 >= htf_r4_th:
         evidence.append("htf_uptrend")
         return "Early Markup", evidence
 
@@ -171,73 +172,87 @@ def _detect_phase(feat: dict) -> tuple[str, list[str]]:
 # ── Investor Behavior Inference ────────────────────────────────────────────────
 
 _PHASE_BEHAVIOR: dict[str, dict] = {
+    # Each entry describes observable market state inferred from confirmed evidence.
+    # Participant attribution ("institutional"/"retail" field names are schema-fixed)
+    # describes market-observable conditions, not unverifiable participant intent.
     "Capitulation": {
-        "institutional":   "Institutions beginning early absorption of distressed supply.",
-        "retail":          "Retail sellers dominating price action.",
+        "institutional":   "Supply absorption initiating at depressed price levels.",
+        "retail":          "Net selling pressure dominant; price testing structural lows.",
         "buying_pressure": "Weak",
         "selling_pressure":"Strong",
         "supply_absorption":"Early-stage",
         "distribution_prob": "Low",
     },
     "Late Capitulation": {
-        "institutional":   "Institutional supply absorption strengthening near demand zone.",
-        "retail":          "Retail capitulation nearing exhaustion.",
+        "institutional":   "Supply absorption strengthening at confirmed demand zone.",
+        "retail":          "Net selling pressure diminishing near volume exhaustion.",
         "buying_pressure": "Strengthening",
         "selling_pressure":"Weakening",
         "supply_absorption":"Active",
         "distribution_prob": "Low",
     },
     "Silent Accumulation": {
-        "institutional":   "Institutional accumulation occurring without retail awareness.",
-        "retail":          "Retail participation minimal.",
+        # Observable: sv_hit + hvn_hit without sweep = volume absorption at a
+        # historical demand node, no liquidity disruption. "Without price disruption"
+        # is directly observable; participant identity is not.
+        "institutional":   "Supply absorption progressing at structural demand levels without price disruption.",
+        "retail":          "Price holding at demand zone; no significant selling volume spikes.",
         "buying_pressure": "Moderate",
         "selling_pressure":"Declining",
         "supply_absorption":"Progressive",
         "distribution_prob": "Very Low",
     },
     "Accumulation": {
-        "institutional":   "Institutional demand confirmed at structural support level.",
-        "retail":          "Retail activity transitioning from selling to holding.",
+        # Observable: sweep + sv (+ optional OB quality). Liquidity run triggered
+        # stops; volume absorption followed. "Structural support" is the OB/demand level.
+        "institutional":   "Demand absorption confirmed at structural support after liquidity sweep.",
+        "retail":          "Selling pressure abating as price stabilises at demand zone.",
         "buying_pressure": "Building",
         "selling_pressure":"Declining",
         "supply_absorption":"Strong",
         "distribution_prob": "Very Low",
     },
     "Confidence Building": {
-        "institutional":   "Institutional positioning extending as structure improves.",
-        "retail":          "Retail confidence gradually returning.",
+        # Observable: htf higher highs/lows + MACD above zero = improving price
+        # structure on higher timeframe with positive momentum. No causal psychology.
+        "institutional":   "Price structure improving; momentum turning positive on higher timeframe.",
+        "retail":          "Buying activity increasing as price recovers above key structural levels.",
         "buying_pressure": "Growing",
         "selling_pressure":"Subdued",
         "supply_absorption":"Established",
         "distribution_prob": "Low",
     },
     "Early Markup": {
-        "institutional":   "Institutional positions being extended on confirmed uptrend.",
-        "retail":          "Early retail participants beginning to re-enter.",
+        # Observable: htf uptrend (HH+HL) with meaningful HTF score. Price advancing
+        # above demand zone. No claim about who is buying.
+        "institutional":   "Higher-timeframe uptrend structure intact; demand zone holding.",
+        "retail":          "Price advancing above demand zone with positive higher-timeframe structure.",
         "buying_pressure": "Strong",
         "selling_pressure":"Minimal",
         "supply_absorption":"Complete",
         "distribution_prob": "Low",
     },
     "Markup": {
-        "institutional":   "Broad institutional participation in markup phase.",
-        "retail":          "Retail re-engagement accelerating.",
+        "institutional":   "Broad participation in markup phase; trend structure intact.",
+        "retail":          "Buying activity accelerating as price advances.",
         "buying_pressure": "Strong",
         "selling_pressure":"Minimal",
         "supply_absorption":"Complete",
         "distribution_prob": "Low",
     },
     "Fear": {
-        "institutional":   "Institutional activity unclear — insufficient demand confirmation.",
-        "retail":          "Retail selling pressure visible.",
+        # Observable: one or two demand signals present but insufficient confluence.
+        # "Demand confirmation insufficient" is directly supported by evidence count.
+        "institutional":   "Demand confirmation insufficient — fewer than two confluent structural signals.",
+        "retail":          "Price in potential discount zone; single-factor signal only.",
         "buying_pressure": "Weak",
         "selling_pressure":"Moderate",
         "supply_absorption":"Unconfirmed",
         "distribution_prob": "Moderate",
     },
     "Neutral": {
-        "institutional":   "Institutional direction indeterminate.",
-        "retail":          "Retail activity mixed.",
+        "institutional":   "Market direction indeterminate — insufficient evidence for phase assignment.",
+        "retail":          "Mixed activity; no dominant directional pressure observable.",
         "buying_pressure": "Indeterminate",
         "selling_pressure":"Indeterminate",
         "supply_absorption":"Unconfirmed",
@@ -269,17 +284,19 @@ def _compute_confidence(evidence: list[str], historical_cases: int,
         if key in ev_set:
             score += w
 
-    # Historical bonus: up to 0.10
+    # Historical bonus: scales proportionally to hist_weight in config.
+    # hist_bonus_fraction in [0.0, 1.0] represents fraction of max historical credit earned.
+    # Max contribution = hist_weight (consistent with configured evidence weight).
     if historical_cases >= 10:
-        hist_bonus = 0.10
+        hist_bonus_fraction = 1.00
     elif historical_cases >= 5:
-        hist_bonus = 0.07
+        hist_bonus_fraction = 0.70
     elif historical_cases >= 3:
-        hist_bonus = 0.04
+        hist_bonus_fraction = 0.40
     else:
-        hist_bonus = 0.0
+        hist_bonus_fraction = 0.0
     hist_weight = weights.get("historical_match", 0.05)
-    score += hist_bonus * (hist_weight / 0.05)
+    score += hist_bonus_fraction * hist_weight
 
     # Similarity boosts confidence proportionally
     if similarity >= 0.70:
@@ -547,14 +564,15 @@ def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
 # ── Explanation Templates ──────────────────────────────────────────────────────
 
 _PHASE_INTRO: dict[str, str] = {
-    "Capitulation":        "Early-stage capitulation detected.",
-    "Late Capitulation":   "Late-stage capitulation detected.",
+    "Capitulation":        "Early-stage capitulation pattern detected.",
+    "Late Capitulation":   "Late-stage capitulation pattern detected.",
     "Silent Accumulation": "Silent accumulation pattern identified.",
     "Accumulation":        "Active accumulation phase confirmed.",
     "Confidence Building": "Confidence-building phase in progress.",
     "Early Markup":        "Early markup phase initiated.",
     "Markup":              "Markup phase in progress.",
-    "Fear":                "Fear-driven selling visible in price action.",
+    # "Fear" replaces causal psychological label ("fear-driven") with observable state.
+    "Fear":                "Price in discount zone — demand confirmation pending.",
     "Neutral":             "Behavioral state inconclusive.",
 }
 
@@ -607,7 +625,8 @@ _HIST_SENTENCE = (
 _CLOSING: dict[str, str] = {
     "HIGH":   "Behavior strongly supports the constitutional signal.",
     "MEDIUM": "Behavior is consistent with the constitutional signal.",
-    "LOW":    "Behavioral evidence partially aligns with the constitutional signal.",
+    # LOW: a single or minimal signal is present; "partially aligns" overstates the inference.
+    "LOW":    "Behavioral evidence is preliminary — additional confirmation recommended.",
 }
 
 

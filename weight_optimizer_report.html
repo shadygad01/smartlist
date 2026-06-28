@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>EGX Weight Optimizer — 2026-06-28 10:07 UTC</title>
+<title>EGX Weight Optimizer — 2026-06-28 12:33 UTC</title>
 <style>
 :root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--sub:#8b949e;
       --green:#3fb950;--red:#f85149;--yellow:#d29922;--blue:#58a6ff;--purple:#bc8cff;
@@ -55,7 +55,7 @@ nav a:hover{background:var(--card)}
 </head>
 <body>
 <h1>⚖️ EGX SMC — Quantitative Weight Optimization Engine</h1>
-<p class="meta">Generated: 2026-06-28 10:07 UTC · Dataset: 1204 signals · 2021–2026</p>
+<p class="meta">Generated: 2026-06-28 12:33 UTC · Dataset: 1204 signals · 2021–2026</p>
 <div class="warn-box">
 <strong>HARDCODED CONSTRAINT:</strong> ENTRY MUST BE IN DISCOUNT ZONE (price &lt; EQ). This cannot be changed.<br>
 Everything else — weights, thresholds, scoring logic — is subject to data-driven optimization.
@@ -179,7 +179,7 @@ Positive OOS improvement = recommendation has out-of-sample validity.
 <h3>Performance Comparison (Top 50% by each scoring method)</h3>
 <table>
 <tr><th>Method</th><th>N</th><th>Win Rate</th><th>Avg Return</th><th>Median Ret</th><th>MFE</th><th>MAE</th><th>Max DD</th><th>Profit Factor</th><th>Opportunities</th><th>Risk Adj</th><th>Consistency</th></tr>
-<tr><td>Current weights</td><td>609</td><td>65.8%</td><td><span class="good">+4.9%</span></td><td><span class="good">+3.9%</span></td><td>+12.8%</td><td>-7.1%</td><td>-30.5%</td><td>2.95</td><td>609</td><td>1.41</td><td>73.7%</td></tr>
+<tr><td>Current weights</td><td>606</td><td>66.0%</td><td><span class="good">+5.0%</span></td><td><span class="good">+4.0%</span></td><td>+12.9%</td><td>-7.1%</td><td>-30.5%</td><td>2.99</td><td>606</td><td>1.42</td><td>73.7%</td></tr>
 <tr><td>Optimized weights</td><td>603</td><td>68.8%</td><td><span class="good">+5.5%</span></td><td><span class="good">+4.0%</span></td><td>+13.4%</td><td>-6.8%</td><td>-30.5%</td><td>3.31</td><td>603</td><td>1.53</td><td>74.4%</td></tr>
 </table>
 </div>
@@ -288,25 +288,7 @@ Discount Zone entry (r1 ≥ 1) is mandatory and preserved in all recommendations
 <td><span class="warn">+0.7%</span> <span class="bar-wrap"><span class="bar" style="width:14%;background:#3fb950"></span></span></td>
 </tr>
 <tr>
-<td><span style="color:var(--sub)">5.</span> Weight Optimization</td>
-<td>All r1-r8</td>
-<td style="font-size:0.8em;color:var(--sub)">r1=30, r2=10, r3=20, r4=10, r5=8, r6=4, r7=3, r8=15</td>
-<td style="font-size:0.8em;color:var(--blue)">Demand Zone=29.4, Liquidity=15.2, MACD=14.9, Order Block=14.5, Divergence=10.6, Price Zone=7.7, AVWAP=7.1, HTF Structure=0.7</td>
-<td>603</td>
-<td><span class="badge badge-red">50.1%</span></td>
-<td>68.8%</td>
-<td><span class="good">+5.5%</span></td>
-<td><span class="good">+4.0%</span></td>
-<td>+13.4%</td>
-<td>-6.8%</td>
-<td>-30.5%</td>
-<td>3.31</td>
-<td>603</td>
-<td><span class="badge badge-red">Low</span></td>
-<td><span class="warn">+0.6%</span> <span class="bar-wrap"><span class="bar" style="width:11%;background:#3fb950"></span></span></td>
-</tr>
-<tr>
-<td><span style="color:var(--sub)">6.</span> Interaction Gate</td>
+<td><span style="color:var(--sub)">5.</span> Interaction Gate</td>
 <td>Liquidity + AVWAP</td>
 <td style="font-size:0.8em;color:var(--sub)">No interaction gate</td>
 <td style="font-size:0.8em;color:var(--blue)">r3_liquidity>0 AND r5_avwap>0</td>
@@ -322,6 +304,24 @@ Discount Zone entry (r1 ≥ 1) is mandatory and preserved in all recommendations
 <td>583</td>
 <td><span class="badge badge-yellow">Medium</span></td>
 <td><span class="warn">+0.5%</span> <span class="bar-wrap"><span class="bar" style="width:11%;background:#3fb950"></span></span></td>
+</tr>
+<tr>
+<td><span style="color:var(--sub)">6.</span> Weight Optimization</td>
+<td>All r1-r8</td>
+<td style="font-size:0.8em;color:var(--sub)">r1=30, r2=10, r3=20, r4=10, r5=8, r6=4, r7=3, r8=15</td>
+<td style="font-size:0.8em;color:var(--blue)">Demand Zone=29.4, Liquidity=15.2, MACD=14.9, Order Block=14.5, Divergence=10.6, Price Zone=7.7, AVWAP=7.1, HTF Structure=0.7</td>
+<td>603</td>
+<td><span class="badge badge-red">50.1%</span></td>
+<td>68.8%</td>
+<td><span class="good">+5.5%</span></td>
+<td><span class="good">+4.0%</span></td>
+<td>+13.4%</td>
+<td>-6.8%</td>
+<td>-30.5%</td>
+<td>3.31</td>
+<td>603</td>
+<td><span class="badge badge-red">Low</span></td>
+<td><span class="warn">+0.5%</span> <span class="bar-wrap"><span class="bar" style="width:10%;background:#3fb950"></span></span></td>
 </tr>
 <tr>
 <td><span style="color:var(--sub)">7.</span> Indicator Gate</td>

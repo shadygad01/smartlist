@@ -153,12 +153,11 @@ class YFinanceNormalizer:
             op_cf = _g(cf_df, *self._CF["operating_cash_flow"])
             capex = _g(cf_df, *self._CF["capex"])
 
-            # Derived: FCF
+            # Derived: FCF = operating CF + capex (capex is negative in yfinance)
+            # FCF is NULL when capex is missing — never estimate from operating CF alone.
             fcf = None
             if op_cf is not None and capex is not None:
-                fcf = op_cf + capex        # capex is negative in yfinance
-            elif op_cf is not None:
-                fcf = op_cf * 0.85         # rough estimate when capex missing
+                fcf = op_cf + capex
 
             # Derived: EBITDA
             ebitda = None

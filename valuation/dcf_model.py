@@ -31,6 +31,8 @@ def run_dcf(
 
     if not shares or shares <= 0:
         return None
+    if wacc <= g_term:
+        return None  # Gordon Growth terminal value undefined when wacc ≤ g
 
     # Discount projected FCFs
     pv_sum = 0.0
@@ -49,10 +51,21 @@ def run_dcf(
     pv_terminal = terminal_value / ((1 + wacc) ** n)
 
     # Enterprise value → equity value
+    # Net cash bridge applied only when both cash and debt are known.
+    # Missing cash: treat as 0 (conservative — no benefit claimed for unknown cash).
+    # Missing debt: treat as 0 only when debt is genuinely unavailable; if debt
+    # cannot be determined, the EV → equity bridge is unreliable.
     enterprise_value = pv_sum + pv_terminal
-    cash = latest(financials, "cash") or 0.0
-    debt = latest(financials, "debt") or 0.0
-    equity_value = enterprise_value + cash - debt
+    cash = latest(financials, "cash")
+    debt = latest(financials, "debt")
+    # Use the bridge whenever at least debt is known; unknown cash → 0 (conservative).
+    if debt is None:
+        # No capital structure info — EV approximates equity (all-equity assumption)
+        net_cash = 0.0
+    else:
+        net_cash = (cash or 0.0) - debt
+
+    equity_value = enterprise_value + net_cash
 
     if equity_value <= 0:
         return None

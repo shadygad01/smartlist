@@ -42,12 +42,18 @@ def run_residual_income(
             return None
         ri = eps - ke * bv
         pv_ri += ri / ((1 + ke) ** i)
-        bv = bv + eps - (latest(financials, "dividend") or 0)  # BV grows by retained earnings
+        # BV grows by retained earnings (EPS - DPS); unknown dividend → full retention
+        div_actual = latest(financials, "dividend") or 0.0
+        bv = bv + eps - div_actual
 
-    # Terminal RI (fade to zero with persistence factor 0.5)
+    # Terminal RI: persistence factor 0.5 means RI fades toward zero at (ke-g)
+    # last_eps=None means no terminal RI contribution (zero terminal)
     if forecasts:
-        last_eps = forecasts[-1].get("eps") or 0
-        terminal_ri = (last_eps - ke * bv) * 0.5 / (ke - g) if ke > g else 0
+        last_eps = forecasts[-1].get("eps")
+        if last_eps is not None and ke > g:
+            terminal_ri = (last_eps - ke * bv) * 0.5 / (ke - g)
+        else:
+            terminal_ri = 0.0
         pv_terminal = terminal_ri / ((1 + ke) ** len(forecasts))
         pv_ri += pv_terminal
 

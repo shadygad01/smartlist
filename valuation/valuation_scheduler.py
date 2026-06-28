@@ -43,13 +43,17 @@ from valuation.valuation_engine import run_valuation
 _DB_PATH = Path(__file__).parent.parent / "valuation.db"
 
 # EGX-calibrated economic defaults (stored in DB at init, never hardcoded in model code)
+# NOTE: 'wacc' stores CAPM cost of equity (Ke = rfr + beta*erp), NOT true WACC.
+# True WACC requires per-company D/E ratio and cost of debt which are not available.
+# Using Ke as discount rate is the conservative (all-equity) assumption.
+# At beta=1.0: Ke = 0.125 + 1.0×0.07 = 0.1950 (default consistent with live formula).
 _EGX_DEFAULTS = {
     "risk_free_rate":      0.1250,   # Egypt 10Y T-bill ~12.5%
     "equity_risk_premium": 0.0700,   # EGX equity risk premium 7%
     "beta":                1.0,      # market-neutral default; overridden per-ticker from yfinance
     "tax_rate":            0.2250,   # Egypt corporate tax 22.5%
     "terminal_growth":     0.0400,   # 4% long-run nominal terminal growth
-    "wacc":                0.1600,   # 16% WACC for EGX (rfr + beta*erp ≈ 0.125 + 1.0*0.07)
+    "wacc":                0.1950,   # Ke default = rfr(12.5%) + beta(1.0)×erp(7%) = 19.5%
 }
 
 
@@ -137,7 +141,10 @@ def _store_collected(ticker: str, data: dict) -> None:
         assumptions["updated_at"] = now
         if live_beta is not None:
             assumptions["beta"] = live_beta
-            # Recompute WACC with live beta: rfr + beta*erp
+            # Note: stored as 'wacc' but formula is CAPM Ke = rfr + beta*erp.
+            # This assumes all-equity financing (no leverage adjustment).
+            # True WACC would require per-company D/E ratio and cost of debt,
+            # which are not available from the current data sources.
             assumptions["wacc"] = round(
                 assumptions["risk_free_rate"]
                 + assumptions["beta"] * assumptions["equity_risk_premium"],

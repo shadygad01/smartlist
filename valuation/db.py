@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS valuation_assumptions (
     beta                REAL DEFAULT 1.0,
     tax_rate            REAL DEFAULT 0.2250,
     terminal_growth     REAL DEFAULT 0.0400,
-    wacc                REAL DEFAULT 0.1600,
+    wacc                REAL DEFAULT 0.1950,  -- Ke = rfr + beta*erp; conservative all-equity proxy
     updated_at          TEXT
 );
 
@@ -533,10 +533,10 @@ def get_assumptions(conn: sqlite3.Connection, ticker: str) -> dict:
     if row:
         return dict(row)
     return {
-        "risk_free_rate": 0.1250,
+        "risk_free_rate":      0.1250,
         "equity_risk_premium": 0.0700,
-        "beta": 1.0,
-        "tax_rate": 0.2250,
-        "terminal_growth": 0.0400,
-        "wacc": 0.1600,
+        "beta":                1.0,
+        "tax_rate":            0.2250,
+        "terminal_growth":     0.0400,
+        "wacc":                0.1950,  # Ke = rfr + beta*erp at default beta=1.0
     }

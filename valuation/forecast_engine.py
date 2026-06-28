@@ -14,8 +14,12 @@ _GROWTH_DAMPEN = 0.50   # blend historical rate toward terminal growth
 _FORECAST_YEARS = 5
 
 
-def _dampen(g_hist: float, g_terminal: float = _DEFAULT_TERMINAL_GROWTH) -> float:
-    """Blend historical growth toward terminal growth (mean reversion)."""
+def _dampen(g_hist: float | None, g_terminal: float = _DEFAULT_TERMINAL_GROWTH) -> float:
+    """Blend historical growth toward terminal growth (mean reversion).
+    When no historical growth data exists, use terminal growth only — never a fabricated default.
+    """
+    if g_hist is None:
+        return g_terminal
     return round(g_hist * (1 - _GROWTH_DAMPEN) + g_terminal * _GROWTH_DAMPEN, 4)
 
 
@@ -34,11 +38,12 @@ def build_forecasts(financials: list[dict], terminal_growth: float = _DEFAULT_TE
     g_eps  = _dampen(average_growth(growth_rates["eps"]),          terminal_growth)
     g_fcf  = _dampen(average_growth(growth_rates["free_cash_flow"]), terminal_growth)
 
-    # Base values (most recent year)
-    base_rev = latest(financials, "revenue")   or 0.0
-    base_eps = latest(financials, "eps")       or 0.0
-    base_fcf = latest(financials, "free_cash_flow") or 0.0
-    base_div = latest(financials, "dividend")  or 0.0
+    # Base values (most recent year) — None when field is unavailable
+    # Downstream `if X else None` guards turn 0.0/None into None in forecast rows
+    base_rev = latest(financials, "revenue")          or 0.0
+    base_eps = latest(financials, "eps")              or 0.0
+    base_fcf = latest(financials, "free_cash_flow")   or 0.0
+    base_div = latest(financials, "dividend")         or 0.0
     last_yr  = max(r["year"] for r in financials)
 
     # Dividend growth tied to EPS growth with payout stability assumption

@@ -9,7 +9,11 @@ Never called during scanner execution.
 from __future__ import annotations
 from valuation.financial_parser import latest, average_growth, compute_growth_rates
 
-# EGX sector median multiples (conservative estimates, Egypt market context)
+# EGX sector median multiples — conservative reference values for the Egyptian market.
+# Source: analyst-consensus estimates for EGX sectors (not derived from live peer data).
+# These are applied uniformly and should be treated as approximations, not validated
+# comparables. Fair-value outputs from these models carry higher uncertainty than
+# intrinsic models (DCF, RI, EPV). All three multiple models are weighted at 10% each.
 _SECTOR_PE: dict[str, float] = {
     "Financial Services": 10.0,
     "Banks":              9.0,
@@ -95,11 +99,13 @@ def run_pe(
         return None
 
     multiple = _get(_SECTOR_PE, sector)
-    # PEG adjustment: if growth > sector median, expand multiple slightly
+    # PEG adjustment: if trailing EPS growth > 10% and PEG < 1.0,
+    # expand multiple by up to 15% (capped at +2.0x) to reflect growth premium.
+    # Only applied when actual historical growth data exists (not the terminal default).
     growth_rates = compute_growth_rates(financials)
     g_eps = average_growth(growth_rates["eps"])
-    if g_eps and g_eps > 0.10:
-        peg = multiple / (g_eps * 100)  # PEG ratio
+    if g_eps is not None and g_eps > 0.10:
+        peg = multiple / (g_eps * 100)  # PEG = PE / growth_rate_in_pct
         if peg < 1.0:
             multiple = min(multiple * 1.15, multiple + 2.0)
 

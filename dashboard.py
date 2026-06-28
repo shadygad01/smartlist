@@ -14,6 +14,7 @@ from pathlib import Path
 
 from presentation.presentation_snapshot import PresentationSnapshot, build_presentation_snapshot
 from constitutional_gate import is_constitutional_buy
+from valuation.card import render_dashboard_card as _ive_dash_card
 
 BASE = Path(__file__).parent
 sys.path.insert(0, str(BASE))
@@ -630,6 +631,7 @@ def _s_buy_signals(snap, mpi_snaps: dict | None = None) -> tuple:
     </div>
   </div>
 {_mpi_behavior_block(ticker, mpi_snaps)}
+{_ive_dash_card(ticker, cur_p)}
 </div>"""
 
     # ── Top Opportunity card ──────────────────────────────────────────────────

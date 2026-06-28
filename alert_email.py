@@ -9,6 +9,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 from time_authority import today_iso as _today_iso, now_cairo as _now_cairo_ta
+from valuation.card import render_email_card as _ive_card
 
 BASE = Path(__file__).parent
 
@@ -381,6 +382,13 @@ def build_alert_email(event: dict) -> tuple[str, str]:
   <tr>
     <td style="padding:0 28px;">
       {fib_block}
+    </td>
+  </tr>
+
+  <!-- Institutional Valuation Card -->
+  <tr>
+    <td style="padding:14px 28px 0 28px;">
+      {_ive_card(ticker, current)}
     </td>
   </tr>
 

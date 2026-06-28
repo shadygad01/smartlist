@@ -25,6 +25,7 @@ from pathlib import Path
 
 from presentation.presentation_snapshot import PresentationSnapshot, build_presentation_snapshot
 from time_authority import now_cairo as _now_cairo, today_cairo as _today_cairo, prev_trading_day_iso as _prev_trading_day_iso
+from valuation.card import render_email_card as _ive_card
 
 BASE = Path(__file__).parent
 
@@ -464,6 +465,12 @@ def _constitutional_buy_signals(dna: dict, mpi_snaps: dict | None = None) -> str
             if mpi_insight else ""
         )
 
+        _ive_html = _ive_card(ticker, cp)
+        ive_row = (
+            f'<tr><td colspan="5" style="padding:0 10px 10px 10px;">{_ive_html}</td></tr>'
+            if _ive_html else ""
+        )
+
         rows += (
             f'<tr style="border-bottom:1px solid #c3e6cb;">'
             f'<td style="padding:10px;font-family:Arial,sans-serif;font-size:14px;'
@@ -477,6 +484,7 @@ def _constitutional_buy_signals(dna: dict, mpi_snaps: dict | None = None) -> str
             f'<td style="padding:10px;">{hv}</td>'
             f'</tr>'
             f'{mpi_row}'
+            f'{ive_row}'
         )
 
     count = len(eligible)
@@ -620,6 +628,12 @@ def _active_opportunities(snap: PresentationSnapshot, dna: dict,
             if mpi_insight else ""
         )
 
+        _ive_html_ao = _ive_card(ticker, cp)
+        ive_row_ao = (
+            f'<tr><td colspan="7" style="padding:0 10px 10px 10px;">{_ive_html_ao}</td></tr>'
+            if _ive_html_ao else ""
+        )
+
         rows += (
             f'<tr style="border-bottom:1px solid #e8f0f8;">'
             f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:13px;'
@@ -636,6 +650,7 @@ def _active_opportunities(snap: PresentationSnapshot, dna: dict,
             f'<td style="padding:8px 10px;text-align:center;">{mem}</td>'
             f'</tr>'
             f'{mpi_row}'
+            f'{ive_row_ao}'
         )
 
     return (
@@ -695,6 +710,12 @@ def _re_accumulation_events(snap: PresentationSnapshot, dna: dict,
             if mpi_insight else ""
         )
 
+        _ive_html_ra = _ive_card(ticker, cp)
+        ive_row_ra = (
+            f'<tr><td colspan="7" style="padding:0 10px 10px 10px;">{_ive_html_ra}</td></tr>'
+            if _ive_html_ra else ""
+        )
+
         rows += (
             f'<tr style="border-bottom:1px solid #e8f0f8;">'
             f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:13px;'
@@ -712,6 +733,7 @@ def _re_accumulation_events(snap: PresentationSnapshot, dna: dict,
             f'<td style="padding:8px 10px;text-align:center;">{mem}</td>'
             f'</tr>'
             f'{mpi_row}'
+            f'{ive_row_ra}'
         )
 
     return (

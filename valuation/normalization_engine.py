@@ -62,8 +62,14 @@ class YFinanceNormalizer:
         "ebit":             ["EBIT", "Operating Income"],
         "net_income":       ["Net Income", "Net Income Common Stockholders"],
         "eps":              ["Basic EPS", "Diluted EPS", "EPS Basic"],
-        "dividend":         ["Cash Dividends Paid"],
     }
+
+    # Cash flow rows used to derive per-share annual dividend
+    _DIV_CF: list[str] = [
+        "Cash Dividends Paid",
+        "Common Stock Dividends Paid",
+        "Payment Of Dividends",
+    ]
 
     # Balance sheet
     _BAL: dict[str, list[str]] = {
@@ -127,9 +133,6 @@ class YFinanceNormalizer:
             ebit       = _g(inc_df, *self._INC["ebit"])
             net_income = _g(inc_df, *self._INC["net_income"])
             eps        = _g(inc_df, *self._INC["eps"])
-            dividend   = _g(inc_df, *self._INC["dividend"])
-            if dividend is not None:
-                dividend = abs(dividend)  # yfinance reports outflows as negative
 
             # Balance sheet
             cash     = _g(bal_df, *self._BAL["cash"])
@@ -139,6 +142,12 @@ class YFinanceNormalizer:
             liab     = _g(bal_df, *self._BAL["liabilities"])
             book_val = _g(bal_df, *self._BAL["book_value"])
             shares   = _g(bal_df, *self._BAL["shares"])
+
+            # Per-share annual dividend: total from CF ÷ shares (never income stmt total)
+            _total_div = _g(cf_df, *self._DIV_CF)
+            dividend: float | None = None
+            if _total_div is not None and shares and shares > 0:
+                dividend = round(abs(_total_div) / shares, 4)
 
             # Cash flow
             op_cf = _g(cf_df, *self._CF["operating_cash_flow"])
@@ -198,27 +207,31 @@ class YFinanceNormalizer:
     def normalize_market_data(self, info: dict) -> dict:
         """Map yfinance info dict to canonical market/company schema."""
         return {
-            "company_name":       info.get("longName") or info.get("shortName") or "",
-            "sector":             info.get("sector", ""),
-            "industry":           info.get("industry", ""),
-            "currency":           info.get("currency", "EGP"),
-            "shares_outstanding": _safe_float(info.get("sharesOutstanding")),
-            "current_price":      _safe_float(
+            "company_name":        info.get("longName") or info.get("shortName") or "",
+            "sector":              info.get("sector", ""),
+            "industry":            info.get("industry", ""),
+            "currency":            info.get("currency", "EGP"),
+            "shares_outstanding":  _safe_float(info.get("sharesOutstanding")),
+            "current_price":       _safe_float(
                 info.get("currentPrice") or info.get("regularMarketPrice")
             ),
-            "market_cap":         _safe_float(info.get("marketCap")),
-            "beta":               _safe_float(info.get("beta")),
-            "trailing_pe":        _safe_float(info.get("trailingPE")),
-            "forward_pe":         _safe_float(info.get("forwardPE")),
-            "pb_ratio":           _safe_float(info.get("priceToBook")),
-            "enterprise_value":   _safe_float(info.get("enterpriseValue")),
-            "ev_ebitda":          _safe_float(info.get("enterpriseToEbitda")),
-            "dividend_yield":     _safe_float(info.get("dividendYield")),
-            "analyst_target":     _safe_float(info.get("targetMeanPrice")),
-            "analyst_low":        _safe_float(info.get("targetLowPrice")),
-            "analyst_high":       _safe_float(info.get("targetHighPrice")),
-            "analyst_recs":       info.get("recommendationKey", ""),
-            "analyst_count":      info.get("numberOfAnalystOpinions"),
+            "market_cap":          _safe_float(info.get("marketCap")),
+            "beta":                _safe_float(info.get("beta")),
+            "trailing_pe":         _safe_float(info.get("trailingPE")),
+            "forward_pe":          _safe_float(info.get("forwardPE")),
+            "pb_ratio":            _safe_float(info.get("priceToBook")),
+            "enterprise_value":    _safe_float(info.get("enterpriseValue")),
+            "ev_ebitda":           _safe_float(info.get("enterpriseToEbitda")),
+            "dividend_yield":      _safe_float(info.get("dividendYield")),
+            # Per-share annual dividend from info (fallback if CF statement missing)
+            "dividend_rate":       _safe_float(
+                info.get("dividendRate") or info.get("trailingAnnualDividendRate")
+            ),
+            "analyst_target":      _safe_float(info.get("targetMeanPrice")),
+            "analyst_low":         _safe_float(info.get("targetLowPrice")),
+            "analyst_high":        _safe_float(info.get("targetHighPrice")),
+            "analyst_recs":        info.get("recommendationKey", ""),
+            "analyst_count":       info.get("numberOfAnalystOpinions"),
         }
 
     def normalize_analyst_consensus(self, market_data: dict, date_iso: str) -> list[dict]:

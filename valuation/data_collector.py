@@ -151,7 +151,7 @@ def collect_all(ticker: str) -> dict:
         f"{len(financials_valid)} accepted, {len(financials_rejected)} rejected"
     )
 
-    # ── Layer 3: market / company data ──────────────────────────────────────
+    # ── Layer 3: market / company data ─────────────────────────────────────
     mkt_result       = sm.fetch("market_data")
     market_data_raw: dict = {}
     if mkt_result:
@@ -160,6 +160,15 @@ def collect_all(ticker: str) -> dict:
     market_data, mkt_issues = validate_market_data(market_data_raw)
     if mkt_issues:
         print(f"[DataCollector] {ticker}: market data issues — {mkt_issues}")
+
+    # Dividend fallback: fill missing per-share dividend from info dividendRate.
+    # normalize_financials() uses CF total ÷ shares; when CF row is absent,
+    # yfinance info.dividendRate is already per-share and annual.
+    _div_rate = market_data.get("dividend_rate")
+    if _div_rate and _div_rate > 0:
+        for row in financials_valid:
+            if row.get("dividend") is None:
+                row["dividend"] = _div_rate
 
     # ── Layer 4: analyst consensus ──────────────────────────────────────────
     consensus_raw    = norm.normalize_analyst_consensus(market_data, today_iso)

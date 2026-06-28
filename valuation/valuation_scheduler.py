@@ -26,6 +26,7 @@ Usage:
 """
 from __future__ import annotations
 
+import json
 import sqlite3
 import sys
 import time
@@ -156,11 +157,36 @@ def _store_collected(ticker: str, data: dict) -> None:
         conn.close()
 
 
-def run_ticker(ticker: str) -> bool:
-    """Full pipeline for one ticker. Returns True on success."""
+def run_ticker(ticker: str) -> tuple[bool, dict]:
+    """
+    Full pipeline for one ticker.
+    Returns (success, stats) where stats carries per-ticker metrics for the quality report.
+    """
+    stats: dict = {
+        "has_financials":   False,
+        "has_dividend":     False,
+        "has_analyst":      False,
+        "validation_fails": 0,
+        "sources":          set(),
+        "model_successes":  {},
+    }
     try:
         # Phase 1–3: Collect, normalize, validate
         data = collect_all(ticker)
+
+        fin_valid    = data.get("financials", [])
+        fin_rejected = data.get("financials_rejected", [])
+        consensus    = data.get("consensus", [])
+
+        stats["has_financials"]  = len(fin_valid) > 0
+        stats["has_dividend"]    = any(r.get("dividend") is not None for r in fin_valid)
+        stats["has_analyst"]     = len(consensus) > 0
+        stats["validation_fails"] = len(fin_rejected)
+
+        src_meta = data.get("source_meta", {})
+        for sm in src_meta.values():
+            if sm:
+                stats["sources"].add(sm.source_name)
 
         # Phase 4: Store raw validated data
         _store_collected(ticker, data)
@@ -175,14 +201,95 @@ def run_ticker(ticker: str) -> bool:
                 f"[Scheduler] {ticker} DONE — "
                 f"FairValue={'%.2f' % fv if fv else 'N/A'}"
             )
-            return True
+            # Collect per-model success flags
+            for ms in result.get("_model_statuses", []):
+                stats["model_successes"][ms["model"]] = ms["success"]
+            return True, stats
         else:
             print(f"[Scheduler] {ticker} — valuation incomplete (insufficient validated data)")
-            return False
+            return False, stats
 
     except Exception as exc:
         print(f"[Scheduler] ERROR {ticker}: {exc}")
-        return False
+        return False, stats
+
+
+def _build_quality_report(
+    run_date:   str,
+    run_time_s: float,
+    tickers:    list[str],
+    results:    list[tuple[bool, dict]],
+) -> dict:
+    """Aggregate per-ticker stats into a single quality report dict."""
+    n = len(tickers)
+    ok_count   = sum(1 for ok, _ in results if ok)
+    with_data  = sum(1 for _, s in results if s.get("has_financials"))
+    with_div   = sum(1 for _, s in results if s.get("has_dividend"))
+    with_cons  = sum(1 for _, s in results if s.get("has_analyst"))
+    val_fails  = sum(s.get("validation_fails", 0) for _, s in results)
+    all_sources: set = set()
+    for _, s in results:
+        all_sources |= s.get("sources", set())
+
+    model_names = ["dcf", "ddm", "residual_income", "earnings_power",
+                   "ev_ebitda", "pe", "pb"]
+    model_counts = {
+        m: sum(1 for _, s in results if s.get("model_successes", {}).get(m))
+        for m in model_names
+    }
+
+    db_size = _DB_PATH.stat().st_size if _DB_PATH.exists() else 0
+
+    return {
+        "run_date":            run_date,
+        "run_time_s":          round(run_time_s, 2),
+        "companies_processed": n,
+        "companies_with_data": with_data,
+        "companies_valued":    ok_count,
+        "financial_coverage":  round(with_data / n, 4) if n else 0,
+        "dividend_coverage":   round(with_div  / n, 4) if n else 0,
+        "analyst_coverage":    round(with_cons  / n, 4) if n else 0,
+        "dcf_success":         model_counts["dcf"],
+        "ddm_success":         model_counts["ddm"],
+        "ri_success":          model_counts["residual_income"],
+        "epv_success":         model_counts["earnings_power"],
+        "ev_ebitda_success":   model_counts["ev_ebitda"],
+        "pe_success":          model_counts["pe"],
+        "pb_success":          model_counts["pb"],
+        "validation_failures": val_fails,
+        "sources_used":        json.dumps(sorted(all_sources)),
+        "db_size_bytes":       db_size,
+    }
+
+
+def _print_scheduler_summary(report: dict, summary: dict[str, str]) -> None:
+    """Print the end-of-run scheduler summary to stdout."""
+    n    = report["companies_processed"]
+    ok   = report["companies_valued"]
+    fail = n - ok
+    failed_tickers = [t for t, s in summary.items() if s == "failed"]
+
+    print("\n" + "═" * 60)
+    print(f"  IVE V2 Scheduler Summary — {report['run_date']}")
+    print("═" * 60)
+    print(f"  Runtime         : {report['run_time_s']}s")
+    print(f"  Tickers         : {n} processed  |  {ok} valued  |  {fail} failed")
+    print(f"  Financial data  : {report['companies_with_data']}/{n} ({report['financial_coverage']*100:.1f}%)")
+    print(f"  Dividend data   : {int(report['dividend_coverage']*n)}/{n} ({report['dividend_coverage']*100:.1f}%)")
+    print(f"  Analyst targets : {int(report['analyst_coverage']*n)}/{n} ({report['analyst_coverage']*100:.1f}%)")
+    print(f"  Validation rej  : {report['validation_failures']} years rejected")
+    print(f"  Sources used    : {report['sources_used']}")
+    print(f"  DB size         : {report['db_size_bytes'] / 1024:.1f} KB")
+    print("  Model successes :")
+    for col, label in [
+        ("dcf_success", "DCF"), ("ddm_success", "DDM"), ("ri_success", "RI"),
+        ("epv_success", "EPV"), ("ev_ebitda_success", "EV/EBITDA"),
+        ("pe_success", "P/E"), ("pb_success", "P/B"),
+    ]:
+        print(f"    {label:<10}: {report[col]}/{n}")
+    if failed_tickers:
+        print(f"  Failed          : {failed_tickers}")
+    print("═" * 60 + "\n")
 
 
 def run_all(tickers: list[str] | None = None, delay_s: float = 2.0) -> dict:
@@ -195,26 +302,36 @@ def run_all(tickers: list[str] | None = None, delay_s: float = 2.0) -> dict:
     if tickers is None:
         tickers = get_constitutional_universe()
 
+    today = date.today().isoformat()
     print(f"\n[Scheduler] Starting IVE V2 run — {len(tickers)} ticker(s)")
     print(f"[Scheduler] Database: {_DB_PATH}")
-    print(f"[Scheduler] Date:     {date.today().isoformat()}\n")
+    print(f"[Scheduler] Date:     {today}\n")
 
     init_database()
     summary: dict[str, str] = {}
+    results: list[tuple[bool, dict]] = []
+    t_start = time.perf_counter()
 
     for i, ticker in enumerate(tickers, start=1):
         print(f"\n[Scheduler] ── {i}/{len(tickers)}: {ticker} ──")
-        ok = run_ticker(ticker)
+        ok, stats = run_ticker(ticker)
         summary[ticker] = "ok" if ok else "failed"
+        results.append((ok, stats))
         if i < len(tickers):
             time.sleep(delay_s)
 
-    ok_count   = sum(1 for v in summary.values() if v == "ok")
-    fail_count = len(summary) - ok_count
-    print(f"\n[Scheduler] Completed — {ok_count} ok, {fail_count} failed")
-    if fail_count:
-        failed = [t for t, s in summary.items() if s == "failed"]
-        print(f"[Scheduler] Failed: {failed}")
+    run_time_s = time.perf_counter() - t_start
+    report     = _build_quality_report(today, run_time_s, tickers, results)
+
+    # Persist quality report
+    conn = sqlite3.connect(str(_DB_PATH))
+    try:
+        _db.save_quality_report(conn, report)
+        conn.commit()
+    finally:
+        conn.close()
+
+    _print_scheduler_summary(report, summary)
     return summary
 
 

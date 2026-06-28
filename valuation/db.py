@@ -131,12 +131,57 @@ CREATE TABLE IF NOT EXISTS data_sources (
     data_version     TEXT NOT NULL,    -- e.g. 'yfinance-2025-06-28-v1'
     UNIQUE(ticker, statement, period, field_name, source_name)
 );
+
+CREATE TABLE IF NOT EXISTS data_completeness (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker               TEXT NOT NULL,
+    valuation_date       TEXT NOT NULL,
+    required_fields      TEXT NOT NULL,  -- JSON array
+    available_fields     TEXT NOT NULL,  -- JSON array
+    missing_fields       TEXT NOT NULL,  -- JSON array
+    completeness_percent REAL NOT NULL,
+    UNIQUE(ticker, valuation_date)
+);
+
+CREATE TABLE IF NOT EXISTS valuation_model_status (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker           TEXT NOT NULL,
+    valuation_date   TEXT NOT NULL,
+    model            TEXT NOT NULL,
+    executed         INTEGER NOT NULL DEFAULT 0,  -- 1=ran, 0=skipped
+    success          INTEGER NOT NULL DEFAULT 0,  -- 1=produced value, 0=failed/skipped
+    reason           TEXT,                         -- 'OK', skip reason, or error message
+    execution_time_ms REAL,
+    UNIQUE(ticker, valuation_date, model)
+);
+
+CREATE TABLE IF NOT EXISTS data_quality_report (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_date              TEXT NOT NULL,
+    run_time_s            REAL,
+    companies_processed   INTEGER,
+    companies_with_data   INTEGER,
+    companies_valued      INTEGER,
+    financial_coverage    REAL,   -- fraction with ≥1 valid financial year
+    dividend_coverage     REAL,   -- fraction with dividend field populated
+    analyst_coverage      REAL,   -- fraction with analyst consensus
+    dcf_success           INTEGER,
+    ddm_success           INTEGER,
+    ri_success            INTEGER,
+    epv_success           INTEGER,
+    ev_ebitda_success     INTEGER,
+    pe_success            INTEGER,
+    pb_success            INTEGER,
+    validation_failures   INTEGER,
+    sources_used          TEXT,   -- JSON array of unique source names
+    db_size_bytes         INTEGER
+);
 """
 
 _MIGRATION_SQL = [
     # Add quarter column to financials if absent (migration for pre-V2 databases)
     "ALTER TABLE financials ADD COLUMN quarter TEXT",
-    # data_sources is created by _SCHEMA above; no extra migration needed
+    # data_completeness, valuation_model_status, data_quality_report created by _SCHEMA
 ]
 
 
@@ -361,6 +406,80 @@ def save_many_data_sources(conn: sqlite3.Connection, records: list[dict]) -> Non
            VALUES (:ticker,:statement,:period,:field_name,:source_name,
                    :source_priority,:collection_time,:validation_status,:data_version)""",
         records,
+    )
+
+
+def save_data_completeness(
+    conn:          sqlite3.Connection,
+    ticker:        str,
+    valuation_date: str,
+    result:        dict,
+) -> None:
+    """Upsert data completeness measurement for a ticker/date."""
+    conn.execute(
+        """INSERT OR REPLACE INTO data_completeness
+           (ticker, valuation_date, required_fields, available_fields,
+            missing_fields, completeness_percent)
+           VALUES (?,?,?,?,?,?)""",
+        (
+            ticker,
+            valuation_date,
+            result.get("required_fields",      "[]"),
+            result.get("available_fields",     "[]"),
+            result.get("missing_fields",       "[]"),
+            result.get("completeness_percent", 0.0),
+        ),
+    )
+
+
+def save_model_status(
+    conn:             sqlite3.Connection,
+    ticker:           str,
+    valuation_date:   str,
+    model:            str,
+    executed:         bool,
+    success:          bool,
+    reason:           str,
+    execution_time_ms: float | None,
+) -> None:
+    """Record execution status for one valuation model."""
+    conn.execute(
+        """INSERT OR REPLACE INTO valuation_model_status
+           (ticker, valuation_date, model, executed, success, reason, execution_time_ms)
+           VALUES (?,?,?,?,?,?,?)""",
+        (ticker, valuation_date, model, int(executed), int(success), reason, execution_time_ms),
+    )
+
+
+def save_quality_report(conn: sqlite3.Connection, report: dict) -> None:
+    """Insert one data quality report row."""
+    conn.execute(
+        """INSERT INTO data_quality_report
+           (run_date, run_time_s, companies_processed, companies_with_data,
+            companies_valued, financial_coverage, dividend_coverage, analyst_coverage,
+            dcf_success, ddm_success, ri_success, epv_success, ev_ebitda_success,
+            pe_success, pb_success, validation_failures, sources_used, db_size_bytes)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            report.get("run_date"),
+            report.get("run_time_s"),
+            report.get("companies_processed"),
+            report.get("companies_with_data"),
+            report.get("companies_valued"),
+            report.get("financial_coverage"),
+            report.get("dividend_coverage"),
+            report.get("analyst_coverage"),
+            report.get("dcf_success"),
+            report.get("ddm_success"),
+            report.get("ri_success"),
+            report.get("epv_success"),
+            report.get("ev_ebitda_success"),
+            report.get("pe_success"),
+            report.get("pb_success"),
+            report.get("validation_failures"),
+            report.get("sources_used", "[]"),
+            report.get("db_size_bytes"),
+        ),
     )
 
 

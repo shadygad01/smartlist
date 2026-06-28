@@ -109,6 +109,35 @@
       ]
     },
     {
+      "pattern_id": "DZ_RANGE_LOW_REVERSAL_MODERATE",
+      "pattern_type": "mixed",
+      "context_signature": {
+        "market_regime": "range",
+        "volatility_state": "low",
+        "structure_state": "reversal",
+        "liquidity_state": "moderate"
+      },
+      "stats": {
+        "n": 13,
+        "n_resolved": 13,
+        "wr": 0.3846,
+        "pf": 4.485,
+        "mean_r20d": 0.0588,
+        "mean_mfe": 0.1354,
+        "mean_mae": -0.049
+      },
+      "symbols": [
+        "ABUK.CA",
+        "BTFH.CA",
+        "COMI.CA",
+        "EAST.CA",
+        "EFID.CA",
+        "EFIH.CA",
+        "HELI.CA",
+        "OIH.CA"
+      ]
+    },
+    {
       "pattern_id": "DZ_RANGE_LOW_EXPANSION_MODERATE",
       "pattern_type": "mixed",
       "context_signature": {
@@ -176,13 +205,13 @@
         "liquidity_state": "strong"
       },
       "stats": {
-        "n": 32,
-        "n_resolved": 32,
-        "wr": 0.3125,
-        "pf": 5.164,
-        "mean_r20d": 0.0557,
-        "mean_mfe": 0.1343,
-        "mean_mae": -0.0675
+        "n": 33,
+        "n_resolved": 33,
+        "wr": 0.3333,
+        "pf": 5.385,
+        "mean_r20d": 0.0569,
+        "mean_mfe": 0.135,
+        "mean_mae": -0.068
       },
       "symbols": [
         "ABUK.CA",
@@ -193,35 +222,6 @@
         "EAST.CA",
         "EFIH.CA",
         "EGAL.CA"
-      ]
-    },
-    {
-      "pattern_id": "DZ_RANGE_LOW_REVERSAL_MODERATE",
-      "pattern_type": "discount_zone_failure",
-      "context_signature": {
-        "market_regime": "range",
-        "volatility_state": "low",
-        "structure_state": "reversal",
-        "liquidity_state": "moderate"
-      },
-      "stats": {
-        "n": 12,
-        "n_resolved": 12,
-        "wr": 0.3333,
-        "pf": 3.79,
-        "mean_r20d": 0.051,
-        "mean_mfe": 0.134,
-        "mean_mae": -0.053
-      },
-      "symbols": [
-        "ABUK.CA",
-        "BTFH.CA",
-        "COMI.CA",
-        "EAST.CA",
-        "EFID.CA",
-        "EFIH.CA",
-        "HELI.CA",
-        "OIH.CA"
       ]
     },
     {
@@ -282,33 +282,6 @@
       ]
     },
     {
-      "pattern_id": "DZ_TREND_LOW_REVERSAL_MODERATE",
-      "pattern_type": "mixed",
-      "context_signature": {
-        "market_regime": "trend",
-        "volatility_state": "low",
-        "structure_state": "reversal",
-        "liquidity_state": "moderate"
-      },
-      "stats": {
-        "n": 7,
-        "n_resolved": 7,
-        "wr": 0.5714,
-        "pf": 2.988,
-        "mean_r20d": 0.0411,
-        "mean_mfe": 0.0895,
-        "mean_mae": -0.0444
-      },
-      "symbols": [
-        "EAST.CA",
-        "JUFO.CA",
-        "OIH.CA",
-        "ORWE.CA",
-        "RMDA.CA",
-        "TMGH.CA"
-      ]
-    },
-    {
       "pattern_id": "DZ_RANGE_MEDIUM_EXPANSION_MODERATE",
       "pattern_type": "mixed",
       "context_signature": {
@@ -365,6 +338,32 @@
       ]
     },
     {
+      "pattern_id": "DZ_TREND_LOW_REVERSAL_MODERATE",
+      "pattern_type": "mixed",
+      "context_signature": {
+        "market_regime": "trend",
+        "volatility_state": "low",
+        "structure_state": "reversal",
+        "liquidity_state": "moderate"
+      },
+      "stats": {
+        "n": 6,
+        "n_resolved": 6,
+        "wr": 0.5,
+        "pf": 1.934,
+        "mean_r20d": 0.0225,
+        "mean_mfe": 0.079,
+        "mean_mae": -0.0515
+      },
+      "symbols": [
+        "JUFO.CA",
+        "OIH.CA",
+        "ORWE.CA",
+        "RMDA.CA",
+        "TMGH.CA"
+      ]
+    },
+    {
       "pattern_id": "DZ_RANGE_LOW_EXPANSION_STRONG",
       "pattern_type": "discount_zone_failure",
       "context_signature": {
@@ -374,13 +373,13 @@
         "liquidity_state": "strong"
       },
       "stats": {
-        "n": 56,
-        "n_resolved": 56,
-        "wr": 0.2857,
-        "pf": 1.502,
-        "mean_r20d": 0.0187,
-        "mean_mfe": 0.1062,
-        "mean_mae": -0.0869
+        "n": 55,
+        "n_resolved": 55,
+        "wr": 0.2727,
+        "pf": 1.457,
+        "mean_r20d": 0.0173,
+        "mean_mfe": 0.1053,
+        "mean_mae": -0.087
       },
       "symbols": [
         "ABUK.CA",
@@ -503,15 +502,15 @@
       "strength": "weak"
     },
     {
-      "feature": "macd_div",
-      "correlation": 0.0305,
-      "direction": "positive",
+      "feature": "htf_hh",
+      "correlation": -0.0342,
+      "direction": "negative",
       "strength": "weak"
     },
     {
-      "feature": "htf_hh",
-      "correlation": -0.0288,
-      "direction": "negative",
+      "feature": "macd_div",
+      "correlation": 0.0305,
+      "direction": "positive",
       "strength": "weak"
     },
     {
@@ -564,7 +563,7 @@
     },
     {
       "feature": "htf_hl",
-      "correlation": 0.0104,
+      "correlation": 0.0087,
       "direction": "positive",
       "strength": "weak"
     },
@@ -634,12 +633,12 @@
         "n": 234,
         "n_resolved": 234,
         "wr": 0.4103,
-        "pf": 2.573,
-        "mean_r20d": 0.0489,
-        "mean_mfe": 0.1393,
-        "mean_mae": -0.0805
+        "pf": 2.565,
+        "mean_r20d": 0.0486,
+        "mean_mfe": 0.1394,
+        "mean_mae": -0.0809
       },
-      "vs_baseline": 0.0043,
+      "vs_baseline": 0.004,
       "verdict": "NEUTRAL — inline with baseline"
     },
     {
@@ -713,8 +712,8 @@
       "pattern_id": "DZ_TREND_LOW_EXPANSION_MODERATE",
       "pattern_type": "discount_zone_success",
       "stability": "stable",
-      "delta_wr": 0.0049,
-      "delta_r20d": 0.0038
+      "delta_wr": 0.0,
+      "delta_r20d": 0.0
     },
     {
       "pattern_id": "DZ_RANGE_LOW_UNKNOWN_WEAK",
@@ -731,11 +730,18 @@
       "delta_r20d": 0.0
     },
     {
+      "pattern_id": "DZ_RANGE_LOW_REVERSAL_MODERATE",
+      "pattern_type": "mixed",
+      "stability": "fluctuating",
+      "delta_wr": 0.0513,
+      "delta_r20d": 0.0078
+    },
+    {
       "pattern_id": "DZ_RANGE_LOW_EXPANSION_MODERATE",
       "pattern_type": "mixed",
       "stability": "stable",
-      "delta_wr": -0.0055,
-      "delta_r20d": -0.0012
+      "delta_wr": 0.0,
+      "delta_r20d": 0.0
     },
     {
       "pattern_id": "DZ_TREND_LOW_REVERSAL_STRONG",
@@ -748,15 +754,8 @@
       "pattern_id": "DZ_TREND_LOW_EXPANSION_STRONG",
       "pattern_type": "discount_zone_failure",
       "stability": "stable",
-      "delta_wr": -0.0208,
-      "delta_r20d": -0.0012
-    },
-    {
-      "pattern_id": "DZ_RANGE_LOW_REVERSAL_MODERATE",
-      "pattern_type": "discount_zone_failure",
-      "stability": "fluctuating",
-      "delta_wr": -0.0513,
-      "delta_r20d": -0.0078
+      "delta_wr": 0.0208,
+      "delta_r20d": 0.0012
     },
     {
       "pattern_id": "DZ_TREND_LOW_COMPRESSION_STRONG",
@@ -773,13 +772,6 @@
       "delta_r20d": 0.0
     },
     {
-      "pattern_id": "DZ_TREND_LOW_REVERSAL_MODERATE",
-      "pattern_type": "mixed",
-      "stability": "strengthening",
-      "delta_wr": 0.0714,
-      "delta_r20d": 0.0186
-    },
-    {
       "pattern_id": "DZ_RANGE_MEDIUM_EXPANSION_MODERATE",
       "pattern_type": "mixed",
       "stability": "stable",
@@ -794,11 +786,18 @@
       "delta_r20d": 0.0
     },
     {
+      "pattern_id": "DZ_TREND_LOW_REVERSAL_MODERATE",
+      "pattern_type": "mixed",
+      "stability": "decaying",
+      "delta_wr": -0.0714,
+      "delta_r20d": -0.0186
+    },
+    {
       "pattern_id": "DZ_RANGE_LOW_EXPANSION_STRONG",
       "pattern_type": "discount_zone_failure",
       "stability": "stable",
-      "delta_wr": 0.013,
-      "delta_r20d": 0.0014
+      "delta_wr": -0.013,
+      "delta_r20d": -0.0014
     },
     {
       "pattern_id": "DZ_TREND_LOW_UNKNOWN_WEAK",

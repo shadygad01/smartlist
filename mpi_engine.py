@@ -373,16 +373,25 @@ def _behavioral_cosine(cur_b: dict, hist_b: dict, b_weights: dict) -> float:
     return dot / (math.sqrt(norm_cur) * math.sqrt(norm_hist))
 
 
-def _r_score_cosine(cur_r: dict, hist_r: dict, r_weights: dict) -> float:
+def _r_score_cosine(cur_r: dict, hist_r: dict, r_weights: dict,
+                    r_max: Optional[dict] = None) -> float:
     """
     Weighted cosine similarity on R1-R8 continuous scores.
-    R scores are already normalized [0,100]; cosine handles relative alignment.
+
+    R-scores are component-specific raw point values (r1 max≈30, r6 max≈4, etc.).
+    Without normalisation the high-magnitude components (r1, r3) dominate the
+    cosine dot product regardless of their configured weights.
+
+    When r_max is supplied (from mpi_config.json r_score_max_values), each score
+    is divided by its component maximum before weighting, so every dimension
+    contributes proportionally to its configured weight rather than its magnitude.
     """
     import math
     dot = norm_cur = norm_hist = 0.0
     for k, w in r_weights.items():
-        c = cur_r.get(k, 0.0) * w
-        h = hist_r.get(k, 0.0) * w
+        m = (r_max.get(k, 1.0) if r_max else 1.0) or 1.0
+        c = (cur_r.get(k, 0.0) / m) * w
+        h = (hist_r.get(k, 0.0) / m) * w
         dot       += c * h
         norm_cur  += c * c
         norm_hist += h * h
@@ -439,6 +448,22 @@ def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
 
     r_blend = float(hist_cfg.get("r_score_blend", 0.70))
     b_blend = float(hist_cfg.get("behavioral_blend", 0.30))
+
+    # R-score max values for per-component normalisation.
+    # Constitutional R-scores are component-specific raw point values (r1 max≈30,
+    # r6 max≈4), not a uniform [0,100] range. Without normalisation, high-magnitude
+    # components dominate the cosine dot product independently of their weights.
+    rmax_cfg = _cfg().get("r_score_max_values", {})
+    r_max = {
+        "r1": float(rmax_cfg.get("r1", 30)),
+        "r2": float(rmax_cfg.get("r2",  9)),
+        "r3": float(rmax_cfg.get("r3", 20)),
+        "r4": float(rmax_cfg.get("r4", 10)),
+        "r5": float(rmax_cfg.get("r5",  8)),
+        "r6": float(rmax_cfg.get("r6",  4)),
+        "r7": float(rmax_cfg.get("r7",  3)),
+        "r8": float(rmax_cfg.get("r8", 15)),
+    }
 
     # Build complete R-score vector.
     # analyze() in main.py only puts r1 as a named key; r2-r8 are in the
@@ -518,7 +543,7 @@ def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
             "htf_hl":         bool(row["htf_hl"]),
         }
 
-        r_sim = _r_score_cosine(cur_r, hist_r, r_weights)
+        r_sim = _r_score_cosine(cur_r, hist_r, r_weights, r_max)
         b_sim = _behavioral_cosine(cur_b, hist_b, b_weights)
         sim   = r_blend * r_sim + b_blend * b_sim
 
@@ -577,20 +602,23 @@ _PHASE_INTRO: dict[str, str] = {
 }
 
 _DEMAND_SENTENCE: dict[str, str] = {
+    # All sentences describe observable evidence only.
+    # Participant attribution ("institutional", "larger participants") removed:
+    # sv_hit and hvn_hit measure volume-at-price; they cannot identify order-flow source.
     "sv_hvn": (
         "Stopping volume combined with a high-volume demand node confirms "
-        "institutional supply absorption at this level."
+        "supply absorption at this price level."
     ),
     "sv_ob": (
-        "Stopping volume at a respected order block suggests demand "
-        "is being absorbed by larger participants."
+        "Stopping volume at a respected order block suggests demand absorption "
+        "at a structural zone."
     ),
     "sv_only": (
         "Stopping volume indicates selling pressure is being absorbed "
         "at this discount zone."
     ),
     "hvn_only": (
-        "A high-volume demand node marks institutional interest "
+        "A high-volume demand node indicates historically significant traded volume "
         "at the current price level."
     ),
     "ob_only": (

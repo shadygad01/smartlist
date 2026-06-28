@@ -45,11 +45,16 @@ def run_epv(
     if nopat <= 0:
         return None
 
-    # EPV equity value = NOPAT / WACC + Net Cash
-    cash = latest(financials, "cash") or 0.0
-    debt = latest(financials, "debt") or 0.0
+    # EPV equity value = NOPAT / WACC ± net cash
+    # Net cash bridge: applied same as DCF — missing debt → no bridge (all-equity assumption).
+    cash = latest(financials, "cash")
+    debt = latest(financials, "debt")
     epv_firm = nopat / wacc
-    epv_equity = epv_firm + cash - debt
+    if debt is None:
+        net_cash = 0.0
+    else:
+        net_cash = (cash or 0.0) - debt
+    epv_equity = epv_firm + net_cash
 
     if epv_equity <= 0:
         return None

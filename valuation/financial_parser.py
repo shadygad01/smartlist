@@ -72,11 +72,11 @@ def compute_growth_rates(financials: list[dict]) -> dict[str, list[float | None]
     return result
 
 
-def average_growth(rates: list[float | None], n: int = 3) -> float:
-    """Return average of last n non-None growth rates."""
+def average_growth(rates: list[float | None], n: int = 3) -> float | None:
+    """Return average of last n non-None growth rates, or None if no data."""
     valid = [r for r in (rates or []) if r is not None]
     if not valid:
-        return 0.05  # default 5%
+        return None
     tail = valid[-n:]
     return round(sum(tail) / len(tail), 4)
 

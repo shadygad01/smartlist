@@ -859,11 +859,9 @@ def run_for_current_signals(
             errors += 1
             continue
 
-        # Below-threshold: replace explanation with unavailable message
-        threshold = _conf_threshold()
-        if snapshot["confidence"] < threshold:
-            snapshot["explanation"]         = _UNAVAILABLE_EXPLANATION
-            snapshot["explanation_compact"] = _UNAVAILABLE_COMPACT
+        # Always store the real explanation — renderers gate on confidence vs display_threshold.
+        # Overwriting with the unavailable sentinel here would corrupt stored records when
+        # the threshold changes in config (stale DB records could never render correct text).
 
         try:
             upsert_snapshot(snapshot, db_path=_db)
@@ -1009,6 +1007,13 @@ def render_behavior_insight_html(snap: Optional[dict], theme: str = "dark") -> s
     if not snap:
         return ""
 
+    # Gate on current config threshold — not the stored explanation sentinel.
+    # Records stored under a different threshold may have a stale explanation string;
+    # re-evaluating here makes the renderer config-threshold-aware on every render.
+    confidence = float(snap.get("confidence", 0.0))
+    if confidence < _conf_threshold():
+        return render_historical_context_html(snap, theme=theme)
+
     explanation = snap.get("explanation", "")
     if not explanation or explanation == _UNAVAILABLE_EXPLANATION:
         return render_historical_context_html(snap, theme=theme)
@@ -1079,9 +1084,12 @@ def render_behavior_insight_telegram(snap: Optional[dict]) -> str:
     """
     if not snap:
         return ""
-    compact = snap.get("explanation_compact", "")
-    if compact and compact != _UNAVAILABLE_COMPACT:
-        return f"🧠 *Behavior*\n{compact}"
+    # Gate on current config threshold before using stored explanation text.
+    confidence = float(snap.get("confidence", 0.0))
+    if confidence >= _conf_threshold():
+        compact = snap.get("explanation_compact", "")
+        if compact and compact != _UNAVAILABLE_COMPACT:
+            return f"🧠 *Behavior*\n{compact}"
 
     # Fallback: compact historical context
     ctx_cfg = _cfg().get("historical_context", {})

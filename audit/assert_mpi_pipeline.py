@@ -115,48 +115,74 @@ def _check_renderer_importable() -> tuple[bool | None, str]:
 
 
 def _check_renderer_output(today_str: str) -> tuple[bool | None, str]:
-    db_path = BASE / "mpi_snapshots.db"
-    if not db_path.exists():
-        return None, "mpi_snapshots.db missing — skip"
+    """
+    Verify that renderers produce output given a record that meets the confidence threshold.
+
+    Uses a synthetic record with known-good features rather than stale DB records, because:
+      - DB records may have been written under a different display_threshold
+      - DB records may have confidence=0 (MPI ran without scan features)
+    The synthetic record tests that the rendering ARCHITECTURE works.
+    """
     try:
-        conn = sqlite3.connect(str(db_path))
-        conn.row_factory = sqlite3.Row
-        # Prefer a record with confidence > 0 (real scan data) over confidence=0 (empty-features scan)
-        row = conn.execute(
-            "SELECT * FROM mpi_snapshots WHERE analysis_date=? AND confidence>0 LIMIT 1", (today_str,)
-        ).fetchone()
-        if row is None:
-            # All records have confidence=0 — MPI ran with empty features (test/manual run)
-            # This is a data quality skip, not an architectural failure
-            count = conn.execute(
-                "SELECT COUNT(*) FROM mpi_snapshots WHERE analysis_date=?", (today_str,)
-            ).fetchone()[0]
-            conn.close()
-            return None, (
-                f"all {count} MPI record(s) for {today_str} have confidence=0 "
-                "(MPI ran without scan features — expected in test/non-production runs)"
-            )
-        conn.close()
-        snap = dict(row)
+        from mpi_engine import (
+            analyze_ticker,
+            render_behavior_insight_html,
+            render_behavior_insight_telegram,
+            _conf_threshold,
+        )
+    except ImportError as e:
+        return False, f"mpi_engine import failed: {e}"
+
+    # Synthetic features guaranteed to produce evidence + confidence >= display_threshold
+    synthetic_feat = {
+        "sweep_detected": True,
+        "sv_hit":         True,
+        "rsi_div":        True,
+        "macd_div":       False,
+        "hvn_hit":        True,
+        "macd_val":       0.5,
+        "htf_hh":         True,
+        "htf_hl":         True,
+        "ob_quality":     None,
+        "r6_macd":        0.0,
+        "r4_htf":         1.0,
+    }
+    try:
+        snap = analyze_ticker("TEST.SYNTHETIC", "FIRST_BUY", synthetic_feat, today_str)
     except Exception as e:
-        return False, f"mpi_snapshots.db read error: {e}"
+        return False, f"analyze_ticker raised exception: {e}"
+
+    if snap is None:
+        return False, "analyze_ticker returned None for synthetic record"
+
+    conf      = snap.get("confidence", 0.0)
+    threshold = _conf_threshold()
+    if conf < threshold:
+        return False, (
+            f"synthetic record confidence={conf:.3f} still below threshold={threshold:.3f} — "
+            f"evidence weights or phase detection may be wrong"
+        )
+
     try:
-        from mpi_engine import render_behavior_insight_html, render_behavior_insight_telegram
         html_out = render_behavior_insight_html(snap, theme="light")
         tg_out   = render_behavior_insight_telegram(snap)
     except Exception as e:
         return False, f"renderer raised exception: {e}"
+
     if not html_out:
         return False, (
-            f"render_behavior_insight_html returned empty string "
-            f"(confidence={snap.get('confidence', 0):.3f}, phase={snap.get('phase')})"
+            f"render_behavior_insight_html returned empty for synthetic "
+            f"record (conf={conf:.3f}, phase={snap.get('phase')})"
         )
     if not tg_out:
         return False, (
-            f"render_behavior_insight_telegram returned empty string "
-            f"(confidence={snap.get('confidence', 0):.3f})"
+            f"render_behavior_insight_telegram returned empty for synthetic "
+            f"record (conf={conf:.3f})"
         )
-    return True, f"renderers produce output (html={len(html_out)}B, tg={len(tg_out)}B)"
+    return True, (
+        f"renderers produce output for synthetic record "
+        f"(conf={conf:.3f}, html={len(html_out)}B, tg={len(tg_out)}B)"
+    )
 
 
 def _check_upsert_idempotency(today_str: str) -> tuple[bool | None, str]:

@@ -1,8 +1,16 @@
 """
-valuation.db — Read-only interface to valuation.db for presentation layers.
+valuation.db — Unified database interface for IVE V2.
 
-This is the ONLY valuation module imported during scanner/presentation execution.
-Contract: one SELECT per ticker, zero computation, never raises.
+Read path (called during presentation):
+  get_valuation_card(ticker) — single SELECT, zero computation, never raises.
+  This is the ONLY function called during scanner/dashboard/email execution.
+
+Write path (called only by valuation_scheduler):
+  save_*() functions — used exclusively by the offline scheduler pipeline.
+  init_db() — idempotent schema initialization with migration support.
+
+data_sources table: every stored financial field is traceable to its
+origin source, collection time, and validation status.
 """
 from __future__ import annotations
 
@@ -13,11 +21,11 @@ _DB = Path(__file__).parent.parent / "valuation.db"
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS companies (
-    ticker          TEXT PRIMARY KEY,
-    company_name    TEXT,
-    sector          TEXT,
-    industry        TEXT,
-    currency        TEXT DEFAULT 'EGP',
+    ticker             TEXT PRIMARY KEY,
+    company_name       TEXT,
+    sector             TEXT,
+    industry           TEXT,
+    currency           TEXT DEFAULT 'EGP',
     shares_outstanding REAL
 );
 
@@ -25,6 +33,7 @@ CREATE TABLE IF NOT EXISTS financials (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     ticker              TEXT NOT NULL,
     year                INTEGER NOT NULL,
+    quarter             TEXT,
     revenue             REAL,
     gross_profit        REAL,
     operating_income    REAL,
@@ -108,15 +117,53 @@ CREATE TABLE IF NOT EXISTS valuation_history (
     discount_percentage REAL,
     UNIQUE(ticker, date)
 );
+
+CREATE TABLE IF NOT EXISTS data_sources (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker           TEXT NOT NULL,
+    statement        TEXT NOT NULL,    -- 'income','balance','cashflow','derived','market','analyst','economic'
+    period           TEXT NOT NULL,    -- '2024', '2024-Q1', etc.
+    field_name       TEXT NOT NULL,
+    source_name      TEXT NOT NULL,    -- 'yfinance', 'alpha_vantage', 'polygon', etc.
+    source_priority  INTEGER NOT NULL, -- 1=official,2=structured,3=market,4=analyst,5=economic
+    collection_time  TEXT NOT NULL,    -- ISO 8601 UTC
+    validation_status TEXT NOT NULL,   -- 'valid','warning','rejected'
+    data_version     TEXT NOT NULL,    -- e.g. 'yfinance-2025-06-28-v1'
+    UNIQUE(ticker, statement, period, field_name, source_name)
+);
 """
+
+_MIGRATION_SQL = [
+    # Add quarter column to financials if absent (migration for pre-V2 databases)
+    "ALTER TABLE financials ADD COLUMN quarter TEXT",
+    # data_sources is created by _SCHEMA above; no extra migration needed
+]
 
 
 def init_db() -> None:
-    """Initialize valuation.db schema. Idempotent."""
+    """Initialize valuation.db schema. Idempotent. Applies migrations for existing DBs."""
     conn = sqlite3.connect(str(_DB))
     conn.executescript(_SCHEMA)
+    _apply_migrations(conn)
     conn.commit()
     conn.close()
+
+
+def _apply_migrations(conn: sqlite3.Connection) -> None:
+    """Apply schema migrations that cannot use CREATE IF NOT EXISTS."""
+    existing_cols = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(financials)")
+    }
+    for sql in _MIGRATION_SQL:
+        # Only run ADD COLUMN if column not already present
+        if "ADD COLUMN" in sql:
+            col = sql.split("ADD COLUMN")[1].strip().split()[0]
+            if col not in existing_cols:
+                try:
+                    conn.execute(sql)
+                except Exception:
+                    pass
 
 
 def get_valuation_card(ticker: str) -> dict | None:
@@ -185,13 +232,14 @@ def save_financials(conn: sqlite3.Connection, ticker: str, rows: list[dict]) -> 
     for r in rows:
         conn.execute(
             """INSERT OR REPLACE INTO financials
-               (ticker, year, revenue, gross_profit, operating_income, ebit, ebitda,
+               (ticker, year, quarter, revenue, gross_profit, operating_income, ebit, ebitda,
                 net_income, operating_cash_flow, free_cash_flow, cash, debt, equity,
                 assets, liabilities, book_value, eps, dividend, roe, roic, capex, shares)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 ticker,
                 r.get("year"),
+                r.get("quarter"),
                 r.get("revenue"),
                 r.get("gross_profit"),
                 r.get("operating_income"),
@@ -279,6 +327,75 @@ def save_valuation_history(
            VALUES (?,?,?,?,?)""",
         (ticker, date, current_price, fair_value, discount),
     )
+
+
+def save_data_source(
+    conn:              sqlite3.Connection,
+    ticker:            str,
+    statement:         str,
+    period:            str,
+    field_name:        str,
+    source_name:       str,
+    source_priority:   int,
+    collection_time:   str,
+    validation_status: str,
+    data_version:      str,
+) -> None:
+    """Record provenance of a single collected data field."""
+    conn.execute(
+        """INSERT OR REPLACE INTO data_sources
+           (ticker, statement, period, field_name, source_name,
+            source_priority, collection_time, validation_status, data_version)
+           VALUES (?,?,?,?,?,?,?,?,?)""",
+        (ticker, statement, period, field_name, source_name,
+         source_priority, collection_time, validation_status, data_version),
+    )
+
+
+def save_many_data_sources(conn: sqlite3.Connection, records: list[dict]) -> None:
+    """Batch-insert data_sources records. Each dict must have all required keys."""
+    conn.executemany(
+        """INSERT OR REPLACE INTO data_sources
+           (ticker, statement, period, field_name, source_name,
+            source_priority, collection_time, validation_status, data_version)
+           VALUES (:ticker,:statement,:period,:field_name,:source_name,
+                   :source_priority,:collection_time,:validation_status,:data_version)""",
+        records,
+    )
+
+
+def save_valuation_assumptions(
+    conn:   sqlite3.Connection,
+    ticker: str,
+    assum:  dict,
+) -> None:
+    """Upsert valuation assumptions for a ticker (economic inputs layer)."""
+    conn.execute(
+        """INSERT OR REPLACE INTO valuation_assumptions
+           (ticker, risk_free_rate, equity_risk_premium, beta, tax_rate,
+            terminal_growth, wacc, updated_at)
+           VALUES (?,?,?,?,?,?,?,?)""",
+        (
+            ticker,
+            assum.get("risk_free_rate",      0.1250),
+            assum.get("equity_risk_premium",  0.0700),
+            assum.get("beta",                 1.0),
+            assum.get("tax_rate",             0.2250),
+            assum.get("terminal_growth",      0.0400),
+            assum.get("wacc",                 0.1600),
+            assum.get("updated_at",           ""),
+        ),
+    )
+
+
+def get_data_sources(conn: sqlite3.Connection, ticker: str) -> list[dict]:
+    """Return all data_sources records for a ticker (provenance audit)."""
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT * FROM data_sources WHERE ticker=? ORDER BY period DESC, statement, field_name",
+        (ticker,),
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def get_financials(conn: sqlite3.Connection, ticker: str) -> list[dict]:

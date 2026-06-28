@@ -1,0 +1,61 @@
+name: IVE UI Regression
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  ive-ui-regression:
+    name: IVE Card Visibility Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pytest playwright
+          pip install -r requirements.txt || true
+
+      - name: Install Playwright Chromium
+        run: python -m playwright install chromium --with-deps
+
+      - name: Resolve Chromium binary path
+        id: chromium
+        run: |
+          BIN=$(python -c "
+          from playwright.sync_api import sync_playwright
+          with sync_playwright() as p:
+              b = p.chromium.launch()
+              exe = b._impl_obj._browser_type.executable_path()
+              b.close()
+              print(exe)
+          " 2>/dev/null || find ~/.cache/ms-playwright -name 'chrome' -o -name 'chromium' 2>/dev/null | head -1)
+          echo "path=${BIN}" >> "$GITHUB_OUTPUT"
+          echo "Chromium: ${BIN}"
+
+      - name: Run IVE UI regression suite
+        run: |
+          python -m pytest tests/test_ive_ui_regression.py -v \
+            --tb=short \
+            --junitxml=tests/artifacts/ive/junit.xml
+        env:
+          PYTHONPATH: .
+          PLAYWRIGHT_CHROMIUM_PATH: ${{ steps.chromium.outputs.path }}
+
+      - name: Upload screenshots (always, for audit trail)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ive-regression-screenshots-${{ github.run_number }}
+          path: tests/artifacts/ive/*.png
+          retention-days: 14

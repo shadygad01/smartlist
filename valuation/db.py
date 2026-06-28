@@ -184,14 +184,26 @@ _MIGRATION_SQL = [
     # data_completeness, valuation_model_status, data_quality_report created by _SCHEMA
 ]
 
+# Required tables for a fully-initialized IVE database
+_REQUIRED_TABLES = {
+    "companies", "financials", "forecasts", "valuation_assumptions",
+    "valuation_models", "analyst_consensus", "valuation_history",
+    "data_sources", "data_completeness", "valuation_model_status",
+    "data_quality_report",
+}
+
+_schema_initialized = False  # module-level flag; avoids repeated PRAGMA calls
+
 
 def init_db() -> None:
     """Initialize valuation.db schema. Idempotent. Applies migrations for existing DBs."""
+    global _schema_initialized
     conn = sqlite3.connect(str(_DB))
     conn.executescript(_SCHEMA)
     _apply_migrations(conn)
     conn.commit()
     conn.close()
+    _schema_initialized = True
 
 
 def _apply_migrations(conn: sqlite3.Connection) -> None:
@@ -211,19 +223,62 @@ def _apply_migrations(conn: sqlite3.Connection) -> None:
                     pass
 
 
+def _ensure_schema() -> None:
+    """Create DB and apply full schema if not already done this process lifetime.
+
+    Called automatically by get_valuation_card() so the read path is always
+    safe regardless of whether the scheduler has been run first.
+    Never raises — worst case the DB stays absent and reads return None.
+    """
+    global _schema_initialized
+    if _schema_initialized:
+        return
+    try:
+        init_db()
+    except Exception:
+        pass
+
+
+def verify_schema() -> dict:
+    """Return schema status dict for startup health checks.
+
+    Keys:
+        db_exists       bool
+        schema_version  str   ('current' | 'needs_migration' | 'absent')
+        missing_tables  list[str]
+        ok              bool
+    """
+    if not _DB.exists():
+        return {"db_exists": False, "schema_version": "absent", "missing_tables": list(_REQUIRED_TABLES), "ok": False}
+    try:
+        conn = sqlite3.connect(str(_DB))
+        present = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        conn.close()
+        missing = sorted(_REQUIRED_TABLES - present)
+        ok = len(missing) == 0
+        return {
+            "db_exists": True,
+            "schema_version": "current" if ok else "needs_migration",
+            "missing_tables": missing,
+            "ok": ok,
+        }
+    except Exception as exc:
+        return {"db_exists": True, "schema_version": "error", "missing_tables": [], "ok": False, "error": str(exc)}
+
+
 def get_valuation_card(ticker: str) -> dict | None:
     """Return valuation card data for ticker, or None if unavailable.
 
     Single lightweight DB read. Never computes anything.
-    Safe to call with no valuation.db present — returns None silently.
+    Auto-initializes schema on first call so the DB file is never required
+    from git — the scheduler populates data after schema creation.
 
     Returned dict keys:
         ticker, valuation_date, weighted_fair_value,
         bull_case, base_case, bear_case,
         analyst_consensus_price, last_stmt_year
     """
-    if not _DB.exists():
-        return None
+    _ensure_schema()
     try:
         conn = sqlite3.connect(str(_DB))
         conn.row_factory = sqlite3.Row

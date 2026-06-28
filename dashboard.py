@@ -1546,11 +1546,10 @@ def build_dashboard(build_hash: str = "") -> str:
 
 if __name__ == "__main__":
     import subprocess
-    from universe_snapshot import build_universe_snapshot
-    from stock_dna_engine import build_stock_dna
 
-    build_universe_snapshot()
-    build_stock_dna()
+    # universe_snapshot and stock_dna are built by the pipeline steps that precede
+    # dashboard.py — rebuilding them here would invalidate production_decision_snapshot.
+    # Dashboard is a pure renderer: it reads from already-built artifacts.
 
     try:
         commit = subprocess.check_output(

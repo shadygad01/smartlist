@@ -2322,8 +2322,8 @@ def save_signal_history(results):
     Keeps a rolling window of _SIGNAL_HISTORY_DAYS to prevent unbounded growth.
     """
     try:
-        today = date.today().isoformat()
-        cutoff = (date.today() - timedelta(days=_SIGNAL_HISTORY_DAYS)).isoformat()
+        today = today_cairo().isoformat()
+        cutoff = (today_cairo() - timedelta(days=_SIGNAL_HISTORY_DAYS)).isoformat()
         hist = {}
         if os.path.exists("signal_history.json"):
             with open("signal_history.json", "r", encoding="utf-8") as f:
@@ -2365,8 +2365,8 @@ def save_rank_history(results):
     Keeps a rolling 90-day window.
     """
     try:
-        today = date.today().isoformat()
-        cutoff = (date.today() - timedelta(days=_RANK_HISTORY_DAYS)).isoformat()
+        today = today_cairo().isoformat()
+        cutoff = (today_cairo() - timedelta(days=_RANK_HISTORY_DAYS)).isoformat()
         hist = {}
         if os.path.exists("rank_history.json"):
             with open("rank_history.json", "r", encoding="utf-8") as f:
@@ -2411,7 +2411,7 @@ def load_rank_changes():
             return {}
         with open("rank_history.json", "r", encoding="utf-8") as f:
             hist = json.load(f)
-        today = date.today().isoformat()
+        today = today_cairo().isoformat()
         past_dates = sorted([d for d in hist if d < today], reverse=True)
         if not past_dates:
             return {}

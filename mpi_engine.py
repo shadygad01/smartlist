@@ -112,8 +112,9 @@ def _detect_phase(feat: dict) -> tuple[str, list[str]]:
     # Divergence-driven late capitulation (exhaustion without full sweep yet)
     if (rsi_d or macd_d) and sv:
         evidence += ["sv_hit"]
-        if rsi_d:  evidence.append("rsi_div")
-        if macd_d: evidence.append("macd_div")
+        if rsi_d:   evidence.append("rsi_div")
+        if macd_d:  evidence.append("macd_div")
+        if sweep:   evidence.append("sweep_detected")  # collect sweep if present — was dropped by greedy exit
         return "Late Capitulation", evidence
 
     # Silent Accumulation: demand zones confirmed but no sweep
@@ -858,11 +859,9 @@ def run_for_current_signals(
             errors += 1
             continue
 
-        # Below-threshold: replace explanation with unavailable message
-        threshold = _conf_threshold()
-        if snapshot["confidence"] < threshold:
-            snapshot["explanation"]         = _UNAVAILABLE_EXPLANATION
-            snapshot["explanation_compact"] = _UNAVAILABLE_COMPACT
+        # Always store the real explanation — renderers gate on confidence vs display_threshold.
+        # Overwriting with the unavailable sentinel here would corrupt stored records when
+        # the threshold changes in config (stale DB records could never render correct text).
 
         try:
             upsert_snapshot(snapshot, db_path=_db)
@@ -998,19 +997,54 @@ def render_historical_context_html(snap: Optional[dict], theme: str = "dark") ->
     )
 
 
+def _render_phase_fallback_html(snap: dict, theme: str) -> str:
+    """
+    Mandatory fallback block rendered when neither behavioral confidence nor
+    historical similarity meets their display thresholds.
+
+    Contract: always returns non-empty HTML for a non-None snap.
+    Renders phase name + accumulating data notice so consumers never receive "".
+    """
+    phase = snap.get("phase") or "Neutral"
+    if theme == "dark":
+        border = "#252645"; bg = "#0d0e26"; title = "#5a5e78"; fg = "#7a7e98"
+    else:
+        border = "#e0e5ef"; bg = "#f8fafd"; title = "#aaaaaa"; fg = "#888888"
+    return (
+        f'<div style="background:{bg};border:1px solid {border};border-radius:6px;'
+        f'padding:8px 12px;margin-top:8px;">'
+        f'<div style="font-size:9px;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:0.6px;color:{title};margin-bottom:4px;">🧠 Behavior Phase</div>'
+        f'<div style="font-size:11px;color:{fg};">'
+        f'{phase} — Behavioral data accumulating for this signal.</div>'
+        f'</div>'
+    )
+
+
 def render_behavior_insight_html(snap: Optional[dict], theme: str = "dark") -> str:
     """
     Render a self-contained Behavior Insight HTML block.
     theme='dark'  → dashboard color scheme
     theme='light' → email color scheme
-    Returns empty string if snap is None or explanation unavailable.
+
+    Contract: returns empty string ONLY when snap is None.
+    For any valid (non-None) snap, always returns non-empty HTML.
     """
     if not snap:
         return ""
 
+    # Gate on current config threshold — not the stored explanation sentinel.
+    # Records stored under a different threshold may have a stale explanation string;
+    # re-evaluating here makes the renderer config-threshold-aware on every render.
+    confidence = float(snap.get("confidence", 0.0))
+    if confidence < _conf_threshold():
+        hist = render_historical_context_html(snap, theme=theme)
+        return hist if hist else _render_phase_fallback_html(snap, theme)
+
     explanation = snap.get("explanation", "")
     if not explanation or explanation == _UNAVAILABLE_EXPLANATION:
-        return render_historical_context_html(snap, theme=theme)
+        hist = render_historical_context_html(snap, theme=theme)
+        return hist if hist else _render_phase_fallback_html(snap, theme)
 
     phase      = snap.get("phase", "")
     conf_label = snap.get("confidence_label", "")
@@ -1074,24 +1108,31 @@ def render_behavior_insight_telegram(snap: Optional[dict]) -> str:
     Render compact Telegram Behavior Insight block (≤4 lines).
     Falls back to compact Historical Context line when confidence is below threshold
     but historical data is meaningful (cases ≥ min and similarity ≥ 0.60).
-    Returns empty string if snap is None or no meaningful data available.
+    Final fallback: phase-only line so consumers never receive empty string.
+
+    Contract: returns empty string ONLY when snap is None.
+    For any valid (non-None) snap, always returns non-empty text.
     """
     if not snap:
         return ""
-    compact = snap.get("explanation_compact", "")
-    if compact and compact != _UNAVAILABLE_COMPACT:
-        return f"🧠 *Behavior*\n{compact}"
+    # Gate on current config threshold before using stored explanation text.
+    confidence = float(snap.get("confidence", 0.0))
+    if confidence >= _conf_threshold():
+        compact = snap.get("explanation_compact", "")
+        if compact and compact != _UNAVAILABLE_COMPACT:
+            return f"🧠 *Behavior*\n{compact}"
 
     # Fallback: compact historical context
     ctx_cfg = _cfg().get("historical_context", {})
-    if not ctx_cfg.get("telegram_enabled", True):
-        return ""
     hist_n  = int(snap.get("historical_cases", 0))
     sim     = float(snap.get("similarity_score", 0.0))
     avg_mfe = float(snap.get("avg_mfe40", 0.0))
     min_n   = int(ctx_cfg.get("min_cases", 3))
     min_sim = float(ctx_cfg.get("min_similarity", 0.60))
-    if hist_n < min_n or sim < min_sim:
-        return ""
-    sim_pct = int(round(sim * 100))
-    return f"📊 *Historical* ({hist_n} signals, {sim_pct}% similarity · MFE40 {avg_mfe:+.0f}%)"
+    if hist_n >= min_n and sim >= min_sim:
+        sim_pct = int(round(sim * 100))
+        return f"📊 *Historical* ({hist_n} signals, {sim_pct}% similarity · MFE40 {avg_mfe:+.0f}%)"
+
+    # Final fallback — phase-only line. Contract: never return "" for valid snap.
+    phase = snap.get("phase") or "Neutral"
+    return f"🧠 *Behavior Phase*: {phase}"

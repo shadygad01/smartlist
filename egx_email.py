@@ -24,7 +24,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from presentation.presentation_snapshot import PresentationSnapshot, build_presentation_snapshot
-from time_authority import now_cairo as _now_cairo
+from time_authority import now_cairo as _now_cairo, today_cairo as _today_cairo, prev_trading_day_iso as _prev_trading_day_iso
 
 BASE = Path(__file__).parent
 
@@ -98,11 +98,11 @@ def _load_stock_dna() -> dict[str, dict]:
 
 
 def _yesterday_events(snap: PresentationSnapshot) -> list[dict]:
-    """Events active on yesterday — uses event_end_date (most recent activity day).
+    """Events active on the previous EGX trading session.
     event_date is the cluster start; event_end_date is the last day the signal qualified.
     Both are checked so a single-day cluster (event_end_date == event_date) is found too.
     """
-    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    yesterday = _prev_trading_day_iso()
     return [
         e for e in (snap.timeline or [])
         if (e.get("event_end_date") or e.get("event_date")) == yesterday
@@ -113,7 +113,7 @@ def _week_events(snap: PresentationSnapshot) -> list[dict]:
     """Events whose most recent activity fell in the last 7 calendar days.
     Uses event_end_date so extended clusters are included for any day they were active.
     """
-    today    = date.today().isoformat()
+    today    = _today_cairo().isoformat()
     week_ago = (date.today() - timedelta(days=7)).isoformat()
     return [
         e for e in (snap.timeline or [])

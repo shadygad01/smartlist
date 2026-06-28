@@ -151,6 +151,9 @@ jobs:
       - name: Build production decision snapshot
         run: python3 audit/build_production_decision_snapshot.py
 
+      - name: Build decision diff (explain every BUY/RE-ACCUM addition/removal)
+        run: python3 audit/build_decision_diff.py
+
       - name: Reconcile presentation snapshot with production decision snapshot
         # After the production_decision_snapshot is built with fresh prices,
         # rebuild presentation_snapshot.json so that new_events_today is filtered
@@ -274,7 +277,7 @@ jobs:
                   consistency_report.json \
                   heartbeat.json operations_state.json \
                   scan_execution.db notification_delivery.db \
-                  scan_context.json mpi_snapshots.db || true
+                  scan_context.json mpi_snapshots.db decision_diff.json || true
           git add operations/incidents.json operations/sla.json \
                   operations/knowledge.json operations/sent_alerts.json || true
           git add historical_data/historical_data/*.csv || true

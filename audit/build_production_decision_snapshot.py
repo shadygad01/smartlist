@@ -124,12 +124,8 @@ def _sync_eligible_to_timeline(decisions: list[dict]) -> None:
         STATE_CONST_BUY,
     )
 
-    try:
-        from time_authority import today_cairo
-        event_date = today_cairo().isoformat()
-    except Exception:
-        from datetime import date as _date
-        event_date = _date.today().isoformat()
+    from time_authority import today_cairo
+    event_date = today_cairo().isoformat()
 
     alert_events: list[dict] = []
     for d in decisions:

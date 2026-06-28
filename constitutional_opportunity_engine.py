@@ -11,6 +11,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime, date
 from pathlib import Path
+from time_authority import today_cairo as _today_cairo
 
 BASE        = Path(__file__).parent
 REGISTRY_DB = BASE / "constitutional_buy_registry.db"
@@ -234,7 +235,7 @@ def get_registry() -> list[dict]:
                 price_data[t]["peak"] = r["current_price"]
             price_data[t]["latest"] = r["current_price"]  # last row wins (ordered by date)
 
-    today = date.today().isoformat()
+    today = _today_cairo().isoformat()
     result = []
     for e in entries:
         t          = e["ticker"]
@@ -280,7 +281,7 @@ def get_registry() -> list[dict]:
 
 def get_new_buys_today() -> list[dict]:
     """Return constitutional BUYs registered today (for morning brief new-signal section)."""
-    today = date.today().isoformat()
+    today = _today_cairo().isoformat()
     return [b for b in get_registry() if b["buy_date"] == today]
 
 
@@ -336,7 +337,7 @@ def run() -> dict:
     2. Register any new ones.
     3. Return updated registry.
     """
-    today = date.today().isoformat()
+    today = _today_cairo().isoformat()
     if not REGISTRY_DB.exists():
         migrate_from_candidate_pool()
 

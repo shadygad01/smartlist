@@ -221,8 +221,7 @@ def build_presentation_snapshot() -> PresentationSnapshot:
         from constitutional_timeline_engine import (
             get_timeline, get_analytics, get_leaderboards
         )
-        from datetime import date as _date
-        _today = _date.today().isoformat()
+        _today = today_cairo().isoformat()
 
         # OPERATIONAL: production events only (signal_version='v1')
         tl_ops = get_timeline(production_only=True)

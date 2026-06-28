@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-06-28T04:30:06+00:00",
-  "mode": "CI/strict",
-  "verdict": "PASS",
+  "generated_at": "2026-06-28T05:12:12+00:00",
+  "mode": "dev/manual",
+  "verdict": "FAIL",
   "assertions": [
     {
       "label": "Decision Consistency",
@@ -17,9 +17,9 @@
     },
     {
       "label": "Cross Layer Consistency",
-      "status": "PASS",
-      "status_code": 0,
-      "brief": "ASSERTION PASSED \u2014 all layers agree on constitutional decisions."
+      "status": "FAIL",
+      "status_code": 1,
+      "brief": "ASSERTION FAILED \u2014 presentation layers produce inconsistent decisions."
     },
     {
       "label": "Rendered Output",
@@ -65,9 +65,9 @@
     },
     {
       "label": "Price Consistency",
-      "status": "PASS",
-      "status_code": 0,
-      "brief": "ASSERTION PASSED \u2014 all sections show identical current prices."
+      "status": "FAIL",
+      "status_code": 1,
+      "brief": "ASSERTION FAILED \u2014 multiple current prices exist for the same ticker."
     },
     {
       "label": "Ci Protection",
@@ -101,9 +101,9 @@
     },
     {
       "label": "Schema Compliance",
-      "status": "PASS",
-      "status_code": 0,
-      "brief": "ASSERTION PASSED \u2014 all artifacts comply with their JSON Schema contracts"
+      "status": "FAIL",
+      "status_code": 1,
+      "brief": "FAIL: jsonschema not installed \u2014 it is a mandatory production dependency"
     },
     {
       "label": "E2E Constitutional Audit",
@@ -119,8 +119,8 @@
     }
   ],
   "summary": {
-    "pass": 19,
-    "fail": 0,
+    "pass": 16,
+    "fail": 3,
     "expected": 0,
     "skipped": 0
   }

@@ -179,9 +179,25 @@ def _check_renderer_output(today_str: str) -> tuple[bool | None, str]:
             f"render_behavior_insight_telegram returned empty for synthetic "
             f"record (conf={conf:.3f})"
         )
+
+    # Also verify the mandatory-non-empty contract for a LOW-confidence snap.
+    # render_behavior_insight_html/telegram must NEVER return "" for a non-None snap.
+    low_snap = {"phase": "Neutral", "confidence": 0.0, "historical_cases": 0, "similarity_score": 0.0}
+    try:
+        from mpi_engine import render_behavior_insight_html as _rh, render_behavior_insight_telegram as _rt
+        low_html = _rh(low_snap, theme="light")
+        low_tg   = _rt(low_snap)
+    except Exception as e:
+        return False, f"low-confidence renderer raised exception: {e}"
+    if not low_html:
+        return False, "render_behavior_insight_html returned empty for low-confidence snap — mandatory fallback broken"
+    if not low_tg:
+        return False, "render_behavior_insight_telegram returned empty for low-confidence snap — mandatory fallback broken"
+
     return True, (
         f"renderers produce output for synthetic record "
-        f"(conf={conf:.3f}, html={len(html_out)}B, tg={len(tg_out)}B)"
+        f"(conf={conf:.3f}, html={len(html_out)}B, tg={len(tg_out)}B) "
+        f"and mandatory fallback for low-conf (html={len(low_html)}B, tg={len(low_tg)}B)"
     )
 
 

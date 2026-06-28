@@ -84,12 +84,19 @@ def main() -> int:
                 if not _near(db_cp, d["current_price"], PRICE_TOL):
                     warnings.append(f"[DB] {ticker}: current_price drift DB={db_cp} snap={d['current_price']} (intraday OK)")
 
-            # Re-derive gate from DB values and compare
-            db_gate = is_constitutional_buy(db_r2, db_score, db_cp, db_ep)
-            if db_gate != d["eligible"]:
+            # Verify gate self-consistency: snapshot's own values must agree with its eligible flag.
+            # Using DB current_price would introduce false failures when the DB is rebuilt
+            # intraday after the snapshot was taken (legitimate price drift).
+            snap_r2    = float(d.get("constitutional_r2") or 0)
+            snap_score = float(d.get("constitutional_score") or 0)
+            snap_cp    = float(d.get("current_price") or 0)
+            snap_ep    = float(d.get("constitutional_entry_price") or 0)
+            snap_gate  = is_constitutional_buy(snap_r2, snap_score, snap_cp, snap_ep)
+            if snap_gate != d["eligible"]:
                 failures.append(
-                    f"[DB-GATE] {ticker}: gate from DB({db_r2:.1f},{db_score:.1f},{db_cp:.4f},{db_ep:.4f})={db_gate} "
-                    f"but production_decision_snapshot.eligible={d['eligible']}"
+                    f"[SNAP-GATE] {ticker}: snapshot internal inconsistency — "
+                    f"gate({snap_r2:.1f},{snap_score:.1f},{snap_cp:.4f},{snap_ep:.4f})={snap_gate} "
+                    f"but snapshot.eligible={d['eligible']}"
                 )
 
         print(f"  Layer 1 — universe_snapshot.db: {len(uni)} tickers validated")

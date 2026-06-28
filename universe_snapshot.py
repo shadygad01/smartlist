@@ -13,7 +13,7 @@ import json
 import sqlite3
 from datetime import datetime, date as _date, timezone, timedelta
 from pathlib import Path
-from time_authority import now_cairo as _now_cairo_ta
+from time_authority import now_cairo as _now_cairo_ta, today_cairo as _today_cairo_ta
 
 BASE = Path(__file__).parent
 
@@ -52,12 +52,13 @@ def _rebuild_pool_if_stale() -> bool:
     Uses INSERT OR IGNORE so rebuilds are safe to call repeatedly.
     """
     latest_sig = _pool_latest_signal_date()
-    today_str  = _date.today().isoformat()
+    _today     = _today_cairo_ta()
+    today_str  = _today.isoformat()
 
     if latest_sig is None:
         needs_rebuild = True
     else:
-        days_stale = (_date.today() - _date.fromisoformat(latest_sig)).days
+        days_stale = (_today - _date.fromisoformat(latest_sig)).days
         needs_rebuild = days_stale > _POOL_STALENESS_DAYS
 
     if not needs_rebuild:
@@ -66,7 +67,7 @@ def _rebuild_pool_if_stale() -> bool:
     print(f"[UniverseSnapshot] Pool stale (latest signal_date={latest_sig}) — rebuilding...")
     try:
         from candidate_pool_builder import build_candidate_pool
-        start = (_date.today() - timedelta(days=7)).isoformat()
+        start = (_today - timedelta(days=7)).isoformat()
         build_candidate_pool(start_date=start, end_date=today_str)
         print(f"[UniverseSnapshot] Pool rebuilt for {start} to {today_str}.")
         return True

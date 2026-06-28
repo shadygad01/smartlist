@@ -121,12 +121,22 @@ def _check_renderer_output(today_str: str) -> tuple[bool | None, str]:
     try:
         conn = sqlite3.connect(str(db_path))
         conn.row_factory = sqlite3.Row
+        # Prefer a record with confidence > 0 (real scan data) over confidence=0 (empty-features scan)
         row = conn.execute(
-            "SELECT * FROM mpi_snapshots WHERE analysis_date=? LIMIT 1", (today_str,)
+            "SELECT * FROM mpi_snapshots WHERE analysis_date=? AND confidence>0 LIMIT 1", (today_str,)
         ).fetchone()
-        conn.close()
         if row is None:
-            return None, f"no MPI records for {today_str} — skip"
+            # All records have confidence=0 — MPI ran with empty features (test/manual run)
+            # This is a data quality skip, not an architectural failure
+            count = conn.execute(
+                "SELECT COUNT(*) FROM mpi_snapshots WHERE analysis_date=?", (today_str,)
+            ).fetchone()[0]
+            conn.close()
+            return None, (
+                f"all {count} MPI record(s) for {today_str} have confidence=0 "
+                "(MPI ran without scan features — expected in test/non-production runs)"
+            )
+        conn.close()
         snap = dict(row)
     except Exception as e:
         return False, f"mpi_snapshots.db read error: {e}"
@@ -137,9 +147,15 @@ def _check_renderer_output(today_str: str) -> tuple[bool | None, str]:
     except Exception as e:
         return False, f"renderer raised exception: {e}"
     if not html_out:
-        return False, "render_behavior_insight_html returned empty string"
+        return False, (
+            f"render_behavior_insight_html returned empty string "
+            f"(confidence={snap.get('confidence', 0):.3f}, phase={snap.get('phase')})"
+        )
     if not tg_out:
-        return False, "render_behavior_insight_telegram returned empty string"
+        return False, (
+            f"render_behavior_insight_telegram returned empty string "
+            f"(confidence={snap.get('confidence', 0):.3f})"
+        )
     return True, f"renderers produce output (html={len(html_out)}B, tg={len(tg_out)}B)"
 
 

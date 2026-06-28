@@ -112,8 +112,9 @@ def _detect_phase(feat: dict) -> tuple[str, list[str]]:
     # Divergence-driven late capitulation (exhaustion without full sweep yet)
     if (rsi_d or macd_d) and sv:
         evidence += ["sv_hit"]
-        if rsi_d:  evidence.append("rsi_div")
-        if macd_d: evidence.append("macd_div")
+        if rsi_d:   evidence.append("rsi_div")
+        if macd_d:  evidence.append("macd_div")
+        if sweep:   evidence.append("sweep_detected")  # collect sweep if present — was dropped by greedy exit
         return "Late Capitulation", evidence
 
     # Silent Accumulation: demand zones confirmed but no sweep

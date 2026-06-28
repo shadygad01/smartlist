@@ -166,3 +166,31 @@ def age_hours(iso_ts: str) -> float:
         return (now_cairo() - dt).total_seconds() / 3600
     except Exception:
         return float("inf")
+
+
+# ── Trading day navigation ─────────────────────────────────────────────────────
+
+def prev_trading_day(d: date | None = None) -> date:
+    """Return the most recent EGX trading day strictly before d (or today).
+
+    EGX trades Sun–Thu. Friday and Saturday are skipped.
+    Does NOT account for public holidays — calendar-only.
+    """
+    d = d or today_cairo()
+    candidate = d - timedelta(days=1)
+    while candidate.weekday() not in _TRADING_DAYS:
+        candidate -= timedelta(days=1)
+    return candidate
+
+
+def prev_trading_day_iso(d: date | None = None) -> str:
+    """ISO-8601 string of the previous EGX trading day (see prev_trading_day)."""
+    return prev_trading_day(d).isoformat()
+
+
+def most_recent_trading_day(d: date | None = None) -> date:
+    """Return d itself if it is a trading day, otherwise the most recent prior trading day."""
+    d = d or today_cairo()
+    if d.weekday() in _TRADING_DAYS:
+        return d
+    return prev_trading_day(d)

@@ -139,6 +139,9 @@ jobs:
       - name: Build production decision snapshot
         run: python3 audit/build_production_decision_snapshot.py
 
+      - name: Build decision diff (explain every BUY/RE-ACCUM addition/removal)
+        run: python3 audit/build_decision_diff.py
+
       - name: Full universe replay (all tickers — gate is reproducible)
         run: python3 audit/assert_full_universe_replay.py
 
@@ -201,7 +204,7 @@ jobs:
                   constitutional_fingerprint.json architecture_fingerprint.json \
                   scan_manifest.json consistency_report.json scan_context.json \
                   version.json dashboard.html signal_history.json \
-                  mpi_snapshots.db || true
+                  mpi_snapshots.db decision_diff.json || true
           git add historical_data/historical_data/*.csv || true
           git diff --staged --quiet || git commit -m "Morning email: full state update [skip ci]"
           git push || true

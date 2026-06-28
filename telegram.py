@@ -64,6 +64,15 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
     scan_s     = snap.last_scan_ts[:16].replace("T", " ") if snap.last_scan_ts else "--"
     data_as_of = getattr(snap, "price_data_as_of", "") or scan_s[:10]
 
+    # Load MPI behavioral snapshots (read-only, non-fatal)
+    _mpi_snaps: dict = {}
+    try:
+        from mpi_engine import get_snapshots_for_date as _mpi_get, render_behavior_insight_telegram as _mpi_tg
+        from time_authority import today_iso as _today_iso
+        _mpi_snaps = _mpi_get(_today_iso())
+    except Exception:
+        _mpi_tg = None
+
     lines = [
         "🏛 *EGX Constitutional Command Center*",
         f"*{date_str}* | {cairo_t} Cairo | {micon} {snap.market_status}",
@@ -74,19 +83,34 @@ def build_morning_brief(snap: PresentationSnapshot, date_str: str) -> str:
     if eligible:
         lines.append(f"🟢 *CONSTITUTIONAL BUY SIGNALS ({len(eligible)} active)*")
         for d in sorted(eligible, key=lambda x: -(x.get("constitutional_r2") or 0)):
+            ticker = d["ticker"]
             ep  = float(d.get("constitutional_entry_price") or 0)
             cp  = float(d.get("current_price") or 0)
             r2  = float(d.get("constitutional_r2") or 0)
             lines.append(
-                f"   ✅ *{d['ticker']}*  BUY LIMIT @ {ep:.2f} EGP  "
+                f"   ✅ *{ticker}*  BUY LIMIT @ {ep:.2f} EGP  "
                 f"(Now: {cp:.2f}  R2: {r2:.1f})"
             )
+            if _mpi_tg and _mpi_snaps:
+                try:
+                    mpi_line = _mpi_tg(_mpi_snaps.get(ticker))
+                    if mpi_line:
+                        lines.append(mpi_line)
+                except Exception:
+                    pass
         lines.append("")
 
     if snap.new_events_today:
         lines.append(f"⚡ *NEW TODAY ({len(snap.new_events_today)})*")
         for e in snap.new_events_today:
             lines.append(_opp_line(e))
+            if _mpi_tg and _mpi_snaps:
+                try:
+                    mpi_line = _mpi_tg(_mpi_snaps.get(e["ticker"]))
+                    if mpi_line:
+                        lines.append(mpi_line)
+                except Exception:
+                    pass
         lines.append("")
 
     if snap.approaching_entries:

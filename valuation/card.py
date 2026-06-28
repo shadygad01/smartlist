@@ -121,10 +121,11 @@ def render_dashboard_card(ticker: str, current_price: float | None) -> str:
     upside  = _upside(fv, cp)
     up_sign = "+" if (upside or 0) >= 0 else ""
     up_color = "#4caf50" if (upside or 0) >= 0 else "#f44336"
+    upside_str = f"{up_sign}{_fmt(upside, 1)}%" if upside is not None else "—"
 
     cells = [
         ("Fair Value",  f"{_fmt(fv)} EGP", "#50d8d0"),
-        ("Upside",      f"{up_sign}{_fmt(upside, 1)}%", up_color),
+        ("Upside",      upside_str,         up_color),
         ("Bull Case",   f"{_fmt(bull)} EGP", "#4caf50"),
         ("Base Case",   f"{_fmt(base)} EGP", "#50d8d0"),
         ("Bear Case",   f"{_fmt(bear)} EGP", "#f0b840"),
@@ -149,20 +150,18 @@ def render_dashboard_card(ticker: str, current_price: float | None) -> str:
     )
 
     return (
-        f'<details style="margin-top:10px;">'
-        f'<summary style="font-size:11px;font-weight:700;color:#50d8d0;'
-        f'letter-spacing:0.5px;cursor:pointer;user-select:none;'
-        f'list-style:none;display:flex;align-items:center;gap:6px;">'
+        f'<div style="margin-top:10px;">'
+        f'<div style="font-size:11px;font-weight:700;color:#50d8d0;'
+        f'letter-spacing:0.5px;display:flex;align-items:center;gap:6px;'
+        f'margin-bottom:8px;">'
         f'<span>&#127974;</span> Institutional Valuation'
-        f'<span style="font-size:10px;color:#8b8fa8;font-weight:400;margin-left:6px;">'
-        f'(click to expand)</span>'
-        f'</summary>'
-        f'<div style="margin-top:8px;padding:10px;background:#10112a;'
+        f'</div>'
+        f'<div style="padding:10px;background:#10112a;'
         f'border:1px solid #252645;border-radius:7px;">'
         f'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'
         f'{boxes}'
         f'</div>'
         f'{meta}'
         f'</div>'
-        f'</details>'
+        f'</div>'
     )

@@ -370,11 +370,14 @@ class TestHTMLRenderer:
         from mpi_engine import render_behavior_insight_html
         assert render_behavior_insight_html(None) == ""
 
-    def test_render_empty_when_unavailable_and_no_history(self):
-        """No history → empty string even when explanation unavailable."""
+    def test_render_phase_fallback_when_unavailable_and_no_history(self):
+        """Low-confidence + no history → mandatory phase fallback (never empty for non-None snap)."""
         from mpi_engine import render_behavior_insight_html, _UNAVAILABLE_EXPLANATION
-        snap = {"explanation": _UNAVAILABLE_EXPLANATION, "historical_cases": 0, "similarity_score": 0.0}
-        assert render_behavior_insight_html(snap) == ""
+        snap = {"explanation": _UNAVAILABLE_EXPLANATION, "historical_cases": 0,
+                "similarity_score": 0.0, "confidence": 0.0, "phase": "Neutral"}
+        html = render_behavior_insight_html(snap)
+        assert html != "", "mandatory fallback must return non-empty for non-None snap"
+        assert "Behavior Phase" in html or "Neutral" in html
 
     def test_render_historical_context_when_unavailable_but_history_present(self):
         """Low-confidence with meaningful history → historical context block, not empty."""
@@ -396,11 +399,12 @@ class TestHTMLRenderer:
     def test_render_contains_phase(self):
         from mpi_engine import render_behavior_insight_html
         snap = {
-            "explanation":   "Late-stage capitulation detected. Institutions absorbing supply.",
-            "phase":         "Late Capitulation",
+            "explanation":      "Late-stage capitulation pattern detected. Supply absorption confirmed.",
+            "phase":            "Late Capitulation",
+            "confidence":       0.75,
             "confidence_label": "HIGH",
             "historical_cases": 10,
-            "avg_mfe40":     24.0,
+            "avg_mfe40":        24.0,
             "similarity_score": 0.85,
         }
         html = render_behavior_insight_html(snap, theme="dark")
@@ -416,10 +420,14 @@ class TestHTMLRenderer:
         assert tg != ""
         assert tg.count("\n") <= 4
 
-    def test_render_telegram_empty_if_unavailable_and_no_history(self):
+    def test_render_telegram_phase_fallback_when_unavailable_and_no_history(self):
+        """Low-confidence + no history → mandatory phase fallback (never empty for non-None snap)."""
         from mpi_engine import render_behavior_insight_telegram, _UNAVAILABLE_COMPACT
-        snap = {"explanation_compact": _UNAVAILABLE_COMPACT, "historical_cases": 0, "similarity_score": 0.0}
-        assert render_behavior_insight_telegram(snap) == ""
+        snap = {"explanation_compact": _UNAVAILABLE_COMPACT, "historical_cases": 0,
+                "similarity_score": 0.0, "confidence": 0.0, "phase": "Neutral"}
+        tg = render_behavior_insight_telegram(snap)
+        assert tg != "", "mandatory fallback must return non-empty for non-None snap"
+        assert "Behavior Phase" in tg or "Neutral" in tg
 
     def test_render_telegram_historical_context_when_available(self):
         """Low-confidence Telegram falls back to compact historical context line."""

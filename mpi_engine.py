@@ -139,8 +139,9 @@ def _detect_phase(feat: dict) -> tuple[str, list[str]]:
             evidence.append("ob_quality_high")
         return "Confidence Building", evidence
 
-    # Early Markup: HTF uptrend without demand zone confirmation
-    if htf_up and r4 > 0:
+    # Early Markup: HTF uptrend with meaningful HTF score (above config cutoff)
+    htf_r4_th = float(_cfg().get("phase_thresholds", {}).get("htf_uptrend_r4_cutoff", 0.5))
+    if htf_up and r4 >= htf_r4_th:
         evidence.append("htf_uptrend")
         return "Early Markup", evidence
 
@@ -171,73 +172,87 @@ def _detect_phase(feat: dict) -> tuple[str, list[str]]:
 # ── Investor Behavior Inference ────────────────────────────────────────────────
 
 _PHASE_BEHAVIOR: dict[str, dict] = {
+    # Each entry describes observable market state inferred from confirmed evidence.
+    # Participant attribution ("institutional"/"retail" field names are schema-fixed)
+    # describes market-observable conditions, not unverifiable participant intent.
     "Capitulation": {
-        "institutional":   "Institutions beginning early absorption of distressed supply.",
-        "retail":          "Retail sellers dominating price action.",
+        "institutional":   "Supply absorption initiating at depressed price levels.",
+        "retail":          "Net selling pressure dominant; price testing structural lows.",
         "buying_pressure": "Weak",
         "selling_pressure":"Strong",
         "supply_absorption":"Early-stage",
         "distribution_prob": "Low",
     },
     "Late Capitulation": {
-        "institutional":   "Institutional supply absorption strengthening near demand zone.",
-        "retail":          "Retail capitulation nearing exhaustion.",
+        "institutional":   "Supply absorption strengthening at confirmed demand zone.",
+        "retail":          "Net selling pressure diminishing near volume exhaustion.",
         "buying_pressure": "Strengthening",
         "selling_pressure":"Weakening",
         "supply_absorption":"Active",
         "distribution_prob": "Low",
     },
     "Silent Accumulation": {
-        "institutional":   "Institutional accumulation occurring without retail awareness.",
-        "retail":          "Retail participation minimal.",
+        # Observable: sv_hit + hvn_hit without sweep = volume absorption at a
+        # historical demand node, no liquidity disruption. "Without price disruption"
+        # is directly observable; participant identity is not.
+        "institutional":   "Supply absorption progressing at structural demand levels without price disruption.",
+        "retail":          "Price holding at demand zone; no significant selling volume spikes.",
         "buying_pressure": "Moderate",
         "selling_pressure":"Declining",
         "supply_absorption":"Progressive",
         "distribution_prob": "Very Low",
     },
     "Accumulation": {
-        "institutional":   "Institutional demand confirmed at structural support level.",
-        "retail":          "Retail activity transitioning from selling to holding.",
+        # Observable: sweep + sv (+ optional OB quality). Liquidity run triggered
+        # stops; volume absorption followed. "Structural support" is the OB/demand level.
+        "institutional":   "Demand absorption confirmed at structural support after liquidity sweep.",
+        "retail":          "Selling pressure abating as price stabilises at demand zone.",
         "buying_pressure": "Building",
         "selling_pressure":"Declining",
         "supply_absorption":"Strong",
         "distribution_prob": "Very Low",
     },
     "Confidence Building": {
-        "institutional":   "Institutional positioning extending as structure improves.",
-        "retail":          "Retail confidence gradually returning.",
+        # Observable: htf higher highs/lows + MACD above zero = improving price
+        # structure on higher timeframe with positive momentum. No causal psychology.
+        "institutional":   "Price structure improving; momentum turning positive on higher timeframe.",
+        "retail":          "Buying activity increasing as price recovers above key structural levels.",
         "buying_pressure": "Growing",
         "selling_pressure":"Subdued",
         "supply_absorption":"Established",
         "distribution_prob": "Low",
     },
     "Early Markup": {
-        "institutional":   "Institutional positions being extended on confirmed uptrend.",
-        "retail":          "Early retail participants beginning to re-enter.",
+        # Observable: htf uptrend (HH+HL) with meaningful HTF score. Price advancing
+        # above demand zone. No claim about who is buying.
+        "institutional":   "Higher-timeframe uptrend structure intact; demand zone holding.",
+        "retail":          "Price advancing above demand zone with positive higher-timeframe structure.",
         "buying_pressure": "Strong",
         "selling_pressure":"Minimal",
         "supply_absorption":"Complete",
         "distribution_prob": "Low",
     },
     "Markup": {
-        "institutional":   "Broad institutional participation in markup phase.",
-        "retail":          "Retail re-engagement accelerating.",
+        "institutional":   "Broad participation in markup phase; trend structure intact.",
+        "retail":          "Buying activity accelerating as price advances.",
         "buying_pressure": "Strong",
         "selling_pressure":"Minimal",
         "supply_absorption":"Complete",
         "distribution_prob": "Low",
     },
     "Fear": {
-        "institutional":   "Institutional activity unclear — insufficient demand confirmation.",
-        "retail":          "Retail selling pressure visible.",
+        # Observable: one or two demand signals present but insufficient confluence.
+        # "Demand confirmation insufficient" is directly supported by evidence count.
+        "institutional":   "Demand confirmation insufficient — fewer than two confluent structural signals.",
+        "retail":          "Price in potential discount zone; single-factor signal only.",
         "buying_pressure": "Weak",
         "selling_pressure":"Moderate",
         "supply_absorption":"Unconfirmed",
         "distribution_prob": "Moderate",
     },
     "Neutral": {
-        "institutional":   "Institutional direction indeterminate.",
-        "retail":          "Retail activity mixed.",
+        "institutional":   "Market direction indeterminate — insufficient evidence for phase assignment.",
+        "retail":          "Mixed activity; no dominant directional pressure observable.",
         "buying_pressure": "Indeterminate",
         "selling_pressure":"Indeterminate",
         "supply_absorption":"Unconfirmed",
@@ -269,17 +284,19 @@ def _compute_confidence(evidence: list[str], historical_cases: int,
         if key in ev_set:
             score += w
 
-    # Historical bonus: up to 0.10
+    # Historical bonus: scales proportionally to hist_weight in config.
+    # hist_bonus_fraction in [0.0, 1.0] represents fraction of max historical credit earned.
+    # Max contribution = hist_weight (consistent with configured evidence weight).
     if historical_cases >= 10:
-        hist_bonus = 0.10
+        hist_bonus_fraction = 1.00
     elif historical_cases >= 5:
-        hist_bonus = 0.07
+        hist_bonus_fraction = 0.70
     elif historical_cases >= 3:
-        hist_bonus = 0.04
+        hist_bonus_fraction = 0.40
     else:
-        hist_bonus = 0.0
+        hist_bonus_fraction = 0.0
     hist_weight = weights.get("historical_match", 0.05)
-    score += hist_bonus * (hist_weight / 0.05)
+    score += hist_bonus_fraction * hist_weight
 
     # Similarity boosts confidence proportionally
     if similarity >= 0.70:
@@ -356,16 +373,25 @@ def _behavioral_cosine(cur_b: dict, hist_b: dict, b_weights: dict) -> float:
     return dot / (math.sqrt(norm_cur) * math.sqrt(norm_hist))
 
 
-def _r_score_cosine(cur_r: dict, hist_r: dict, r_weights: dict) -> float:
+def _r_score_cosine(cur_r: dict, hist_r: dict, r_weights: dict,
+                    r_max: Optional[dict] = None) -> float:
     """
     Weighted cosine similarity on R1-R8 continuous scores.
-    R scores are already normalized [0,100]; cosine handles relative alignment.
+
+    R-scores are component-specific raw point values (r1 max≈30, r6 max≈4, etc.).
+    Without normalisation the high-magnitude components (r1, r3) dominate the
+    cosine dot product regardless of their configured weights.
+
+    When r_max is supplied (from mpi_config.json r_score_max_values), each score
+    is divided by its component maximum before weighting, so every dimension
+    contributes proportionally to its configured weight rather than its magnitude.
     """
     import math
     dot = norm_cur = norm_hist = 0.0
     for k, w in r_weights.items():
-        c = cur_r.get(k, 0.0) * w
-        h = hist_r.get(k, 0.0) * w
+        m = (r_max.get(k, 1.0) if r_max else 1.0) or 1.0
+        c = (cur_r.get(k, 0.0) / m) * w
+        h = (hist_r.get(k, 0.0) / m) * w
         dot       += c * h
         norm_cur  += c * c
         norm_hist += h * h
@@ -422,6 +448,22 @@ def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
 
     r_blend = float(hist_cfg.get("r_score_blend", 0.70))
     b_blend = float(hist_cfg.get("behavioral_blend", 0.30))
+
+    # R-score max values for per-component normalisation.
+    # Constitutional R-scores are component-specific raw point values (r1 max≈30,
+    # r6 max≈4), not a uniform [0,100] range. Without normalisation, high-magnitude
+    # components dominate the cosine dot product independently of their weights.
+    rmax_cfg = _cfg().get("r_score_max_values", {})
+    r_max = {
+        "r1": float(rmax_cfg.get("r1", 30)),
+        "r2": float(rmax_cfg.get("r2",  9)),
+        "r3": float(rmax_cfg.get("r3", 20)),
+        "r4": float(rmax_cfg.get("r4", 10)),
+        "r5": float(rmax_cfg.get("r5",  8)),
+        "r6": float(rmax_cfg.get("r6",  4)),
+        "r7": float(rmax_cfg.get("r7",  3)),
+        "r8": float(rmax_cfg.get("r8", 15)),
+    }
 
     # Build complete R-score vector.
     # analyze() in main.py only puts r1 as a named key; r2-r8 are in the
@@ -501,7 +543,7 @@ def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
             "htf_hl":         bool(row["htf_hl"]),
         }
 
-        r_sim = _r_score_cosine(cur_r, hist_r, r_weights)
+        r_sim = _r_score_cosine(cur_r, hist_r, r_weights, r_max)
         b_sim = _behavioral_cosine(cur_b, hist_b, b_weights)
         sim   = r_blend * r_sim + b_blend * b_sim
 
@@ -547,32 +589,36 @@ def _fetch_historical_analogs(ticker: str, feat: dict) -> dict:
 # ── Explanation Templates ──────────────────────────────────────────────────────
 
 _PHASE_INTRO: dict[str, str] = {
-    "Capitulation":        "Early-stage capitulation detected.",
-    "Late Capitulation":   "Late-stage capitulation detected.",
+    "Capitulation":        "Early-stage capitulation pattern detected.",
+    "Late Capitulation":   "Late-stage capitulation pattern detected.",
     "Silent Accumulation": "Silent accumulation pattern identified.",
     "Accumulation":        "Active accumulation phase confirmed.",
     "Confidence Building": "Confidence-building phase in progress.",
     "Early Markup":        "Early markup phase initiated.",
     "Markup":              "Markup phase in progress.",
-    "Fear":                "Fear-driven selling visible in price action.",
+    # "Fear" replaces causal psychological label ("fear-driven") with observable state.
+    "Fear":                "Price in discount zone — demand confirmation pending.",
     "Neutral":             "Behavioral state inconclusive.",
 }
 
 _DEMAND_SENTENCE: dict[str, str] = {
+    # All sentences describe observable evidence only.
+    # Participant attribution ("institutional", "larger participants") removed:
+    # sv_hit and hvn_hit measure volume-at-price; they cannot identify order-flow source.
     "sv_hvn": (
         "Stopping volume combined with a high-volume demand node confirms "
-        "institutional supply absorption at this level."
+        "supply absorption at this price level."
     ),
     "sv_ob": (
-        "Stopping volume at a respected order block suggests demand "
-        "is being absorbed by larger participants."
+        "Stopping volume at a respected order block suggests demand absorption "
+        "at a structural zone."
     ),
     "sv_only": (
         "Stopping volume indicates selling pressure is being absorbed "
         "at this discount zone."
     ),
     "hvn_only": (
-        "A high-volume demand node marks institutional interest "
+        "A high-volume demand node indicates historically significant traded volume "
         "at the current price level."
     ),
     "ob_only": (
@@ -607,7 +653,8 @@ _HIST_SENTENCE = (
 _CLOSING: dict[str, str] = {
     "HIGH":   "Behavior strongly supports the constitutional signal.",
     "MEDIUM": "Behavior is consistent with the constitutional signal.",
-    "LOW":    "Behavioral evidence partially aligns with the constitutional signal.",
+    # LOW: a single or minimal signal is present; "partially aligns" overstates the inference.
+    "LOW":    "Behavioral evidence is preliminary — additional confirmation recommended.",
 }
 
 

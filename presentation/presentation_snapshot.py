@@ -182,14 +182,39 @@ class PresentationSnapshot:
 
 
 def build_presentation_snapshot() -> PresentationSnapshot:
-    """Build PresentationSnapshot from constitutional timeline, pool, advisor, and universe sources."""
+    """Build PresentationSnapshot from constitutional timeline, pool, advisor, and universe sources.
+
+    Architectural contract:
+      Presentation is a PURE RENDERER of constitutional decisions.
+      It never evaluates constitutional eligibility independently.
+      new_events_today is derived from production_decision_snapshot (who is eligible)
+      enriched with event metadata from the constitutional timeline (when did it fire).
+    """
     snap = PresentationSnapshot(
         generated_at=now_iso(),
         market_status=_market_status(),
         price_data_as_of=_csv_data_as_of(),
     )
 
-    # ── 0. Constitutional Opportunity Timeline ────────────────────────────────
+    # ── 0. Load authoritative eligibility decisions ───────────────────────────
+    # production_decision_snapshot is the ONLY source of constitutional eligibility.
+    # Presentation never re-evaluates the gate. It only asks: "who is eligible?"
+    # and gets the answer here, before any rendering begins.
+    import json as _json_prod
+    _prod_eligible_set: set[str] = set()
+    _prod_snap_path = BASE / "production_decision_snapshot.json"
+    if _prod_snap_path.exists():
+        try:
+            _prod_data = _json_prod.loads(_prod_snap_path.read_text())
+            _prod_eligible_set = {
+                d["ticker"]
+                for d in _prod_data.get("decisions", [])
+                if d.get("eligible")
+            }
+        except Exception as _prod_load_err:
+            print(f"[PresentationSnapshot] production_decision_snapshot load: {_prod_load_err}")
+
+    # ── 1. Constitutional Opportunity Timeline ────────────────────────────────
     try:
         import sys
         sys.path.insert(0, str(BASE))
@@ -213,7 +238,15 @@ def build_presentation_snapshot() -> PresentationSnapshot:
         snap.timeline         = tl_ops
         snap.total_events     = len(tl_ops)
         snap.total_tickers    = len(set(e["ticker"] for e in tl_ops))
-        snap.new_events_today = [e for e in tl_ops if e["event_date"] == _today]
+
+        # new_events_today: eligible tickers (from production_decision_snapshot)
+        # that have a timeline event today. The timeline provides WHEN and
+        # event metadata; production_decision_snapshot decides WHETHER.
+        snap.new_events_today = [
+            e for e in tl_ops
+            if e["event_date"] == _today and e["ticker"] in _prod_eligible_set
+        ]
+
         snap.first_buys       = [e for e in tl_ops if e["event_type"] == "FIRST_BUY"]
         snap.re_accumulations = [e for e in tl_ops if e["event_type"] == "RE_ACCUMULATION"]
 
@@ -252,12 +285,13 @@ def build_presentation_snapshot() -> PresentationSnapshot:
         # Legacy aliases
         snap.constitutional_buys = snap.first_buys
         snap.total_buys          = len(snap.first_buys)
-        snap.new_buys_today      = [e for e in snap.new_events_today
-                                    if e["event_type"] == "FIRST_BUY"]
+        snap.new_buys_today      = [
+            e for e in snap.new_events_today if e["event_type"] == "FIRST_BUY"
+        ]
     except Exception:
         pass
 
-    # ── 1. Approaching Constitutional Entry (candidate_pool) ──────────────────
+    # ── 2. Approaching Constitutional Entry (candidate_pool) ──────────────────
     pool = _db(_POOL_DB)
     if pool:
         try:

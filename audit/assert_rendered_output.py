@@ -200,8 +200,20 @@ def main() -> int:
     # ── Check 5: Presentation snapshot cross-check ────────────────────────────
     if PRES_SNAP.exists():
         pres  = json.loads(PRES_SNAP.read_text())
-        # new_events_today tickers should be subset of eligible
-        today_evs = {e["ticker"] for e in pres.get("new_events_today", [])}
+        # new_events_today tickers should be subset of eligible.
+        # Filter by today's date (Cairo) to stay consistent with
+        # assert_cross_layer_consistency and avoid timezone edge-case false
+        # failures when presentation_snapshot was built near midnight.
+        try:
+            from time_authority import today_cairo as _today_cairo
+            _today_str = _today_cairo().isoformat()
+        except Exception:
+            from datetime import date as _dt_date
+            _today_str = _dt_date.today().isoformat()
+        today_evs = {
+            e["ticker"] for e in pres.get("new_events_today", [])
+            if e.get("event_date") == _today_str
+        }
         phantom_evs = today_evs - eligible
         if phantom_evs:
             for t in sorted(phantom_evs):

@@ -1,13 +1,21 @@
 """
 valuation.valuation_scheduler — Offline valuation pipeline runner.
 
-Workflow:
-  1. Download financial data for all tickers (or one)
-  2. Update valuation.db
-  3. Run all valuation models
-  4. Save results
+This is the ONLY authorised writer to valuation.db in production.
 
-Run this AFTER market close or when new financial statements become available.
+Workflow:
+  1. Collect official financial statements via yfinance (Layer 1)
+  2. Collect market data (Layer 2)
+  3. Collect analyst consensus (Layer 3)
+  4. Store raw data in valuation.db
+  5. Run all 7 valuation models on real financials
+  6. Save results
+
+PRODUCTION RULE: If real financial data cannot be collected for a ticker,
+no valuation record is written and no IVE card will be shown.
+Silence is correct. Fabricated data is never correct.
+
+Run AFTER market close or when new financial statements become available.
 NEVER run during scanner execution.
 
 Usage:

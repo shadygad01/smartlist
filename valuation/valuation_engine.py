@@ -98,6 +98,23 @@ def run_valuation(ticker: str, current_price: float | None = None) -> dict | Non
         print(f"[ValuationEngine] No financial data for {ticker}")
         return None
 
+    # Minimum data quality gate: at least one core financial statement field must
+    # be non-NULL. EPS alone is insufficient — it could be synthetic.
+    # Required: at least one of revenue, net_income, operating_cash_flow, equity.
+    _CORE_FIELDS = ("revenue", "net_income", "operating_cash_flow", "equity")
+    has_real_data = any(
+        r.get(f) is not None
+        for r in financials
+        for f in _CORE_FIELDS
+    )
+    if not has_real_data:
+        conn.close()
+        print(
+            f"[ValuationEngine] {ticker}: financials contain no core income/balance data — "
+            f"refusing to write valuation (would be based on synthetic inputs)"
+        )
+        return None
+
     forecasts = build_forecasts(financials, assumptions.get("terminal_growth", 0.04))
 
     results = {

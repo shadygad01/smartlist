@@ -259,6 +259,12 @@ def build_alert_email(event: dict) -> tuple[str, str]:
   </div>
 </div>"""
 
+    _ive_html = _ive_card(ticker, current)
+    ive_block = (
+        f'<tr><td style="padding:14px 28px 0 28px;">{_ive_html}</td></tr>'
+        if _ive_html else ''
+    )
+
     html_body = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -385,12 +391,7 @@ def build_alert_email(event: dict) -> tuple[str, str]:
     </td>
   </tr>
 
-  <!-- Institutional Valuation Card -->
-  <tr>
-    <td style="padding:14px 28px 0 28px;">
-      {_ive_card(ticker, current)}
-    </td>
-  </tr>
+  {ive_block}
 
   <!-- Call To Action -->
   <tr>

@@ -153,6 +153,18 @@ def _detect_phase(feat: dict) -> tuple[str, list[str]]:
         evidence.append("hvn_hit")
         return "Fear", evidence
 
+    # Sweep detected — volume confirmation pending.
+    # Sweep alone is a meaningful structural signal (liquidity run without
+    # volume absorption yet). Include HTF uptrend when present to push
+    # confidence past the display threshold for unlocked tickers.
+    if sweep and htf_up:
+        evidence += ["sweep_detected", "htf_uptrend"]
+        return "Fear", evidence
+
+    if sweep:
+        evidence.append("sweep_detected")
+        return "Fear", evidence
+
     return "Neutral", []
 
 

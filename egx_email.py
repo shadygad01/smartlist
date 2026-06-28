@@ -427,7 +427,7 @@ def _new_since_yesterday(snap: PresentationSnapshot) -> str:
 
 # ── SECTION 3b: CONSTITUTIONAL BUY SIGNALS (from production snapshot) ─────────
 
-def _constitutional_buy_signals(dna: dict) -> str:
+def _constitutional_buy_signals(dna: dict, mpi_snaps: dict | None = None) -> str:
     """Return HTML for live constitutional BUY SIGNALS from production_decision_snapshot."""
     snap_path = BASE / "production_decision_snapshot.json"
     if not snap_path.exists():
@@ -448,8 +448,22 @@ def _constitutional_buy_signals(dna: dict) -> str:
         cp     = float(d.get("current_price") or 0)
         r2     = float(d.get("constitutional_r2") or 0)
         score  = float(d.get("constitutional_score") or 0)
-        reason = d.get("reason", "")
         hv     = _hist_val_badge(dna.get(ticker))
+
+        mpi_insight = ""
+        if mpi_snaps:
+            try:
+                from mpi_engine import render_behavior_insight_html
+                mpi_insight = render_behavior_insight_html(
+                    mpi_snaps.get(ticker), theme="light"
+                )
+            except Exception:
+                pass
+        mpi_row = (
+            f'<tr><td colspan="5" style="padding:2px 10px 10px 10px;">{mpi_insight}</td></tr>'
+            if mpi_insight else ""
+        )
+
         rows += (
             f'<tr style="border-bottom:1px solid #c3e6cb;">'
             f'<td style="padding:10px;font-family:Arial,sans-serif;font-size:14px;'
@@ -462,6 +476,7 @@ def _constitutional_buy_signals(dna: dict) -> str:
             f'color:{_BLUE};">{r2:.1f}/100 &bull; Score {score:.1f}</td>'
             f'<td style="padding:10px;">{hv}</td>'
             f'</tr>'
+            f'{mpi_row}'
         )
 
     count = len(eligible)
@@ -556,7 +571,8 @@ def _near_constitutional_entry(snap: PresentationSnapshot, dna: dict,
 
 # ── SECTION 5: ACTIVE OPPORTUNITIES ──────────────────────────────────────────
 
-def _active_opportunities(snap: PresentationSnapshot, dna: dict) -> str:
+def _active_opportunities(snap: PresentationSnapshot, dna: dict,
+                          mpi_snaps: dict | None = None) -> str:
     """Return HTML for the 'Active Opportunities' email section."""
     active = [
         u for u in snap.universe_snapshot
@@ -581,18 +597,33 @@ def _active_opportunities(snap: PresentationSnapshot, dna: dict) -> str:
 
     rows = ""
     for a in active_sorted:
+        ticker = a["ticker"]
         ret    = a.get("return_pct") or 0
         rc     = _ret_c(ret)
         action = a.get("action", "")
         act_c  = _G if action.startswith("HOLD") else (_A if action.startswith("MONITOR") else _MUTED)
-        mem    = _mem_badge(dna.get(a["ticker"]))
+        mem    = _mem_badge(dna.get(ticker))
         ez     = a.get("constitutional_entry_price") or 0
         cp     = a.get("current_price") or 0
+
+        mpi_insight = ""
+        if mpi_snaps:
+            try:
+                from mpi_engine import render_behavior_insight_html
+                mpi_insight = render_behavior_insight_html(
+                    mpi_snaps.get(ticker), theme="light"
+                )
+            except Exception:
+                pass
+        mpi_row = (
+            f'<tr><td colspan="7" style="padding:2px 10px 10px 10px;">{mpi_insight}</td></tr>'
+            if mpi_insight else ""
+        )
 
         rows += (
             f'<tr style="border-bottom:1px solid #e8f0f8;">'
             f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:13px;'
-            f'font-weight:700;color:{_NAVY};white-space:nowrap;">{a["ticker"]}</td>'
+            f'font-weight:700;color:{_NAVY};white-space:nowrap;">{ticker}</td>'
             f'<td style="padding:8px 10px;">{_status_badge_html(a.get("status",""))}</td>'
             f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:12px;">'
             f'{ez:.2f} EGP</td>'
@@ -604,6 +635,7 @@ def _active_opportunities(snap: PresentationSnapshot, dna: dict) -> str:
             f'color:{act_c};font-weight:700;white-space:nowrap;">{action}</td>'
             f'<td style="padding:8px 10px;text-align:center;">{mem}</td>'
             f'</tr>'
+            f'{mpi_row}'
         )
 
     return (
@@ -617,7 +649,8 @@ def _active_opportunities(snap: PresentationSnapshot, dna: dict) -> str:
 
 # ── SECTION 6: RE-ACCUMULATION EVENTS ────────────────────────────────────────
 
-def _re_accumulation_events(snap: PresentationSnapshot, dna: dict) -> str:
+def _re_accumulation_events(snap: PresentationSnapshot, dna: dict,
+                            mpi_snaps: dict | None = None) -> str:
     """Return HTML for the 'Re-Accumulation Events' email section."""
     reacs       = snap.re_accumulations or []
     reacs_sort  = sorted(reacs, key=lambda x: -(x.get("return_pct") or 0))
@@ -640,17 +673,32 @@ def _re_accumulation_events(snap: PresentationSnapshot, dna: dict) -> str:
 
     rows = ""
     for e in reacs_sort:
+        ticker = e["ticker"]
         ret  = e.get("return_pct") or 0
         rc   = _ret_c(ret)
         idx  = e.get("event_index", 1)
         ep   = e.get("constitutional_entry_price") or 0
         cp   = e.get("current_price") or 0
-        mem  = _mem_badge(dna.get(e["ticker"]))
+        mem  = _mem_badge(dna.get(ticker))
+
+        mpi_insight = ""
+        if mpi_snaps:
+            try:
+                from mpi_engine import render_behavior_insight_html
+                mpi_insight = render_behavior_insight_html(
+                    mpi_snaps.get(ticker), theme="light"
+                )
+            except Exception:
+                pass
+        mpi_row = (
+            f'<tr><td colspan="7" style="padding:2px 10px 10px 10px;">{mpi_insight}</td></tr>'
+            if mpi_insight else ""
+        )
 
         rows += (
             f'<tr style="border-bottom:1px solid #e8f0f8;">'
             f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:13px;'
-            f'font-weight:700;color:{_NAVY};white-space:nowrap;">{e["ticker"]}</td>'
+            f'font-weight:700;color:{_NAVY};white-space:nowrap;">{ticker}</td>'
             f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:11px;'
             f'font-weight:700;color:{_PURPL};">RE-ACCUM #{idx}</td>'
             f'<td style="padding:8px 10px;font-family:Arial,sans-serif;font-size:12px;">'
@@ -663,6 +711,7 @@ def _re_accumulation_events(snap: PresentationSnapshot, dna: dict) -> str:
             f'color:{_MUTED};">{e.get("event_date","")}</td>'
             f'<td style="padding:8px 10px;text-align:center;">{mem}</td>'
             f'</tr>'
+            f'{mpi_row}'
         )
 
     return (
@@ -923,7 +972,7 @@ def build_email(snap: PresentationSnapshot | None = None) -> str:
     except Exception as _mpi_err:
         print(f"[Email] MPI load non-fatal: {_mpi_err}")
 
-    buy_signals_html = _constitutional_buy_signals(dna)
+    buy_signals_html = _constitutional_buy_signals(dna, _mpi_snaps)
     sections = [
         _hdr(snap, date_str),
         '<div style="padding:0 24px 8px 24px;">',
@@ -937,9 +986,9 @@ def build_email(snap: PresentationSnapshot | None = None) -> str:
         _divider(),
         _near_constitutional_entry(snap, dna, _mpi_snaps),
         _divider(),
-        _active_opportunities(snap, dna),
+        _active_opportunities(snap, dna, _mpi_snaps),
         _divider(),
-        _re_accumulation_events(snap, dna),
+        _re_accumulation_events(snap, dna, _mpi_snaps),
         _divider(),
         _portfolio_health(snap),
         _divider(),

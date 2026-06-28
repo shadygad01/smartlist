@@ -213,6 +213,9 @@ jobs:
       - name: Regression suite (all previously fixed bugs)
         run: python3 audit/assert_regression_suite.py
 
+      - name: MPI pipeline integrity (behavioral analysis end-to-end)
+        run: python3 audit/assert_mpi_pipeline.py
+
       - name: Build constitutional fingerprint
         run: python3 audit/build_constitutional_fingerprint.py || true
 
@@ -271,7 +274,7 @@ jobs:
                   consistency_report.json \
                   heartbeat.json operations_state.json \
                   scan_execution.db notification_delivery.db \
-                  scan_context.json || true
+                  scan_context.json mpi_snapshots.db || true
           git add operations/incidents.json operations/sla.json \
                   operations/knowledge.json operations/sent_alerts.json || true
           git add historical_data/historical_data/*.csv || true

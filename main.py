@@ -1210,6 +1210,14 @@ def build_report(holiday_mode=False, last_trading=None, _cached_results=None):
     # ─────────────────────────────────────────────────────────────────────────────
 
     snap = build_presentation_snapshot()
+
+    # MPI must run BEFORE build_email so email readers see populated mpi_snapshots.db
+    try:
+        from mpi_engine import run_for_current_signals as _mpi_run
+        _mpi_run(results, snap)
+    except Exception as _mpi_err:
+        print(f"  [MPI] non-fatal: {_mpi_err}")
+
     html = build_email(snap)
     return html, results, snap
 
@@ -1964,12 +1972,12 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
     tx.step(Phase.PERSIST, "save_signal_history",  save_signal_history,  results)
     tx.step(Phase.PERSIST, "save_rank_history",    save_rank_history,    results)
 
-    # MPI: behavioral analysis after all signals and data are persisted
+    # MPI: re-run with fresh snapshot after all signals and timeline are persisted
     try:
         from mpi_engine import run_for_current_signals as _mpi_run
-        _mpi_run(results, snap)
+        _mpi_run(results, _fresh_snap)
     except Exception as _mpi_err:
-        print(f"  [MPI] non-fatal: {_mpi_err}")
+        print(f"  [MPI] re-run non-fatal: {_mpi_err}")
 
     tx.complete(Phase.PERSIST)
 
@@ -2265,7 +2273,7 @@ def continuous_scan():
     # ── MPI: Behavioral analysis (after all signals finalized) ────────────────
     try:
         from mpi_engine import run_for_current_signals as _mpi_run
-        _mpi_run(current_results, snap)
+        _mpi_run(current_results, _fresh_snap)
     except Exception as _mpi_err:
         print(f"  [MPI] non-fatal: {_mpi_err}")
 

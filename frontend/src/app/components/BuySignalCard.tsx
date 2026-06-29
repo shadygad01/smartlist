@@ -5,8 +5,9 @@ import { TrendingUp, Copy, CheckCircle, Clock, Zap, Activity } from 'lucide-reac
 import { toast } from 'sonner';
 import R2ProgressBar from './R2ProgressBar';
 import SeenBeforePanel from './SeenBeforePanel';
+import ValuationPanel from './ValuationPanel';
 import { useSnapshot } from '@/providers/SnapshotProvider';
-import type { UniverseItem, MPIBehavior, StockDNA } from '@/types/snapshot';
+import type { UniverseItem, MPIBehavior, StockDNA, ValuationCard } from '@/types/snapshot';
 
 // BUY-ready classification comes from the production snapshot field verbatim.
 // The frontend never evaluates r2, score, or gate conditions itself.
@@ -73,7 +74,7 @@ function BehaviorPhaseBlock({ mpi }: { mpi: MPIBehavior }) {
   );
 }
 
-function BuyCard({ signal, mpi, dna }: { signal: UniverseItem; mpi?: MPIBehavior; dna?: StockDNA }) {
+function BuyCard({ signal, mpi, dna, valuation }: { signal: UniverseItem; mpi?: MPIBehavior; dna?: StockDNA; valuation?: ValuationCard }) {
   return (
     <div className="rounded-xl glow-buy animate-fade-in-up" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--signal-buy-border)' }}>
       <div
@@ -140,6 +141,10 @@ function BuyCard({ signal, mpi, dna }: { signal: UniverseItem; mpi?: MPIBehavior
         <SeenBeforePanel dna={dna} mpi={mpi} />
       )}
 
+      {valuation && valuation.weighted_fair_value != null && (
+        <ValuationPanel valuation={valuation} currentPrice={signal.current_price} />
+      )}
+
       <div className="px-5 py-3 rounded-b-xl flex items-center gap-2" style={{ backgroundColor: 'rgba(16,185,129,0.04)', borderTop: '1px solid rgba(16,185,129,0.12)' }}>
         <Zap size={11} style={{ color: 'var(--signal-buy)', flexShrink: 0 }} />
         <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>{signal.waiting_for_reason}</span>
@@ -179,15 +184,22 @@ export default function BuySignalCard() {
   }
 
   const buySignals = snapshot.universe_snapshot.filter(isBuyReady);
-  const mpiMap = snapshot.mpi_behavior ?? {};
-  const dnaMap = snapshot.stock_dna ?? {};
+  const mpiMap        = snapshot.mpi_behavior ?? {};
+  const dnaMap        = snapshot.stock_dna ?? {};
+  const valuationMap  = snapshot.valuation ?? {};
 
   if (buySignals.length === 0) return <NoBuyState scanId={snapshot.scan_id} />;
 
   return (
     <div className="flex flex-col gap-4">
       {buySignals.map((signal) => (
-        <BuyCard key={signal.ticker} signal={signal} mpi={mpiMap[signal.ticker]} dna={dnaMap[signal.ticker]} />
+        <BuyCard
+          key={signal.ticker}
+          signal={signal}
+          mpi={mpiMap[signal.ticker]}
+          dna={dnaMap[signal.ticker]}
+          valuation={valuationMap[signal.ticker]}
+        />
       ))}
     </div>
   );

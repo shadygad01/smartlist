@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import { RefreshCw, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
 import SeenBeforePanel from './SeenBeforePanel';
+import ValuationPanel from './ValuationPanel';
 import { useSnapshot } from '@/providers/SnapshotProvider';
-import type { ReAccumulationEvent, StockDNA, MPIBehavior } from '@/types/snapshot';
+import type { ReAccumulationEvent, StockDNA, MPIBehavior, ValuationCard } from '@/types/snapshot';
 
 function statusColor(status: string): string {
   if (status === 'PREMIUM_NOW') return '#a78bfa';
@@ -14,7 +15,7 @@ function statusColor(status: string): string {
   return 'var(--muted-foreground)';
 }
 
-function EventCard({ evt, dna, mpi }: { evt: ReAccumulationEvent; dna?: StockDNA; mpi?: MPIBehavior }) {
+function EventCard({ evt, dna, mpi, valuation }: { evt: ReAccumulationEvent; dna?: StockDNA; mpi?: MPIBehavior; valuation?: ValuationCard }) {
   const retColor = evt.return_pct >= 0 ? 'var(--signal-buy)' : '#ef4444';
   const sign = evt.return_pct >= 0 ? '+' : '';
   const hasDna = dna != null && dna.constitutional_memory_hits > 0;
@@ -81,6 +82,11 @@ function EventCard({ evt, dna, mpi }: { evt: ReAccumulationEvent; dna?: StockDNA
 
       {/* Seen Before — generic: renders whenever constitutional history exists */}
       {hasDna && <SeenBeforePanel dna={dna!} mpi={mpi} />}
+
+      {/* IVE Valuation — generic: renders whenever fair value exists in snapshot */}
+      {valuation && valuation.weighted_fair_value != null && (
+        <ValuationPanel valuation={valuation} currentPrice={evt.current_price} />
+      )}
     </div>
   );
 }
@@ -89,9 +95,10 @@ export default function ReAccumulationSection() {
   const { snapshot, loading } = useSnapshot();
   const [collapsed, setCollapsed] = useState(false);
 
-  const events = snapshot?.re_accumulation ?? [];
-  const dnaMap = snapshot?.stock_dna ?? {};
-  const mpiMap = snapshot?.mpi_behavior ?? {};
+  const events        = snapshot?.re_accumulation ?? [];
+  const dnaMap        = snapshot?.stock_dna ?? {};
+  const mpiMap        = snapshot?.mpi_behavior ?? {};
+  const valuationMap  = snapshot?.valuation ?? {};
 
   if (!loading && events.length === 0) return null;
 
@@ -147,6 +154,7 @@ export default function ReAccumulationSection() {
                   evt={evt}
                   dna={dnaMap[evt.ticker]}
                   mpi={mpiMap[evt.ticker]}
+                  valuation={valuationMap[evt.ticker]}
                 />
               ))}
             </>

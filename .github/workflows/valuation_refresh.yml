@@ -1,0 +1,106 @@
+name: 📐 Valuation Refresh (IVE)
+
+# Single responsibility:
+#   1. Run IVE valuation scheduler for all 27 constitutional tickers
+#   2. Commit updated valuation.db to main
+#   3. Trigger dashboard_refresh to rebuild the frontend with new fair values
+#
+# This is the ONLY workflow authorised to write valuation.db.
+# Runs weekly (Sunday 07:00 Cairo = 05:00 UTC, before EGX opens at 10:00 Cairo)
+# so fair values are fresh before each trading week.
+# Also available via manual workflow_dispatch.
+
+on:
+  schedule:
+    - cron: '0 5 * * 0'   # Sunday 05:00 UTC = 07:00 Cairo (before market open)
+
+  workflow_dispatch:
+    inputs:
+      tickers:
+        description: 'Comma-separated tickers to value (blank = all 27)'
+        required: false
+        default: ''
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
+
+jobs:
+
+  valuation_refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies (includes yfinance)
+        run: pip install -r requirements.txt
+
+      - name: Initialize valuation.db schema
+        run: python -m valuation.valuation_scheduler --init-db
+
+      - name: Run IVE valuation scheduler
+        run: |
+          if [ -n "${{ github.event.inputs.tickers }}" ]; then
+            # Run specific tickers from manual input
+            echo "Running valuation for: ${{ github.event.inputs.tickers }}"
+            python3 - <<PYEOF
+          import sys
+          sys.path.insert(0, '.')
+          from valuation.valuation_scheduler import run_ticker, init_database
+          init_database()
+          tickers = [t.strip() for t in "${{ github.event.inputs.tickers }}".split(',') if t.strip()]
+          for ticker in tickers:
+              ok, stats = run_ticker(ticker)
+              print(f"{'OK' if ok else 'FAIL'}: {ticker}")
+          PYEOF
+          else
+            # Run all 27 constitutional tickers
+            echo "Running valuation for all constitutional tickers"
+            python -m valuation.valuation_scheduler
+          fi
+
+      - name: Verify valuation.db was populated
+        run: |
+          python3 - <<'PYEOF'
+          import sqlite3, sys
+          conn = sqlite3.connect('valuation.db')
+          counts = {
+              t[0]: conn.execute(f"SELECT COUNT(*) FROM {t[0]}").fetchone()[0]
+              for t in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+          }
+          conn.close()
+          print("valuation.db row counts:")
+          for table, count in counts.items():
+              print(f"  {table}: {count}")
+          valued = counts.get('valuation_models', 0)
+          companies = counts.get('companies', 0)
+          print(f"\nSummary: {valued} tickers valued, {companies} companies registered")
+          PYEOF
+
+      - name: Commit valuation.db to main
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add valuation.db
+          git diff --staged --quiet || git commit -m "chore: IVE valuation refresh $(date -u +%Y-%m-%d) [skip ci]"
+          git push || true
+
+      - name: Trigger dashboard rebuild with fresh valuation data
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: dashboard_refresh

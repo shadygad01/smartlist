@@ -190,11 +190,13 @@ function EventRow({ evt }: { evt: EventTimelineItem }) {
       </div>
 
       {/* Time */}
-      <div
-        className="font-mono flex-shrink-0"
-        style={{ fontSize: '11px', color: '#6b7280', paddingTop: 2 }}
-      >
-        {wallTime(evt.timestamp)}
+      <div className="flex-shrink-0 flex flex-col items-end gap-0.5" style={{ paddingTop: 2 }}>
+        <span className="font-mono" style={{ fontSize: '11px', color: '#6b7280' }}>
+          {wallTime(evt.timestamp)}
+        </span>
+        <span className="font-mono" style={{ fontSize: '9px', color: '#4a4d6a' }}>
+          {relativeTime(evt.timestamp)}
+        </span>
       </div>
     </div>
   );

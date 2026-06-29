@@ -189,14 +189,16 @@ function EventRow({ evt }: { evt: EventTimelineItem }) {
         )}
       </div>
 
-      {/* Time */}
+      {/* Time — fixed event timestamp, never "now" */}
       <div className="flex-shrink-0 flex flex-col items-end gap-0.5" style={{ paddingTop: 2 }}>
         <span className="font-mono" style={{ fontSize: '11px', color: '#6b7280' }}>
           {wallTime(evt.timestamp)}
         </span>
-        <span className="font-mono" style={{ fontSize: '9px', color: '#4a4d6a' }}>
-          {relativeTime(evt.timestamp)}
-        </span>
+        {evt.timestamp.slice(0, 10) !== new Date().toISOString().slice(0, 10) && (
+          <span className="font-mono" style={{ fontSize: '9px', color: '#4a4d6a' }}>
+            {evt.timestamp.slice(0, 10)}
+          </span>
+        )}
       </div>
     </div>
   );

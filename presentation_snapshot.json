@@ -1,11 +1,11 @@
 {
   "scan_id": "4752c823-fe56-41e6-8b19-21f58e86e29f",
-  "generated_at": "2026-06-29T20:11:40.386941+03:00",
+  "generated_at": "2026-06-29T20:17:38.789295+03:00",
   "price_data_as_of": "2026-06-28",
   "market_date": "2026-06-29",
   "market_status": "CLOSED (After Hours)",
   "build_hash": "",
-  "commit": "452a3361",
+  "commit": "ac4b1c3f",
   "last_scan_ts": "2026-06-29T19:31:28.259733+03:00",
   "_lineage": {
     "scan_id": "4752c823-fe56-41e6-8b19-21f58e86e29f",
@@ -15,7 +15,7 @@
       "universe_snapshot.db",
       "candidate_pool.db"
     ],
-    "generation_timestamp": "2026-06-29T17:11:40+00:00",
+    "generation_timestamp": "2026-06-29T17:17:38+00:00",
     "git_commit": "18272b3",
     "gate_version": "cff742390944766e",
     "workflow_run": "28387297859",
@@ -3263,5 +3263,92 @@
       "confidence": "MEDIUM"
     }
   ],
-  "knowledge_count": 8
+  "knowledge_count": 8,
+  "event_timeline": [
+    {
+      "id": 8,
+      "event_type": "NEAR_ENTRY",
+      "ticker": "HRHO.CA",
+      "badge": "NEAR ENTRY",
+      "description": "Re-entered watchlist \u2014 R\u00b2 score upgraded to 0.91",
+      "icon": "Clock",
+      "timestamp": "2026-06-29T20:01:39+03:00",
+      "metadata": "{\"pct_above\": 0.3}"
+    },
+    {
+      "id": 7,
+      "event_type": "SCAN",
+      "ticker": "",
+      "badge": "SCAN",
+      "description": "Incremental scan batch completed \u2014 9 tickers processed",
+      "icon": "RefreshCw",
+      "timestamp": "2026-06-29T20:01:39+03:00",
+      "metadata": "{\"tickers_processed\": 9}"
+    },
+    {
+      "id": 6,
+      "event_type": "VOL_SPIKE",
+      "ticker": "ETEL.CA",
+      "badge": "VOL SPIKE",
+      "description": "Volume anomaly detected \u2014 3.2\u00d7 average daily volume",
+      "icon": "AlertTriangle",
+      "timestamp": "2026-06-29T20:01:39+03:00",
+      "metadata": "{\"vol_ratio\": 3.2}"
+    },
+    {
+      "id": 5,
+      "event_type": "NEAR_ENTRY",
+      "ticker": "BTFH.CA",
+      "badge": "NEAR ENTRY",
+      "description": "Price approaching accumulation zone \u2014 1.1% above entry",
+      "icon": "Clock",
+      "timestamp": "2026-06-29T20:01:39+03:00",
+      "metadata": "{\"pct_above\": 1.1}"
+    },
+    {
+      "id": 4,
+      "event_type": "SCAN",
+      "ticker": "",
+      "badge": "SCAN",
+      "description": "Full universe scan completed \u2014 27 tickers processed",
+      "icon": "RefreshCw",
+      "timestamp": "2026-06-29T20:01:39+03:00",
+      "metadata": "{\"tickers_processed\": 27}"
+    },
+    {
+      "id": 3,
+      "event_type": "NEAR_ENTRY",
+      "ticker": "MCQE.CA",
+      "badge": "NEAR ENTRY",
+      "description": "Entered near-entry zone \u2014 0.8% above limit price",
+      "icon": "Clock",
+      "timestamp": "2026-06-29T20:01:39+03:00",
+      "metadata": "{\"pct_above\": 0.8}"
+    },
+    {
+      "id": 2,
+      "event_type": "BUY_SIGNAL",
+      "ticker": "ABUK.CA",
+      "badge": "BUY SIGNAL",
+      "description": "BUY LIMIT @ 69.85 EGP \u2014 Constitutional model confirmed",
+      "icon": "TrendingUp",
+      "timestamp": "2026-06-29T20:01:39+03:00",
+      "metadata": "{\"entry_price\": 69.85, \"r2\": 62, \"score\": 38}"
+    },
+    {
+      "id": 1,
+      "event_type": "SYSTEM",
+      "ticker": "",
+      "badge": "SYSTEM",
+      "description": "Event Timeline Engine initialized \u2014 v1.0",
+      "icon": "Settings",
+      "timestamp": "2026-06-29T20:01:29+03:00",
+      "metadata": "{}"
+    }
+  ],
+  "event_timeline_engine": {
+    "last_event_ts": "2026-06-29T20:01:39+03:00",
+    "total_events": 8,
+    "db_path": "/home/runner/work/smartlist/smartlist/event_timeline.db"
+  }
 }

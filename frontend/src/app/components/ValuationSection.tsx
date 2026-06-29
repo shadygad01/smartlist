@@ -61,7 +61,7 @@ export default function ValuationSection() {
   // Build price lookup from universe_snapshot
   const priceMap: Record<string, number> = {};
   for (const u of snapshot?.universe_snapshot ?? []) {
-    if (u.ticker && u.price != null) priceMap[u.ticker] = u.price;
+    if (u.ticker && u.current_price != null) priceMap[u.ticker] = u.current_price;
   }
 
   const cardCount = cards.length;

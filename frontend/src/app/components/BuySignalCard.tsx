@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TrendingUp, Copy, CheckCircle, Clock, Zap, Activity } from 'lucide-react';
+import { TrendingUp, Copy, CheckCircle, Clock, Zap, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import R2ProgressBar from './R2ProgressBar';
 import SeenBeforePanel from './SeenBeforePanel';
@@ -44,31 +44,42 @@ function CopyButton({ ticker }: { ticker: string }) {
 }
 
 function BehaviorPhaseBlock({ mpi }: { mpi: MPIBehavior }) {
+  const [collapsed, setCollapsed] = useState(true);
   const phaseColor: Record<string, string> = {
     Fear: '#f44336', Greed: '#4caf50', Accumulation: '#50d8d0',
     Distribution: '#f0b840', Neutral: '#8b8fa8',
   };
   const color = phaseColor[mpi.phase] ?? '#9c6fff';
   return (
-    <div
-      className="px-5 py-3 flex flex-col gap-1"
-      style={{ borderTop: '1px solid rgba(255,255,255,0.06)', backgroundColor: 'rgba(255,255,255,0.02)' }}
-    >
-      <div className="flex items-center gap-2">
-        <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8', letterSpacing: '0.07em' }}>BEHAVIOR PHASE</span>
-        <span
-          className="font-mono font-bold px-2 py-0.5 rounded"
-          style={{ fontSize: '10px', color, backgroundColor: `${color}18`, border: `1px solid ${color}44` }}
-        >
-          {mpi.phase.toUpperCase()}
-        </span>
-        <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8' }}>{mpi.confidence_label}</span>
-      </div>
-      <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', lineHeight: 1.5 }}>{mpi.explanation}</span>
-      {mpi.historical_cases > 0 && (
-        <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8', opacity: 0.75 }}>
-          Historical similarity: {Math.round((mpi.similarity_score ?? 0) * 100)}% · Avg MFE40: +{(mpi.avg_mfe40 ?? 0).toFixed(0)}% ({mpi.historical_cases} cases)
-        </span>
+    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full flex items-center justify-between px-5 py-2.5"
+        style={{ background: 'none', cursor: 'pointer' }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8', letterSpacing: '0.07em' }}>BEHAVIOR PHASE</span>
+          <span
+            className="font-mono font-bold px-2 py-0.5 rounded"
+            style={{ fontSize: '10px', color, backgroundColor: `${color}18`, border: `1px solid ${color}44` }}
+          >
+            {mpi.phase.toUpperCase()}
+          </span>
+          <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8' }}>{mpi.confidence_label}</span>
+        </div>
+        {collapsed
+          ? <ChevronDown size={11} style={{ color: '#8b8fa8' }} />
+          : <ChevronUp size={11} style={{ color: '#8b8fa8' }} />}
+      </button>
+      {!collapsed && (
+        <div className="px-5 pb-3 flex flex-col gap-1">
+          <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', lineHeight: 1.5 }}>{mpi.explanation}</span>
+          {mpi.historical_cases > 0 && (
+            <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8', opacity: 0.75 }}>
+              Historical similarity: {Math.round((mpi.similarity_score ?? 0) * 100)}% · Avg MFE40: +{(mpi.avg_mfe40 ?? 0).toFixed(0)}% ({mpi.historical_cases} cases)
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

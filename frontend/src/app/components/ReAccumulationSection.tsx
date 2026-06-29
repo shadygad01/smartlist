@@ -93,7 +93,7 @@ function EventCard({ evt, dna, mpi, valuation }: { evt: ReAccumulationEvent; dna
 
 export default function ReAccumulationSection() {
   const { snapshot, loading } = useSnapshot();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const events        = snapshot?.re_accumulation ?? [];
   const dnaMap        = snapshot?.stock_dna ?? {};

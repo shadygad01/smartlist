@@ -72,13 +72,8 @@ function DNACard({ dna }: { dna: StockDNA }) {
         </div>
       </div>
 
-      {/* Buy zone */}
       <div className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', marginTop: '4px' }}>
-        Buy Zone:{' '}
-        <b style={{ color: '#d0d4e8' }}>
-          {fmt(dna.historical_buy_zone_low)}–{fmt(dna.historical_buy_zone_high)} EGP
-        </b>
-        {' '}· Mem hits: <b style={{ color: '#d0d4e8' }}>{dna.constitutional_memory_hits ?? 0}</b>
+        Constitutional memory hits: <b style={{ color: '#d0d4e8' }}>{dna.constitutional_memory_hits ?? 0}</b>
       </div>
     </div>
   );

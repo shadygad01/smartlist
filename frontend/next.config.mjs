@@ -4,6 +4,9 @@ const nextConfig = {
   // GitHub Pages serves at /smartlist/ — all assets must be prefixed.
   basePath: '/smartlist',
   assetPrefix: '/smartlist',
+  env: {
+    NEXT_PUBLIC_BASE_PATH: '/smartlist',
+  },
   trailingSlash: true,
   typescript: {
     ignoreBuildErrors: true,

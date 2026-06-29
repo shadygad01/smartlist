@@ -37,6 +37,11 @@ function wallTime(ts: string): string {
   return ts.slice(11, 19); // HH:MM:SS
 }
 
+function wallDate(ts: string): string {
+  if (!ts) return '';
+  return ts.slice(0, 10); // YYYY-MM-DD
+}
+
 function engineAge(ts: string | null | undefined): string {
   if (!ts) return 'never';
   try {
@@ -189,16 +194,14 @@ function EventRow({ evt }: { evt: EventTimelineItem }) {
         )}
       </div>
 
-      {/* Time — fixed event timestamp, never "now" */}
+      {/* Time — fixed event timestamp (date + time), never "now" */}
       <div className="flex-shrink-0 flex flex-col items-end gap-0.5" style={{ paddingTop: 2 }}>
         <span className="font-mono" style={{ fontSize: '11px', color: '#6b7280' }}>
           {wallTime(evt.timestamp)}
         </span>
-        {evt.timestamp.slice(0, 10) !== new Date().toISOString().slice(0, 10) && (
-          <span className="font-mono" style={{ fontSize: '9px', color: '#4a4d6a' }}>
-            {evt.timestamp.slice(0, 10)}
-          </span>
-        )}
+        <span className="font-mono" style={{ fontSize: '9px', color: '#4a4d6a' }}>
+          {wallDate(evt.timestamp)}
+        </span>
       </div>
     </div>
   );

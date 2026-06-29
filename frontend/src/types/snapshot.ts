@@ -123,10 +123,12 @@ export interface StockDNA {
   current_price: number;
   avg_return_pct: number;
   best_return_pct: number;
+  worst_return_pct: number;
   historical_buy_zone_low: number;
   historical_buy_zone_high: number;
   constitutional_memory_hits: number;
   constitutional_memory_confidence: string;
+  last_event_date: string | null;
   last_updated: string;
 }
 

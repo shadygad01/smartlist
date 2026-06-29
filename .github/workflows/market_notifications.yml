@@ -129,9 +129,7 @@ jobs:
 
       - name: Prepare web deploy
         run: |
-          rm -rf web_deploy
           mkdir -p web_deploy
-          cp dashboard.html web_deploy/index.html
           cp version.json web_deploy/ 2>/dev/null || true
           cp manifest.json web_deploy/ 2>/dev/null || true
           cp sw.js web_deploy/ 2>/dev/null || true

@@ -20,7 +20,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 from presentation.presentation_snapshot import PresentationSnapshot, build_presentation_snapshot
@@ -115,7 +115,7 @@ def _week_events(snap: PresentationSnapshot) -> list[dict]:
     Uses event_end_date so extended clusters are included for any day they were active.
     """
     today    = _today_cairo().isoformat()
-    week_ago = (date.today() - timedelta(days=7)).isoformat()
+    week_ago = (_today_cairo() - timedelta(days=7)).isoformat()
     return [
         e for e in (snap.timeline or [])
         if week_ago <= (e.get("event_end_date") or e.get("event_date", "")) < today
@@ -350,21 +350,14 @@ def _last_week_summary(snap: PresentationSnapshot) -> str:
     w_buys  = [e for e in week_events if e["event_type"] == "FIRST_BUY"]
     w_reacs = [e for e in week_events if e["event_type"] == "RE_ACCUMULATION"]
 
-    active_list = [
-        u for u in snap.universe_snapshot
-        if u.get("status") in ("ACTIVE", "PREMIUM", "UNDER_REVIEW")
-    ]
-    winners = [a for a in active_list if (a.get("return_pct") or 0) > 0]
-    win_rate = round(len(winners) / len(active_list) * 100) if active_list else 0
-
     stats = [
-        ("Active Positions",        len(active_list),      _G),
+        ("Active Positions",        len(snap.active_positions), _G),
         ("Re-Accumulation Events",  len(snap.re_accumulations or []), _PURPL),
         ("Timeline Events (Total)", snap.total_events,     _NAVY),
         ("Unique Tickers",          snap.total_tickers,    _BLUE),
         ("BUY Signals (7 days)",    len(w_buys),           _G),
         ("Re-Accum (7 days)",       len(w_reacs),          _PURPL),
-        ("Win Rate (Active)",       f"{win_rate}%",        _G if win_rate >= 70 else _A),
+        ("Win Rate (Active)",       f"{snap.win_rate_active}%", _G if snap.win_rate_active >= 70 else _A),
         ("Universe Size",            f"{snap.universe_size} tickers", _NAVY),
     ]
 
@@ -582,15 +575,11 @@ def _near_constitutional_entry(snap: PresentationSnapshot, dna: dict,
 def _active_opportunities(snap: PresentationSnapshot, dna: dict,
                           mpi_snaps: dict | None = None) -> str:
     """Return HTML for the 'Active Opportunities' email section."""
-    active = [
-        u for u in snap.universe_snapshot
-        if u.get("status") in ("ACTIVE", "PREMIUM", "UNDER_REVIEW")
-    ]
-    active_sorted = sorted(active, key=lambda x: -(x.get("return_pct") or 0))
+    active_sorted = snap.active_positions
 
     total     = len(active_sorted)
     with_pos  = sum(1 for a in active_sorted if (a.get("return_pct") or 0) > 0)
-    win_rate  = round(with_pos / total * 100) if total else 0
+    win_rate  = snap.win_rate_active
     mem_badge = (
         f'<span style="background:{_G}22;color:{_G};padding:3px 10px;border-radius:12px;'
         f'font-size:11px;font-weight:700;">&#9733; {with_pos}/{total} {win_rate}%</span>'
@@ -754,23 +743,11 @@ def _portfolio_health(snap: PresentationSnapshot) -> str:
         else (_A if snap.health_stars.count("★") >= 3 else _R)
     )
 
-    active_list = [
-        u for u in snap.universe_snapshot
-        if u.get("status") in ("ACTIVE", "PREMIUM", "UNDER_REVIEW")
-    ]
-    premium     = [u for u in active_list if u.get("status") == "PREMIUM"]
-    with_pos    = [u for u in active_list if (u.get("return_pct") or 0) > 0]
-    win_rate    = round(len(with_pos) / len(active_list) * 100) if active_list else 0
-    avg_return  = (
-        sum(u.get("return_pct") or 0 for u in active_list) / len(active_list)
-        if active_list else 0
-    )
-
     metrics = [
-        (str(len(active_list)), "Positions",   _G),
-        (str(len(premium)),     "Premium",      _A),
-        (f"{win_rate}%",        "Win Rate",     _G if win_rate >= 70 else _A),
-        (f"{_sign(avg_return)}{avg_return:.1f}%", "Avg Return", _ret_c(avg_return)),
+        (str(len(snap.active_positions)), "Positions",   _G),
+        (str(snap.premium_count),         "Premium",      _A),
+        (f"{snap.win_rate_active}%",      "Win Rate",     _G if snap.win_rate_active >= 70 else _A),
+        (f"{_sign(snap.avg_return_active)}{snap.avg_return_active:.1f}%", "Avg Return", _ret_c(snap.avg_return_active)),
     ]
 
     metric_cells = "".join(

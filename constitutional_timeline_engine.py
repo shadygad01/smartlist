@@ -24,6 +24,7 @@ TIMELINE_DB  = BASE / "constitutional_opportunity_events.db"
 POOL_DB      = BASE / "candidate_pool.db"
 
 from constitutional_gate import CONST_R2_MIN, CONST_SCORE_MIN
+from time_authority import today_cairo as _today_cairo
 
 # Clustering: gap in calendar days that separates two distinct events
 GAP_DAYS = 7
@@ -186,7 +187,7 @@ def migrate() -> dict:
 
         clusters = _cluster_signals(rows)
         ticker_summary[ticker] = len(clusters)
-        now_ts = date.today().isoformat()
+        now_ts = _today_cairo().isoformat()
 
         for idx, cl in enumerate(clusters):
             eid   = _event_id(ticker, idx)
@@ -322,7 +323,7 @@ def get_timeline(production_only: bool = False) -> list[dict]:
         tl.close()
 
     pi     = _build_price_index()
-    today  = date.today().isoformat()
+    today  = _today_cairo().isoformat()
     result = []
 
     for r in rows:
@@ -366,7 +367,7 @@ def get_timeline(production_only: bool = False) -> list[dict]:
 
 def get_new_events_today() -> list[dict]:
     """Return constitutional events whose event_date is today (for morning-brief new-signal section)."""
-    today = date.today().isoformat()
+    today = _today_cairo().isoformat()
     return [e for e in get_timeline() if e["event_date"] == today]
 
 
@@ -515,7 +516,7 @@ def run_daily() -> dict:
     Daily entry point: check candidate_pool for today's new qualifying signals.
     Register new events if found, return updated timeline.
     """
-    today = date.today().isoformat()
+    today = _today_cairo().isoformat()
     if not TIMELINE_DB.exists():
         migrate()
 
@@ -632,7 +633,7 @@ def register_alert_events(alert_events: list[dict]) -> list[str]:
 
     for ev in alert_events:
         t      = ev.get("ticker", "")
-        today  = ev.get("event_date", date.today().isoformat())
+        today  = ev.get("event_date", _today_cairo().isoformat())
         entry  = float(ev.get("constitutional_entry_price") or 0.0)
         r2     = float(ev.get("constitutional_r2") or 0.0)
         score  = float(ev.get("constitutional_score") or 0.0)

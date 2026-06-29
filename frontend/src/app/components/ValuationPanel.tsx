@@ -25,11 +25,13 @@ function _mos(fair: number, price: number): string {
 export default function ValuationPanel({
   valuation,
   currentPrice,
+  defaultExpanded = false,
 }: {
   valuation: ValuationCard;
   currentPrice: number;
+  defaultExpanded?: boolean;
 }) {
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(!defaultExpanded);
   const fv = valuation.weighted_fair_value;
   if (fv == null) return null;
 

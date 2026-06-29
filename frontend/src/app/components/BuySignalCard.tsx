@@ -85,7 +85,32 @@ function BehaviorPhaseBlock({ mpi }: { mpi: MPIBehavior }) {
   );
 }
 
+function _fvUpside(fv: number, price: number): number | null {
+  if (!fv || !price) return null;
+  return ((fv - price) / price) * 100;
+}
+
+function FairValueSignalBadge({ fv, price }: { fv: number; price: number }) {
+  const upside = _fvUpside(fv, price);
+  if (upside == null) return null;
+  const isUndervalued = upside > 0;
+  const sign = upside >= 0 ? '+' : '';
+  const color    = isUndervalued ? '#10b981' : '#ef4444';
+  const bg       = isUndervalued ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+  const border   = isUndervalued ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)';
+  const label    = isUndervalued ? 'UNDERVALUED' : 'OVERVALUED';
+  return (
+    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg" style={{ backgroundColor: bg, border: `1px solid ${border}` }}>
+      <span className="font-mono font-bold" style={{ fontSize: '9px', color, letterSpacing: '0.07em' }}>{label}</span>
+      <span className="font-mono font-bold tabular-nums" style={{ fontSize: '10px', color }}>
+        {sign}{upside.toFixed(1)}%
+      </span>
+    </div>
+  );
+}
+
 function BuyCard({ signal, mpi, dna, valuation }: { signal: UniverseItem; mpi?: MPIBehavior; dna?: StockDNA; valuation?: ValuationCard }) {
+  const fv = valuation?.weighted_fair_value ?? null;
   return (
     <div className="rounded-xl glow-buy animate-fade-in-up" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--signal-buy-border)' }}>
       <div
@@ -105,6 +130,9 @@ function BuyCard({ signal, mpi, dna, valuation }: { signal: UniverseItem; mpi?: 
               <span className="font-mono px-2 py-0.5 rounded-md" style={{ fontSize: '9px', backgroundColor: 'rgba(16,185,129,0.15)', color: 'var(--signal-buy)', border: '1px solid rgba(16,185,129,0.3)' }}>
                 {signal.status}
               </span>
+              {fv != null && (
+                <FairValueSignalBadge fv={fv} price={signal.current_price} />
+              )}
             </div>
           </div>
         </div>
@@ -122,12 +150,19 @@ function BuyCard({ signal, mpi, dna, valuation }: { signal: UniverseItem; mpi?: 
           <p className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>CURRENT PRICE</p>
           <p className="font-mono font-bold tabular-nums" style={{ fontSize: '18px', color: 'var(--foreground)' }}>{signal.current_price.toFixed(2)}</p>
         </div>
-        <div>
-          <p className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>DISTANCE</p>
-          <p className="font-mono font-bold tabular-nums" style={{ fontSize: '18px', color: signal.distance != null && signal.distance < 0 ? 'var(--signal-near)' : 'var(--foreground)' }}>
-            {signal.distance != null ? `${signal.distance.toFixed(2)}%` : '—'}
-          </p>
-        </div>
+        {fv != null ? (
+          <div>
+            <p className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>FAIR VALUE</p>
+            <p className="font-mono font-bold tabular-nums" style={{ fontSize: '18px', color: '#50d8d0' }}>{fv.toFixed(2)}</p>
+          </div>
+        ) : (
+          <div>
+            <p className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>DISTANCE</p>
+            <p className="font-mono font-bold tabular-nums" style={{ fontSize: '18px', color: signal.distance != null && signal.distance < 0 ? 'var(--signal-near)' : 'var(--foreground)' }}>
+              {signal.distance != null ? `${signal.distance.toFixed(2)}%` : '—'}
+            </p>
+          </div>
+        )}
         <div>
           <p className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>REWARD SCORE</p>
           <p className="font-mono font-bold tabular-nums" style={{ fontSize: '18px', color: 'var(--signal-reaccum)' }}>
@@ -153,7 +188,7 @@ function BuyCard({ signal, mpi, dna, valuation }: { signal: UniverseItem; mpi?: 
       )}
 
       {valuation && valuation.weighted_fair_value != null && (
-        <ValuationPanel valuation={valuation} currentPrice={signal.current_price} />
+        <ValuationPanel valuation={valuation} currentPrice={signal.current_price} defaultExpanded />
       )}
 
       <div className="px-5 py-3 rounded-b-xl flex items-center gap-2" style={{ backgroundColor: 'rgba(16,185,129,0.04)', borderTop: '1px solid rgba(16,185,129,0.12)' }}>

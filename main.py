@@ -2235,6 +2235,29 @@ def continuous_scan():
     except Exception as _tl_err:
         print(f"  [continuous_scan] timeline engine non-fatal: {_tl_err}")
 
+    # ── Event Timeline Engine: log scan + vol spikes ──────────────────────────
+    try:
+        import event_timeline_engine as _etl
+        _ticker_count = len(current_results) if current_results else 0
+        _etl.log_scan_event(tickers_processed=_ticker_count)
+        # Log volume spikes (vol_ratio > 2.5× average daily volume)
+        for _sym, _res in (current_results or {}).items():
+            _vr = _res.get("vol_spike")
+            if _vr and _vr >= 2.5:
+                _etl.log_vol_spike(
+                    ticker=_sym,
+                    vol_ratio=_vr,
+                    description=f"Volume anomaly detected — {_vr:.1f}× average daily volume",
+                )
+        # Log near-entry tickers from the fresh snapshot
+        for _ne in (snap.approaching_entries if snap else []):
+            _ne_ticker = _ne.get("ticker", "")
+            _pct = _ne.get("need_move_pct")
+            if _ne_ticker:
+                _etl.log_near_entry(ticker=_ne_ticker, pct_above=abs(_pct) if _pct else None)
+    except Exception as _etl_err:
+        print(f"  [EventTimeline] non-fatal: {_etl_err}")
+
     # Detect changes BEFORE overwriting scan_results.json (needs previous state)
     changes = detect_signal_changes(snap)
 
@@ -2296,6 +2319,21 @@ def continuous_scan():
 
     if changes:
         print(f"🚨 Found {len(changes)} new constitutional event(s) today!")
+        # Log buy signals to event timeline
+        try:
+            import event_timeline_engine as _etl
+            for _ch in changes:
+                _ep = _ch.get("constitutional_entry_price")
+                _ep_str = f"BUY LIMIT @ {_ep:.2f} EGP — " if _ep else ""
+                _etl.log_buy_signal(
+                    ticker=_ch.get("ticker", ""),
+                    description=f"{_ep_str}Constitutional model confirmed",
+                    entry_price=_ep,
+                    r2=_ch.get("constitutional_r2"),
+                    score=_ch.get("constitutional_score"),
+                )
+        except Exception as _etl_buy_err:
+            print(f"  [EventTimeline] buy log non-fatal: {_etl_buy_err}")
         send_change_alert(changes)
     else:
         print("ℹ️ No signal changes detected")

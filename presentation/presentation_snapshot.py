@@ -569,6 +569,18 @@ def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: s
     except Exception as _val_err:
         print(f"[PresentationSnapshot] valuation load non-fatal: {_val_err}")
 
+    # ── Event Timeline Engine ──────────────────────────────────────────────────
+    _event_timeline_data: list[dict] = []
+    _etl_status: dict = {}
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(BASE))
+        import event_timeline_engine as _etl_mod
+        _event_timeline_data = _etl_mod.get_recent_events(limit=50)
+        _etl_status = _etl_mod.get_engine_status()
+    except Exception as _etl_load_err:
+        print(f"[PresentationSnapshot] event_timeline load non-fatal: {_etl_load_err}")
+
     # ── Full constitutional timeline (all events, newest first) ────────────────
     _timeline_all = sorted(
         snap.first_buys + snap.re_accumulations,
@@ -619,6 +631,8 @@ def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: s
         "health_narrative":  snap.health_narrative,
         "research_insights": snap.research_insights,
         "knowledge_count":   snap.knowledge_count,
+        "event_timeline":    _event_timeline_data,
+        "event_timeline_engine": _etl_status,
     }
 
     out = BASE / "presentation_snapshot.json"

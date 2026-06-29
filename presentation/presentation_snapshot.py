@@ -161,6 +161,12 @@ class PresentationSnapshot:
     # Universe Snapshot (all 27 tickers)
     universe_snapshot: list[dict] = field(default_factory=list)
 
+    # Pre-computed active position metrics — single source for all renderers
+    active_positions:   list[dict] = field(default_factory=list)
+    win_rate_active:    int = 0
+    premium_count:      int = 0
+    avg_return_active:  float = 0.0
+
     # Meta
     generated_at:      str = ""
     price_data_as_of:  str = ""   # date of latest CSV close — authoritative price date
@@ -313,7 +319,7 @@ def build_presentation_snapshot() -> PresentationSnapshot:
             ).fetchone()[0]
             if _latest_sig:
                 from datetime import date as _dt_date
-                _days_stale = (_dt_date.today() - _dt_date.fromisoformat(_latest_sig)).days
+                _days_stale = (today_cairo() - _dt_date.fromisoformat(_latest_sig)).days
                 if _days_stale > 5:
                     print(f"[PresentationSnapshot] Pool stale ({_days_stale}d) — "
                           f"skipping approaching entries from stale pool.")
@@ -409,6 +415,21 @@ def build_presentation_snapshot() -> PresentationSnapshot:
     except Exception:
         snap.universe_snapshot = []
 
+    # ── Active position metrics — computed once, consumed by all renderers ────────
+    # Renderers must use these fields; they must NOT re-filter universe_snapshot.
+    _active_raw = [
+        u for u in snap.universe_snapshot
+        if u.get("status") in ("ACTIVE", "PREMIUM", "UNDER_REVIEW")
+    ]
+    snap.active_positions = sorted(_active_raw, key=lambda u: -(u.get("return_pct") or 0))
+    snap.premium_count    = sum(1 for u in _active_raw if u.get("status") == "PREMIUM")
+    _winners              = sum(1 for u in _active_raw if (u.get("return_pct") or 0) > 0)
+    snap.win_rate_active  = round(_winners / len(_active_raw) * 100) if _active_raw else 0
+    snap.avg_return_active = (
+        sum(u.get("return_pct") or 0 for u in _active_raw) / len(_active_raw)
+        if _active_raw else 0.0
+    )
+
     # ── Approaching Entry exclusivity (must run after universe_snapshot is loaded) ─
     # Exclude tickers that are CURRENTLY live constitutional buy/re-accum signals.
     # "Live" means: R2>=60 AND score>=35 AND price<=constitutional_entry_price right now.
@@ -473,8 +494,8 @@ def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: s
     import json
     import subprocess
 
-    near_tickers = {e["ticker"] for e in snap.approaching_entries}
-    active = [u for u in snap.universe_snapshot if u["status"] in ("ACTIVE", "PREMIUM", "UNDER_REVIEW")]
+    near_tickers   = {e["ticker"] for e in snap.approaching_entries}
+    active         = snap.active_positions
     active_tickers = {u["ticker"] for u in active}
     future_candidates = [
         u for u in snap.universe_snapshot

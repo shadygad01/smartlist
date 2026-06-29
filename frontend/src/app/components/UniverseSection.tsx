@@ -17,7 +17,7 @@ function statusColor(status: string): string {
 
 export default function UniverseSection() {
   const { snapshot, loading } = useSnapshot();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const tickers = snapshot?.universe_snapshot ?? [];
 

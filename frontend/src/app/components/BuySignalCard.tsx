@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TrendingUp, Copy, CheckCircle, Clock, Zap, Activity } from 'lucide-react';
+import { TrendingUp, Copy, CheckCircle, Clock, Zap, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import R2ProgressBar from './R2ProgressBar';
 import SeenBeforePanel from './SeenBeforePanel';
+import ValuationPanel from './ValuationPanel';
 import { useSnapshot } from '@/providers/SnapshotProvider';
-import type { UniverseItem, MPIBehavior, StockDNA } from '@/types/snapshot';
+import type { UniverseItem, MPIBehavior, StockDNA, ValuationCard } from '@/types/snapshot';
 
 // BUY-ready classification comes from the production snapshot field verbatim.
 // The frontend never evaluates r2, score, or gate conditions itself.
@@ -43,37 +44,48 @@ function CopyButton({ ticker }: { ticker: string }) {
 }
 
 function BehaviorPhaseBlock({ mpi }: { mpi: MPIBehavior }) {
+  const [collapsed, setCollapsed] = useState(true);
   const phaseColor: Record<string, string> = {
     Fear: '#f44336', Greed: '#4caf50', Accumulation: '#50d8d0',
     Distribution: '#f0b840', Neutral: '#8b8fa8',
   };
   const color = phaseColor[mpi.phase] ?? '#9c6fff';
   return (
-    <div
-      className="px-5 py-3 flex flex-col gap-1"
-      style={{ borderTop: '1px solid rgba(255,255,255,0.06)', backgroundColor: 'rgba(255,255,255,0.02)' }}
-    >
-      <div className="flex items-center gap-2">
-        <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8', letterSpacing: '0.07em' }}>BEHAVIOR PHASE</span>
-        <span
-          className="font-mono font-bold px-2 py-0.5 rounded"
-          style={{ fontSize: '10px', color, backgroundColor: `${color}18`, border: `1px solid ${color}44` }}
-        >
-          {mpi.phase.toUpperCase()}
-        </span>
-        <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8' }}>{mpi.confidence_label}</span>
-      </div>
-      <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', lineHeight: 1.5 }}>{mpi.explanation}</span>
-      {mpi.historical_cases > 0 && (
-        <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8', opacity: 0.75 }}>
-          Historical similarity: {Math.round((mpi.similarity_score ?? 0) * 100)}% · Avg MFE40: +{(mpi.avg_mfe40 ?? 0).toFixed(0)}% ({mpi.historical_cases} cases)
-        </span>
+    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full flex items-center justify-between px-5 py-2.5"
+        style={{ background: 'none', cursor: 'pointer' }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8', letterSpacing: '0.07em' }}>BEHAVIOR PHASE</span>
+          <span
+            className="font-mono font-bold px-2 py-0.5 rounded"
+            style={{ fontSize: '10px', color, backgroundColor: `${color}18`, border: `1px solid ${color}44` }}
+          >
+            {mpi.phase.toUpperCase()}
+          </span>
+          <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8' }}>{mpi.confidence_label}</span>
+        </div>
+        {collapsed
+          ? <ChevronDown size={11} style={{ color: '#8b8fa8' }} />
+          : <ChevronUp size={11} style={{ color: '#8b8fa8' }} />}
+      </button>
+      {!collapsed && (
+        <div className="px-5 pb-3 flex flex-col gap-1">
+          <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', lineHeight: 1.5 }}>{mpi.explanation}</span>
+          {mpi.historical_cases > 0 && (
+            <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8', opacity: 0.75 }}>
+              Historical similarity: {Math.round((mpi.similarity_score ?? 0) * 100)}% · Avg MFE40: +{(mpi.avg_mfe40 ?? 0).toFixed(0)}% ({mpi.historical_cases} cases)
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-function BuyCard({ signal, mpi, dna }: { signal: UniverseItem; mpi?: MPIBehavior; dna?: StockDNA }) {
+function BuyCard({ signal, mpi, dna, valuation }: { signal: UniverseItem; mpi?: MPIBehavior; dna?: StockDNA; valuation?: ValuationCard }) {
   return (
     <div className="rounded-xl glow-buy animate-fade-in-up" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--signal-buy-border)' }}>
       <div
@@ -140,6 +152,10 @@ function BuyCard({ signal, mpi, dna }: { signal: UniverseItem; mpi?: MPIBehavior
         <SeenBeforePanel dna={dna} mpi={mpi} />
       )}
 
+      {valuation && valuation.weighted_fair_value != null && (
+        <ValuationPanel valuation={valuation} currentPrice={signal.current_price} />
+      )}
+
       <div className="px-5 py-3 rounded-b-xl flex items-center gap-2" style={{ backgroundColor: 'rgba(16,185,129,0.04)', borderTop: '1px solid rgba(16,185,129,0.12)' }}>
         <Zap size={11} style={{ color: 'var(--signal-buy)', flexShrink: 0 }} />
         <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>{signal.waiting_for_reason}</span>
@@ -179,15 +195,22 @@ export default function BuySignalCard() {
   }
 
   const buySignals = snapshot.universe_snapshot.filter(isBuyReady);
-  const mpiMap = snapshot.mpi_behavior ?? {};
-  const dnaMap = snapshot.stock_dna ?? {};
+  const mpiMap        = snapshot.mpi_behavior ?? {};
+  const dnaMap        = snapshot.stock_dna ?? {};
+  const valuationMap  = snapshot.valuation ?? {};
 
   if (buySignals.length === 0) return <NoBuyState scanId={snapshot.scan_id} />;
 
   return (
     <div className="flex flex-col gap-4">
       {buySignals.map((signal) => (
-        <BuyCard key={signal.ticker} signal={signal} mpi={mpiMap[signal.ticker]} dna={dnaMap[signal.ticker]} />
+        <BuyCard
+          key={signal.ticker}
+          signal={signal}
+          mpi={mpiMap[signal.ticker]}
+          dna={dnaMap[signal.ticker]}
+          valuation={valuationMap[signal.ticker]}
+        />
       ))}
     </div>
   );

@@ -6,7 +6,7 @@ import { useSnapshot } from '@/providers/SnapshotProvider';
 
 export default function DiagnosticsSection() {
   const { snapshot, loading, error } = useSnapshot();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const lineage = snapshot?._lineage;
   const stats = snapshot?.statistics;

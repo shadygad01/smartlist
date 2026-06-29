@@ -126,6 +126,41 @@ jobs:
           print('Universe snapshot and DNA rebuilt.')
           PYEOF
 
+      - name: Refresh valuation models (IVE — non-fatal)
+        # Runs valuation scheduler on tickers that lack a model newer than 30 days.
+        # Non-fatal: missing financials (yfinance gap) must not block the scan.
+        # valuation.db is committed later in "Save core state to git".
+        run: |
+          python3 - <<'PYEOF'
+          import sqlite3, sys
+          from pathlib import Path
+          sys.path.insert(0, '.')
+          from valuation.valuation_scheduler import init_database, run_ticker
+          from config.scanner_config import get_constitutional_universe
+          init_database()
+          db = Path('valuation.db')
+          conn = sqlite3.connect(str(db))
+          try:
+              # Find tickers with no model or model older than 30 days
+              existing = {
+                  r[0] for r in conn.execute(
+                      "SELECT ticker FROM valuation_models "
+                      "WHERE julianday('now') - julianday(valuation_date) < 30"
+                  ).fetchall()
+              }
+          finally:
+              conn.close()
+          universe = get_constitutional_universe()
+          stale = [t for t in universe if t not in existing]
+          if not stale:
+              print('[IVE] All tickers valued within 30 days — skipping.')
+          else:
+              print(f'[IVE] Refreshing {len(stale)} stale/missing tickers: {stale}')
+              for ticker in stale:
+                  run_ticker(ticker)
+          PYEOF
+        continue-on-error: true
+
       - name: Assert price freshness
         run: python3 audit/assert_price_freshness.py
 
@@ -277,7 +312,8 @@ jobs:
                   consistency_report.json \
                   heartbeat.json operations_state.json \
                   scan_execution.db notification_delivery.db \
-                  scan_context.json mpi_snapshots.db decision_diff.json || true
+                  scan_context.json mpi_snapshots.db decision_diff.json \
+                  valuation.db || true
           git add operations/incidents.json operations/sla.json \
                   operations/knowledge.json operations/sent_alerts.json || true
           git add historical_data/historical_data/*.csv || true

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>تقرير البحث الكمي — 2026-06-29</title>
+  
+<style>
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#222;direction:rtl;margin:0}
+  .container{max-width:980px;margin:20px auto;background:#fff;border-radius:10px;
+             box-shadow:0 2px 12px #0002;overflow:hidden}
+  .header{background:linear-gradient(135deg,#1a3c5e,#2a6496);color:#fff;padding:28px 30px}
+  .header h1{margin:0;font-size:1.6em}
+  .header p{margin:6px 0 0;opacity:.8;font-size:.9em}
+  .section{padding:20px 30px;border-bottom:1px solid #eee}
+  .section h2{color:#1a3c5e;margin-top:0;font-size:1.15em;
+              border-right:4px solid #2a6496;padding-right:10px}
+  .kpi-row{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0}
+  .kpi{flex:1;min-width:110px;background:#f7f9fb;border-radius:8px;
+       padding:14px 16px;text-align:center}
+  .kpi .val{font-size:1.7em;font-weight:700;color:#1a3c5e}
+  .kpi .lbl{font-size:.76em;color:#666;margin-top:4px}
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse;font-size:.85em}
+  th{background:#1a3c5e;color:#fff;padding:8px 10px;text-align:right;white-space:nowrap}
+  th.wr-col{background:#4a5568;opacity:.8}
+  td{padding:7px 10px;border-bottom:1px solid #eee}
+  tr:nth-child(even) td{background:#f9f9f9}
+  .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.78em;font-weight:600}
+  .b-high{background:#d4edda;color:#155724}
+  .b-med{background:#fff3cd;color:#856404}
+  .b-low{background:#f8d7da;color:#721c24}
+  .warn{background:#fff3cd;border:1px solid #ffc107;border-radius:6px;
+        padding:10px 14px;margin:8px 0;font-size:.88em;color:#856404}
+  .rec-box{background:#e8f4f8;border:1px solid #bee5eb;border-radius:8px;
+           padding:14px 18px;margin:10px 0}
+  .rec-box h3{margin:0 0 8px;color:#1a3c5e;font-size:1em}
+  .phase-badge{display:inline-block;background:#2a6496;color:#fff;border-radius:4px;
+               padding:1px 8px;font-size:.75em;margin-left:8px;vertical-align:middle}
+  .score-bar{display:inline-block;background:#e0e0e0;border-radius:4px;
+             height:12px;vertical-align:middle;margin-right:6px}
+  .score-fill{height:100%;border-radius:4px;background:#2a6496}
+  .frozen-note{background:#e8f0fe;border:1px solid #c5cae9;border-radius:6px;
+               padding:8px 14px;margin:8px 0;font-size:.82em;color:#3949ab}
+  .wr-dim{color:#999;font-size:.85em}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>📊 تقرير البحث الكمي — EGX30</h1>
+    <p>تاريخ: 2026-06-29 | إشارات ناضجة: 1204 | W_PRICE=30 | W_OB=10 | W_LIQ=20 | W_HTF=10 | W_AVWAP=8 | W_MACD=4 | W_DIV=3 | W_DZ=15</p>
+  </div>
+  
+<div class="section" style="border-right:6px solid #c0392b;">
+  <h2 style="color:#c0392b;">المرحلة 0: القيود التشغيلية
+    <span class="phase-badge" style="background:#c0392b;">Operational Constraints</span>
+  </h2>
+
+  <div style="background:#fff3f3;border:1px solid #f5c6cb;border-radius:8px;
+              padding:14px 18px;margin:10px 0;font-size:.88em;line-height:1.9">
+    <strong>الهدف الأساسي:</strong> ماسح فرص قيعان — <em>ليس</em> تعظيم الدقة أو Win Rate<br>
+    <strong>الأولوية القصوى:</strong> الحفاظ على تدفق الإشارات<br>
+    <strong>قاعدة الرفض:</strong> أي توصية تُخفّض الإشارات > 5% تُرفَض إلا بأداء استثنائي<br>
+    <strong>الحل المفضّل:</strong> <em>حافة أعلى مع عدد إشارات مشابه</em> — ليس إشارات أقل بإحصاءات أجمل
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="val">1204</div><div class="lbl">إجمالي الإشارات</div></div>
+    <div class="kpi"><div class="val">1204</div><div class="lbl">إشارات ناضجة</div></div>
+    <div class="kpi"><div class="val">236</div><div class="lbl">إشارة / سنة</div></div>
+    <div class="kpi"><div class="val">19</div><div class="lbl">إشارة / شهر</div></div>
+    <div class="kpi"><div class="val">28/27</div><div class="lbl">تغطية السوق</div></div>
+    <div class="kpi"><div class="val">28</div><div class="lbl">أسهم مُغطّاة</div></div>
+  </div>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr>
+      <th>العتبة</th><th>Retention %</th><th>حالة التوصية</th><th>الإجراء</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>≥ 95%</td>
+          <td><span class="badge b-high">هدف مثالي</span></td>
+          <td>✅ مقبول بالكامل</td><td>تطبيق مباشر</td></tr>
+      <tr><td>80–95%</td>
+          <td><span class="badge b-med">⚠ تحذير</span></td>
+          <td>مقبول مع تحفظ — اتشال 20-5% من الإشارات</td><td>دراسة إضافية</td></tr>
+      <tr><td>40–80%</td>
+          <td><span class="badge b-low">⛔ غرامة</span></td>
+          <td>غرامة في OPT Score — اتشال 20-60%</td><td>رفض إلا لأداء استثنائي</td></tr>
+      <tr><td>< 40%</td>
+          <td><span class="badge b-low">❌ رفض</span></td>
+          <td>مرفوض — اتشال أكثر من 60% من الإشارات</td><td>رفض</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div style="background:#1a3c5e;color:#fff;border-radius:6px;padding:10px 16px;
+              margin:10px 0;font-size:.83em;line-height:1.8">
+    <strong>صيغة OPT Score:</strong>
+    CAGR×30% + Profit Factor×20% + Calmar×15% + Avg MFE×15%
+    + Signal Retention×10% + Market Coverage×5% + Unique Stocks×5%<br>
+    <span style="opacity:.75">الاحتفاظ المنخفض يُطبَّق عليه ضارب تخفيض تلقائي: &lt;90%→×0.85 | &lt;80%→×0.60 | &lt;70%→×0.30</span>
+  </div>
+</div>
+<div class="section">
+  <h2>المرحلة 1: تدقيق البيانات <span class="phase-badge">Data Audit</span></h2>
+  <div class="kpi-row">
+    <div class="kpi"><div class="val">1204</div><div class="lbl">إجمالي الإشارات</div></div>
+    <div class="kpi"><div class="val">1204</div><div class="lbl">إشارات ناضجة</div></div>
+    <div class="kpi"><div class="val">28</div><div class="lbl">رمز سهم</div></div>
+    <div class="kpi"><div class="val"><span class="badge b-high">100/100</span></div><div class="lbl">درجة جودة البيانات</div></div>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="val">73%</div><div class="lbl">CAGR الكلي</div></div>
+    <div class="kpi"><div class="val">2.61</div><div class="lbl">Profit Factor</div></div>
+    <div class="kpi"><div class="val">12.7%</div><div class="lbl">Avg MFE</div></div>
+    <div class="kpi"><div class="val">9.94</div><div class="lbl">Calmar Ratio</div></div>
+    <div class="kpi"><div class="val">54.9%</div><div class="lbl">Max DD</div></div>
+  </div>
+  
+<div class="kpi-row">
+  <div class="kpi"><div class="val">20%</div><div class="lbl">MFE ≥ 20% (كبار)</div></div>
+  <div class="kpi"><div class="val">30%</div><div class="lbl">MFE 10–20%</div></div>
+  <div class="kpi"><div class="val">24%</div><div class="lbl">MFE 5–10%</div></div>
+  <div class="kpi"><div class="val">26%</div><div class="lbl">MFE < 5%</div></div>
+  <div class="kpi"><div class="val">9.9%</div><div class="lbl">Median MFE</div></div>
+</div>
+  <h3 style="color:#1a3c5e;margin:14px 0 6px">اكتمال بيانات المكوّنات r1-r8</h3>
+  <div class="tbl-wrap"><table><thead><tr><th>المكوّن</th><th>متوفر</th><th>Null</th><th>اكتمال</th></tr></thead><tbody><tr><td>r1 السعر</td><td>1204</td><td>0</td><td><span class="badge b-high">100.0%</span></td></tr><tr><td>r2 Order Block</td><td>1204</td><td>0</td><td><span class="badge b-high">100.0%</span></td></tr><tr><td>r3 السيولة</td><td>1204</td><td>0</td><td><span class="badge b-high">100.0%</span></td></tr><tr><td>r4 HTF</td><td>1204</td><td>0</td><td><span class="badge b-high">100.0%</span></td></tr><tr><td>r5 AVWAP</td><td>1204</td><td>0</td><td><span class="badge b-high">100.0%</span></td></tr><tr><td>r6 MACD</td><td>1204</td><td>0</td><td><span class="badge b-high">100.0%</span></td></tr><tr><td>r7 Divergence</td><td>1204</td><td>0</td><td><span class="badge b-high">100.0%</span></td></tr><tr><td>r8 منطقة الطلب</td><td>1204</td><td>0</td><td><span class="badge b-high">100.0%</span></td></tr></tbody></table></div>
+  <h3 style="color:#1a3c5e;margin:14px 0 6px">اكتمال متغيرات الهدف</h3>
+  <div class="tbl-wrap"><table><thead><tr><th>المتغير</th><th>متوفر</th><th>Null</th><th>اكتمال</th></tr></thead><tbody><tr><td>mfe_20d</td><td>1204</td><td>0</td><td><span class="badge b-high">100.0%</span></td></tr><tr><td>mfe_40d</td><td>1096</td><td>108</td><td><span class="badge b-high">91.0%</span></td></tr><tr><td>mae_20d</td><td>1204</td><td>0</td><td><span class="badge b-high">100.0%</span></td></tr><tr><td>r20d</td><td>1204</td><td>0</td><td><span class="badge b-high">100.0%</span></td></tr><tr><td>bq_score</td><td>1203</td><td>1</td><td><span class="badge b-high">99.9%</span></td></tr></tbody></table></div>
+  <div class="frozen-note">⚙ منطق الإدخال مجمّد — هذا التقرير للبحث والإبلاغ فقط</div>
+</div>
+<div class="section">
+  <h2>المرحلة 2: اتساق المكونات <span class="phase-badge">Feature Analysis</span></h2>
+  
+<div style="background:#1a3c5e;color:#fff;border-radius:6px;padding:10px 16px;
+            margin:10px 0;font-size:.85em;line-height:1.7">
+  <strong>⚖ ترتيب التقييم:</strong>
+  CAGR → Profit Factor → Avg MFE → Calmar → Max DD → Win Rate
+  <span style="opacity:.7;margin-right:12px">|</span>
+  Win Rate مقياس مهم لكنه ليس الأول — النظام يحقق عوائده من رابحين قلائل كبار،
+  لذا CAGR وProfit Factor يُقيّمان حجم العائد الكلي بدقة أكبر.
+</div>
+  <p style="font-size:.85em;color:#555">
+    CAGR/PF/MFE للنصف العلوي من كل مكوّن — Spearman مع MFE — Mono = رتابة عبر الأرباع
+  </p>
+  <div class="tbl-wrap"><table><thead><tr><th>المكوّن</th><th>N</th><th>Spearman</th><th>CAGR(top)</th><th>PF(top)</th><th>MFE(top)</th><th>Mono</th><th>Win Rate</th><th>درجة</th></tr></thead><tbody><tr><td>r1 السعر</td><td>1204</td><td>+0.053</td><td>69%</td><td>2.40</td><td>12.9%</td><td>✓</td><td>60%</td><td><span class="score-bar" style="width:60px"><span class="score-fill" style="width:10%"></span></span>10</td></tr><tr><td>r2 Order Block</td><td>1204</td><td>-0.030</td><td>73%</td><td>2.61</td><td>12.7%</td><td>—</td><td>59%</td><td><span class="score-bar" style="width:60px"><span class="score-fill" style="width:0%"></span></span>0</td></tr><tr><td>r3 السيولة</td><td>1204</td><td>+0.060</td><td>87%</td><td>3.08</td><td>13.0%</td><td>—</td><td>61%</td><td><span class="score-bar" style="width:60px"><span class="score-fill" style="width:20%"></span></span>20</td></tr><tr><td>r4 HTF</td><td>1204</td><td>+0.070</td><td>82%</td><td>2.86</td><td>13.3%</td><td>✓</td><td>60%</td><td><span class="score-bar" style="width:60px"><span class="score-fill" style="width:22%"></span></span>22</td></tr><tr><td>r5 AVWAP</td><td>1204</td><td>+0.024</td><td>73%</td><td>2.70</td><td>12.9%</td><td>—</td><td>59%</td><td><span class="score-bar" style="width:60px"><span class="score-fill" style="width:2%"></span></span>2</td></tr><tr><td>r6 MACD</td><td>1204</td><td>+0.028</td><td>78%</td><td>2.78</td><td>12.7%</td><td>—</td><td>60%</td><td><span class="score-bar" style="width:60px"><span class="score-fill" style="width:13%"></span></span>13</td></tr><tr><td>r7 Divergence</td><td>1204</td><td>-0.002</td><td>73%</td><td>2.61</td><td>12.7%</td><td>—</td><td>59%</td><td><span class="score-bar" style="width:60px"><span class="score-fill" style="width:0%"></span></span>0</td></tr><tr><td>r8 منطقة الطلب</td><td>1204</td><td>+0.058</td><td>82%</td><td>2.86</td><td>13.5%</td><td>—</td><td>61%</td><td><span class="score-bar" style="width:60px"><span class="score-fill" style="width:12%"></span></span>12</td></tr></tbody></table></div>
+</div>
+<div class="section">
+  <h2>المرحلة 3: التحقق من الأوزان <span class="phase-badge">Weight Validation</span></h2>
+  
+<div style="background:#1a3c5e;color:#fff;border-radius:6px;padding:10px 16px;
+            margin:10px 0;font-size:.85em;line-height:1.7">
+  <strong>⚖ ترتيب التقييم:</strong>
+  CAGR → Profit Factor → Avg MFE → Calmar → Max DD → Win Rate
+  <span style="opacity:.7;margin-right:12px">|</span>
+  Win Rate مقياس مهم لكنه ليس الأول — النظام يحقق عوائده من رابحين قلائل كبار،
+  لذا CAGR وProfit Factor يُقيّمان حجم العائد الكلي بدقة أكبر.
+</div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="val">1204</div><div class="lbl">إشارات</div></div>
+    <div class="kpi"><div class="val">-0.657</div><div class="lbl">RF R² على MFE</div></div>
+    <div class="kpi"><div class="val">842</div><div class="lbl">تدريب</div></div>
+    <div class="kpi"><div class="val">362</div><div class="lbl">اختبار</div></div>
+  </div>
+  <p style="font-size:.85em;color:#555">
+    الأهمية مُحسَّبة على هدف <strong>MFE_20d</strong> — ليس Win Rate.
+    النموذج يُقيّم مساهمة كل مكوّن في تعظيم العائد الكامن.
+  </p>
+  <div class="tbl-wrap"><table><thead><tr><th>المكوّن</th><th>وزن حالي</th><th>%حالي</th><th>أهمية↔MFE</th><th>وزن مقترح</th><th>فارق</th></tr></thead><tbody><tr><td>r1 السعر</td><td>30</td><td>30.0%</td><td>33.8%</td><td>34</td><td><span class="badge b-high">+4</span></td></tr><tr><td>r2 Order Block</td><td>10</td><td>10.0%</td><td>5.4%</td><td>5</td><td><span class="badge b-low">-5</span></td></tr><tr><td>r3 السيولة</td><td>20</td><td>20.0%</td><td>8.7%</td><td>9</td><td><span class="badge b-low">-11</span></td></tr><tr><td>r4 HTF</td><td>10</td><td>10.0%</td><td>19.6%</td><td>20</td><td><span class="badge b-high">+10</span></td></tr><tr><td>r5 AVWAP</td><td>8</td><td>8.0%</td><td>6.2%</td><td>6</td><td><span class="badge b-med">-2</span></td></tr><tr><td>r6 MACD</td><td>4</td><td>4.0%</td><td>17.9%</td><td>18</td><td><span class="badge b-high">+14</span></td></tr><tr><td>r7 Divergence</td><td>3</td><td>3.0%</td><td>5.3%</td><td>5</td><td><span class="badge b-med">+2</span></td></tr><tr><td>r8 منطقة الطلب</td><td>15</td><td>15.0%</td><td>3.1%</td><td>3</td><td><span class="badge b-low">-12</span></td></tr></tbody></table></div>
+  <div class="frozen-note">⚠ الأوزان الحالية مجمّدة — هذا اقتراح بحثي فقط</div>
+</div>
+<div class="section">
+  <h2>المرحلة 4: تحليل العتبات <span class="phase-badge">Gate Analysis</span></h2>
+  
+<div style="background:#1a3c5e;color:#fff;border-radius:6px;padding:10px 16px;
+            margin:10px 0;font-size:.85em;line-height:1.7">
+  <strong>⚖ ترتيب التقييم:</strong>
+  CAGR → Profit Factor → Avg MFE → Calmar → Max DD → Win Rate
+  <span style="opacity:.7;margin-right:12px">|</span>
+  Win Rate مقياس مهم لكنه ليس الأول — النظام يحقق عوائده من رابحين قلائل كبار،
+  لذا CAGR وProfit Factor يُقيّمان حجم العائد الكلي بدقة أكبر.
+</div>
+  <div class="frozen-note">⚠ العتبات مجمّدة في النظام — النتائج للبحث فقط</div>
+  <p style="font-size:.84em;color:#555">
+    <strong>Retention %</strong>: نسبة الإشارات المحتفَظ بها بعد تطبيق العتبة من القاعدة (1204 إشارة).
+    <strong>OPT Score</strong>: الدرجة المركّبة (CAGR×30 + PF×20 + Calmar×15 + MFE×15 + Retention×10 + Coverage×10) مع عقوبة الاحتفاظ المنخفض.
+  </p>
+
+  <h3 style="color:#1a3c5e;margin:14px 0 6px">PRICE_GATE — r1_price ≥ x</h3>
+  <div class="tbl-wrap"><table><thead><tr><th>العتبة</th><th>N</th><th>Retention %</th><th>CAGR</th><th>Profit Factor</th><th>Avg MFE</th><th>Calmar</th><th>Max DD</th><th>Win Rate</th><th>OPT Score</th><th>ملاحظة</th></tr></thead><tbody><tr><td>10</td><td>863</td><td><span class="badge b-low">72% ⛔</span></td><td><span class="badge b-high">74% <span style="font-size:.73em;color:#aaa">(+1%)</span></span></td><td><span class="badge b-high">2.67 <span style="font-size:.73em;color:#aaa">(+0.06)</span></span></td><td><span class="badge b-high">12.9% <span style="font-size:.73em;color:#aaa">(+0.2%)</span></span></td><td><span class="badge b-high">9.87 <span style="font-size:.73em;color:#aaa">(-0.07)</span></span></td><td>54.9%</td><td>59%</td><td><span class="badge b-low">15</span></td><td></td></tr><tr><td>11</td><td>856</td><td><span class="badge b-low">71% ⛔</span></td><td><span class="badge b-high">74% <span style="font-size:.73em;color:#aaa">(+1%)</span></span></td><td><span class="badge b-high">2.67 <span style="font-size:.73em;color:#aaa">(+0.06)</span></span></td><td><span class="badge b-high">12.9% <span style="font-size:.73em;color:#aaa">(+0.2%)</span></span></td><td><span class="badge b-high">9.87 <span style="font-size:.73em;color:#aaa">(-0.07)</span></span></td><td>54.9%</td><td>59%</td><td><span class="badge b-low">15</span></td><td></td></tr><tr><td>12</td><td>855</td><td><span class="badge b-low">71% ⛔</span></td><td><span class="badge b-high">74% <span style="font-size:.73em;color:#aaa">(+1%)</span></span></td><td><span class="badge b-high">2.67 <span style="font-size:.73em;color:#aaa">(+0.05)</span></span></td><td><span class="badge b-high">12.9% <span style="font-size:.73em;color:#aaa">(+0.2%)</span></span></td><td><span class="badge b-high">9.86 <span style="font-size:.73em;color:#aaa">(-0.07)</span></span></td><td>54.9%</td><td>59%</td><td><span class="badge b-low">15</span></td><td></td></tr><tr><td>13</td><td>854</td><td><span class="badge b-low">71% ⛔</span></td><td><span class="badge b-high">74% <span style="font-size:.73em;color:#aaa">(+1%)</span></span></td><td><span class="badge b-high">2.67 <span style="font-size:.73em;color:#aaa">(+0.05)</span></span></td><td><span class="badge b-high">12.9% <span style="font-size:.73em;color:#aaa">(+0.2%)</span></span></td><td><span class="badge b-high">9.85 <span style="font-size:.73em;color:#aaa">(-0.08)</span></span></td><td>54.9%</td><td>59%</td><td><span class="badge b-low">15</span></td><td></td></tr><tr><td>14</td><td>852</td><td><span class="badge b-low">71% ⛔</span></td><td><span class="badge b-high">74% <span style="font-size:.73em;color:#aaa">(+1%)</span></span></td><td><span class="badge b-high">2.65 <span style="font-size:.73em;color:#aaa">(+0.04)</span></span></td><td><span class="badge b-high">12.9% <span style="font-size:.73em;color:#aaa">(+0.2%)</span></span></td><td><span class="badge b-high">9.77 <span style="font-size:.73em;color:#aaa">(-0.16)</span></span></td><td>54.9%</td><td>59%</td><td><span class="badge b-low">15</span></td><td></td></tr><tr><td>15</td><td>849</td><td><span class="badge b-low">71% ⛔</span></td><td><span class="badge b-high">73% <span style="font-size:.73em;color:#aaa">(-0%)</span></span></td><td><span class="badge b-high">2.63 <span style="font-size:.73em;color:#aaa">(+0.02)</span></span></td><td><span class="badge b-high">12.9% <span style="font-size:.73em;color:#aaa">(+0.1%)</span></span></td><td><span class="badge b-high">9.63 <span style="font-size:.73em;color:#aaa">(-0.30)</span></span></td><td>54.9%</td><td>59%</td><td><span class="badge b-low">15</span></td><td></td></tr><tr><td>16</td><td>795</td><td><span class="badge b-low">66% ⛔</span></td><td><span class="badge b-high">70% <span style="font-size:.73em;color:#aaa">(-3%)</span></span></td><td><span class="badge b-high">2.54 <span style="font-size:.73em;color:#aaa">(-0.08)</span></span></td><td><span class="badge b-high">12.8% <span style="font-size:.73em;color:#aaa">(+0.0%)</span></span></td><td><span class="badge b-high">9.20 <span style="font-size:.73em;color:#aaa">(-0.74)</span></span></td><td>54.9%</td><td>58%</td><td><span class="badge b-low">15</span></td><td></td></tr><tr><td>17</td><td>620</td><td><span class="badge b-low">51% ❌ رفض</span></td><td><span class="badge b-high">69% <span style="font-size:.73em;color:#aaa">(-4%)</span></span></td><td><span class="badge b-high">2.40 <span style="font-size:.73em;color:#aaa">(-0.22)</span></span></td><td><span class="badge b-high">12.9% <span style="font-size:.73em;color:#aaa">(+0.2%)</span></span></td><td><span class="badge b-high">8.71 <span style="font-size:.73em;color:#aaa">(-1.22)</span></span></td><td>54.9%</td><td>60%</td><td><span class="badge b-low">10</span></td><td></td></tr><tr><td>18</td><td>491</td><td><span class="badge b-low">41% ❌ رفض</span></td><td><span class="badge b-high">79% <span style="font-size:.73em;color:#aaa">(+6%)</span></span></td><td><span class="badge b-high">2.58 <span style="font-size:.73em;color:#aaa">(-0.03)</span></span></td><td><span class="badge b-high">13.6% <span style="font-size:.73em;color:#aaa">(+0.8%)</span></span></td><td><span class="badge b-high">9.90 <span style="font-size:.73em;color:#aaa">(-0.03)</span></span></td><td>54.9%</td><td>61%</td><td><span class="badge b-low">9</span></td><td></td></tr><tr><td>19</td><td>431</td><td><span class="badge b-low">36% ❌ رفض</span></td><td><span class="badge b-high">81% <span style="font-size:.73em;color:#aaa">(+8%)</span></span></td><td><span class="badge b-high">2.67 <span style="font-size:.73em;color:#aaa">(+0.06)</span></span></td><td><span class="badge b-high">13.7% <span style="font-size:.73em;color:#aaa">(+0.9%)</span></span></td><td><span class="badge b-high">10.11 <span style="font-size:.73em;color:#aaa">(+0.17)</span></span></td><td>54.9%</td><td>62%</td><td><span class="badge b-low">4</span></td><td> ❌ رفض (Retention<70%)</td></tr><tr><td>20</td><td>370</td><td><span class="badge b-low">31% ❌ رفض</span></td><td><span class="badge b-high">87% <span style="font-size:.73em;color:#aaa">(+14%)</span></span></td><td><span class="badge b-high">2.80 <span style="font-size:.73em;color:#aaa">(+0.19)</span></span></td><td><span class="badge b-high">13.7% <span style="font-size:.73em;color:#aaa">(+1.0%)</span></span></td><td><span class="badge b-high">10.95 <span style="font-size:.73em;color:#aaa">(+1.02)</span></span></td><td>54.9%</td><td>62%</td><td><span class="badge b-low">4</span></td><td> ❌ رفض (Retention<70%)</td></tr><tr><td>21</td><td>307</td><td><span class="badge b-low">25% ❌ رفض</span></td><td><span class="badge b-high">94% <span style="font-size:.73em;color:#aaa">(+21%)</span></span></td><td><span class="badge b-high">2.94 <span style="font-size:.73em;color:#aaa">(+0.33)</span></span></td><td><span class="badge b-high">14.0% <span style="font-size:.73em;color:#aaa">(+1.3%)</span></span></td><td><span class="badge b-high">11.72 <span style="font-size:.73em;color:#aaa">(+1.78)</span></span></td><td>54.9%</td><td>62%</td><td><span class="badge b-low">4</span></td><td> ❌ رفض (Retention<70%)</td></tr><tr><td>22</td><td>258</td><td><span class="badge b-low">21% ❌ رفض</span></td><td><span class="badge b-high">115% <span style="font-size:.73em;color:#aaa">(+42%)</span></span></td><td><span class="badge b-high">3.84 <span style="font-size:.73em;color:#aaa">(+1.22)</span></span></td><td><span class="badge b-high">13.8% <span style="font-size:.73em;color:#aaa">(+1.1%)</span></span></td><td><span class="badge b-high">15.16 <span style="font-size:.73em;color:#aaa">(+5.22)</span></span></td><td>31.5%</td><td>64%</td><td><span class="badge b-low">4</span></td><td> ❌ رفض (Retention<70%)</td></tr><tr><td>23</td><td>224</td><td><span class="badge b-low">19% ❌ رفض</span></td><td><span class="badge b-high">117% <span style="font-size:.73em;color:#aaa">(+43%)</span></span></td><td><span class="badge b-high">3.96 <span style="font-size:.73em;color:#aaa">(+1.35)</span></span></td><td><span class="badge b-high">13.9% <span style="font-size:.73em;color:#aaa">(+1.1%)</span></span></td><td><span class="badge b-high">15.14 <span style="font-size:.73em;color:#aaa">(+5.21)</span></span></td><td>31.5%</td><td>66%</td><td><span class="badge b-low">4</span></td><td> ❌ رفض (Retention<70%)</td></tr><tr><td>24</td><td>193</td><td><span class="badge b-low">16% ❌ رفض</span></td><td><span class="badge b-high">116% <span style="font-size:.73em;color:#aaa">(+43%)</span></span></td><td><span class="badge b-high">4.03 <span style="font-size:.73em;color:#aaa">(+1.42)</span></span></td><td><span class="badge b-high">13.7% <span style="font-size:.73em;color:#aaa">(+1.0%)</span></span></td><td><span class="badge b-high">15.30 <span style="font-size:.73em;color:#aaa">(+5.36)</span></span></td><td>31.5%</td><td>65%</td><td><span class="badge b-low">4</span></td><td> ❌ رفض (Retention<70%)</td></tr></tbody></table></div>
+
+  <h3 style="color:#1a3c5e;margin:14px 0 6px">LIQ_GATE — r3_liquidity ≥ x</h3>
+  <div class="tbl-wrap"><table><thead><tr><th>العتبة</th><th>N</th><th>Retention %</th><th>CAGR</th><th>Profit Factor</th><th>Avg MFE</th><th>Calmar</th><th>Max DD</th><th>Win Rate</th><th>OPT Score</th><th>ملاحظة</th></tr></thead><tbody><tr><td>0</td><td>1204</td><td><span class="badge b-high">100%</span></td><td><span class="badge b-high">73% <span style="font-size:.73em;color:#aaa">(0%)</span></span></td><td><span class="badge b-high">2.61 <span style="font-size:.73em;color:#aaa">(0.00)</span></span></td><td><span class="badge b-high">12.7% <span style="font-size:.73em;color:#aaa">(0.0%)</span></span></td><td><span class="badge b-high">9.94 <span style="font-size:.73em;color:#aaa">(0.00)</span></span></td><td>54.9%</td><td>59%</td><td><span class="badge b-low">20</span></td><td></td></tr><tr><td>5</td><td>699</td><td><span class="badge b-low">58% ❌ رفض</span></td><td><span class="badge b-high">81% <span style="font-size:.73em;color:#aaa">(+8%)</span></span></td><td><span class="badge b-high">2.95 <span style="font-size:.73em;color:#aaa">(+0.34)</span></span></td><td><span class="badge b-high">12.8% <span style="font-size:.73em;color:#aaa">(+0.1%)</span></span></td><td><span class="badge b-high">11.75 <span style="font-size:.73em;color:#aaa">(+1.81)</span></span></td><td>33.6%</td><td>61%</td><td><span class="badge b-low">10</span></td><td></td></tr><tr><td>8</td><td>681</td><td><span class="badge b-low">57% ❌ رفض</span></td><td><span class="badge b-high">83% <span style="font-size:.73em;color:#aaa">(+10%)</span></span></td><td><span class="badge b-high">2.99 <span style="font-size:.73em;color:#aaa">(+0.37)</span></span></td><td><span class="badge b-high">12.9% <span style="font-size:.73em;color:#aaa">(+0.1%)</span></span></td><td><span class="badge b-high">12.01 <span style="font-size:.73em;color:#aaa">(+2.07)</span></span></td><td>33.6%</td><td>61%</td><td><span class="badge b-low">10</span></td><td></td></tr><tr><td>10</td><td>629</td><td><span class="badge b-low">52% ❌ رفض</span></td><td><span class="badge b-high">87% <span style="font-size:.73em;color:#aaa">(+14%)</span></span></td><td><span class="badge b-high">3.08 <span style="font-size:.73em;color:#aaa">(+0.47)</span></span></td><td><span class="badge b-high">13.0% <span style="font-size:.73em;color:#aaa">(+0.3%)</span></span></td><td><span class="badge b-high">12.56 <span style="font-size:.73em;color:#aaa">(+2.62)</span></span></td><td>33.6%</td><td>61%</td><td><span class="badge b-low">10</span></td><td></td></tr><tr><td>12</td><td>629</td><td><span class="badge b-low">52% ❌ رفض</span></td><td><span class="badge b-high">87% <span style="font-size:.73em;color:#aaa">(+14%)</span></span></td><td><span class="badge b-high">3.08 <span style="font-size:.73em;color:#aaa">(+0.47)</span></span></td><td><span class="badge b-high">13.0% <span style="font-size:.73em;color:#aaa">(+0.3%)</span></span></td><td><span class="badge b-high">12.56 <span style="font-size:.73em;color:#aaa">(+2.62)</span></span></td><td>33.6%</td><td>61%</td><td><span class="badge b-low">10</span></td><td></td></tr><tr><td>14</td><td>506</td><td><span class="badge b-low">42% ❌ رفض</span></td><td><span class="badge b-high">92% <span style="font-size:.73em;color:#aaa">(+19%)</span></span></td><td><span class="badge b-high">3.22 <span style="font-size:.73em;color:#aaa">(+0.60)</span></span></td><td><span class="badge b-high">13.3% <span style="font-size:.73em;color:#aaa">(+0.6%)</span></span></td><td><span class="badge b-high">13.27 <span style="font-size:.73em;color:#aaa">(+3.33)</span></span></td><td>32.8%</td><td>62%</td><td><span class="badge b-low">10</span></td><td></td></tr><tr><td>16</td><td>478</td><td><span class="badge b-low">40% ❌ رفض</span></td><td><span class="badge b-high">91% <span style="font-size:.73em;color:#aaa">(+18%)</span></span></td><td><span class="badge b-high">3.19 <span style="font-size:.73em;color:#aaa">(+0.58)</span></span></td><td><span class="badge b-high">13.3% <span style="font-size:.73em;color:#aaa">(+0.6%)</span></span></td><td><span class="badge b-high">13.02 <span style="font-size:.73em;color:#aaa">(+3.08)</span></span></td><td>32.8%</td><td>62%</td><td><span class="badge b-low">4</span></td><td> ❌ رفض (Retention<70%)</td></tr><tr><td>18</td><td>478</td><td><span class="badge b-low">40% ❌ رفض</span></td><td><span class="badge b-high">91% <span style="font-size:.73em;color:#aaa">(+18%)</span></span></td><td><span class="badge b-high">3.19 <span style="font-size:.73em;color:#aaa">(+0.58)</span></span></td><td><span class="badge b-high">13.3% <span style="font-size:.73em;color:#aaa">(+0.6%)</span></span></td><td><span class="badge b-high">13.02 <span style="font-size:.73em;color:#aaa">(+3.08)</span></span></td><td>32.8%</td><td>62%</td><td><span class="badge b-low">4</span></td><td> ❌ رفض (Retention<70%)</td></tr><tr><td>20</td><td>478</td><td><span class="badge b-low">40% ❌ رفض</span></td><td><span class="badge b-high">91% <span style="font-size:.73em;color:#aaa">(+18%)</span></span></td><td><span class="badge b-high">3.19 <span style="font-size:.73em;color:#aaa">(+0.58)</span></span></td><td><span class="badge b-high">13.3% <span style="font-size:.73em;color:#aaa">(+0.6%)</span></span></td><td><span class="badge b-high">13.02 <span style="font-size:.73em;color:#aaa">(+3.08)</span></span></td><td>32.8%</td><td>62%</td><td><span class="badge b-low">4</span></td><td> ◀ حالي</td></tr></tbody></table></div>
+
+  <h3 style="color:#1a3c5e;margin:14px 0 6px">ENTRY_SCORE_GATE — raw_score ≥ x</h3>
+  <div class="tbl-wrap"><table><thead><tr><th>العتبة</th><th>N</th><th>Retention %</th><th>CAGR</th><th>Profit Factor</th><th>Avg MFE</th><th>Calmar</th><th>Max DD</th><th>Win Rate</th><th>OPT Score</th><th>ملاحظة</th></tr></thead><tbody><tr><td>25</td><td>1204</td><td><span class="badge b-high">100%</span></td><td><span class="badge b-high">73% <span style="font-size:.73em;color:#aaa">(0%)</span></span></td><td><span class="badge b-high">2.61 <span style="font-size:.73em;color:#aaa">(0.00)</span></span></td><td><span class="badge b-high">12.7% <span style="font-size:.73em;color:#aaa">(0.0%)</span></span></td><td><span class="badge b-high">9.94 <span style="font-size:.73em;color:#aaa">(0.00)</span></span></td><td>54.9%</td><td>59%</td><td><span class="badge b-low">20</span></td><td></td></tr><tr><td>30</td><td>1204</td><td><span class="badge b-high">100%</span></td><td><span class="badge b-high">73% <span style="font-size:.73em;color:#aaa">(0%)</span></span></td><td><span class="badge b-high">2.61 <span style="font-size:.73em;color:#aaa">(0.00)</span></span></td><td><span class="badge b-high">12.7% <span style="font-size:.73em;color:#aaa">(0.0%)</span></span></td><td><span class="badge b-high">9.94 <span style="font-size:.73em;color:#aaa">(0.00)</span></span></td><td>54.9%</td><td>59%</td><td><span class="badge b-low">20</span></td><td></td></tr><tr><td>35</td><td>1204</td><td><span class="badge b-high">100%</span></td><td><span class="badge b-high">73% <span style="font-size:.73em;color:#aaa">(0%)</span></span></td><td><span class="badge b-high">2.61 <span style="font-size:.73em;color:#aaa">(0.00)</span></span></td><td><span class="badge b-high">12.7% <span style="font-size:.73em;color:#aaa">(0.0%)</span></span></td><td><span class="badge b-high">9.94 <span style="font-size:.73em;color:#aaa">(0.00)</span></span></td><td>54.9%</td><td>59%</td><td><span class="badge b-low">20</span></td><td></td></tr><tr><td>40</td><td>1064</td><td><span class="badge b-med">88% ⚠</span></td><td><span class="badge b-high">73% <span style="font-size:.73em;color:#aaa">(-0%)</span></span></td><td><span class="badge b-high">2.59 <span style="font-size:.73em;color:#aaa">(-0.03)</span></span></td><td><span class="badge b-high">12.8% <span style="font-size:.73em;color:#aaa">(+0.0%)</span></span></td><td><span class="badge b-high">9.90 <span style="font-size:.73em;color:#aaa">(-0.04)</span></span></td><td>54.9%</td><td>59%</td><td><span class="badge b-low">19</span></td><td> ◀ حالي</td></tr><tr><td>45</td><td>852</td><td><span class="badge b-low">71% ⛔</span></td><td><span class="badge b-high">76% <span style="font-size:.73em;color:#aaa">(+3%)</span></span></td><td><span class="badge b-high">2.65 <span style="font-size:.73em;color:#aaa">(+0.03)</span></span></td><td><span class="badge b-high">12.7% <span style="font-size:.73em;color:#aaa">(-0.0%)</span></span></td><td><span class="badge b-high">10.79 <span style="font-size:.73em;color:#aaa">(+0.85)</span></span></td><td>54.9%</td><td>60%</td><td><span class="badge b-low">15</span></td><td></td></tr><tr><td>50</td><td>655</td><td><span class="badge b-low">54% ❌ رفض</span></td><td><span class="badge b-high">87% <span style="font-size:.73em;color:#aaa">(+13%)</span></span></td><td><span class="badge b-high">2.92 <span style="font-size:.73em;color:#aaa">(+0.31)</span></span></td><td><span class="badge b-high">13.0% <span style="font-size:.73em;color:#aaa">(+0.3%)</span></span></td><td><span class="badge b-high">12.72 <span style="font-size:.73em;color:#aaa">(+2.78)</span></span></td><td>33.6%</td><td>61%</td><td><span class="badge b-low">10</span></td><td></td></tr><tr><td>55</td><td>528</td><td><span class="badge b-low">44% ❌ رفض</span></td><td><span class="badge b-high">88% <span style="font-size:.73em;color:#aaa">(+15%)</span></span></td><td><span class="badge b-high">3.01 <span style="font-size:.73em;color:#aaa">(+0.39)</span></span></td><td><span class="badge b-high">13.1% <span style="font-size:.73em;color:#aaa">(+0.4%)</span></span></td><td><span class="badge b-high">13.20 <span style="font-size:.73em;color:#aaa">(+3.27)</span></span></td><td>33.6%</td><td>62%</td><td><span class="badge b-low">10</span></td><td></td></tr><tr><td>60</td><td>401</td><td><span class="badge b-low">33% ❌ رفض</span></td><td><span class="badge b-high">95% <span style="font-size:.73em;color:#aaa">(+22%)</span></span></td><td><span class="badge b-high">3.20 <span style="font-size:.73em;color:#aaa">(+0.59)</span></span></td><td><span class="badge b-high">13.2% <span style="font-size:.73em;color:#aaa">(+0.5%)</span></span></td><td><span class="badge b-high">14.55 <span style="font-size:.73em;color:#aaa">(+4.62)</span></span></td><td>27.3%</td><td>62%</td><td><span class="badge b-low">4</span></td><td> ❌ رفض (Retention<70%)</td></tr><tr><td>65</td><td>314</td><td><span class="badge b-low">26% ❌ رفض</span></td><td><span class="badge b-high">96% <span style="font-size:.73em;color:#aaa">(+23%)</span></span></td><td><span class="badge b-high">3.13 <span style="font-size:.73em;color:#aaa">(+0.52)</span></span></td><td><span class="badge b-high">13.0% <span style="font-size:.73em;color:#aaa">(+0.3%)</span></span></td><td><span class="badge b-high">14.96 <span style="font-size:.73em;color:#aaa">(+5.02)</span></span></td><td>27.3%</td><td>61%</td><td><span class="badge b-low">4</span></td><td> ❌ رفض (Retention<70%)</td></tr><tr><td>70</td><td>163</td><td><span class="badge b-low">14% ❌ رفض</span></td><td><span class="badge b-high">77% <span style="font-size:.73em;color:#aaa">(+3%)</span></span></td><td><span class="badge b-high">2.63 <span style="font-size:.73em;color:#aaa">(+0.02)</span></span></td><td><span class="badge b-high">12.4% <span style="font-size:.73em;color:#aaa">(-0.3%)</span></span></td><td><span class="badge b-high">11.72 <span style="font-size:.73em;color:#aaa">(+1.78)</span></span></td><td>26.9%</td><td>60%</td><td><span class="badge b-low">3</span></td><td> ❌ رفض (Retention<70%)</td></tr></tbody></table></div>
+</div>
+<div class="section">
+  <h2>المرحلة 5: اكتشاف الحافة <span class="phase-badge">Edge Discovery</span></h2>
+  
+<div style="background:#1a3c5e;color:#fff;border-radius:6px;padding:10px 16px;
+            margin:10px 0;font-size:.85em;line-height:1.7">
+  <strong>⚖ ترتيب التقييم:</strong>
+  CAGR → Profit Factor → Avg MFE → Calmar → Max DD → Win Rate
+  <span style="opacity:.7;margin-right:12px">|</span>
+  Win Rate مقياس مهم لكنه ليس الأول — النظام يحقق عوائده من رابحين قلائل كبار،
+  لذا CAGR وProfit Factor يُقيّمان حجم العائد الكلي بدقة أكبر.
+</div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="val">73%</div><div class="lbl">CAGR قاعدي</div></div>
+    <div class="kpi"><div class="val">12.7%</div><div class="lbl">Avg MFE قاعدي</div></div>
+    <div class="kpi"><div class="val">1204</div><div class="lbl">إجمالي الإشارات</div></div>
+    <div class="kpi"><div class="val">20</div><div class="lbl">حافة ذات دلالة</div></div>
+  </div>
+  <p style="font-size:.84em;color:#555">
+    مرتَّب: CAGR Lift ← ثم Avg MFE. فلترة: p ≤ 0.25 و N ≥ 8.
+    <strong>Retention</strong>: نسبة الإشارات التي تُحقق هذا الشرط — الحافات ذات الاحتفاظ العالي أكثر عملية.
+    <strong>OPT Score</strong>: درجة مركّبة تُعاقِب الاحتفاظ المنخفض.
+  </p>
+  <div class="tbl-wrap"><table><thead><tr><th>التركيبة</th><th>نوع</th><th>N</th><th>Retention</th><th>CAGR Lift</th><th>PF</th><th>Avg MFE</th><th>Calmar</th><th>p-val</th><th>Win Rate</th><th>OPT</th></tr></thead><tbody><tr><td>r4 HTF + r8 منطقة الطلب + r3 السيولة</td><td>ثلاثي</td><td>281</td><td><span class="badge b-low">23% ❌ رفض</span></td><td>1.56×</td><td>4.07</td><td>14.3%</td><td>17.57</td><td>0.005</td><td>67%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r3 السيولة + r8 منطقة الطلب + r4 HTF</td><td>ثلاثي</td><td>281</td><td><span class="badge b-low">23% ❌ رفض</span></td><td>1.56×</td><td>4.07</td><td>14.3%</td><td>17.57</td><td>0.005</td><td>67%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r3 السيولة + r4 HTF + r8 منطقة الطلب</td><td>ثلاثي</td><td>281</td><td><span class="badge b-low">23% ❌ رفض</span></td><td>1.56×</td><td>4.07</td><td>14.3%</td><td>17.57</td><td>0.005</td><td>67%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r3 السيولة + r8 منطقة الطلب + r6 MACD</td><td>ثلاثي</td><td>372</td><td><span class="badge b-low">31% ❌ رفض</span></td><td>1.42×</td><td>3.69</td><td>13.9%</td><td>15.56</td><td>0.017</td><td>65%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r3 السيولة + r4 HTF + r6 MACD</td><td>ثلاثي</td><td>388</td><td><span class="badge b-low">32% ❌ رفض</span></td><td>1.42×</td><td>3.70</td><td>13.7%</td><td>15.37</td><td>0.038</td><td>63%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r3 السيولة + r4 HTF</td><td>زوجي</td><td>406</td><td><span class="badge b-low">34% ❌ رفض</span></td><td>1.35×</td><td>3.49</td><td>13.6%</td><td>14.72</td><td>0.050</td><td>63%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r3 السيولة + r4 HTF + r2 Order Block</td><td>ثلاثي</td><td>406</td><td><span class="badge b-low">34% ❌ رفض</span></td><td>1.35×</td><td>3.49</td><td>13.6%</td><td>14.72</td><td>0.050</td><td>63%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r3 السيولة + r4 HTF + r7 Divergence</td><td>ثلاثي</td><td>406</td><td><span class="badge b-low">34% ❌ رفض</span></td><td>1.35×</td><td>3.49</td><td>13.6%</td><td>14.72</td><td>0.050</td><td>63%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r3 السيولة + r8 منطقة الطلب</td><td>زوجي</td><td>383</td><td><span class="badge b-low">32% ❌ رفض</span></td><td>1.35×</td><td>3.54</td><td>13.7%</td><td>14.83</td><td>0.031</td><td>65%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r3 السيولة + r8 منطقة الطلب + r2 Order Block</td><td>ثلاثي</td><td>383</td><td><span class="badge b-low">32% ❌ رفض</span></td><td>1.35×</td><td>3.54</td><td>13.7%</td><td>14.83</td><td>0.031</td><td>65%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r3 السيولة + r8 منطقة الطلب + r7 Divergence</td><td>ثلاثي</td><td>383</td><td><span class="badge b-low">32% ❌ رفض</span></td><td>1.35×</td><td>3.54</td><td>13.7%</td><td>14.83</td><td>0.031</td><td>65%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r3 السيولة + r8 منطقة الطلب + r5 AVWAP</td><td>ثلاثي</td><td>261</td><td><span class="badge b-low">22% ❌ رفض</span></td><td>1.35×</td><td>3.99</td><td>13.7%</td><td>14.85</td><td>0.111</td><td>64%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r5 AVWAP + r8 منطقة الطلب + r3 السيولة</td><td>ثلاثي</td><td>261</td><td><span class="badge b-low">22% ❌ رفض</span></td><td>1.35×</td><td>3.99</td><td>13.7%</td><td>14.85</td><td>0.111</td><td>64%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r3 السيولة + r4 HTF + r5 AVWAP</td><td>ثلاثي</td><td>308</td><td><span class="badge b-low">26% ❌ رفض</span></td><td>1.31×</td><td>3.60</td><td>13.5%</td><td>14.24</td><td>0.141</td><td>63%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r4 HTF + r8 منطقة الطلب</td><td>زوجي</td><td>496</td><td><span class="badge b-low">41% ❌ رفض</span></td><td>1.18×</td><td>2.92</td><td>13.9%</td><td>11.62</td><td>0.005</td><td>61%</td><td><span class="badge b-low">9</span></td></tr><tr><td>r4 HTF + r8 منطقة الطلب + r2 Order Block</td><td>ثلاثي</td><td>496</td><td><span class="badge b-low">41% ❌ رفض</span></td><td>1.18×</td><td>2.92</td><td>13.9%</td><td>11.62</td><td>0.005</td><td>61%</td><td><span class="badge b-low">9</span></td></tr><tr><td>r4 HTF + r8 منطقة الطلب + r7 Divergence</td><td>ثلاثي</td><td>496</td><td><span class="badge b-low">41% ❌ رفض</span></td><td>1.18×</td><td>2.92</td><td>13.9%</td><td>11.62</td><td>0.005</td><td>61%</td><td><span class="badge b-low">9</span></td></tr><tr><td>r4 HTF + r8 منطقة الطلب + r6 MACD</td><td>ثلاثي</td><td>465</td><td><span class="badge b-low">39% ❌ رفض</span></td><td>1.17×</td><td>2.90</td><td>13.5%</td><td>11.34</td><td>0.058</td><td>61%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r4 HTF + r8 منطقة الطلب + r5 AVWAP</td><td>ثلاثي</td><td>370</td><td><span class="badge b-low">31% ❌ رفض</span></td><td>1.12×</td><td>2.92</td><td>13.7%</td><td>10.64</td><td>0.050</td><td>61%</td><td><span class="badge b-low">4</span></td></tr><tr><td>r5 AVWAP + r8 منطقة الطلب + r4 HTF</td><td>ثلاثي</td><td>370</td><td><span class="badge b-low">31% ❌ رفض</span></td><td>1.12×</td><td>2.92</td><td>13.7%</td><td>10.64</td><td>0.050</td><td>61%</td><td><span class="badge b-low">4</span></td></tr></tbody></table></div>
+</div>
+<div class="section">
+  <h2>المرحلة 6: ملامح التجميع <span class="phase-badge">Cluster Profiles</span></h2>
+  
+<div style="background:#1a3c5e;color:#fff;border-radius:6px;padding:10px 16px;
+            margin:10px 0;font-size:.85em;line-height:1.7">
+  <strong>⚖ ترتيب التقييم:</strong>
+  CAGR → Profit Factor → Avg MFE → Calmar → Max DD → Win Rate
+  <span style="opacity:.7;margin-right:12px">|</span>
+  Win Rate مقياس مهم لكنه ليس الأول — النظام يحقق عوائده من رابحين قلائل كبار،
+  لذا CAGR وProfit Factor يُقيّمان حجم العائد الكلي بدقة أكبر.
+</div>
+  <p style="font-size:.85em;color:#555">
+    KMeans (k=3) — مرتَّب حسب CAGR تنازلياً.
+    Win Rate مُدرَج كمقياس كامل — الترتيب يبدأ من CAGR.
+  </p>
+  <div class="tbl-wrap"><table><thead><tr><th>المجموعة</th><th>N</th><th>CAGR</th><th>Profit Factor</th><th>Avg MFE</th><th>Calmar</th><th>Max DD</th><th>Win Rate</th><th>أقوى مكوّن</th></tr></thead><tbody><tr><td>قاع قوي 🟢</td><td>712</td><td><span class="badge b-high">81%</span></td><td><span class="badge b-high">2.94</span></td><td><span class="badge b-high">13.2%</span></td><td><span class="badge b-high">10.92</span></td><td>54.9%</td><td>60%</td><td>r1 السعر</td></tr><tr><td>متوسط 🟡</td><td>316</td><td><span class="badge b-high">75%</span></td><td><span class="badge b-high">2.49</span></td><td><span class="badge b-high">12.6%</span></td><td><span class="badge b-high">10.78</span></td><td>25.5%</td><td>57%</td><td>r6 MACD</td></tr><tr><td>ضعيف 🔴</td><td>176</td><td><span class="badge b-high">40%</span></td><td><span class="badge b-high">1.82</span></td><td><span class="badge b-med">11.2%</span></td><td><span class="badge b-high">5.23</span></td><td>33.6%</td><td>57%</td><td>r1 السعر</td></tr></tbody></table></div>
+  <h3 style="color:#1a3c5e;margin:14px 0 6px">متوسط المكونات لكل مجموعة</h3>
+  <div class="tbl-wrap"><table><thead><tr><th>المجموعة</th><th>r1 السعر</th><th>r2 Order Block</th><th>r3 السيولة</th><th>r4 HTF</th><th>r5 AVWAP</th><th>r6 MACD</th><th>r7 Divergence</th><th>r8 منطقة الطلب</th></tr></thead><tbody><tr><td>قاع قوي 🟢</td><td>19.3</td><td>0.0</td><td>13.1</td><td>3.4</td><td>7.3</td><td>2.2</td><td>0.6</td><td>4.7</td></tr><tr><td>متوسط 🟡</td><td>3.0</td><td>0.2</td><td>2.7</td><td>0.5</td><td>0.9</td><td>6.3</td><td>0.4</td><td>0.9</td></tr><tr><td>ضعيف 🔴</td><td>18.2</td><td>6.8</td><td>10.5</td><td>2.3</td><td>4.1</td><td>2.3</td><td>0.8</td><td>4.4</td></tr></tbody></table></div>
+</div>
+<div class="section">
+  <h2>المرحلة 7: الملخص النهائي <span class="phase-badge">Final Summary</span></h2>
+  
+<div style="background:#1a3c5e;color:#fff;border-radius:6px;padding:10px 16px;
+            margin:10px 0;font-size:.85em;line-height:1.7">
+  <strong>⚖ ترتيب التقييم:</strong>
+  CAGR → Profit Factor → Avg MFE → Calmar → Max DD → Win Rate
+  <span style="opacity:.7;margin-right:12px">|</span>
+  Win Rate مقياس مهم لكنه ليس الأول — النظام يحقق عوائده من رابحين قلائل كبار،
+  لذا CAGR وProfit Factor يُقيّمان حجم العائد الكلي بدقة أكبر.
+</div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="val"><span class="badge b-high">جيدة</span></div><div class="lbl">جودة البيانات</div></div>
+    <div class="kpi"><div class="val">1204</div><div class="lbl">إشارات ناضجة</div></div>
+    <div class="kpi"><div class="val">73%</div><div class="lbl">CAGR الكلي</div></div>
+    <div class="kpi"><div class="val">2.61</div><div class="lbl">Profit Factor</div></div>
+    <div class="kpi"><div class="val">12.7%</div><div class="lbl">Avg MFE</div></div>
+    <div class="kpi"><div class="val">9.94</div><div class="lbl">Calmar Ratio</div></div>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="val">54.9%</div><div class="lbl">Max DD</div></div>
+    <div class="kpi"><div class="val">59%</div><div class="lbl">Win Rate</div></div>
+  </div>
+  <div class="rec-box">
+    <h3>أقوى المكونات (CAGR/PF/MFE)</h3>
+    <ul style="margin:4px 0;padding-right:18px"><li><strong>r4 HTF</strong> — درجة 22/100</li><li><strong>r3 السيولة</strong> — درجة 20/100</li><li><strong>r6 MACD</strong> — درجة 13/100</li></ul>
+  </div>
+  <div class="rec-box">
+    <h3>المكونات الأضعف تنبؤياً</h3>
+    <ul style="margin:4px 0;padding-right:18px"><li><strong>r7 Divergence</strong> — درجة 0/100</li><li><strong>r2 Order Block</strong> — درجة 0/100</li><li><strong>r5 AVWAP</strong> — درجة 2/100</li></ul>
+  </div>
+  <div class="rec-box">
+    <h3>توصيات البحث</h3>
+    <ul style="margin:4px 0;padding-right:18px"><li>مكونات ذات ارتباط ضعيف بـ CAGR/MFE: r1 السعر, r2 Order Block, r3 السيولة</li></ul>
+  </div>
+  <div class="warn">✓ حجم العينة كافٍ للتحليل الموثوق</div>
+  <div class="frozen-note">
+    ⚙ جميع التوصيات بحثية — منطق الدخول والأوزان والعتبات مجمّدة في النظام الفعلي
+  </div>
+</div>
+</div>
+</body>
+</html>

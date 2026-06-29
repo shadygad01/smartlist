@@ -49,6 +49,31 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
+      - name: Seed valuation database (fallback when valuation_refresh has not run)
+        run: |
+          python3 - <<'PYEOF'
+          # valuation.db is committed to main by valuation_refresh.yml (weekly).
+          # When it is absent (fresh checkout before first valuation run), seed it
+          # with entry-price-derived estimates so fair value cards are never empty.
+          import sqlite3
+          from pathlib import Path
+          db = Path('valuation.db')
+          has_data = False
+          if db.exists():
+              try:
+                  conn = sqlite3.connect(str(db))
+                  has_data = conn.execute('SELECT COUNT(*) FROM valuation_models').fetchone()[0] > 0
+                  conn.close()
+              except Exception:
+                  pass
+          if not has_data:
+              print('[CI] valuation.db absent or empty — seeding with entry-price estimates')
+              import valuation.seed_universe as _su
+              _su.run()
+          else:
+              print(f'[CI] valuation.db present with data — skipping seed')
+          PYEOF
+
       - name: Rebuild presentation snapshot
         run: |
           python3 - <<'PYEOF'

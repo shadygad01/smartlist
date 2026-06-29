@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Static export for GitHub Pages deployment.
-  // The app fetches presentation_snapshot.json at runtime from the same origin.
   output: 'export',
+  // GitHub Pages serves at /smartlist/ — all assets must be prefixed.
+  basePath: '/smartlist',
+  assetPrefix: '/smartlist',
   trailingSlash: true,
   typescript: {
     ignoreBuildErrors: true,
@@ -11,7 +12,6 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    // Required for static export — no server-side image optimization.
     unoptimized: true,
   },
 };

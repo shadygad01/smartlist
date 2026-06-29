@@ -85,7 +85,8 @@ jobs:
         run: npm run build
         env:
           # Fetch presentation_snapshot.json from same origin at runtime
-          NEXT_PUBLIC_SNAPSHOT_URL: /presentation_snapshot.json
+          # basePath is /smartlist — snapshot must be fetched relative to that path
+          NEXT_PUBLIC_SNAPSHOT_URL: /smartlist/presentation_snapshot.json
 
       # ── Deploy ────────────────────────────────────────────────────────────
       - name: Prepare web deploy

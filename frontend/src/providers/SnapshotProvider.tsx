@@ -3,11 +3,12 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { ProductionSnapshot } from '@/types/snapshot';
 
-// In production (GitHub Pages): fetches /presentation_snapshot.json from same origin.
-// In development: override with NEXT_PUBLIC_SNAPSHOT_URL=/api/snapshot
-// or copy presentation_snapshot.json to frontend/public/ for direct file serving.
+// Static file is served under basePath (/smartlist) on GitHub Pages and dev server.
+// Construct the correct path by reading the basePath from env (set in next.config.mjs).
+// Override entirely with NEXT_PUBLIC_SNAPSHOT_URL for custom deployments.
+const _basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const SNAPSHOT_URL =
-  process.env.NEXT_PUBLIC_SNAPSHOT_URL ?? '/presentation_snapshot.json';
+  process.env.NEXT_PUBLIC_SNAPSHOT_URL ?? `${_basePath}/presentation_snapshot.json`;
 
 const REFRESH_INTERVAL_MS = 60_000;
 

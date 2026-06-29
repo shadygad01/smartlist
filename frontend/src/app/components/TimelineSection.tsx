@@ -52,7 +52,7 @@ function EventRow({ evt }: { evt: TimelineEvent }) {
 
 export default function TimelineSection() {
   const { snapshot, loading } = useSnapshot();
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
 
   const events: TimelineEvent[] = snapshot?.timeline ?? [];
   const totalEvents = snapshot?.statistics?.total_timeline_events ?? 0;

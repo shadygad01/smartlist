@@ -10,6 +10,7 @@ import StockDNASection from './components/StockDNASection';
 import WatchlistSection from './components/WatchlistSection';
 import FutureCandidatesSection from './components/FutureCandidatesSection';
 import DiagnosticsSection from './components/DiagnosticsSection';
+import ValuationSection from './components/ValuationSection';
 import ToastProvider from './components/ToastProvider';
 
 function Divider({ label }: { label: string }) {
@@ -85,7 +86,14 @@ export default function EGXCommandCenter() {
           <FutureCandidatesSection />
         </div>
 
-        {/* ── TIER 6: Diagnostics ───────────────────────────────────────────── */}
+        {/* ── TIER 6: Institutional Valuation Engine ────────────────────────── */}
+        <Divider label="INSTITUTIONAL VALUATION ENGINE" />
+
+        <div className="mt-4">
+          <ValuationSection />
+        </div>
+
+        {/* ── TIER 7: Diagnostics ───────────────────────────────────────────── */}
         <Divider label="ANALYSIS & DIAGNOSTICS" />
 
         <div className="mt-4">

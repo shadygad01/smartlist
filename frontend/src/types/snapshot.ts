@@ -156,6 +156,24 @@ export interface ValuationCard {
   last_stmt_year: number | null;
 }
 
+export interface EventTimelineItem {
+  id: number;
+  event_type: 'BUY_SIGNAL' | 'NEAR_ENTRY' | 'SCAN' | 'VOL_SPIKE' | 'SYSTEM';
+  ticker: string;
+  badge: string;
+  description: string;
+  icon: string;
+  timestamp: string;
+  metadata: string; // JSON string
+}
+
+export interface EventTimelineEngine {
+  last_event_ts: string | null;
+  total_events: number;
+  db_path?: string;
+  error?: string;
+}
+
 export interface ProductionSnapshot {
   scan_id: string;
   generated_at: string;
@@ -184,4 +202,6 @@ export interface ProductionSnapshot {
   health_narrative: string;
   research_insights: ResearchInsight[];
   knowledge_count: number;
+  event_timeline: EventTimelineItem[];
+  event_timeline_engine: EventTimelineEngine;
 }

@@ -9,6 +9,7 @@ import TimelineSection from './components/TimelineSection';
 import StockDNASection from './components/StockDNASection';
 import WatchlistSection from './components/WatchlistSection';
 import FutureCandidatesSection from './components/FutureCandidatesSection';
+import EventTimelineSection from './components/EventTimelineSection';
 import ToastProvider from './components/ToastProvider';
 
 function Divider({ label }: { label: string }) {
@@ -48,6 +49,13 @@ export default function EGXCommandCenter() {
           <div className="xl:col-span-1">
             <NearEntrySection />
           </div>
+        </div>
+
+        {/* ── EVENT TIMELINE (separate engine + DB) ─────────────────────────── */}
+        <Divider label="EVENT TIMELINE" />
+
+        <div className="mt-4">
+          <EventTimelineSection />
         </div>
 
         {/* ── TIER 3: Constitutional Timeline ───────────────────────────────── */}

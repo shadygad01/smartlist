@@ -66,8 +66,10 @@ def build_stock_dna() -> None:
             avg_entry = mean(prices) if prices else 0.0
             avg_ret   = mean(returns) if returns else 0.0
             best_ret  = max(returns) if returns else 0.0
+            worst_ret = min(returns) if returns else 0.0
             zone_low  = min(prices) if prices else 0.0
             zone_high = max(prices) if prices else 0.0
+            last_event_date = events[-1]["event_date"]
 
             buy_count = len(buys)
             re_count  = len(re_acc)
@@ -94,10 +96,12 @@ def build_stock_dna() -> None:
                 round(current_price, 4),
                 round(avg_ret, 4),
                 round(best_ret, 4),
+                round(worst_ret, 4),
                 round(zone_low, 4),
                 round(zone_high, 4),
                 constitutional_memory_hits,
                 confidence,
+                last_event_date,
                 now_str,
             ))
         else:
@@ -114,10 +118,12 @@ def build_stock_dna() -> None:
                 current_price,  # current_price
                 0.0,            # avg_return_pct
                 0.0,            # best_return_pct
+                0.0,            # worst_return_pct
                 entry_price,    # historical_buy_zone_low
                 entry_price,    # historical_buy_zone_high
                 0,              # constitutional_memory_hits
                 "MONITORING",   # constitutional_memory_confidence
+                None,           # last_event_date
                 now_str,
             ))
 
@@ -133,15 +139,17 @@ def build_stock_dna() -> None:
             current_price REAL,
             avg_return_pct REAL,
             best_return_pct REAL,
+            worst_return_pct REAL,
             historical_buy_zone_low REAL,
             historical_buy_zone_high REAL,
             constitutional_memory_hits INTEGER,
             constitutional_memory_confidence TEXT,
+            last_event_date TEXT,
             last_updated TEXT
         )
     """)
     conn.executemany(
-        "INSERT OR REPLACE INTO stock_dna VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT OR REPLACE INTO stock_dna VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         dna_rows
     )
     conn.commit()

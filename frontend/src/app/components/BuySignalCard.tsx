@@ -5,7 +5,7 @@ import { TrendingUp, Copy, CheckCircle, Clock, Zap, Activity } from 'lucide-reac
 import { toast } from 'sonner';
 import R2ProgressBar from './R2ProgressBar';
 import { useSnapshot } from '@/providers/SnapshotProvider';
-import type { UniverseItem, MPIBehavior } from '@/types/snapshot';
+import type { UniverseItem, MPIBehavior, StockDNA } from '@/types/snapshot';
 
 // BUY-ready classification comes from the production snapshot field verbatim.
 // The frontend never evaluates r2, score, or gate conditions itself.
@@ -67,7 +67,70 @@ function BehaviorPhaseBlock({ mpi }: { mpi: MPIBehavior }) {
   );
 }
 
-function BuyCard({ signal, mpi }: { signal: UniverseItem; mpi?: MPIBehavior }) {
+function SeenBeforePanel({ dna, mpi }: { dna: StockDNA; mpi?: MPIBehavior }) {
+  const confColor: Record<string, string> = {
+    STRONG: '#10b981', CONFIRMED: '#50d8d0', DEVELOPING: '#f0b840', MONITORING: '#8b8fa8',
+  };
+  const color = confColor[dna.constitutional_memory_confidence] ?? '#8b8fa8';
+  const totalEvents = dna.buy_count + dna.re_accum_count;
+
+  return (
+    <div
+      className="px-5 py-3 flex flex-col gap-2"
+      style={{ borderTop: '1px solid rgba(255,255,255,0.06)', backgroundColor: 'rgba(0,0,0,0.15)' }}
+    >
+      <div className="flex items-center gap-2 mb-0.5">
+        <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8', letterSpacing: '0.07em' }}>SEEN BEFORE</span>
+        <span
+          className="font-mono font-bold px-2 py-0.5 rounded"
+          style={{ fontSize: '10px', color, backgroundColor: `${color}18`, border: `1px solid ${color}44` }}
+        >
+          {dna.constitutional_memory_hits}× &nbsp;{dna.constitutional_memory_confidence}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div>
+          <p className="font-mono" style={{ fontSize: '8px', color: '#8b8fa8', letterSpacing: '0.07em', marginBottom: '2px' }}>HISTORICAL EXPECTANCY</p>
+          <p className="font-mono font-bold tabular-nums" style={{ fontSize: '13px', color: '#10b981' }}>
+            {dna.avg_return_pct > 0 ? '+' : ''}{dna.avg_return_pct.toFixed(1)}%
+          </p>
+          <p className="font-mono" style={{ fontSize: '8px', color: '#8b8fa8' }}>{totalEvents} event{totalEvents !== 1 ? 's' : ''}</p>
+        </div>
+        <div>
+          <p className="font-mono" style={{ fontSize: '8px', color: '#8b8fa8', letterSpacing: '0.07em', marginBottom: '2px' }}>AVG MFE40</p>
+          <p className="font-mono font-bold tabular-nums" style={{ fontSize: '13px', color: '#50d8d0' }}>
+            {mpi && mpi.avg_mfe40 != null ? `+${mpi.avg_mfe40.toFixed(0)}%` : '—'}
+          </p>
+          {mpi && mpi.historical_cases > 0 && (
+            <p className="font-mono" style={{ fontSize: '8px', color: '#8b8fa8' }}>{mpi.historical_cases} analogs</p>
+          )}
+        </div>
+        <div>
+          <p className="font-mono" style={{ fontSize: '8px', color: '#8b8fa8', letterSpacing: '0.07em', marginBottom: '2px' }}>BEST / WORST</p>
+          <p className="font-mono font-bold tabular-nums" style={{ fontSize: '13px', color: '#10b981' }}>
+            +{dna.best_return_pct.toFixed(1)}%
+          </p>
+          <p className="font-mono tabular-nums" style={{ fontSize: '10px', color: '#f44336' }}>
+            {dna.worst_return_pct != null && dna.worst_return_pct < 0
+              ? `${dna.worst_return_pct.toFixed(1)}%`
+              : dna.worst_return_pct != null
+              ? `+${dna.worst_return_pct.toFixed(1)}%`
+              : '—'}
+          </p>
+        </div>
+        <div>
+          <p className="font-mono" style={{ fontSize: '8px', color: '#8b8fa8', letterSpacing: '0.07em', marginBottom: '2px' }}>LAST SIGNAL</p>
+          <p className="font-mono font-bold tabular-nums" style={{ fontSize: '12px', color: '#8b8fa8' }}>
+            {dna.last_event_date ?? dna.first_buy_date ?? '—'}
+          </p>
+          <p className="font-mono" style={{ fontSize: '8px', color: '#8b8fa8' }}>First: {dna.first_buy_date ?? '—'}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BuyCard({ signal, mpi, dna }: { signal: UniverseItem; mpi?: MPIBehavior; dna?: StockDNA }) {
   return (
     <div className="rounded-xl glow-buy animate-fade-in-up" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--signal-buy-border)' }}>
       <div
@@ -130,6 +193,10 @@ function BuyCard({ signal, mpi }: { signal: UniverseItem; mpi?: MPIBehavior }) {
 
       {mpi && <BehaviorPhaseBlock mpi={mpi} />}
 
+      {dna && dna.constitutional_memory_hits > 0 && (
+        <SeenBeforePanel dna={dna} mpi={mpi} />
+      )}
+
       <div className="px-5 py-3 rounded-b-xl flex items-center gap-2" style={{ backgroundColor: 'rgba(16,185,129,0.04)', borderTop: '1px solid rgba(16,185,129,0.12)' }}>
         <Zap size={11} style={{ color: 'var(--signal-buy)', flexShrink: 0 }} />
         <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>{signal.waiting_for_reason}</span>
@@ -170,13 +237,14 @@ export default function BuySignalCard() {
 
   const buySignals = snapshot.universe_snapshot.filter(isBuyReady);
   const mpiMap = snapshot.mpi_behavior ?? {};
+  const dnaMap = snapshot.stock_dna ?? {};
 
   if (buySignals.length === 0) return <NoBuyState scanId={snapshot.scan_id} />;
 
   return (
     <div className="flex flex-col gap-4">
       {buySignals.map((signal) => (
-        <BuyCard key={signal.ticker} signal={signal} mpi={mpiMap[signal.ticker]} />
+        <BuyCard key={signal.ticker} signal={signal} mpi={mpiMap[signal.ticker]} dna={dnaMap[signal.ticker]} />
       ))}
     </div>
   );

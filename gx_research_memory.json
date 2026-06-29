@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "created_at": "2026-06-14T03:30:17.870233+00:00",
-  "last_updated": "2026-06-28T18:56:52.439537+00:00",
+  "last_updated": "2026-06-29T04:52:06.320756+00:00",
   "research_items": {
     "RI-PRICE-INV": {
       "id": "RI-PRICE-INV",
@@ -11,7 +11,7 @@
       "finding": "Current linear scoring rewards the wrong range. delta_r20d when r1>0: +0.59%.",
       "source_report": "logic_analyzer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Open",
@@ -178,7 +178,7 @@
       "finding": "r2_ob>0 signals underperform (delta_r20d=-1.4%). 3 modules agree, but WF folds inconsistent — System Audit verdict: OVERFITTED.",
       "source_report": "logic_analyzer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Investigating",
@@ -345,7 +345,7 @@
       "finding": "Full HH+HL confirmation currently scores highest but returns -0.8%. HL-only returns +11.6%. System Audit WF-consistent.",
       "source_report": "logic_analyzer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
@@ -496,7 +496,7 @@
       "finding": "SV+HVN together is the worst demand outcome. HVN-only is the best. The scoring function is rewarding the wrong combination.",
       "source_report": "logic_analyzer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Investigating",
@@ -647,7 +647,7 @@
       "finding": "Wick rejection is the weakest liquidity sub-signal. Reducing its multiplier from 0.6 to 0.15 frees weight for equal-lows.",
       "source_report": "logic_analyzer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "MEDIUM",
       "evidence_strength": "LOW",
       "current_status": "Open",
@@ -798,7 +798,7 @@
       "finding": "rsi_div=1 signals underperform. r7_div combines RSI+MACD div — RSI drag cancels MACD edge. Need to separate them.",
       "source_report": "logic_analyzer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Open",
@@ -949,7 +949,7 @@
       "finding": "Three independent methods converge on reducing r6_macd. Only weight change currently with HIGH evidence.",
       "source_report": "weight_optimizer",
       "date_discovered": "2026-06-13",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "HIGH",
       "evidence_strength": "HIGH",
       "current_status": "Awaiting Validation",
@@ -1101,7 +1101,7 @@
       "finding": "Three methods agree: reduce AVWAP weight. Positive delta when present but modest. Consensus around 4-6.",
       "source_report": "weight_optimizer",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
@@ -1154,7 +1154,7 @@
       "finding": "Retains 43% of signals, win_rate=68.4%, expected return +0.9% vs baseline. Highest optimizer confidence.",
       "source_report": "weight_optimizer",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
@@ -1185,7 +1185,7 @@
       "finding": "Score gate >=55: IS +1.75% but OOS -4.52%. Gate >=60: IS +1.06%, OOS OVERFITTED. Both confirmed overfitted.",
       "source_report": "system_audit",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "LOW",
       "evidence_strength": "HIGH",
       "current_status": "Rejected",
@@ -1217,7 +1217,7 @@
       "finding": "ML rebalance to Liq=28, Div=26, Demand=21, Price=12. OOS improvement=-0.000039 ≈ zero. Conflicts with RL and WF.",
       "source_report": "weight_optimizer",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "LOW",
       "evidence_strength": "LOW",
       "current_status": "Investigating",
@@ -1395,7 +1395,7 @@
       "finding": "sweep=1 signals: IS diff=+0.013, OOS=+0.077, WF consistent=True. Folds=[0.0523, -0.0069, 0.0126, 0.0789].",
       "source_report": "system_audit",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
@@ -1411,8 +1411,8 @@
         "oos_diff": 0.0807,
         "wf_folds": [
           0.0428,
-          -0.0014,
-          0.014,
+          -0.0018,
+          0.0136,
           0.0829
         ]
       },
@@ -2149,6 +2149,13 @@
           "fields": [
             "evidence_data"
           ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -2160,7 +2167,7 @@
       "finding": "HVN hit outperforms. WF consistent=True, OOS diff=+0.090. Folds=[0.0243, -0.0126, 0.0062, 0.0913].",
       "source_report": "system_audit",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "HIGH",
       "evidence_strength": "HIGH",
       "current_status": "Awaiting Validation",
@@ -2176,7 +2183,7 @@
         "verdict": "CONFIRMED",
         "oos_diff": 0.0917,
         "wf_folds": [
-          0.0144,
+          0.0178,
           -0.0265,
           0.0056,
           0.0931
@@ -2509,6 +2516,13 @@
           "fields": [
             "evidence_data"
           ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -2520,7 +2534,7 @@
       "finding": "Current additive weighted sum has OOS R²=-0.15 (negative!). Architecture is not predicting returns. Recommendation: mandatory gate (sweep=1 + r1≥gate) × quality bonus. Non-linear with minimum viable conditions outperforms additive sum.",
       "source_report": "system_audit",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "CRITICAL",
       "evidence_strength": "HIGH",
       "current_status": "Investigating",
@@ -2550,7 +2564,7 @@
       "finding": "Fix HTF scoring inversion: HH+HL currently scores highest but returns -0.8%. HL-only returns +11.6%. A single logic fix (swap full/partial scoring) could shift system performance significantly.",
       "source_report": "system_audit",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "HIGH",
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
@@ -2580,12 +2594,12 @@
       "finding": "delta_ret=+0.026 when hvn_hit=1 AND htf_hh=1. WF-consistent=True. Only 8.5% of signals qualify. GX memory flags as overfitted.",
       "source_report": "adaptive_learning",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
       "next_required_action": "Need 6+ months forward data (n≥150) before promoting. Do not apply to main scanner.",
-      "estimated_impact": 0.0224,
+      "estimated_impact": 0.0242,
       "supporting_modules": [
         "adaptive_learning"
       ],
@@ -3210,6 +3224,13 @@
           "fields": [
             "estimated_impact"
           ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
         }
       ]
     },
@@ -3221,7 +3242,7 @@
       "finding": "After 40 epochs on 395 signals: top-Q avg=17.26% vs bot-Q avg=21.48%. Loss=0.2386 converging but model is inversely predictive.",
       "source_report": "smc_rl",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "CRITICAL",
       "evidence_strength": "HIGH",
       "current_status": "Investigating",
@@ -3309,7 +3330,7 @@
       "finding": "865 trades, equity grew to 2427x. But weights barely moved from original (max drift 27.7%). WF is not encoding structural fixes (HTF inversion, OB removal).",
       "source_report": "walk_forward",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Investigating",
@@ -3548,7 +3569,7 @@
       "finding": "RF R²=-1.225, GBM R²=-0.021, XGBoost R²=-0.012. AUC=0.506 (near random). High-confidence prob model hits 72% precision but only on tiny subset.",
       "source_report": "research_quant",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "CRITICAL",
       "evidence_strength": "HIGH",
       "current_status": "Investigating",
@@ -3847,7 +3868,7 @@
       "finding": "macd_div=1: n=74, PF=3.82, WR=44.6%, mean=0.060. RSI div is negative — must be separated before increasing r7_div.",
       "source_report": "historical_backtest",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Investigating",
@@ -3937,7 +3958,7 @@
       "finding": "The learning ecosystem has no mechanism to move findings from Proposed → Staged → Promoted. actual_delta_ret=None for every recommendation. The system discovers but does not learn.",
       "source_report": "gx_research_memory",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "CRITICAL",
       "evidence_strength": "HIGH",
       "current_status": "Open",
@@ -3967,7 +3988,7 @@
       "finding": "WF adjusts weights ±0.05 per trade. Structural fixes (HTF inversion, OB removal) require ±5-10 point changes. These cannot coexist in the same update loop.",
       "source_report": "gx_research_memory",
       "date_discovered": "2026-06-14",
-      "date_updated": "2026-06-28",
+      "date_updated": "2026-06-29",
       "priority": "MEDIUM",
       "evidence_strength": "MEDIUM",
       "current_status": "Investigating",
@@ -4205,10 +4226,10 @@
       "priority": "MEDIUM",
       "evidence": "MEDIUM",
       "status": "Awaiting Validation",
-      "impact": 0.0224,
+      "impact": 0.0242,
       "indicator": "multi",
       "next_action": "Need 6+ months forward data (n≥150) before promoting. Do not apply to main scanner.",
-      "rank_score": 148.8
+      "rank_score": 147.9
     },
     {
       "id": "RI-DIV-MACD",
@@ -5330,6 +5351,13 @@
     },
     {
       "date": "2026-06-28",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-29",
       "n_items": 23,
       "n_active": 22,
       "n_validated": 0,

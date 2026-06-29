@@ -170,3 +170,43 @@ class TestFrontendTypes:
         content = card_path.read_text()
         assert "dnaMap" in content or "stock_dna" in content, "dnaMap not wired in BuySignalCard"
         assert "dna={dnaMap" in content or "dna={" in content, "dna prop not passed to BuyCard"
+
+    def test_is_buy_ready_matches_both_production_strings(self):
+        """
+        isBuyReady() must match BOTH strings the backend emits:
+          'READY NOW — R2≥60, Score≥35'   (new first-buy)
+          'READY FOR RE-ACCUMULATION'      (status=PREMIUM or ACTIVE)
+        A mismatch here silently drops all RE-ACCUMULATION signals before BuyCard
+        is instantiated, making SeenBeforePanel unreachable regardless of DNA data.
+        """
+        card_path = BASE / "frontend" / "src" / "app" / "components" / "BuySignalCard.tsx"
+        content = card_path.read_text()
+        assert "READY FOR RE-ACCUMULATION" in content, (
+            "isBuyReady() does not handle 'READY FOR RE-ACCUMULATION' — "
+            "all PREMIUM/ACTIVE buy signals will be silently filtered out"
+        )
+        assert "READY NOW" in content, "isBuyReady() must still handle 'READY NOW' string"
+
+    def test_snapshot_reaccum_signals_have_dna_and_would_render(self):
+        """End-to-end integration: RE-ACCUMULATION buy signals in the snapshot
+        must have DNA with hits > 0, meaning SeenBeforePanel would actually render."""
+        snap_path = BASE / "presentation_snapshot.json"
+        if not snap_path.exists():
+            pytest.skip("presentation_snapshot.json not present")
+        import json
+        snap = json.loads(snap_path.read_text())
+
+        def is_buy_ready(item):
+            r = item.get("waiting_for_reason", "")
+            return "READY NOW" in r or "READY FOR RE-ACCUMULATION" in r
+
+        buy_signals = [u for u in snap.get("universe_snapshot", []) if is_buy_ready(u)]
+        dna_map = snap.get("stock_dna", {})
+
+        reaccum = [s for s in buy_signals if "RE-ACCUMULATION" in (s.get("waiting_for_reason") or "")]
+        for sig in reaccum:
+            ticker = sig["ticker"]
+            assert ticker in dna_map, f"{ticker} RE-ACCUMULATION signal has no stock_dna entry"
+            assert dna_map[ticker].get("constitutional_memory_hits", 0) > 0, (
+                f"{ticker} DNA has constitutional_memory_hits=0 — SeenBeforePanel would not render"
+            )

@@ -9,8 +9,13 @@ import type { UniverseItem, MPIBehavior, StockDNA } from '@/types/snapshot';
 
 // BUY-ready classification comes from the production snapshot field verbatim.
 // The frontend never evaluates r2, score, or gate conditions itself.
+// Production backend emits two distinct buy-ready strings:
+//   "READY NOW — R2≥60, Score≥35"          (new first-buy tickers)
+//   "READY FOR RE-ACCUMULATION"             (status=PREMIUM or ACTIVE)
+// Both must be treated as active buy signals.
 function isBuyReady(item: UniverseItem): boolean {
-  return item.waiting_for_reason?.includes('READY NOW') ?? false;
+  const r = item.waiting_for_reason ?? '';
+  return r.includes('READY NOW') || r.includes('READY FOR RE-ACCUMULATION');
 }
 
 function CopyButton({ ticker }: { ticker: string }) {

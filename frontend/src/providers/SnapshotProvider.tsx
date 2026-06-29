@@ -3,6 +3,14 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { ProductionSnapshot } from '@/types/snapshot';
 
+// In production (GitHub Pages): fetches /presentation_snapshot.json from same origin.
+// In development: override with NEXT_PUBLIC_SNAPSHOT_URL=/api/snapshot
+// or copy presentation_snapshot.json to frontend/public/ for direct file serving.
+const SNAPSHOT_URL =
+  process.env.NEXT_PUBLIC_SNAPSHOT_URL ?? '/presentation_snapshot.json';
+
+const REFRESH_INTERVAL_MS = 60_000;
+
 interface SnapshotContextValue {
   snapshot: ProductionSnapshot | null;
   loading: boolean;
@@ -21,8 +29,6 @@ export function useSnapshot(): SnapshotContextValue {
   return useContext(SnapshotContext);
 }
 
-const REFRESH_INTERVAL_MS = 60_000;
-
 export default function SnapshotProvider({ children }: { children: React.ReactNode }) {
   const [snapshot, setSnapshot] = useState<ProductionSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,16 +36,13 @@ export default function SnapshotProvider({ children }: { children: React.ReactNo
 
   const fetchSnapshot = useCallback(async () => {
     try {
-      const res = await fetch('/api/snapshot', { cache: 'no-store' });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error ?? `HTTP ${res.status}`);
-      }
+      const res = await fetch(SNAPSHOT_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status} fetching snapshot`);
       const data: ProductionSnapshot = await res.json();
       setSnapshot(data);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
+      setError(e instanceof Error ? e.message : 'Snapshot unavailable');
     } finally {
       setLoading(false);
     }

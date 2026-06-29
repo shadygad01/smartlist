@@ -1,13 +1,11 @@
 name: 📊 Dashboard Refresh
 
 # Single responsibility:
-# Build presentation snapshot
-# Build dashboard
-# Deploy to GitHub Pages
+# 1. Build presentation snapshot (Python)
+# 2. Build EGX Command Center frontend (Next.js static export)
+# 3. Deploy to GitHub Pages
 #
-# No git commit
-# No git push
-# No self-trigger loop
+# No git commit. No git push. No self-trigger loop.
 
 on:
   repository_dispatch:
@@ -31,7 +29,7 @@ jobs:
   dashboard_refresh:
 
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
 
@@ -41,15 +39,15 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
+      # ── Python: rebuild production snapshot ───────────────────────────────
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
 
       - name: Rebuild presentation snapshot
         run: |
@@ -58,39 +56,59 @@ jobs:
               build_presentation_snapshot,
               write_presentation_snapshot_json,
           )
-
           snap = build_presentation_snapshot()
           write_presentation_snapshot_json(snap)
-
           print("presentation_snapshot.json written.")
           PYEOF
 
-      - name: Build dashboard
-        run: |
-          python3 dashboard.py
-
       - name: Price consistency assertion
-        run: |
-          python3 audit/assert_price_consistency.py
+        run: python3 audit/assert_price_consistency.py
         continue-on-error: true
 
+      # ── Node.js: build Next.js static export ──────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci --prefer-offline
+
+      - name: Copy snapshot into public/ for build
+        run: cp presentation_snapshot.json frontend/public/presentation_snapshot.json
+
+      - name: Build Next.js static export
+        working-directory: frontend
+        run: npm run build
+        env:
+          # Fetch presentation_snapshot.json from same origin at runtime
+          NEXT_PUBLIC_SNAPSHOT_URL: /presentation_snapshot.json
+
+      # ── Deploy ────────────────────────────────────────────────────────────
       - name: Prepare web deploy
         run: |
           rm -rf web_deploy
           mkdir -p web_deploy
 
-          cp dashboard.html web_deploy/index.html
+          # Copy Next.js static export (replaces legacy dashboard.html)
+          cp -r frontend/out/. web_deploy/
 
+          # Ensure snapshot is at root for runtime fetch
+          cp presentation_snapshot.json web_deploy/presentation_snapshot.json
+
+          # Keep legacy assets
           cp version.json web_deploy/ 2>/dev/null || true
           cp manifest.json web_deploy/ 2>/dev/null || true
           cp sw.js web_deploy/ 2>/dev/null || true
           cp icon.svg web_deploy/ 2>/dev/null || true
-          cp presentation_snapshot.json web_deploy/ 2>/dev/null || true
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./web_deploy
-          keep_files: true
-          commit_message: Deploy dashboard [skip ci]
+          keep_files: false
+          commit_message: Deploy EGX Command Center [skip ci]

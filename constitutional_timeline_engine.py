@@ -696,6 +696,27 @@ def register_alert_events(alert_events: list[dict]) -> list[str]:
     return registered
 
 
+def verify_event_persisted(ticker: str, event_date: str) -> bool:
+    """
+    Return True iff constitutional_opportunity_events.db contains an active v1 cluster
+    covering event_date for ticker (event_date <= today <= event_end_date).
+    Used as a hard gate: notifications must not fire until this returns True.
+    """
+    if not TIMELINE_DB.exists():
+        return False
+    conn = _open(TIMELINE_DB)
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM constitutional_opportunity_events "
+            "WHERE ticker=? AND event_date<=? AND (event_end_date IS NULL OR event_end_date>=?) "
+            "  AND (signal_version='v1' OR signal_version IS NULL) LIMIT 1",
+            (ticker, event_date, event_date),
+        ).fetchone()
+        return row is not None
+    finally:
+        conn.close()
+
+
 # ── CLI / self-test ───────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

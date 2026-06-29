@@ -150,30 +150,48 @@ def main() -> int:
         tl_type  = tl.get("event_type", "")
         print(f"    ✓ Timeline: event_type={tl_type}  r2={tl_r2:.1f}  score={tl_score:.1f}  entry={tl_ep:.4f}")
 
-        # Link 2: timeline → production_decision_snapshot (eligible=True)
-        # Only enforce for NEW buy signals (not self-maintenance CONSTITUTIONAL_BUY→CONSTITUTIONAL_BUY).
-        # Self-transitions are logged for tracking; eligible may temporarily drop while state persists.
+        # Link 2: constitutional gate compliance — verified from the IMMUTABLE timeline record.
+        # The production_decision_snapshot is rebuilt every scan cycle; by the time the audit runs
+        # the price may have moved (signal expired), making eligible=False even for a legitimate
+        # historical notification. The timeline event's own persisted r2 and score are the
+        # authoritative evidence: they record what the gate evaluated at the exact moment of persistence.
+        #
+        # Production snapshot is consulted as a secondary source: if it says eligible=True and entry
+        # prices agree that is a positive identity check; if it says eligible=False we fall back to
+        # the timeline's constitutional metrics.
         is_new_transition = tr.get("from_state") != "CONSTITUTIONAL_BUY"
-        if ticker in prod_by_t and is_new_transition:
-            prod = prod_by_t[ticker]
-            if not prod["eligible"]:
-                failures.append(f"{ticker}: signal fired today but production_decision_snapshot.eligible=False")
-                print(f"    ✗ Production: eligible=False")
-            else:
-                prod_ep = float(prod.get("constitutional_entry_price") or 0)
-                if tl_ep > 0 and prod_ep > 0 and not _near(tl_ep, prod_ep):
-                    failures.append(
-                        f"{ticker}: Phase 4 IDENTITY MUTATION — "
-                        f"entry_price timeline={tl_ep} != production_snapshot={prod_ep}"
-                    )
-                    print(f"    ✗ Production: entry_price MISMATCH {tl_ep} != {prod_ep}")
-                else:
-                    print(f"    ✓ Production: eligible=True  entry={prod_ep:.4f}")
-        elif not is_new_transition:
+        if not is_new_transition:
             print(f"    ⚠ Production: self-transition (ongoing signal, snapshot check skipped)")
         else:
-            warnings.append(f"{ticker}: not in production_decision_snapshot (may be from earlier pipeline run)")
-            print(f"    ⚠ Production: not in snapshot (earlier run?)")
+            # Primary: validate constitutional gate from timeline record
+            gate_r2    = tl_r2
+            gate_score = tl_score
+            from constitutional_gate import CONST_R2_MIN, CONST_SCORE_MIN
+            if gate_r2 < CONST_R2_MIN or gate_score < CONST_SCORE_MIN:
+                failures.append(
+                    f"{ticker}: timeline event fails constitutional gate — "
+                    f"r2={gate_r2:.1f} (min {CONST_R2_MIN}) score={gate_score:.1f} (min {CONST_SCORE_MIN})"
+                )
+                print(f"    ✗ Constitutional gate: FAILED r2={gate_r2:.1f} score={gate_score:.1f}")
+            else:
+                print(f"    ✓ Constitutional gate: r2={gate_r2:.1f} score={gate_score:.1f}")
+                # Secondary: if snapshot is present and agrees, verify identity
+                if ticker in prod_by_t:
+                    prod    = prod_by_t[ticker]
+                    prod_ep = float(prod.get("constitutional_entry_price") or 0)
+                    if prod.get("eligible"):
+                        if tl_ep > 0 and prod_ep > 0 and not _near(tl_ep, prod_ep):
+                            failures.append(
+                                f"{ticker}: Phase 4 IDENTITY MUTATION — "
+                                f"entry_price timeline={tl_ep} != production_snapshot={prod_ep}"
+                            )
+                            print(f"    ✗ Production: entry_price MISMATCH {tl_ep} != {prod_ep}")
+                        else:
+                            print(f"    ✓ Production: eligible=True  entry={prod_ep:.4f}")
+                    else:
+                        # Snapshot says ineligible but timeline metrics are valid.
+                        # This is expected when price moves after signal fires (signal expired).
+                        print(f"    ⚠ Production: eligible=False (price moved after signal; timeline record is authoritative)")
 
         # Link 3: timeline → presentation_snapshot.new_events_today
         if ticker not in pres_today:

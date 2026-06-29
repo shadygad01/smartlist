@@ -2242,14 +2242,31 @@ def continuous_scan():
     # run_daily() only processes candidate_pool rows for TODAY — if the pool is
     # stale, events that Alert Email fired for would be invisible to Morning Email.
     # register_alert_events() bridges this gap using the same clustering logic.
+    #
+    # ARCHITECTURAL INVARIANT: persistence and verification MUST succeed before
+    # any notification is sent. Failures are fatal — not swallowed.
     if changes:
+        from constitutional_timeline_engine import register_alert_events, verify_event_persisted
         try:
-            from constitutional_timeline_engine import register_alert_events
-            _registered = register_alert_events(changes)
-            if _registered:
-                print(f"  [Timeline] Registered alert events: {_registered}")
-        except Exception as _reg_err:
-            print(f"  [continuous_scan] alert event registration non-fatal: {_reg_err}")
+            _event_date = today_cairo().isoformat()
+        except Exception:
+            from datetime import date as _date
+            _event_date = _date.today().isoformat()
+
+        _registered = register_alert_events(changes)
+        if _registered:
+            print(f"  [Timeline] Registered alert events: {_registered}")
+
+        # Hard verification gate: every change ticker must have a persisted event
+        _unverified = [
+            ev["ticker"] for ev in changes
+            if not verify_event_persisted(ev["ticker"], _event_date)
+        ]
+        if _unverified:
+            raise RuntimeError(
+                f"[PIPELINE ABORT] Timeline persistence FAILED for {_unverified} — "
+                f"notifications suppressed. Fix constitutional_opportunity_events.db before retrying."
+            )
 
     # Rebuild production decision snapshot before writing presentation snapshot
     try:

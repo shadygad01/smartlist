@@ -85,6 +85,12 @@ export interface TimelineEvent {
   ticker?: string;
   event_type?: string;
   event_date?: string;
+  constitutional_entry_price?: number;
+  constitutional_r2?: number;
+  constitutional_score?: number;
+  current_price?: number;
+  return_pct?: number;
+  sector?: string;
   [key: string]: unknown;
 }
 
@@ -94,6 +100,8 @@ export interface Statistics {
   near_constitutional_count: number;
   active_count: number;
   re_accumulation_count: number;
+  first_buys_count?: number;
+  premium_count?: number;
   future_candidates_count?: number;
   universe_size?: number;
   new_events_today: number;
@@ -105,6 +113,47 @@ export interface ResearchInsight {
   confidence: string;
 }
 
+export interface StockDNA {
+  ticker: string;
+  first_buy_date: string;
+  first_buy_price: number;
+  buy_count: number;
+  re_accum_count: number;
+  avg_entry_price: number;
+  current_price: number;
+  avg_return_pct: number;
+  best_return_pct: number;
+  historical_buy_zone_low: number;
+  historical_buy_zone_high: number;
+  constitutional_memory_hits: number;
+  constitutional_memory_confidence: string;
+  last_updated: string;
+}
+
+export interface MPIBehavior {
+  ticker: string;
+  phase: string;
+  confidence: number;
+  confidence_label: string;
+  explanation: string;
+  historical_cases: number;
+  similarity_score: number;
+  avg_mfe40: number;
+  avg_drawdown: number;
+  avg_holding_days: number;
+}
+
+export interface ValuationCard {
+  ticker: string;
+  valuation_date: string;
+  weighted_fair_value: number | null;
+  bull_case: number | null;
+  base_case: number | null;
+  bear_case: number | null;
+  analyst_consensus_price: number | null;
+  last_stmt_year: number | null;
+}
+
 export interface ProductionSnapshot {
   scan_id: string;
   generated_at: string;
@@ -113,14 +162,20 @@ export interface ProductionSnapshot {
   market_status: string;
   build_hash: string;
   commit: string;
+  last_scan_ts: string;
   _lineage: Lineage;
   near_constitutional: NearConstitutionalTicker[];
   active: ActivePosition[];
   re_accumulation: ReAccumulationEvent[];
+  first_buys: ReAccumulationEvent[];
+  timeline: TimelineEvent[];
   future_candidates: UniverseItem[];
   watchlist: string[];
   universe_snapshot: UniverseItem[];
   new_events_today: TimelineEvent[];
+  stock_dna: Record<string, StockDNA>;
+  mpi_behavior: Record<string, MPIBehavior>;
+  valuation: Record<string, ValuationCard>;
   statistics: Statistics;
   health_stars: string;
   health_label: string;

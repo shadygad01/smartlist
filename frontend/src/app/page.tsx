@@ -9,7 +9,6 @@ import TimelineSection from './components/TimelineSection';
 import StockDNASection from './components/StockDNASection';
 import WatchlistSection from './components/WatchlistSection';
 import FutureCandidatesSection from './components/FutureCandidatesSection';
-import ResearchInsightsSection from './components/ResearchInsightsSection';
 import DiagnosticsSection from './components/DiagnosticsSection';
 import ToastProvider from './components/ToastProvider';
 
@@ -31,7 +30,7 @@ export default function EGXCommandCenter() {
       {/* Fixed Header — scan_id, market_status, commit, wall clock */}
       <DashboardHeader />
 
-      <main className="pt-[68px] pb-16 px-4 md:px-6 xl:px-10 2xl:px-16 max-w-screen-2xl mx-auto">
+      <main className="pt-[78px] pb-16 px-4 md:px-6 xl:px-10 2xl:px-16 max-w-screen-2xl mx-auto">
 
         {/* ── TIER 1: Statistics ─────────────────────────────────────────────── */}
         <div className="mt-5">
@@ -89,8 +88,7 @@ export default function EGXCommandCenter() {
         {/* ── TIER 6: Diagnostics ───────────────────────────────────────────── */}
         <Divider label="ANALYSIS & DIAGNOSTICS" />
 
-        <div className="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-5">
-          <ResearchInsightsSection />
+        <div className="mt-4">
           <DiagnosticsSection />
         </div>
       </main>

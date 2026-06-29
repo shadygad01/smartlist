@@ -526,6 +526,60 @@ def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: s
         _scan_id = ""
         _lineage = {}
 
+    # ── Stock DNA ──────────────────────────────────────────────────────────────
+    _stock_dna: dict = {}
+    _dna_path = BASE / "stock_dna.db"
+    if _dna_path.exists():
+        try:
+            _dna_conn = sqlite3.connect(str(_dna_path))
+            _dna_conn.row_factory = sqlite3.Row
+            _dna_rows = _dna_conn.execute("SELECT * FROM stock_dna").fetchall()
+            _dna_conn.close()
+            for _dr in _dna_rows:
+                _stock_dna[_dr["ticker"]] = dict(_dr)
+        except Exception as _dna_err:
+            print(f"[PresentationSnapshot] stock_dna load non-fatal: {_dna_err}")
+
+    # ── MPI Behavior (only non-Neutral entries with constitutional explanation) ─
+    _mpi_behavior: dict = {}
+    _mpi_path = BASE / "mpi_snapshots.db"
+    if _mpi_path.exists():
+        try:
+            _mpi_conn = sqlite3.connect(str(_mpi_path))
+            _mpi_conn.row_factory = sqlite3.Row
+            _mpi_rows = _mpi_conn.execute(
+                "SELECT ticker, phase, confidence, confidence_label, explanation, "
+                "historical_cases, similarity_score, avg_mfe40, avg_drawdown, avg_holding_days "
+                "FROM mpi_snapshots WHERE phase != 'Neutral' AND confidence > 0"
+            ).fetchall()
+            _mpi_conn.close()
+            for _mr in _mpi_rows:
+                _mpi_behavior[_mr["ticker"]] = dict(_mr)
+        except Exception as _mpi_err:
+            print(f"[PresentationSnapshot] mpi_behavior load non-fatal: {_mpi_err}")
+
+    # ── Institutional Valuation Engine ─────────────────────────────────────────
+    _valuation: dict = {}
+    try:
+        from valuation.db import get_valuation_card as _get_vc
+        for _u in snap.universe_snapshot:
+            _vc = _get_vc(_u["ticker"])
+            if _vc:
+                _valuation[_u["ticker"]] = _vc
+    except Exception as _val_err:
+        print(f"[PresentationSnapshot] valuation load non-fatal: {_val_err}")
+
+    # ── Full constitutional timeline (all events, newest first) ────────────────
+    _timeline_all = sorted(
+        snap.first_buys + snap.re_accumulations,
+        key=lambda e: e.get("event_date", ""),
+        reverse=True,
+    )
+
+    # ── Active position counts for stats ───────────────────────────────────────
+    _premium_count = sum(1 for u in snap.universe_snapshot if u.get("status") == "PREMIUM")
+    _first_buys_count = len(snap.first_buys)
+
     data = {
         "scan_id":             _scan_id,
         "generated_at":        snap.generated_at,
@@ -534,23 +588,31 @@ def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: s
         "market_status":       snap.market_status,
         "build_hash":          build_hash,
         "commit":              commit,
+        "last_scan_ts":        snap.last_scan_ts,
         "_lineage":            _lineage,
         "near_constitutional": snap.approaching_entries,
         "active":              active,
         "re_accumulation":     snap.re_accumulations,
+        "first_buys":          snap.first_buys,
+        "timeline":            _timeline_all,
         "future_candidates":   future_candidates,
         "watchlist":           watchlist,
         "universe_snapshot":   snap.universe_snapshot,
         "new_events_today":    list(snap.new_events_today),
+        "stock_dna":           _stock_dna,
+        "mpi_behavior":        _mpi_behavior,
+        "valuation":           _valuation,
         "statistics": {
-            "total_timeline_events":    snap.total_events,
+            "total_timeline_events":     snap.total_events,
             "total_tickers_in_timeline": snap.total_tickers,
             "near_constitutional_count": len(snap.approaching_entries),
-            "active_count":             len(active),
-            "re_accumulation_count":    len(snap.re_accumulations),
-            "future_candidates_count":  len(future_candidates),
-            "universe_size":            len(snap.universe_snapshot),
-            "new_events_today":         len(snap.new_events_today),
+            "active_count":              len(active),
+            "re_accumulation_count":     len(snap.re_accumulations),
+            "first_buys_count":          _first_buys_count,
+            "premium_count":             _premium_count,
+            "future_candidates_count":   len(future_candidates),
+            "universe_size":             len(snap.universe_snapshot),
+            "new_events_today":          len(snap.new_events_today),
         },
         "health_stars":      snap.health_stars,
         "health_label":      snap.health_label,

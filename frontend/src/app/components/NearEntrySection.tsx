@@ -40,7 +40,11 @@ export default function NearEntrySection() {
           </div>
         )}
 
-        {tickers.map((t) => (
+        {tickers.map((t) => {
+          const mpi = snapshot?.mpi_behavior?.[t.ticker];
+          const phaseColors: Record<string, string> = { Fear: '#f44336', Greed: '#4caf50', Accumulation: '#50d8d0', Distribution: '#f0b840' };
+          const phaseColor = mpi ? (phaseColors[mpi.phase] ?? '#9c6fff') : undefined;
+          return (
           <div
             key={t.ticker}
             className="px-3 py-3 rounded-xl"
@@ -50,6 +54,11 @@ export default function NearEntrySection() {
               <div className="flex items-center gap-2">
                 <span className="font-mono font-bold" style={{ fontSize: '13px', color: 'var(--foreground)' }}>{t.ticker}</span>
                 <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>{t.sector}</span>
+                {mpi && phaseColor && (
+                  <span className="font-mono font-bold px-1.5 py-0.5 rounded" style={{ fontSize: '9px', color: phaseColor, backgroundColor: `${phaseColor}18`, border: `1px solid ${phaseColor}44` }}>
+                    {mpi.phase.toUpperCase()}
+                  </span>
+                )}
               </div>
               <ChevronRight size={12} style={{ color: 'var(--muted-foreground)' }} />
             </div>
@@ -83,8 +92,20 @@ export default function NearEntrySection() {
                 <span className="font-mono" style={{ fontSize: '9px', color: 'var(--signal-near)', fontWeight: 600 }}>AT ZONE</span>
               )}
             </div>
+
+            {mpi && (
+              <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <p className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8', lineHeight: 1.5 }}>{mpi.explanation}</p>
+                {mpi.historical_cases > 0 && (
+                  <p className="font-mono mt-1" style={{ fontSize: '9px', color: '#8b8fa8', opacity: 0.7 }}>
+                    {Math.round((mpi.similarity_score ?? 0) * 100)}% similarity · Avg MFE40 +{(mpi.avg_mfe40 ?? 0).toFixed(0)}% · {mpi.historical_cases} cases
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-        ))}
+          );
+        })}
 
         <div
           className="flex items-center gap-2 mt-1 px-3 py-2 rounded-lg"

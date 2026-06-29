@@ -5,7 +5,7 @@ import { TrendingUp, Copy, CheckCircle, Clock, Zap, Activity } from 'lucide-reac
 import { toast } from 'sonner';
 import R2ProgressBar from './R2ProgressBar';
 import { useSnapshot } from '@/providers/SnapshotProvider';
-import type { UniverseItem } from '@/types/snapshot';
+import type { UniverseItem, MPIBehavior } from '@/types/snapshot';
 
 // BUY-ready classification comes from the production snapshot field verbatim.
 // The frontend never evaluates r2, score, or gate conditions itself.
@@ -36,7 +36,38 @@ function CopyButton({ ticker }: { ticker: string }) {
   );
 }
 
-function BuyCard({ signal }: { signal: UniverseItem }) {
+function BehaviorPhaseBlock({ mpi }: { mpi: MPIBehavior }) {
+  const phaseColor: Record<string, string> = {
+    Fear: '#f44336', Greed: '#4caf50', Accumulation: '#50d8d0',
+    Distribution: '#f0b840', Neutral: '#8b8fa8',
+  };
+  const color = phaseColor[mpi.phase] ?? '#9c6fff';
+  return (
+    <div
+      className="px-5 py-3 flex flex-col gap-1"
+      style={{ borderTop: '1px solid rgba(255,255,255,0.06)', backgroundColor: 'rgba(255,255,255,0.02)' }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8', letterSpacing: '0.07em' }}>BEHAVIOR PHASE</span>
+        <span
+          className="font-mono font-bold px-2 py-0.5 rounded"
+          style={{ fontSize: '10px', color, backgroundColor: `${color}18`, border: `1px solid ${color}44` }}
+        >
+          {mpi.phase.toUpperCase()}
+        </span>
+        <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8' }}>{mpi.confidence_label}</span>
+      </div>
+      <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', lineHeight: 1.5 }}>{mpi.explanation}</span>
+      {mpi.historical_cases > 0 && (
+        <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8', opacity: 0.75 }}>
+          Historical similarity: {Math.round((mpi.similarity_score ?? 0) * 100)}% · Avg MFE40: +{(mpi.avg_mfe40 ?? 0).toFixed(0)}% ({mpi.historical_cases} cases)
+        </span>
+      )}
+    </div>
+  );
+}
+
+function BuyCard({ signal, mpi }: { signal: UniverseItem; mpi?: MPIBehavior }) {
   return (
     <div className="rounded-xl glow-buy animate-fade-in-up" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--signal-buy-border)' }}>
       <div
@@ -97,6 +128,8 @@ function BuyCard({ signal }: { signal: UniverseItem }) {
         <R2ProgressBar value={(signal.candidate_r2 ?? 0) / 100} color="var(--signal-reaccum)" height={5} />
       </div>
 
+      {mpi && <BehaviorPhaseBlock mpi={mpi} />}
+
       <div className="px-5 py-3 rounded-b-xl flex items-center gap-2" style={{ backgroundColor: 'rgba(16,185,129,0.04)', borderTop: '1px solid rgba(16,185,129,0.12)' }}>
         <Zap size={11} style={{ color: 'var(--signal-buy)', flexShrink: 0 }} />
         <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>{signal.waiting_for_reason}</span>
@@ -136,13 +169,14 @@ export default function BuySignalCard() {
   }
 
   const buySignals = snapshot.universe_snapshot.filter(isBuyReady);
+  const mpiMap = snapshot.mpi_behavior ?? {};
 
   if (buySignals.length === 0) return <NoBuyState scanId={snapshot.scan_id} />;
 
   return (
     <div className="flex flex-col gap-4">
       {buySignals.map((signal) => (
-        <BuyCard key={signal.ticker} signal={signal} />
+        <BuyCard key={signal.ticker} signal={signal} mpi={mpiMap[signal.ticker]} />
       ))}
     </div>
   );

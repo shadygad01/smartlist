@@ -1,9 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Wifi, RefreshCw, AlertCircle, Archive, Signal } from 'lucide-react';
-import AppLogo from '@/components/ui/AppLogo';
-import Link from 'next/link';
+import React, { useState, useEffect, useCallback } from 'react';
+import { RefreshCw, AlertCircle, Wifi } from 'lucide-react';
 import { useSnapshot } from '@/providers/SnapshotProvider';
 
 // Wall-clock display only — NOT used for trading date calculations.
@@ -12,207 +10,178 @@ function formatCairoTime(date: Date): string {
   return date.toLocaleTimeString('en-GB', { timeZone: 'Africa/Cairo', hour12: false });
 }
 
-function formatCairoDate(date: Date): string {
-  return date.toLocaleDateString('en-GB', {
-    timeZone: 'Africa/Cairo',
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+function formatCairoDateTime(iso: string | undefined): string {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('en-GB', {
+      timeZone: 'Africa/Cairo',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    }).replace(',', '');
+  } catch {
+    return iso.slice(0, 16).replace('T', ' ');
+  }
 }
 
 export default function DashboardHeader() {
-  const { snapshot, loading, error } = useSnapshot();
+  const { snapshot, loading, error, refresh } = useSnapshot();
 
   const [timeStr, setTimeStr] = useState('--:--:--');
-  const [dateStr, setDateStr] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const tick = () => {
-      const now = new Date();
-      setTimeStr(formatCairoTime(now));
-      setDateStr(formatCairoDate(now));
-    };
+    const tick = () => setTimeStr(formatCairoTime(new Date()));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refresh?.();
+    setTimeout(() => setRefreshing(false), 1500);
+  }, [refresh]);
+
   const isLive = !error && !loading;
-  const marketStatus = snapshot?.market_status ?? (loading ? '...' : 'UNAVAILABLE');
-  const scanId = snapshot?.scan_id ? snapshot.scan_id.slice(0, 8) : '--------';
+  const marketStatus = snapshot?.market_status ?? (loading ? '…' : 'UNAVAILABLE');
+  const isMarketOpen = marketStatus === 'OPEN';
   const commit = snapshot?.commit ?? '-------';
+
+  const lastScanTs = snapshot?.last_scan_ts
+    ? formatCairoDateTime(snapshot.last_scan_ts)
+    : '—';
+  const generatedAt = snapshot?.generated_at
+    ? formatCairoDateTime(snapshot.generated_at)
+    : '—';
+  const dataAsOf = snapshot?.price_data_as_of ?? '—';
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 md:px-6 xl:px-10"
+      className="fixed top-0 left-0 right-0 z-50"
       style={{
-        height: '68px',
-        backgroundColor: 'rgba(7, 11, 20, 0.95)',
-        borderBottom: '1px solid rgba(26, 37, 64, 0.8)',
+        backgroundColor: 'rgba(7, 11, 20, 0.97)',
+        borderBottom: '2px solid #252645',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        boxShadow: '0 1px 0 rgba(255,255,255,0.03), 0 4px 24px rgba(0,0,0,0.4)',
       }}
     >
-      {/* Left: Logo + Brand */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2.5">
-          <div
-            className="flex items-center justify-center rounded-lg"
+      {/* ── Row 1: Logo + status + clock ──────────────────────────────────── */}
+      <div className="flex items-center justify-between px-4 md:px-6" style={{ height: '52px' }}>
+        {/* Left: branding */}
+        <div className="flex items-center gap-3">
+          <span style={{ fontSize: '20px' }}>🏛</span>
+          <span
+            className="font-bold tracking-tight"
+            style={{ fontSize: '15px', color: '#d0d4e8', letterSpacing: '-0.01em' }}
+          >
+            EGX Constitutional Command Center
+          </span>
+          <span
+            className="hidden md:inline font-mono px-2 py-0.5 rounded"
             style={{
-              width: '34px',
-              height: '34px',
-              background: 'linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0.05) 100%)',
-              border: '1px solid rgba(16,185,129,0.25)',
+              fontSize: '9px',
+              backgroundColor: 'rgba(16,185,129,0.1)',
+              color: '#4caf50',
+              border: '1px solid rgba(76,175,80,0.25)',
+              letterSpacing: '0.04em',
             }}
           >
-            <AppLogo size={20} />
-          </div>
-          <div className="flex flex-col leading-tight">
-            <div className="flex items-center gap-1.5">
-              <span
-                className="font-semibold tracking-tight"
-                style={{ fontSize: '14px', color: 'var(--foreground)', letterSpacing: '-0.01em' }}
-              >
-                EGX<span style={{ color: 'var(--signal-buy)' }}>_</span>Command
-              </span>
-              <span
-                className="font-mono px-1.5 py-0.5 rounded"
-                style={{
-                  fontSize: '9px',
-                  backgroundColor: 'rgba(16,185,129,0.1)',
-                  color: 'var(--signal-buy)',
-                  border: '1px solid rgba(16,185,129,0.2)',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                {commit}
-              </span>
-            </div>
+            {commit}
+          </span>
+        </div>
+
+        {/* Center: market status */}
+        <div className="hidden md:flex items-center gap-3">
+          <span
+            className="font-mono font-bold px-2.5 py-1 rounded"
+            style={{
+              fontSize: '10px',
+              backgroundColor: isMarketOpen ? 'rgba(76,175,80,0.12)' : 'rgba(255,255,255,0.05)',
+              color: isMarketOpen ? '#4caf50' : '#8b8fa8',
+              border: `1px solid ${isMarketOpen ? 'rgba(76,175,80,0.3)' : 'rgba(255,255,255,0.1)'}`,
+              letterSpacing: '0.07em',
+            }}
+          >
+            {isMarketOpen ? '● EGX OPEN' : `● EGX ${marketStatus}`}
+          </span>
+        </div>
+
+        {/* Right: refresh + clock */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded"
+            style={{
+              backgroundColor: 'rgba(80,216,208,0.08)',
+              border: '1px solid rgba(80,216,208,0.3)',
+              color: '#50d8d0',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: refreshing ? 'default' : 'pointer',
+              opacity: refreshing ? 0.6 : 1,
+            }}
+          >
+            <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
+            <span className="hidden md:inline font-mono" style={{ fontSize: '10px', letterSpacing: '0.06em' }}>
+              REFRESH
+            </span>
+          </button>
+
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded"
+            style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid #252645' }}
+          >
             <span
-              className="font-mono"
-              style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}
+              className="font-mono font-bold tabular-nums"
+              style={{ fontSize: '14px', color: '#d0d4e8', letterSpacing: '0.05em' }}
             >
-              SCAN {scanId}
+              {timeStr}
             </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Center: Status indicators */}
-      <div className="hidden md:flex items-center gap-1">
-        <div
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
-          style={{
-            backgroundColor: isLive ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
-            border: `1px solid ${isLive ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
-          }}
-        >
-          <span
-            className="pulse-dot inline-block w-1.5 h-1.5 rounded-full"
-            style={{ backgroundColor: isLive ? 'var(--signal-buy)' : 'var(--signal-danger)' }}
-          />
-          <span
-            className="font-mono font-bold"
-            style={{ fontSize: '10px', color: isLive ? 'var(--signal-buy)' : 'var(--signal-danger)', letterSpacing: '0.08em' }}
-          >
-            {isLive ? 'LIVE' : error ? 'ERROR' : 'LOADING'}
-          </span>
-        </div>
-
-        <div style={{ width: '1px', height: '20px', backgroundColor: 'var(--border)', margin: '0 8px' }} />
-
-        <div className="flex items-center gap-1.5">
-          <RefreshCw size={11} style={{ color: 'var(--muted-foreground)' }} className="scan-blink" />
-          <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>
-            SNAPSHOT
-          </span>
-          <span className="font-mono font-medium" style={{ fontSize: '10px', color: 'var(--foreground)' }}>
-            {snapshot?.price_data_as_of ?? '--'}
-          </span>
-        </div>
-
-        <div style={{ width: '1px', height: '20px', backgroundColor: 'var(--border)', margin: '0 8px' }} />
-
-        <div className="flex items-center gap-1.5">
-          <Signal size={11} style={{ color: 'var(--signal-near)' }} />
-          <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>
-            EGX
-          </span>
-          <span
-            className="font-mono font-bold"
-            style={{ fontSize: '10px', color: 'var(--signal-near)', letterSpacing: '0.06em' }}
-          >
-            {marketStatus}
-          </span>
-        </div>
-      </div>
-
-      {/* Right: Cairo Clock + Archive Link */}
-      <div className="flex items-center gap-3">
-        <Link
-          href="/archive"
-          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-150"
-          style={{
-            backgroundColor: 'rgba(167,139,250,0.06)',
-            border: '1px solid rgba(167,139,250,0.18)',
-          }}
-        >
-          <Archive size={11} style={{ color: 'var(--signal-elite)' }} />
-          <span
-            className="font-mono font-semibold"
-            style={{ fontSize: '10px', color: 'var(--signal-elite)', letterSpacing: '0.07em' }}
-          >
-            ARCHIVE
-          </span>
-        </Link>
-
-        <div
-          className="flex items-center gap-3 px-3 py-1.5 rounded-lg"
-          style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}
-        >
-          <div className="flex flex-col items-end">
-            <div className="flex items-center gap-1.5">
-              <span
-                className="font-mono font-bold tabular-nums"
-                style={{ fontSize: '14px', color: 'var(--foreground)', letterSpacing: '0.05em' }}
-              >
-                {timeStr}
-              </span>
-              <span
-                className="font-mono px-1 py-0.5 rounded"
-                style={{
-                  fontSize: '8px',
-                  backgroundColor: 'rgba(59,130,246,0.12)',
-                  color: 'var(--signal-reaccum)',
-                  border: '1px solid rgba(59,130,246,0.18)',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                CAI
-              </span>
+            <span
+              className="font-mono px-1 py-0.5 rounded"
+              style={{
+                fontSize: '8px',
+                backgroundColor: 'rgba(59,130,246,0.12)',
+                color: '#9c6fff',
+                border: '1px solid rgba(156,111,255,0.2)',
+                letterSpacing: '0.06em',
+              }}
+            >
+              CAI
+            </span>
+            <div
+              className="p-1 rounded"
+              style={{
+                backgroundColor: isLive ? 'rgba(76,175,80,0.1)' : 'rgba(239,68,68,0.1)',
+                border: `1px solid ${isLive ? 'rgba(76,175,80,0.2)' : 'rgba(239,68,68,0.2)'}`,
+              }}
+            >
+              {isLive ? (
+                <Wifi size={12} style={{ color: '#4caf50' }} />
+              ) : (
+                <AlertCircle size={12} style={{ color: '#ef4444' }} />
+              )}
             </div>
-            <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
-              {dateStr}
-            </span>
-          </div>
-
-          <div
-            className="p-1.5 rounded-md"
-            style={{
-              backgroundColor: isLive ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-              border: `1px solid ${isLive ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
-            }}
-          >
-            {isLive ? (
-              <Wifi size={14} style={{ color: 'var(--signal-buy)' }} />
-            ) : (
-              <AlertCircle size={14} style={{ color: 'var(--signal-danger)' }} />
-            )}
           </div>
         </div>
+      </div>
+
+      {/* ── Row 2: Timestamps ──────────────────────────────────────────────── */}
+      <div
+        className="flex flex-wrap items-center gap-x-5 gap-y-0.5 px-4 md:px-6"
+        style={{ height: '26px', borderTop: '1px solid #1a2040' }}
+      >
+        <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', whiteSpace: 'nowrap' }}>
+          Last Scan&nbsp;<b style={{ color: '#d0d4e8' }}>{lastScanTs} Cairo</b>
+        </span>
+        <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', whiteSpace: 'nowrap' }}>
+          Generated&nbsp;<b style={{ color: '#d0d4e8' }}>{generatedAt} Cairo</b>
+        </span>
+        <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', whiteSpace: 'nowrap' }}>
+          Data As Of&nbsp;<b style={{ color: '#d0d4e8' }}>{dataAsOf}</b>
+        </span>
       </div>
     </header>
   );

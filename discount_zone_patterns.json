@@ -32,13 +32,13 @@
         "liquidity_state": "moderate"
       },
       "stats": {
-        "n": 39,
-        "n_resolved": 39,
-        "wr": 0.5897,
-        "pf": 7.654,
-        "mean_r20d": 0.1045,
-        "mean_mfe": 0.1808,
-        "mean_mae": -0.0638
+        "n": 38,
+        "n_resolved": 38,
+        "wr": 0.5789,
+        "pf": 7.489,
+        "mean_r20d": 0.1046,
+        "mean_mfe": 0.182,
+        "mean_mae": -0.065
       },
       "symbols": [
         "ADIB.CA",
@@ -485,7 +485,7 @@
     },
     {
       "feature": "sweep_detected",
-      "correlation": 0.0417,
+      "correlation": 0.0401,
       "direction": "positive",
       "strength": "weak"
     },
@@ -502,15 +502,15 @@
       "strength": "weak"
     },
     {
-      "feature": "macd_div",
-      "correlation": 0.0305,
-      "direction": "positive",
+      "feature": "htf_hh",
+      "correlation": -0.0315,
+      "direction": "negative",
       "strength": "weak"
     },
     {
-      "feature": "htf_hh",
-      "correlation": -0.0298,
-      "direction": "negative",
+      "feature": "macd_div",
+      "correlation": 0.0305,
+      "direction": "positive",
       "strength": "weak"
     },
     {
@@ -532,12 +532,6 @@
       "strength": "weak"
     },
     {
-      "feature": "equal_lows",
-      "correlation": -0.0166,
-      "direction": "negative",
-      "strength": "weak"
-    },
-    {
       "feature": "r6_macd",
       "correlation": 0.0139,
       "direction": "positive",
@@ -553,6 +547,12 @@
       "feature": "r8_demand",
       "correlation": 0.013,
       "direction": "positive",
+      "strength": "weak"
+    },
+    {
+      "feature": "equal_lows",
+      "correlation": -0.0123,
+      "direction": "negative",
       "strength": "weak"
     },
     {
@@ -600,15 +600,15 @@
       "condition": "with_sweep",
       "type": "structural_condition",
       "stats": {
-        "n": 239,
-        "n_resolved": 239,
-        "wr": 0.3975,
-        "pf": 3.102,
-        "mean_r20d": 0.0532,
+        "n": 238,
+        "n_resolved": 238,
+        "wr": 0.395,
+        "pf": 3.085,
+        "mean_r20d": 0.053,
         "mean_mfe": 0.1334,
-        "mean_mae": -0.0748
+        "mean_mae": -0.0751
       },
-      "vs_baseline": 0.0086,
+      "vs_baseline": 0.0084,
       "verdict": "NEUTRAL — inline with baseline"
     },
     {
@@ -712,8 +712,8 @@
       "pattern_id": "DZ_TREND_LOW_EXPANSION_MODERATE",
       "pattern_type": "discount_zone_success",
       "stability": "stable",
-      "delta_wr": 0.0108,
-      "delta_r20d": 0.0024
+      "delta_wr": -0.0108,
+      "delta_r20d": 0.0001
     },
     {
       "pattern_id": "DZ_RANGE_LOW_UNKNOWN_WEAK",
@@ -725,9 +725,9 @@
     {
       "pattern_id": "DZ_TREND_MEDIUM_UNKNOWN_STRONG",
       "pattern_type": "mixed",
-      "stability": "fluctuating",
-      "delta_wr": -0.0444,
-      "delta_r20d": -0.0061
+      "stability": "stable",
+      "delta_wr": 0.0,
+      "delta_r20d": 0.0
     },
     {
       "pattern_id": "DZ_RANGE_LOW_REVERSAL_MODERATE",
@@ -746,16 +746,16 @@
     {
       "pattern_id": "DZ_TREND_LOW_REVERSAL_STRONG",
       "pattern_type": "mixed",
-      "stability": "strengthening",
-      "delta_wr": 0.0229,
-      "delta_r20d": 0.0112
+      "stability": "stable",
+      "delta_wr": 0.0,
+      "delta_r20d": 0.0
     },
     {
       "pattern_id": "DZ_TREND_LOW_EXPANSION_STRONG",
       "pattern_type": "discount_zone_failure",
       "stability": "stable",
-      "delta_wr": 0.0208,
-      "delta_r20d": 0.0012
+      "delta_wr": 0.0,
+      "delta_r20d": 0.0
     },
     {
       "pattern_id": "DZ_TREND_LOW_COMPRESSION_STRONG",
@@ -788,16 +788,16 @@
     {
       "pattern_id": "DZ_TREND_LOW_REVERSAL_MODERATE",
       "pattern_type": "mixed",
-      "stability": "decaying",
-      "delta_wr": -0.0714,
-      "delta_r20d": -0.0322
+      "stability": "stable",
+      "delta_wr": 0.0,
+      "delta_r20d": 0.0
     },
     {
       "pattern_id": "DZ_RANGE_LOW_EXPANSION_STRONG",
       "pattern_type": "discount_zone_failure",
       "stability": "stable",
-      "delta_wr": -0.013,
-      "delta_r20d": -0.0014
+      "delta_wr": 0.0,
+      "delta_r20d": 0.0
     },
     {
       "pattern_id": "DZ_TREND_LOW_UNKNOWN_WEAK",
@@ -809,9 +809,9 @@
     {
       "pattern_id": "DZ_MIXED_LOW_EXPANSION_MODERATE",
       "pattern_type": "discount_zone_failure",
-      "stability": "decaying",
-      "delta_wr": -0.0524,
-      "delta_r20d": -0.0124
+      "stability": "stable",
+      "delta_wr": 0.0,
+      "delta_r20d": 0.0
     },
     {
       "pattern_id": "DZ_RANGE_LOW_COMPRESSION_MODERATE",

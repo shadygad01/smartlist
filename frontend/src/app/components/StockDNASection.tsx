@@ -1,128 +1,101 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Dna, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react';
-import R2ProgressBar from './R2ProgressBar';
+import { BarChart2, ChevronDown, ChevronUp, TrendingUp, TrendingDown } from 'lucide-react';
+import { useSnapshot } from '@/providers/SnapshotProvider';
 
-interface DNAMetric {
-  id: string;
-  label: string;
-  value: number;
-  raw: string;
-  color: string;
-  description: string;
-}
-
-const dnaMetrics: DNAMetric[] = [
-  { id: 'dna-momentum', label: 'MOMENTUM SCORE', value: 87, raw: '87 / 100', color: 'var(--signal-buy)', description: 'Price momentum vs. 20-day moving average' },
-  { id: 'dna-volume', label: 'VOLUME PROFILE', value: 76, raw: '2.4x avg', color: 'var(--signal-near)', description: 'Volume ratio relative to 30-day average' },
-  { id: 'dna-trend', label: 'TREND STRENGTH', value: 93, raw: 'ADX 38.2', color: 'var(--signal-buy)', description: 'Average Directional Index — trend conviction' },
-  { id: 'dna-support', label: 'SUPPORT QUALITY', value: 91, raw: '3 confluences', color: 'var(--signal-reaccum)', description: 'Number of technical support levels at entry zone' },
-  { id: 'dna-sector', label: 'SECTOR ALIGNMENT', value: 68, raw: 'Trade +1.2%', color: 'var(--signal-near)', description: 'Sector performance vs. EGX30 benchmark' },
-  { id: 'dna-r2', label: 'MODEL FIT (R²)', value: 94, raw: '0.94', color: 'var(--signal-reaccum)', description: 'Constitutional model coefficient of determination' },
-  { id: 'dna-winrate', label: 'HISTORICAL WIN RATE', value: 95, raw: '19/20 signals', color: 'var(--signal-buy)', description: 'Percentage of profitable prior signals for this ticker' },
-];
-
+// Renamed to Active Positions — renders from the 'active' array in the production snapshot.
+// No DNA metrics exist in the snapshot; no values are computed locally.
 export default function StockDNASection() {
+  const { snapshot, loading } = useSnapshot();
   const [collapsed, setCollapsed] = useState(false);
 
-  const overallScore = Math.round(
-    dnaMetrics.reduce((sum, m) => sum + m.value, 0) / dnaMetrics.length
-  );
+  const positions = snapshot?.active ?? [];
 
   return (
-    <div
-      className="rounded-xl"
-      style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', boxShadow: '0 2px 16px rgba(0,0,0,0.3)' }}
-    >
-      {/* Header */}
+    <div className="rounded-xl" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', boxShadow: '0 2px 16px rgba(0,0,0,0.3)' }}>
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="section-header-btn w-full flex items-center justify-between px-4 py-3.5 rounded-t-xl"
         style={{ borderBottom: collapsed ? 'none' : '1px solid var(--border)' }}
       >
         <div className="flex items-center gap-2">
-          <Dna size={13} style={{ color: '#a78bfa' }} />
-          <span
-            className="font-mono font-semibold"
-            style={{ fontSize: '12px', color: 'var(--foreground)', letterSpacing: '0.07em' }}
-          >
-            STOCK DNA — ABUK.CA
+          <BarChart2 size={13} style={{ color: '#a78bfa' }} />
+          <span className="font-mono font-semibold" style={{ fontSize: '12px', color: 'var(--foreground)', letterSpacing: '0.07em' }}>
+            ACTIVE POSITIONS
           </span>
-          {/* Overall score badge */}
           <span
-            className="font-mono font-bold px-2 py-0.5 rounded-md"
-            style={{
-              fontSize: '10px',
-              backgroundColor: 'rgba(16,185,129,0.1)',
-              color: 'var(--signal-buy)',
-              border: '1px solid rgba(16,185,129,0.2)',
-            }}
+            className="font-mono px-2 py-0.5 rounded-md"
+            style={{ fontSize: '9px', backgroundColor: 'rgba(167,139,250,0.1)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.2)' }}
           >
-            {overallScore}/100
+            {loading ? '…' : `${positions.length}`}
           </span>
         </div>
-        {collapsed ? (
-          <ChevronDown size={13} style={{ color: 'var(--muted-foreground)' }} />
-        ) : (
-          <ChevronUp size={13} style={{ color: 'var(--muted-foreground)' }} />
-        )}
+        {collapsed ? <ChevronDown size={13} style={{ color: 'var(--muted-foreground)' }} /> : <ChevronUp size={13} style={{ color: 'var(--muted-foreground)' }} />}
       </button>
 
-      {/* Content */}
       {!collapsed && (
-        <div className="p-4">
-          {/* Overall score bar */}
-          <div
-            className="flex items-center gap-4 p-3.5 rounded-xl mb-4"
-            style={{ backgroundColor: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)' }}
-          >
-            <BarChart2 size={15} style={{ color: 'var(--signal-buy)', flexShrink: 0 }} />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>
-                  COMPOSITE SIGNAL STRENGTH
-                </span>
-                <span
-                  className="font-mono font-bold tabular-nums"
-                  style={{ fontSize: '15px', color: 'var(--signal-buy)' }}
-                >
-                  {overallScore}%
-                </span>
-              </div>
-              <R2ProgressBar value={overallScore / 100} color="var(--signal-buy)" height={6} />
+        <div className="p-3 flex flex-col gap-1.5">
+          {loading && (
+            <div className="flex items-center justify-center py-8">
+              <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>Loading…</span>
             </div>
-          </div>
+          )}
 
-          {/* DNA metrics grid */}
-          <div className="grid grid-cols-1 gap-3">
-            {dnaMetrics.map((metric) => (
-              <div key={metric.id} className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span
-                      className="font-mono"
-                      style={{ fontSize: '10px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}
-                    >
-                      {metric.label}
-                    </span>
-                    <span
-                      className="font-mono"
-                      style={{ fontSize: '9px', color: 'var(--muted-foreground)', opacity: 0.45 }}
-                    >
-                      {metric.description}
-                    </span>
+          {!loading && positions.length === 0 && (
+            <div className="flex items-center justify-center py-8">
+              <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>No active positions in snapshot.</span>
+            </div>
+          )}
+
+          {positions.map((pos) => {
+            const isPositive = pos.return_pct != null && pos.return_pct >= 0;
+            const returnColor = pos.return_pct == null ? 'var(--muted-foreground)'
+              : isPositive ? 'var(--signal-buy)' : '#ef4444';
+
+            return (
+              <div
+                key={pos.ticker}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}
+              >
+                <div className="flex flex-col flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold" style={{ fontSize: '12px', color: 'var(--foreground)' }}>{pos.ticker}</span>
+                    <span className="font-mono" style={{ fontSize: '8px', color: 'var(--muted-foreground)' }}>{pos.status}</span>
                   </div>
-                  <span
-                    className="font-mono font-semibold tabular-nums flex-shrink-0 ml-3"
-                    style={{ fontSize: '12px', color: metric.color }}
-                  >
-                    {metric.raw}
+                  <span className="font-mono truncate" style={{ fontSize: '9px', color: 'var(--muted-foreground)', marginTop: '2px' }}>
+                    {pos.action}
                   </span>
                 </div>
-                <R2ProgressBar value={metric.value / 100} color={metric.color} height={3} />
+
+                <div className="flex flex-col items-end flex-shrink-0">
+                  <span className="font-mono font-bold tabular-nums" style={{ fontSize: '13px', color: 'var(--foreground)' }}>
+                    {pos.current_price.toFixed(2)}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {pos.return_pct != null && (
+                      isPositive
+                        ? <TrendingUp size={9} style={{ color: returnColor }} />
+                        : <TrendingDown size={9} style={{ color: returnColor }} />
+                    )}
+                    <span className="font-mono tabular-nums" style={{ fontSize: '10px', color: returnColor }}>
+                      {pos.return_pct != null ? `${pos.return_pct.toFixed(1)}%` : '—'}
+                    </span>
+                  </div>
+                </div>
               </div>
-            ))}
+            );
+          })}
+
+          <div
+            className="flex items-center gap-2 mt-1 px-3 py-2 rounded-lg"
+            style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}
+          >
+            <BarChart2 size={10} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+            <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
+              {positions.length} active positions · constitutional entry prices · {snapshot?.price_data_as_of ?? '—'}
+            </span>
           </div>
         </div>
       )}

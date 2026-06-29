@@ -4,54 +4,45 @@ import React, { useState, useEffect } from 'react';
 import { Wifi, RefreshCw, AlertCircle, Archive, Signal } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
 import Link from 'next/link';
+import { useSnapshot } from '@/providers/SnapshotProvider';
 
+// Wall-clock display only — NOT used for trading date calculations.
+// All trading dates and market status come from the production snapshot.
 function formatCairoTime(date: Date): string {
-  const utc = date.getTime() + date.getTimezoneOffset() * 60000;
-  const cairo = new Date(utc + 3 * 3600000);
-  const h = cairo.getHours().toString().padStart(2, '0');
-  const m = cairo.getMinutes().toString().padStart(2, '0');
-  const s = cairo.getSeconds().toString().padStart(2, '0');
-  return `${h}:${m}:${s}`;
+  return date.toLocaleTimeString('en-GB', { timeZone: 'Africa/Cairo', hour12: false });
 }
 
 function formatCairoDate(date: Date): string {
-  const utc = date.getTime() + date.getTimezoneOffset() * 60000;
-  const cairo = new Date(utc + 3 * 3600000);
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${days[cairo.getDay()]}, ${cairo.getDate()} ${months[cairo.getMonth()]} ${cairo.getFullYear()}`;
+  return date.toLocaleDateString('en-GB', {
+    timeZone: 'Africa/Cairo',
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 export default function DashboardHeader() {
+  const { snapshot, loading, error } = useSnapshot();
+
   const [timeStr, setTimeStr] = useState('--:--:--');
   const [dateStr, setDateStr] = useState('');
-  const [scanAge, setScanAge] = useState(0);
-  const [isLive, setIsLive] = useState(true);
 
   useEffect(() => {
     const tick = () => {
       const now = new Date();
       setTimeStr(formatCairoTime(now));
       setDateStr(formatCairoDate(now));
-      setScanAge((prev) => prev + 1);
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      setIsLive(true);
-    }, 30000);
-    return () => clearInterval(id);
-  }, []);
-
-  const scanAgeDisplay = scanAge < 60
-    ? `${scanAge}s ago`
-    : scanAge < 3600
-    ? `${Math.floor(scanAge / 60)}m ago`
-    : `${Math.floor(scanAge / 3600)}h ago`;
+  const isLive = !error && !loading;
+  const marketStatus = snapshot?.market_status ?? (loading ? '...' : 'UNAVAILABLE');
+  const scanId = snapshot?.scan_id ? snapshot.scan_id.slice(0, 8) : '--------';
+  const commit = snapshot?.commit ?? '-------';
 
   return (
     <header
@@ -97,14 +88,14 @@ export default function DashboardHeader() {
                   letterSpacing: '0.04em',
                 }}
               >
-                v2.4
+                {commit}
               </span>
             </div>
             <span
               className="font-mono"
               style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}
             >
-              CONSTITUTIONAL SIGNAL SYSTEM
+              SCAN {scanId}
             </span>
           </div>
         </div>
@@ -112,7 +103,6 @@ export default function DashboardHeader() {
 
       {/* Center: Status indicators */}
       <div className="hidden md:flex items-center gap-1">
-        {/* Live indicator */}
         <div
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
           style={{
@@ -128,28 +118,24 @@ export default function DashboardHeader() {
             className="font-mono font-bold"
             style={{ fontSize: '10px', color: isLive ? 'var(--signal-buy)' : 'var(--signal-danger)', letterSpacing: '0.08em' }}
           >
-            {isLive ? 'LIVE' : 'RECONNECTING'}
+            {isLive ? 'LIVE' : error ? 'ERROR' : 'LOADING'}
           </span>
         </div>
 
-        {/* Divider */}
         <div style={{ width: '1px', height: '20px', backgroundColor: 'var(--border)', margin: '0 8px' }} />
 
-        {/* Scan status */}
         <div className="flex items-center gap-1.5">
           <RefreshCw size={11} style={{ color: 'var(--muted-foreground)' }} className="scan-blink" />
           <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>
-            SCAN
+            SNAPSHOT
           </span>
           <span className="font-mono font-medium" style={{ fontSize: '10px', color: 'var(--foreground)' }}>
-            {scanAgeDisplay}
+            {snapshot?.price_data_as_of ?? '--'}
           </span>
         </div>
 
-        {/* Divider */}
         <div style={{ width: '1px', height: '20px', backgroundColor: 'var(--border)', margin: '0 8px' }} />
 
-        {/* Market status */}
         <div className="flex items-center gap-1.5">
           <Signal size={11} style={{ color: 'var(--signal-near)' }} />
           <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>
@@ -159,14 +145,13 @@ export default function DashboardHeader() {
             className="font-mono font-bold"
             style={{ fontSize: '10px', color: 'var(--signal-near)', letterSpacing: '0.06em' }}
           >
-            PRE-OPEN
+            {marketStatus}
           </span>
         </div>
       </div>
 
       {/* Right: Cairo Clock + Archive Link */}
       <div className="flex items-center gap-3">
-        {/* Archive nav link */}
         <Link
           href="/archive"
           className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-150"
@@ -184,13 +169,9 @@ export default function DashboardHeader() {
           </span>
         </Link>
 
-        {/* Clock block */}
         <div
           className="flex items-center gap-3 px-3 py-1.5 rounded-lg"
-          style={{
-            backgroundColor: 'rgba(255,255,255,0.03)',
-            border: '1px solid var(--border)',
-          }}
+          style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}
         >
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-1.5">
@@ -218,7 +199,6 @@ export default function DashboardHeader() {
             </span>
           </div>
 
-          {/* Connection icon */}
           <div
             className="p-1.5 rounded-md"
             style={{

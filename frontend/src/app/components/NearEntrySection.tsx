@@ -1,242 +1,100 @@
 'use client';
 
 import React from 'react';
-import { Clock, TrendingUp, ArrowRight } from 'lucide-react';
+import { Target, ChevronRight } from 'lucide-react';
 import R2ProgressBar from './R2ProgressBar';
-
-interface NearEntryTicker {
-  id: string;
-  ticker: string;
-  company: string;
-  r2Score: number;
-  proximity: number;
-  entryPrice: number;
-  currentPrice: number;
-  winRate: number;
-  trend: 'approaching' | 'at_zone' | 'slightly_above';
-}
-
-const nearEntryTickers: NearEntryTicker[] = [
-  {
-    id: 'near-fwry',
-    ticker: 'FWRY.CA',
-    company: 'Fawry for Banking Technology',
-    r2Score: 0.89,
-    proximity: 2.3,
-    entryPrice: 42.10,
-    currentPrice: 43.07,
-    winRate: 88,
-    trend: 'approaching',
-  },
-  {
-    id: 'near-btfh',
-    ticker: 'BTFH.CA',
-    company: 'Beltone Financial Holding',
-    r2Score: 0.82,
-    proximity: 1.1,
-    entryPrice: 18.45,
-    currentPrice: 18.65,
-    winRate: 83,
-    trend: 'at_zone',
-  },
-  {
-    id: 'near-hrho',
-    ticker: 'HRHO.CA',
-    company: 'Hermes Financial Group',
-    r2Score: 0.91,
-    proximity: 3.7,
-    entryPrice: 55.20,
-    currentPrice: 57.24,
-    winRate: 91,
-    trend: 'approaching',
-  },
-  {
-    id: 'near-mcqe',
-    ticker: 'MCQE.CA',
-    company: 'Madinet Masr for Housing',
-    r2Score: 0.77,
-    proximity: 0.8,
-    entryPrice: 31.60,
-    currentPrice: 31.85,
-    winRate: 79,
-    trend: 'at_zone',
-  },
-];
-
-function getTrendBadge(trend: NearEntryTicker['trend']) {
-  if (trend === 'at_zone') {
-    return (
-      <span
-        className="font-mono px-2 py-0.5 rounded-md"
-        style={{
-          fontSize: '9px',
-          backgroundColor: 'rgba(245,158,11,0.12)',
-          color: 'var(--signal-near)',
-          border: '1px solid rgba(245,158,11,0.25)',
-          letterSpacing: '0.04em',
-        }}
-      >
-        AT ZONE
-      </span>
-    );
-  }
-  return (
-    <span
-      className="font-mono px-2 py-0.5 rounded-md"
-      style={{
-        fontSize: '9px',
-        backgroundColor: 'rgba(59,130,246,0.08)',
-        color: 'var(--signal-reaccum)',
-        border: '1px solid rgba(59,130,246,0.18)',
-        letterSpacing: '0.04em',
-      }}
-    >
-      APPROACHING
-    </span>
-  );
-}
+import { useSnapshot } from '@/providers/SnapshotProvider';
 
 export default function NearEntrySection() {
+  const { snapshot, loading } = useSnapshot();
+
+  const tickers = snapshot?.near_constitutional ?? [];
+
   return (
-    <div
-      className="rounded-xl h-full glow-near"
-      style={{
-        backgroundColor: 'var(--card)',
-        border: '1px solid var(--signal-near-border)',
-      }}
-    >
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-4 py-3.5 rounded-t-xl"
-        style={{
-          background: 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.02) 100%)',
-          borderBottom: '1px solid var(--signal-near-border)',
-        }}
-      >
+    <div className="rounded-xl h-full" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', boxShadow: '0 2px 16px rgba(0,0,0,0.3)' }}>
+      <div className="flex items-center justify-between px-4 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="flex items-center gap-2">
-          <Clock size={13} style={{ color: 'var(--signal-near)' }} />
-          <span
-            className="font-mono font-semibold"
-            style={{ fontSize: '12px', color: 'var(--signal-near)', letterSpacing: '0.07em' }}
-          >
-            NEAR ENTRY
-          </span>
-          <span
-            className="font-mono px-1.5 py-0.5 rounded-full"
-            style={{
-              fontSize: '9px',
-              backgroundColor: 'rgba(245,158,11,0.12)',
-              color: 'var(--signal-near)',
-              border: '1px solid rgba(245,158,11,0.2)',
-            }}
-          >
-            {nearEntryTickers.length}
+          <Target size={13} style={{ color: 'var(--signal-near)' }} />
+          <span className="font-mono font-semibold" style={{ fontSize: '12px', color: 'var(--foreground)', letterSpacing: '0.07em' }}>
+            NEAR CONSTITUTIONAL ENTRY
           </span>
         </div>
-        <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>
-          WATCHLIST
+        <span
+          className="font-mono px-2 py-0.5 rounded-md"
+          style={{ fontSize: '9px', backgroundColor: 'rgba(245,158,11,0.1)', color: 'var(--signal-near)', border: '1px solid rgba(245,158,11,0.2)' }}
+        >
+          {loading ? '…' : `${tickers.length} TICKERS`}
         </span>
       </div>
 
-      {/* Ticker list */}
-      <div className="p-3 flex flex-col gap-2.5">
-        {nearEntryTickers.map((item) => (
+      <div className="p-3 flex flex-col gap-2">
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>Loading…</span>
+          </div>
+        )}
+
+        {!loading && tickers.length === 0 && (
+          <div className="flex items-center justify-center py-8">
+            <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>No near-constitutional tickers this scan.</span>
+          </div>
+        )}
+
+        {tickers.map((t) => (
           <div
-            key={item.id}
-            className="ticker-row rounded-xl p-3.5 cursor-pointer"
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.02)',
-              border: '1px solid var(--border)',
-            }}
+            key={t.ticker}
+            className="px-3 py-3 rounded-xl"
+            style={{ backgroundColor: 'rgba(245,158,11,0.04)', border: '1px solid rgba(245,158,11,0.15)' }}
           >
-            {/* Row top: ticker + badge + proximity */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span
-                  className="font-mono font-bold"
-                  style={{ fontSize: '13px', color: 'var(--foreground)', letterSpacing: '0.02em' }}
-                >
-                  {item.ticker}
-                </span>
-                {getTrendBadge(item.trend)}
+                <span className="font-mono font-bold" style={{ fontSize: '13px', color: 'var(--foreground)' }}>{t.ticker}</span>
+                <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>{t.sector}</span>
               </div>
-              <div className="flex items-center gap-1">
-                <TrendingUp size={10} style={{ color: 'var(--signal-near)' }} />
-                <span
-                  className="font-mono font-semibold tabular-nums"
-                  style={{ fontSize: '11px', color: 'var(--signal-near)' }}
-                >
-                  +{item.proximity.toFixed(1)}%
-                </span>
+              <ChevronRight size={12} style={{ color: 'var(--muted-foreground)' }} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <div>
+                <p className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>ENTRY ZONE</p>
+                <p className="font-mono font-bold tabular-nums" style={{ fontSize: '14px', color: 'var(--signal-near)' }}>
+                  {t.candidate_entry_zone.toFixed(2)}
+                </p>
+              </div>
+              <div>
+                <p className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>CURRENT</p>
+                <p className="font-mono font-bold tabular-nums" style={{ fontSize: '14px', color: 'var(--foreground)' }}>
+                  {t.current_price.toFixed(2)}
+                </p>
               </div>
             </div>
 
-            {/* Company name */}
-            <p
-              className="mb-2.5 truncate"
-              style={{ fontSize: '11px', color: 'var(--muted-foreground)' }}
-            >
-              {item.company}
-            </p>
-
-            {/* Prices row */}
-            <div
-              className="flex items-center justify-between mb-2.5 px-3 py-2 rounded-lg"
-              style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}
-            >
-              <div>
-                <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
-                  ENTRY{' '}
-                </span>
-                <span
-                  className="font-mono font-semibold tabular-nums"
-                  style={{ fontSize: '12px', color: 'var(--signal-near)' }}
-                >
-                  {item.entryPrice.toFixed(2)}
-                </span>
-              </div>
-              <ArrowRight size={10} style={{ color: 'var(--muted-foreground)' }} />
-              <div>
-                <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
-                  NOW{' '}
-                </span>
-                <span
-                  className="font-mono font-semibold tabular-nums"
-                  style={{ fontSize: '12px', color: 'var(--foreground)' }}
-                >
-                  {item.currentPrice.toFixed(2)}
-                </span>
-              </div>
-              <div>
-                <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
-                  WIN{' '}
-                </span>
-                <span
-                  className="font-mono font-semibold tabular-nums"
-                  style={{ fontSize: '12px', color: 'var(--signal-buy)' }}
-                >
-                  {item.winRate}%
-                </span>
-              </div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>R² SCORE</span>
+              <span className="font-mono font-bold" style={{ fontSize: '11px', color: 'var(--signal-reaccum)' }}>{t.candidate_r2}</span>
             </div>
+            <R2ProgressBar value={t.candidate_r2 / 100} color="var(--signal-near)" height={3} />
 
-            {/* R2 bar */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
-                  R² SCORE
-                </span>
-                <span
-                  className="font-mono font-semibold tabular-nums"
-                  style={{ fontSize: '9px', color: 'var(--signal-near)' }}
-                >
-                  {(item.r2Score * 100).toFixed(0)}%
-                </span>
-              </div>
-              <R2ProgressBar value={item.r2Score} color="var(--signal-near)" height={3} />
+            <div className="flex items-center justify-between mt-2">
+              <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
+                Distance to constitutional: {t.distance_to_constitutional.toFixed(1)}%
+              </span>
+              {t.need_move_pct === 0 && (
+                <span className="font-mono" style={{ fontSize: '9px', color: 'var(--signal-near)', fontWeight: 600 }}>AT ZONE</span>
+              )}
             </div>
           </div>
         ))}
+
+        <div
+          className="flex items-center gap-2 mt-1 px-3 py-2 rounded-lg"
+          style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}
+        >
+          <Target size={10} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+          <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
+            Reward score: {snapshot?.statistics?.near_constitutional_count ?? 0} tickers near constitutional threshold · {snapshot?.market_date ?? '—'}
+          </span>
+        </div>
       </div>
     </div>
   );

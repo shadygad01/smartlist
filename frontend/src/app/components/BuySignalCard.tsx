@@ -1,489 +1,149 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TrendingUp, Award, Copy, CheckCircle, BarChart2, Clock, Target, Zap, Brain, Activity } from 'lucide-react';
+import { TrendingUp, Copy, CheckCircle, Clock, Zap, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 import R2ProgressBar from './R2ProgressBar';
+import { useSnapshot } from '@/providers/SnapshotProvider';
+import type { UniverseItem } from '@/types/snapshot';
 
-const signal = {
-  ticker: 'ABUK.CA',
-  companyName: 'Abu Khashaba for Trade & Agencies',
-  signalType: 'NEW BUY ELITE',
-  tier: 'ELITE',
-  entryPrice: 69.05,
-  currentPrice: 67.80,
-  discount: 1.81,
-  winRate: 95,
-  avgReturn: 52.6,
-  r2Score: 0.94,
-  priorSignals: 20,
-  sector: 'Trade & Distribution',
-  detectedAt: '05:14:22',
-  confidence: 'VERY HIGH',
-  target1: 78.50,
-  target2: 89.30,
-  volumeRatio: 2.4,
-  ive: 84.30,
-  behaviorPhase: 'ACCUMULATION',
-};
+// BUY-ready classification comes from the production snapshot field verbatim.
+// The frontend never evaluates r2, score, or gate conditions itself.
+function isBuyReady(item: UniverseItem): boolean {
+  return item.waiting_for_reason?.includes('READY NOW') ?? false;
+}
 
-const behaviorPhaseColor: Record<string, string> = {
-  ACCUMULATION: '#3b82f6',
-  BREAKOUT: '#10b981',
-  DISTRIBUTION: '#f59e0b',
-  MARKUP: '#10b981',
-  MARKDOWN: '#ef4444',
-};
-
-export default function BuySignalCard() {
+function CopyButton({ ticker }: { ticker: string }) {
   const [copied, setCopied] = useState(false);
-
   const handleCopy = () => {
-    navigator.clipboard?.writeText(signal?.ticker)?.catch(() => {});
+    navigator.clipboard?.writeText(ticker)?.catch(() => {});
     setCopied(true);
-    toast?.success(`Copied ${signal?.ticker} to clipboard`, {
+    toast?.success(`Copied ${ticker} to clipboard`, {
       duration: 2000,
       style: { background: 'var(--card)', border: '1px solid var(--signal-buy-border)', color: 'var(--foreground)' },
     });
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const phaseColor = behaviorPhaseColor[signal?.behaviorPhase] ?? '#f59e0b';
-
   return (
-    <div
-      className="rounded-xl glow-buy animate-fade-in-up"
-      style={{
-        backgroundColor: 'var(--card)',
-        border: '1px solid var(--signal-buy-border)',
-      }}
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-150"
+      style={{ backgroundColor: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: 'var(--signal-buy)', fontSize: '10px', fontFamily: 'monospace' }}
     >
-      {/* Card Header */}
+      {copied ? <CheckCircle size={12} /> : <Copy size={12} />}
+      {copied ? 'COPIED' : 'COPY'}
+    </button>
+  );
+}
+
+function BuyCard({ signal }: { signal: UniverseItem }) {
+  return (
+    <div className="rounded-xl glow-buy animate-fade-in-up" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--signal-buy-border)' }}>
       <div
         className="flex items-center justify-between px-5 py-3.5 rounded-t-xl"
-        style={{
-          background: 'linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(16,185,129,0.03) 100%)',
-          borderBottom: '1px solid var(--signal-buy-border)',
-        }}
+        style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(16,185,129,0.03) 100%)' }}
       >
-        <div className="flex items-center gap-2.5">
-          <div
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
-            style={{
-              backgroundColor: 'rgba(16,185,129,0.12)',
-              border: '1px solid rgba(16,185,129,0.3)',
-            }}
-          >
-            <TrendingUp size={12} style={{ color: 'var(--signal-buy)' }} />
-            <span
-              className="font-mono font-bold"
-              style={{ fontSize: '11px', color: 'var(--signal-buy)', letterSpacing: '0.07em' }}
-            >
-              {signal?.signalType}
-            </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center rounded-lg" style={{ width: '32px', height: '32px', backgroundColor: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
+            <TrendingUp size={16} style={{ color: 'var(--signal-buy)' }} />
           </div>
-
-          <div
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg"
-            style={{
-              backgroundColor: 'rgba(167,139,250,0.1)',
-              border: '1px solid rgba(167,139,250,0.25)',
-            }}
-          >
-            <Award size={11} style={{ color: 'var(--signal-elite)' }} />
-            <span
-              className="font-mono font-bold"
-              style={{ fontSize: '10px', color: 'var(--signal-elite)', letterSpacing: '0.07em' }}
-            >
-              ELITE
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <Clock size={10} style={{ color: 'var(--muted-foreground)' }} />
-          <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>
-            Detected {signal?.detectedAt} CAI
-          </span>
-        </div>
-      </div>
-
-      {/* Card Body */}
-      <div className="px-5 py-5">
-
-        {/* Ticker + Company */}
-        <div className="flex items-start justify-between mb-5">
           <div>
-            <div className="flex items-center gap-2.5 mb-1">
-              <h2
-                className="font-mono font-bold tabular-nums"
-                style={{ fontSize: '36px', color: 'var(--foreground)', lineHeight: 1, letterSpacing: '-0.02em' }}
-              >
-                {signal?.ticker}
-              </h2>
-              <button
-                onClick={handleCopy}
-                className="p-1.5 rounded-md transition-all duration-150 hover:scale-105 active:scale-95"
-                style={{
-                  backgroundColor: copied ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${copied ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
-                  color: copied ? 'var(--signal-buy)' : 'var(--muted-foreground)',
-                }}
-                title="Copy ticker symbol"
-              >
-                {copied ? <CheckCircle size={13} /> : <Copy size={13} />}
-              </button>
-            </div>
-            <p style={{ fontSize: '13px', color: 'var(--foreground)', fontWeight: 500, opacity: 0.8 }}>
-              {signal?.companyName}
-            </p>
-            <p
-              className="font-mono mt-0.5"
-              style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}
-            >
-              {signal?.sector} · EGX
-            </p>
-          </div>
-
-          <div className="flex flex-col items-end gap-1.5">
-            <span
-              className="font-mono font-semibold px-3 py-1.5 rounded-lg"
-              style={{
-                fontSize: '10px',
-                backgroundColor: 'rgba(16,185,129,0.1)',
-                color: 'var(--signal-buy)',
-                border: '1px solid rgba(16,185,129,0.2)',
-                letterSpacing: '0.06em',
-              }}
-            >
-              {signal?.confidence} CONFIDENCE
+            <span className="font-mono font-bold" style={{ fontSize: '10px', color: 'var(--signal-buy)', letterSpacing: '0.12em' }}>
+              CONSTITUTIONAL BUY SIGNAL
             </span>
-            <div className="flex items-center gap-1">
-              <Zap size={10} style={{ color: 'var(--signal-near)' }} />
-              <span className="font-mono" style={{ fontSize: '10px', color: 'var(--signal-near)' }}>
-                Vol Ratio: {signal?.volumeRatio}x
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="font-mono font-bold" style={{ fontSize: '18px', color: 'var(--foreground)' }}>{signal.ticker}</span>
+              <span className="font-mono px-2 py-0.5 rounded-md" style={{ fontSize: '9px', backgroundColor: 'rgba(16,185,129,0.15)', color: 'var(--signal-buy)', border: '1px solid rgba(16,185,129,0.3)' }}>
+                {signal.status}
               </span>
             </div>
           </div>
         </div>
+        <CopyButton ticker={signal.ticker} />
+      </div>
 
-        {/* ── IVE + BEHAVIOR PHASE ── */}
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          {/* IVE */}
-          <div
-            className="flex flex-col gap-1.5 p-4 rounded-xl"
-            style={{ backgroundColor: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.2)' }}
-          >
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <Brain size={11} style={{ color: '#a78bfa' }} />
-              <span
-                className="font-mono"
-                style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.09em' }}
-              >
-                INTRINSIC VALUE EST.
-              </span>
-            </div>
-            <span
-              className="font-mono font-bold tabular-nums"
-              style={{ fontSize: '24px', color: '#a78bfa', lineHeight: 1.1, letterSpacing: '-0.01em' }}
-            >
-              {signal?.ive?.toFixed(2)}
-            </span>
-            <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
-              EGP · fair value
-            </span>
-          </div>
-
-          {/* BEHAVIOR PHASE */}
-          <div
-            className="flex flex-col gap-1.5 p-4 rounded-xl"
-            style={{
-              backgroundColor: 'rgba(59,130,246,0.07)',
-              border: `1px solid rgba(59,130,246,0.2)`,
-            }}
-          >
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <Activity size={11} style={{ color: phaseColor }} />
-              <span
-                className="font-mono"
-                style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.09em' }}
-              >
-                BEHAVIOR PHASE
-              </span>
-            </div>
-            <span
-              className="font-mono font-bold"
-              style={{ fontSize: '19px', color: phaseColor, lineHeight: 1.2, letterSpacing: '0.02em' }}
-            >
-              {signal?.behaviorPhase}
-            </span>
-            <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
-              Wyckoff cycle stage
-            </span>
-          </div>
+      <div className="px-5 py-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <p className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>ENTRY ZONE</p>
+          <p className="font-mono font-bold tabular-nums" style={{ fontSize: '18px', color: 'var(--signal-buy)' }}>
+            {signal.constitutional_entry_price != null ? signal.constitutional_entry_price.toFixed(2) : '—'}
+          </p>
         </div>
-
-        {/* Price Block */}
-        <div
-          className="grid grid-cols-3 gap-0 mb-5 rounded-xl overflow-hidden"
-          style={{ border: '1px solid var(--border)' }}
-        >
-          <div
-            className="flex flex-col gap-1 p-4"
-            style={{ borderRight: '1px solid var(--border)', backgroundColor: 'rgba(16,185,129,0.05)' }}
-          >
-            <span
-              className="font-mono"
-              style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.08em' }}
-            >
-              BUY LIMIT
-            </span>
-            <span
-              className="font-mono font-bold tabular-nums"
-              style={{ fontSize: '22px', color: 'var(--signal-buy)', lineHeight: 1.1, letterSpacing: '-0.01em' }}
-            >
-              {signal?.entryPrice?.toFixed(2)}
-            </span>
-            <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
-              EGP
-            </span>
-          </div>
-
-          <div
-            className="flex flex-col gap-1 p-4"
-            style={{ borderRight: '1px solid var(--border)', backgroundColor: 'rgba(255,255,255,0.02)' }}
-          >
-            <span
-              className="font-mono"
-              style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.08em' }}
-            >
-              CURRENT
-            </span>
-            <span
-              className="font-mono font-bold tabular-nums"
-              style={{ fontSize: '22px', color: 'var(--foreground)', lineHeight: 1.1, letterSpacing: '-0.01em' }}
-            >
-              {signal?.currentPrice?.toFixed(2)}
-            </span>
-            <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
-              EGP
-            </span>
-          </div>
-
-          <div
-            className="flex flex-col gap-1 p-4"
-            style={{ backgroundColor: 'rgba(16,185,129,0.04)' }}
-          >
-            <span
-              className="font-mono"
-              style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.08em' }}
-            >
-              DISCOUNT
-            </span>
-            <span
-              className="font-mono font-bold tabular-nums"
-              style={{ fontSize: '22px', color: 'var(--signal-buy)', lineHeight: 1.1, letterSpacing: '-0.01em' }}
-            >
-              -{signal?.discount?.toFixed(1)}%
-            </span>
-            <span
-              className="font-mono"
-              style={{ fontSize: '9px', color: 'var(--signal-buy)', opacity: 0.7 }}
-            >
-              below limit
-            </span>
-          </div>
+        <div>
+          <p className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>CURRENT PRICE</p>
+          <p className="font-mono font-bold tabular-nums" style={{ fontSize: '18px', color: 'var(--foreground)' }}>{signal.current_price.toFixed(2)}</p>
         </div>
-
-        {/* Targets row */}
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          <div
-            className="flex flex-col gap-1 p-3.5 rounded-xl"
-            style={{ backgroundColor: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)' }}
-          >
-            <span
-              className="font-mono"
-              style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.08em' }}
-            >
-              TARGET 1
-            </span>
-            <span
-              className="font-mono font-semibold tabular-nums"
-              style={{ fontSize: '20px', color: 'var(--signal-buy)', letterSpacing: '-0.01em' }}
-            >
-              {signal?.target1?.toFixed(2)}
-            </span>
-            <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
-              EGP
-            </span>
-          </div>
-          <div
-            className="flex flex-col gap-1 p-3.5 rounded-xl"
-            style={{ backgroundColor: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}
-          >
-            <span
-              className="font-mono"
-              style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.08em' }}
-            >
-              TARGET 2
-            </span>
-            <span
-              className="font-mono font-semibold tabular-nums"
-              style={{ fontSize: '20px', color: 'var(--signal-buy)', letterSpacing: '-0.01em' }}
-            >
-              {signal?.target2?.toFixed(2)}
-            </span>
-            <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
-              EGP
-            </span>
-          </div>
+        <div>
+          <p className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>DISTANCE</p>
+          <p className="font-mono font-bold tabular-nums" style={{ fontSize: '18px', color: signal.distance != null && signal.distance < 0 ? 'var(--signal-near)' : 'var(--foreground)' }}>
+            {signal.distance != null ? `${signal.distance.toFixed(2)}%` : '—'}
+          </p>
         </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          {/* Win Rate */}
-          <div
-            className="flex flex-col gap-2 p-3.5 rounded-xl"
-            style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}
-          >
-            <span
-              className="font-mono"
-              style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.08em' }}
-            >
-              WIN RATE
-            </span>
-            <span
-              className="font-mono font-bold tabular-nums"
-              style={{ fontSize: '24px', color: 'var(--signal-buy)', lineHeight: 1, letterSpacing: '-0.02em' }}
-            >
-              {signal?.winRate}%
-            </span>
-            <div className="w-full rounded-full overflow-hidden" style={{ height: '3px', backgroundColor: 'rgba(255,255,255,0.07)' }}>
-              <div
-                className="h-full rounded-full r2-bar-fill"
-                style={{ width: `${signal?.winRate}%`, backgroundColor: 'var(--signal-buy)' }}
-              />
-            </div>
-          </div>
-
-          {/* Avg Return */}
-          <div
-            className="flex flex-col gap-2 p-3.5 rounded-xl"
-            style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}
-          >
-            <span
-              className="font-mono"
-              style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.08em' }}
-            >
-              AVG RETURN
-            </span>
-            <span
-              className="font-mono font-bold tabular-nums"
-              style={{ fontSize: '24px', color: 'var(--signal-buy)', lineHeight: 1, letterSpacing: '-0.02em' }}
-            >
-              +{signal?.avgReturn}%
-            </span>
-            <div className="w-full rounded-full overflow-hidden" style={{ height: '3px', backgroundColor: 'rgba(255,255,255,0.07)' }}>
-              <div
-                className="h-full rounded-full r2-bar-fill"
-                style={{ width: `${Math.min(signal?.avgReturn, 100)}%`, backgroundColor: 'var(--signal-buy)' }}
-              />
-            </div>
-          </div>
-
-          {/* Prior Signals */}
-          <div
-            className="flex flex-col gap-2 p-3.5 rounded-xl"
-            style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}
-          >
-            <span
-              className="font-mono"
-              style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.08em' }}
-            >
-              PRIOR SIGNALS
-            </span>
-            <span
-              className="font-mono font-bold tabular-nums"
-              style={{ fontSize: '24px', color: 'var(--foreground)', lineHeight: 1, letterSpacing: '-0.02em' }}
-            >
-              {signal?.priorSignals}
-            </span>
-            <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>
-              historical
-            </span>
-          </div>
-        </div>
-
-        {/* R2 Score */}
-        <div
-          className="p-4 rounded-xl"
-          style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}
-        >
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-2">
-              <BarChart2 size={12} style={{ color: 'var(--signal-reaccum)' }} />
-              <span
-                className="font-mono"
-                style={{ fontSize: '10px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}
-              >
-                MODEL R² SCORE
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span
-                className="font-mono font-bold tabular-nums"
-                style={{ fontSize: '16px', color: 'var(--signal-reaccum)' }}
-              >
-                {(signal?.r2Score * 100)?.toFixed(0)}%
-              </span>
-              <span
-                className="font-mono px-2 py-0.5 rounded-md"
-                style={{
-                  fontSize: '9px',
-                  backgroundColor: 'rgba(59,130,246,0.1)',
-                  color: 'var(--signal-reaccum)',
-                  border: '1px solid rgba(59,130,246,0.2)',
-                }}
-              >
-                EXCELLENT
-              </span>
-            </div>
-          </div>
-          <R2ProgressBar value={signal?.r2Score} color="var(--signal-reaccum)" />
-          <div className="flex justify-between mt-1.5">
-            <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>0.00</span>
-            <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>0.50</span>
-            <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>1.00</span>
-          </div>
+        <div>
+          <p className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>REWARD SCORE</p>
+          <p className="font-mono font-bold tabular-nums" style={{ fontSize: '18px', color: 'var(--signal-reaccum)' }}>
+            {signal.expected_reward_score?.toFixed(1) ?? '—'}
+          </p>
         </div>
       </div>
 
-      {/* Card Footer */}
-      <div
-        className="flex items-center justify-between px-5 py-3.5 rounded-b-xl"
-        style={{ borderTop: '1px solid var(--border)', backgroundColor: 'rgba(255,255,255,0.01)' }}
-      >
-        <div className="flex items-center gap-1.5">
-          <Target size={11} style={{ color: 'var(--muted-foreground)' }} />
-          <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>
-            Constitutional Signal · EGX Listed
+      <div className="px-5 pb-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>CONSTITUTIONAL R²</span>
+          <span className="font-mono font-bold" style={{ fontSize: '12px', color: 'var(--signal-reaccum)' }}>
+            {signal.candidate_r2 != null ? signal.candidate_r2 : '—'}
           </span>
         </div>
-        <button
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-semibold transition-all duration-150 hover:opacity-90 active:scale-95"
-          style={{
-            fontSize: '11px',
-            backgroundColor: 'var(--signal-buy)',
-            color: '#000',
-            fontFamily: 'var(--font-mono)',
-            letterSpacing: '0.04em',
-          }}
-          onClick={() => toast?.info('Signal details logged', { duration: 2000, style: { background: 'var(--card)', color: 'var(--foreground)', border: '1px solid var(--border)' } })}
-        >
-          <TrendingUp size={11} />
-          ADD TO WATCHLIST
-        </button>
+        <R2ProgressBar value={(signal.candidate_r2 ?? 0) / 100} color="var(--signal-reaccum)" height={5} />
       </div>
+
+      <div className="px-5 py-3 rounded-b-xl flex items-center gap-2" style={{ backgroundColor: 'rgba(16,185,129,0.04)', borderTop: '1px solid rgba(16,185,129,0.12)' }}>
+        <Zap size={11} style={{ color: 'var(--signal-buy)', flexShrink: 0 }} />
+        <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>{signal.waiting_for_reason}</span>
+        <span className="font-mono ml-auto" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>{signal.last_scan}</span>
+      </div>
+    </div>
+  );
+}
+
+function NoBuyState({ scanId }: { scanId?: string }) {
+  return (
+    <div className="rounded-xl flex flex-col items-center justify-center py-12 px-6" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', minHeight: '200px' }}>
+      <Activity size={28} style={{ color: 'var(--muted-foreground)', marginBottom: '12px' }} />
+      <p className="font-mono font-semibold" style={{ fontSize: '13px', color: 'var(--foreground)' }}>NO ACTIVE BUY SIGNAL</p>
+      <p className="font-mono mt-2 text-center" style={{ fontSize: '10px', color: 'var(--muted-foreground)', maxWidth: '320px' }}>
+        The Constitutional Engine found no qualifying buy opportunities in this scan. Monitor near-entry candidates.
+      </p>
+      {scanId && (
+        <div className="flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
+          <Clock size={10} style={{ color: 'var(--muted-foreground)' }} />
+          <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>scan {scanId.slice(0, 8)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function BuySignalCard() {
+  const { snapshot, loading } = useSnapshot();
+
+  if (loading || !snapshot) {
+    return (
+      <div className="rounded-xl flex items-center justify-center py-12" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}>
+        <span className="font-mono" style={{ fontSize: '11px', color: 'var(--muted-foreground)' }}>Loading snapshot…</span>
+      </div>
+    );
+  }
+
+  const buySignals = snapshot.universe_snapshot.filter(isBuyReady);
+
+  if (buySignals.length === 0) return <NoBuyState scanId={snapshot.scan_id} />;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {buySignals.map((signal) => (
+        <BuyCard key={signal.ticker} signal={signal} />
+      ))}
     </div>
   );
 }

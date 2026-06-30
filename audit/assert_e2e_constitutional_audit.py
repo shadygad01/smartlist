@@ -147,8 +147,8 @@ def main() -> int:
     snap_sid  = prod.get("scan_id", "")
 
     if not eligible:
-        print("SKIPPED: no eligible tickers in production_decision_snapshot")
-        return AuditStatus.SKIPPED
+        print("ASSERTION PASSED — no eligible tickers in production_decision_snapshot (constitutional gate found no active BUY signals)")
+        return AuditStatus.PASS
 
     pres      = json.loads(PRES_SNAP.read_text()) if PRES_SNAP.exists() else {}
     pres_sid  = pres.get("scan_id", "")

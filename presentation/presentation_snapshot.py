@@ -363,16 +363,9 @@ def build_presentation_snapshot() -> PresentationSnapshot:
 
             # Only tickers with a prior FIRST_BUY in the constitutional timeline
             # are eligible for near_constitutional (re-accumulation candidates).
-            # Brand-new tickers without constitutional history are excluded.
+            # Active/held tickers may appear here if they are approaching a
+            # re-acc entry zone — being in the active section is not a disqualifier.
             _first_buy_tickers = {e["ticker"] for e in snap.first_buys}
-
-            # Tickers with an active constitutional signal must not appear here —
-            # they belong in the buy/re-accum cards.
-            _active_statuses = {"ACTIVE_OPPORTUNITY", "UNDER_REVIEW"}
-            _active_timeline_tickers: set[str] = set()
-            for _te in snap.timeline:
-                if _te.get("status") in _active_statuses:
-                    _active_timeline_tickers.add(_te["ticker"])
 
             entries = []
             for r in rows:
@@ -380,9 +373,6 @@ def build_presentation_snapshot() -> PresentationSnapshot:
                 ticker = r["ticker"]
                 # Must have prior constitutional buy history
                 if ticker not in _first_buy_tickers:
-                    continue
-                # Must not have an active signal right now
-                if ticker in _active_timeline_tickers:
                     continue
                 if ticker in _auth_prices and _auth_prices[ticker] > 0:
                     current_price = _auth_prices[ticker]
@@ -447,31 +437,8 @@ def build_presentation_snapshot() -> PresentationSnapshot:
         if _active_raw else 0.0
     )
 
-    # ── Approaching Entry exclusivity (must run after universe_snapshot is loaded) ─
-    # Exclude tickers that are CURRENTLY live constitutional buy/re-accum signals.
-    # "Live" means: R2>=60 AND score>=35 AND price<=constitutional_entry_price right now.
-    # Historical RE_ACCUMULATION events must NOT suppress current Near Entry
-    # candidates — a ticker that previously had a re-accum event may be
-    # approaching the constitutional gate again and must be visible.
-    try:
-        _prod_snap_path = BASE / "production_decision_snapshot.json"
-        live_constitutional_tickers: set[str] = set()
-        if _prod_snap_path.exists():
-            import json as _json_ps
-            _prod = _json_ps.loads(_prod_snap_path.read_text())
-            live_constitutional_tickers = {
-                d["ticker"] for d in _prod.get("decisions", []) if d.get("eligible")
-            }
-        signal_tickers = {
-            e["ticker"] for e in (snap.new_events_today or [])
-        } | live_constitutional_tickers
-        if signal_tickers:
-            snap.approaching_entries = [
-                e for e in snap.approaching_entries
-                if e["ticker"] not in signal_tickers
-            ]
-    except Exception as exc:
-        print(f"[PresentationSnapshot] approaching-entry exclusivity failed: {exc}")
+    # Active/held tickers may appear in near_constitutional if they are
+    # approaching a re-acc entry — no exclusivity filter applied here.
 
     # ── 3. Knowledge Base ─────────────────────────────────────────────────────
     kb = _db(_KB_DB)

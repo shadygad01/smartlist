@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-06-30T06:57:56+00:00",
-  "mode": "dev/manual",
+  "generated_at": "2026-06-30T16:35:47+00:00",
+  "mode": "CI/strict",
   "verdict": "PASS",
   "assertions": [
     {
@@ -35,9 +35,9 @@
     },
     {
       "label": "Data Freshness",
-      "status": "EXPECTED",
-      "status_code": 3,
-      "brief": "ASSERTION EXPECTED \u2014 data is stale for a dev/manual run (not a productio"
+      "status": "PASS",
+      "status_code": 0,
+      "brief": "ASSERTION PASSED \u2014 all required data sources are fresh."
     },
     {
       "label": "Workflow Completeness",
@@ -109,7 +109,7 @@
       "label": "E2E Constitutional Audit",
       "status": "PASS",
       "status_code": 0,
-      "brief": "CONSTITUTIONAL INTEGRITY: PASS"
+      "brief": "ASSERTION PASSED \u2014 no eligible tickers in production_decision_snapshot ("
     },
     {
       "label": "Scan Manifest",
@@ -119,9 +119,9 @@
     }
   ],
   "summary": {
-    "pass": 18,
+    "pass": 19,
     "fail": 0,
-    "expected": 1,
+    "expected": 0,
     "skipped": 0
   }
 }

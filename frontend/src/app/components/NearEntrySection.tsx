@@ -11,7 +11,7 @@ export default function NearEntrySection() {
 
   const tickers = snapshot?.near_constitutional ?? [];
 
-  if (!loading && tickers.length === 0) return null;
+  // Keep section visible even when empty so the panel slot is preserved.
 
   return (
     <div className="rounded-xl h-full" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', boxShadow: '0 2px 16px rgba(0,0,0,0.3)' }}>
@@ -42,6 +42,14 @@ export default function NearEntrySection() {
           {loading && (
             <div className="flex items-center justify-center py-8">
               <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>Loading…</span>
+            </div>
+          )}
+
+          {!loading && tickers.length === 0 && (
+            <div className="flex items-center justify-center py-6">
+              <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>
+                No tickers approaching constitutional entry
+              </span>
             </div>
           )}
 

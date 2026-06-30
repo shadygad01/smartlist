@@ -336,7 +336,8 @@ jobs:
                   heartbeat.json operations_state.json \
                   scan_execution.db notification_delivery.db \
                   scan_context.json mpi_snapshots.db decision_diff.json \
-                  valuation.db universe_snapshot.db candidate_pool.db || true
+                  universe_snapshot.db candidate_pool.db || true
+          git add -f valuation.db || true
           git add operations/incidents.json operations/sla.json \
                   operations/knowledge.json operations/sent_alerts.json || true
           git add historical_data/historical_data/*.csv || true

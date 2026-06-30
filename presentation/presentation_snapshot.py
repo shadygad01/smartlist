@@ -361,10 +361,13 @@ def build_presentation_snapshot() -> PresentationSnapshot:
             except Exception:
                 _auth_prices = {}
 
-            # Tickers with an active constitutional signal must not appear in
-            # near_constitutional — they belong in the buy/re-accum cards.
-            # Exclude any ticker whose most-recent timeline event is still live
-            # (ACTIVE_OPPORTUNITY or UNDER_REVIEW).
+            # Only tickers with a prior FIRST_BUY in the constitutional timeline
+            # are eligible for near_constitutional (re-accumulation candidates).
+            # Brand-new tickers without constitutional history are excluded.
+            _first_buy_tickers = {e["ticker"] for e in snap.first_buys}
+
+            # Tickers with an active constitutional signal must not appear here —
+            # they belong in the buy/re-accum cards.
             _active_statuses = {"ACTIVE_OPPORTUNITY", "UNDER_REVIEW"}
             _active_timeline_tickers: set[str] = set()
             for _te in snap.timeline:
@@ -374,9 +377,11 @@ def build_presentation_snapshot() -> PresentationSnapshot:
             entries = []
             for r in rows:
                 candidate_entry_zone = r["candidate_entry_zone"]
-                # PriceAuthority is the single source of truth for current price.
-                # Fallback: CSV price, then candidate_pool price.
                 ticker = r["ticker"]
+                # Must have prior constitutional buy history
+                if ticker not in _first_buy_tickers:
+                    continue
+                # Must not have an active signal right now
                 if ticker in _active_timeline_tickers:
                     continue
                 if ticker in _auth_prices and _auth_prices[ticker] > 0:

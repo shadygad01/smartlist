@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-06-29T16:32:55+00:00",
-  "mode": "CI/strict",
+  "generated_at": "2026-06-30T06:53:09+00:00",
+  "mode": "dev/manual",
   "verdict": "PASS",
   "assertions": [
     {
@@ -31,13 +31,13 @@
       "label": "Event Chain Integrity",
       "status": "PASS",
       "status_code": 0,
-      "brief": "ASSERTION PASSED \u2014 1 event chain(s) intact."
+      "brief": "ASSERTION PASSED \u2014 no transitions to validate."
     },
     {
       "label": "Data Freshness",
-      "status": "PASS",
-      "status_code": 0,
-      "brief": "ASSERTION PASSED \u2014 all required data sources are fresh."
+      "status": "EXPECTED",
+      "status_code": 3,
+      "brief": "ASSERTION EXPECTED \u2014 data is stale for a dev/manual run (not a productio"
     },
     {
       "label": "Workflow Completeness",
@@ -119,9 +119,9 @@
     }
   ],
   "summary": {
-    "pass": 19,
+    "pass": 18,
     "fail": 0,
-    "expected": 0,
+    "expected": 1,
     "skipped": 0
   }
 }

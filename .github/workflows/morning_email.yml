@@ -204,7 +204,8 @@ jobs:
                   constitutional_fingerprint.json architecture_fingerprint.json \
                   scan_manifest.json consistency_report.json scan_context.json \
                   version.json dashboard.html signal_history.json \
-                  mpi_snapshots.db decision_diff.json || true
+                  mpi_snapshots.db decision_diff.json \
+                  universe_snapshot.db candidate_pool.db || true
           git add historical_data/historical_data/*.csv || true
           git diff --staged --quiet || git commit -m "Morning email: full state update [skip ci]"
           git push || true

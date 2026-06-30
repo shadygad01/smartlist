@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GX Research Memory — 2026-06-30</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;background:#0d1117;color:#e6edf3;font-size:14px}
+  .wrap{max-width:1400px;margin:0 auto;padding:24px}
+  h1{font-size:1.5em;color:#58a6ff;border-bottom:1px solid #30363d;padding-bottom:12px;margin-bottom:8px}
+  h2{font-size:0.85em;color:#8b949e;margin:28px 0 12px;text-transform:uppercase;letter-spacing:1.2px}
+  .card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:18px;margin:10px 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
+  .stat{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;text-align:center}
+  .sv{font-size:1.9em;font-weight:700}
+  .sl{font-size:0.72em;color:#8b949e;margin-top:4px}
+  table{width:100%;border-collapse:collapse}
+  th{background:#161b22;color:#8b949e;padding:9px 12px;text-align:left;border-bottom:2px solid #30363d;font-size:0.78em;text-transform:uppercase;letter-spacing:0.8px;font-weight:500;white-space:nowrap}
+  td{padding:9px 12px;border-bottom:1px solid #21262d;vertical-align:top;line-height:1.5}
+  tr:hover td{background:#1c2128}
+  .ts{font-size:0.75em;color:#6c757d}
+  ul{margin:0;padding-left:18px;line-height:2.2}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🔬 GX Research Memory</h1>
+<div class="ts">Generated: 2026-06-30 16:25 UTC &nbsp;·&nbsp; 23 total items &nbsp;·&nbsp; Schema v2</div>
+
+<div class="grid">
+  <div class="stat"><div class="sv" style="color:#58a6ff">14</div><div class="sl">Open / Investigating</div></div>
+  <div class="stat"><div class="sv" style="color:#f0883e">8</div><div class="sl">Awaiting Validation</div></div>
+  <div class="stat"><div class="sv" style="color:#3fb950">0</div><div class="sl">Validated</div></div>
+  <div class="stat"><div class="sv" style="color:#a371f7">0</div><div class="sl">Promoted</div></div>
+  <div class="stat"><div class="sv" style="color:#da3633">1</div><div class="sl">Rejected</div></div>
+  <div class="stat"><div class="sv" style="color:#da3633">4</div><div class="sl">Critical Open</div></div>
+</div>
+
+<h2>⚠ Critical Items</h2><div class='card'><div style="background:#1f1b18;border:1px solid #f0883e;border-radius:8px;padding:12px;margin:8px 0">
+          <div style="color:#f0883e;font-weight:700">⚠ <code>RI-ARCH-ADDITIVE</code> — Additive scoring: OOS R² = -0.15 — architecture cannot be fixed by weight tuning</div>
+          <div style="color:#8b949e;font-size:0.85em;margin-top:4px">Design non-linear scoring: mandatory gates × quality bonus. Test vs current additive sum. This is the root cause of the learning plateau.</div>
+        </div><div style="background:#1f1b18;border:1px solid #f0883e;border-radius:8px;padding:12px;margin:8px 0">
+          <div style="color:#f0883e;font-weight:700">⚠ <code>RI-RL-NEG-DISC</code> — SMC RL discrimination = -4.23 (NEGATIVE — top-quartile underperforms bottom)</div>
+          <div style="color:#8b949e;font-size:0.85em;margin-top:4px">Diagnose RL objective function. Likely the target variable is inverted or the loss is minimizing the wrong direction. Do not use RL weights for any promotion until fixed.</div>
+        </div><div style="background:#1f1b18;border:1px solid #f0883e;border-radius:8px;padding:12px;margin:8px 0">
+          <div style="color:#f0883e;font-weight:700">⚠ <code>RI-QUANT-R2</code> — All ML models R² ≤ -0.012 — scoring has zero predictive power for returns</div>
+          <div style="color:#8b949e;font-size:0.85em;margin-top:4px">Confirms RI-ARCH-ADDITIVE. Weight tuning cannot fix R²<0. Structural redesign needed — not weight changes.</div>
+        </div><div style="background:#1f1b18;border:1px solid #f0883e;border-radius:8px;padding:12px;margin:8px 0">
+          <div style="color:#f0883e;font-weight:700">⚠ <code>RI-SYS-PROMOTE</code> — Structural gap: no promotion pipeline — all 33 findings stuck at Proposed, actual_delta=None</div>
+          <div style="color:#8b949e;font-size:0.85em;margin-top:4px">Implement shadow scoring: run scanner in parallel with proposed change, log results without alerting, compare after 20 sessions. This is the single highest-ROI engineering task.</div>
+        </div></div>
+
+<h2>📋 What Should Be Investigated Next?</h2>
+<div class="card"><div style="border-left:4px solid #dc3545;padding:12px 16px;margin:8px 0;background:#1c2128;border-radius:0 8px 8px 0">
+          <div style="font-weight:600;color:#e6edf3">1. <code style="color:#58a6ff">[RI-SYS-PROMOTE]</code> Structural gap: no promotion pipeline — all 33 findings stuck at Proposed, actua</div>
+          <div style="color:#8b949e;margin-top:6px;font-size:0.88em">→ Implement shadow scoring: run scanner in parallel with proposed change, log results without alerting, compare after 20 s</div>
+          <div style="margin-top:8px">
+            <span style="background:#dc3545;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.72em">CRITICAL</span>
+            <span style="background:#21262d;color:#8b949e;padding:1px 8px;border-radius:10px;font-size:0.72em;margin-left:4px">Open</span>
+          </div></div><div style="border-left:4px solid #dc3545;padding:12px 16px;margin:8px 0;background:#1c2128;border-radius:0 8px 8px 0">
+          <div style="font-weight:600;color:#e6edf3">2. <code style="color:#58a6ff">[RI-RL-NEG-DISC]</code> SMC RL discrimination = -4.23 (NEGATIVE — top-quartile underperforms bottom)</div>
+          <div style="color:#8b949e;margin-top:6px;font-size:0.88em">→ Diagnose RL objective function. Likely the target variable is inverted or the loss is minimizing the wrong direction. Do</div>
+          <div style="margin-top:8px">
+            <span style="background:#dc3545;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.72em">CRITICAL</span>
+            <span style="background:#21262d;color:#8b949e;padding:1px 8px;border-radius:10px;font-size:0.72em;margin-left:4px">Investigating</span>
+          </div></div><div style="border-left:4px solid #dc3545;padding:12px 16px;margin:8px 0;background:#1c2128;border-radius:0 8px 8px 0">
+          <div style="font-weight:600;color:#e6edf3">3. <code style="color:#58a6ff">[RI-QUANT-R2]</code> All ML models R² ≤ -0.012 — scoring has zero predictive power for returns</div>
+          <div style="color:#8b949e;margin-top:6px;font-size:0.88em">→ Confirms RI-ARCH-ADDITIVE. Weight tuning cannot fix R²<0. Structural redesign needed — not weight changes.</div>
+          <div style="margin-top:8px">
+            <span style="background:#dc3545;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.72em">CRITICAL</span>
+            <span style="background:#21262d;color:#8b949e;padding:1px 8px;border-radius:10px;font-size:0.72em;margin-left:4px">Investigating</span>
+          </div></div></div>
+
+<h2>🎯 Indicator Maturity</h2>
+<div class="card"><table>
+  <tr><th>Indicator</th><th>Evidence</th><th>Validation</th><th>Promotion Readiness</th><th>Direction</th><th>Research Priority</th></tr>
+  <tr>
+          <td><strong style="color:#e6edf3">Price Position</strong><br>
+              <small style="color:#8b949e">r1_price · w=30</small></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#58a6ff;width:35%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">35</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#3fb950;width:0%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">0</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#a371f7;width:14%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">14</span></div></td>
+          <td><span style="color:#f0883e;font-weight:600">FIX_LOGIC</span>
+              </td>
+          <td><span style="color:#f0883e">MEDIUM</span>
+              <br><small style="color:#8b949e">1 open</small></td>
+        </tr><tr>
+          <td><strong style="color:#e6edf3">Order Block</strong><br>
+              <small style="color:#8b949e">r2_ob · w=10</small></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#58a6ff;width:35%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">35</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#3fb950;width:0%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">0</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#a371f7;width:14%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">14</span></div></td>
+          <td><span style="color:#8b949e;font-weight:600">STABLE</span>
+              </td>
+          <td><span style="color:#f0883e">MEDIUM</span>
+              <br><small style="color:#8b949e">1 open</small></td>
+        </tr><tr>
+          <td><strong style="color:#e6edf3">Liquidity</strong><br>
+              <small style="color:#8b949e">r3_liquidity · w=20</small></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#58a6ff;width:70%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">70</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#3fb950;width:0%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">0</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#a371f7;width:28%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">28</span></div></td>
+          <td><span style="color:#8b949e;font-weight:600">STABLE</span>
+              </td>
+          <td><span style="color:#da3633">HIGH</span>
+              <br><small style="color:#8b949e">2 open</small></td>
+        </tr><tr>
+          <td><strong style="color:#e6edf3">HTF Structure</strong><br>
+              <small style="color:#8b949e">r4_htf · w=10</small></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#58a6ff;width:42%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">42</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#3fb950;width:0%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">0</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#a371f7;width:16%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">16</span></div></td>
+          <td><span style="color:#f0883e;font-weight:600">FIX_LOGIC</span>
+              </td>
+          <td><span style="color:#f0883e">MEDIUM</span>
+              <br><small style="color:#8b949e">2 open</small></td>
+        </tr><tr>
+          <td><strong style="color:#e6edf3">Anchored VWAP</strong><br>
+              <small style="color:#8b949e">r5_avwap · w=8</small></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#58a6ff;width:91%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">91</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#3fb950;width:0%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">0</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#a371f7;width:36%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">36</span></div></td>
+          <td><span style="color:#da3633;font-weight:600">DECREASE</span>
+              <br><small style='color:#8b949e'>→ 4.9</small></td>
+          <td><span style="color:#da3633">HIGH</span>
+              <br><small style="color:#8b949e">1 open</small></td>
+        </tr><tr>
+          <td><strong style="color:#e6edf3">MACD Context</strong><br>
+              <small style="color:#8b949e">r6_macd · w=4</small></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#58a6ff;width:91%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">91</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#3fb950;width:0%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">0</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#a371f7;width:36%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">36</span></div></td>
+          <td><span style="color:#da3633;font-weight:600">DECREASE</span>
+              <br><small style='color:#8b949e'>→ 1.7</small></td>
+          <td><span style="color:#da3633">HIGH</span>
+              <br><small style="color:#8b949e">1 open</small></td>
+        </tr><tr>
+          <td><strong style="color:#e6edf3">Divergence</strong><br>
+              <small style="color:#8b949e">r7_div · w=3</small></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#58a6ff;width:42%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">42</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#3fb950;width:0%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">0</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#a371f7;width:16%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">16</span></div></td>
+          <td><span style="color:#8b949e;font-weight:600">STABLE</span>
+              </td>
+          <td><span style="color:#f0883e">MEDIUM</span>
+              <br><small style="color:#8b949e">2 open</small></td>
+        </tr><tr>
+          <td><strong style="color:#e6edf3">Demand Zone</strong><br>
+              <small style="color:#8b949e">r8_demand · w=15</small></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#58a6ff;width:42%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">42</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#3fb950;width:0%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">0</span></div></td>
+          <td><div style="display:inline-flex;align-items:center;gap:6px"><div style="background:#21262d;border-radius:4px;height:6px;width:80px"><div style="background:#a371f7;width:16%;height:6px;border-radius:4px"></div></div><span style="font-size:0.8em;color:#8b949e">16</span></div></td>
+          <td><span style="color:#f0883e;font-weight:600">FIX_LOGIC</span>
+              </td>
+          <td><span style="color:#f0883e">MEDIUM</span>
+              <br><small style="color:#8b949e">2 open</small></td>
+        </tr>
+</table></div>
+
+<h2>🗂 Research Backlog — Ranked</h2>
+<div class="card"><table>
+  <tr><th>#</th><th>Priority</th><th>Item</th><th>Status</th><th>Evidence</th><th>Next Required Action</th></tr>
+  <tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#1</td>
+          <td><span style="background:#dc3545;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">CRITICAL</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-SYS-PROMOTE</code><br>
+              <small>Structural gap: no promotion pipeline — all 33 findings stuck at Proposed, actua</small></td>
+          <td><span style="color:#8b949e;font-size:0.82em">Open</span></td>
+          <td><span style="color:#3fb950;font-size:0.82em">HIGH</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Implement shadow scoring: run scanner in parallel with proposed change, log results without alerting, compare after 20 s</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#2</td>
+          <td><span style="background:#dc3545;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">CRITICAL</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-RL-NEG-DISC</code><br>
+              <small>SMC RL discrimination = -4.23 (NEGATIVE — top-quartile underperforms bottom)</small></td>
+          <td><span style="color:#58a6ff;font-size:0.82em">Investigating</span></td>
+          <td><span style="color:#3fb950;font-size:0.82em">HIGH</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Diagnose RL objective function. Likely the target variable is inverted or the loss is minimizing the wrong direction. Do</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#3</td>
+          <td><span style="background:#dc3545;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">CRITICAL</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-QUANT-R2</code><br>
+              <small>All ML models R² ≤ -0.012 — scoring has zero predictive power for returns</small></td>
+          <td><span style="color:#58a6ff;font-size:0.82em">Investigating</span></td>
+          <td><span style="color:#3fb950;font-size:0.82em">HIGH</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Confirms RI-ARCH-ADDITIVE. Weight tuning cannot fix R²<0. Structural redesign needed — not weight changes.</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#4</td>
+          <td><span style="background:#dc3545;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">CRITICAL</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-ARCH-ADDITIVE</code><br>
+              <small>Additive scoring: OOS R² = -0.15 — architecture cannot be fixed by weight tuning</small></td>
+          <td><span style="color:#58a6ff;font-size:0.82em">Investigating</span></td>
+          <td><span style="color:#3fb950;font-size:0.82em">HIGH</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Design non-linear scoring: mandatory gates × quality bonus. Test vs current additive sum. This is the root cause of the </td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#5</td>
+          <td><span style="background:#fd7e14;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">HIGH</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-HVN-CONF</code><br>
+              <small>HVN-only = strongest demand signal — System Audit: CONFIRMED</small></td>
+          <td><span style="color:#f0883e;font-size:0.82em">Awaiting Validation</span></td>
+          <td><span style="color:#3fb950;font-size:0.82em">HIGH</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Promote HVN-only scoring fix: increase HVN-only sub-score, decrease SV+HVN sub-score in sc_demand().</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#6</td>
+          <td><span style="background:#fd7e14;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">HIGH</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-MACD-REDUCE</code><br>
+              <small>r6_macd: reduce 4 → 2  (Optimizer=1.2, RL=1.1, WF=2.9 — 3-method convergence)</small></td>
+          <td><span style="color:#f0883e;font-size:0.82em">Awaiting Validation</span></td>
+          <td><span style="color:#3fb950;font-size:0.82em">HIGH</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Stage shadow scoring with r6_macd=2 for 20 trading sessions. This is the only weight change currently safe to promote.</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#7</td>
+          <td><span style="background:#fd7e14;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">HIGH</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-HTF-FIX-IMPACT</code><br>
+              <small>HTF inversion fix = highest single-change impact per System Audit</small></td>
+          <td><span style="color:#f0883e;font-size:0.82em">Awaiting Validation</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Swap HH+HL → 0 pts, HL-only → full pts in sc_htf(). Shadow mode 20 sessions.</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#8</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-HVN-HTF-BONUS</code><br>
+              <small>IMP-5: HVN + HTF_HH super-bonus tier — model_score=100, n=8.5% of signals</small></td>
+          <td><span style="color:#f0883e;font-size:0.82em">Awaiting Validation</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Need 6+ months forward data (n≥150) before promoting. Do not apply to main scanner.</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#9</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-MICRO-FEATURES</code><br>
+              <small>Edge Discovery: 30 microstructure features predict returns but are absent from s</small></td>
+          <td><span style="color:#8b949e;font-size:0.82em">Open</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Start with snap_reclaim_spd (reclaim speed appears in multiple top rules). Research whether it can be computed daily and</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#10</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-PRICE-INV</code><br>
+              <small>Price scoring inversion: near-EQ (r1=1-10) outperforms deep-discount (r1=21-30)</small></td>
+          <td><span style="color:#8b949e;font-size:0.82em">Open</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Test modified buy-zone scoring in shadow mode; cross-check WF fold consistency.</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#11</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-DIV-MACD</code><br>
+              <small>MACD Divergence: PF=3.82 vs baseline 2.50 — strongest edge of any flag</small></td>
+          <td><span style="color:#58a6ff;font-size:0.82em">Investigating</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Separate RSI and MACD div sub-scores in sc_div() first (RI-DIV-RSI). Then test r7_div increase from 3 → 5.</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#12</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-HTF-INV</code><br>
+              <small>HTF Scoring Inversion: HH+HL = -0.8%, HL-only = +11.6%</small></td>
+          <td><span style="color:#f0883e;font-size:0.82em">Awaiting Validation</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Implement HTF scoring inversion fix in shadow mode for 20 sessions.</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#13</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-OB-HARM</code><br>
+              <small>Order Block presence REDUCES expected return by -1.4%</small></td>
+          <td><span style="color:#58a6ff;font-size:0.82em">Investigating</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Extend OOS window to 6+ months. Do not remove OB until WF folds converge.</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#14</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-SYS-WFSCOPE</code><br>
+              <small>Walk-Forward micro-learning cannot encode structural fixes — two incompatible le</small></td>
+          <td><span style="color:#58a6ff;font-size:0.82em">Investigating</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Design two-layer weight system: structural base (updated quarterly via promotion) + WF micro-delta (updated per trade).</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#15</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-DIV-RSI</code><br>
+              <small>RSI Divergence: NEGATIVE edge (mean=3.8% vs baseline 4.7%)</small></td>
+          <td><span style="color:#8b949e;font-size:0.82em">Open</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Separate RSI and MACD divergence sub-scores in sc_div(). RSI div should be zeroed or penalized.</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#16</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-GATE-LIQ20</code><br>
+              <small>Liquidity gate: r3_liquidity >= 20  (optimizer confidence=0.88 — highest of all </small></td>
+          <td><span style="color:#f0883e;font-size:0.82em">Awaiting Validation</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Validate across WF fold periods. If consistent, stage for shadow scoring.</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#17</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-SWEEP-GATE</code><br>
+              <small>Sweep detected mandatory gate — System Audit: CONFIRMED</small></td>
+          <td><span style="color:#f0883e;font-size:0.82em">Awaiting Validation</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Reduces signals by 54.6%. Shadow test 20 sessions to measure opportunity cost before promoting.</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#18</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-DEM-PAR</code><br>
+              <small>Demand Zone Paradox: SV+HVN (max score=15) = lowest return</small></td>
+          <td><span style="color:#58a6ff;font-size:0.82em">Investigating</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Validate HVN-only vs SV+HVN split across WF folds. Fix internal scoring multipliers in sc_demand().</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#19</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-WF-DRIFT</code><br>
+              <small>Walk-Forward: 194 weight updates but max drift 28% — micro-corrections only</small></td>
+          <td><span style="color:#58a6ff;font-size:0.82em">Investigating</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Evaluate whether WF's trade-by-trade micro-learning can coexist with structural overrides. May need a 'structural anchor</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#20</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-AVWAP-REDUCE</code><br>
+              <small>r5_avwap: reduce 8 → 4-6  (Optimizer=4.3, RL=4.1, WF=6.3 — 3-method convergence)</small></td>
+          <td><span style="color:#f0883e;font-size:0.82em">Awaiting Validation</span></td>
+          <td><span style="color:#f0883e;font-size:0.82em">MEDIUM</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Shadow test r5_avwap=5 for 20 sessions. Validate after r6_macd reduction is complete (one change at a time).</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#21</td>
+          <td><span style="background:#ffc107;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">MEDIUM</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-LIQ-WICK</code><br>
+              <small>Rejection Wick (r3=8 pts) has near-zero edge — sub-component overweighted</small></td>
+          <td><span style="color:#8b949e;font-size:0.82em">Open</span></td>
+          <td><span style="color:#da3633;font-size:0.82em">LOW</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Cross-validate wick reduction in Weight Optimizer and Walk-Forward before changing.</td>
+        </tr><tr>
+          <td style="color:#6c757d;font-size:0.8em;white-space:nowrap">#22</td>
+          <td><span style="background:#6c757d;color:#fff;padding:1px 7px;border-radius:10px;font-size:0.72em;white-space:nowrap">LOW</span></td>
+          <td style="min-width:120px"><code style="color:#58a6ff;font-size:0.8em">RI-OPT-REBAL</code><br>
+              <small>Full weight rebalance (Optimizer) — OOS improvement ≈ 0, high overfit risk</small></td>
+          <td><span style="color:#58a6ff;font-size:0.82em">Investigating</span></td>
+          <td><span style="color:#da3633;font-size:0.82em">LOW</span></td>
+          <td style="font-size:0.8em;color:#8b949e">Do not promote as a batch. Decompose into per-indicator items. Validate each independently.</td>
+        </tr>
+</table></div>
+
+<h2>🚫 What Can Be Safely Ignored Now</h2>
+<div class="card"><ul><li><code style='color:#8b949e'>RI-GATE-SCORE</code> — Score gates (>=55, >=60) — REJECTED: OVERFITTED in System Audit OOS… <span style='color:#da3633;font-size:0.8em'>(Rejected)</span></li><li><code style='color:#8b949e'>RI-OPT-REBAL</code> — Full weight rebalance (Optimizer) — OOS improvement ≈ 0, high overfit … <span style='color:#da3633;font-size:0.8em'>(Investigating)</span></li></ul></div>
+
+</div></body></html>

@@ -361,12 +361,19 @@ def build_presentation_snapshot() -> PresentationSnapshot:
             except Exception:
                 _auth_prices = {}
 
+            # Tickers already in the constitutional timeline have an active buy
+            # signal — they must not appear in near_constitutional.
+            _timeline_tickers = {e["ticker"] for e in snap.timeline}
+
             entries = []
             for r in rows:
                 candidate_entry_zone = r["candidate_entry_zone"]
                 # PriceAuthority is the single source of truth for current price.
                 # Fallback: CSV price, then candidate_pool price.
                 ticker = r["ticker"]
+                # Skip tickers with an active constitutional position
+                if ticker in _timeline_tickers:
+                    continue
                 if ticker in _auth_prices and _auth_prices[ticker] > 0:
                     current_price = _auth_prices[ticker]
                 else:

@@ -437,25 +437,19 @@ def build_presentation_snapshot() -> PresentationSnapshot:
         if _active_raw else 0.0
     )
 
-    # Tickers with a live CONSTITUTIONAL BUY SIGNAL (currently eligible per
-    # production_decision_snapshot) must not appear in near_constitutional —
-    # showing two different entry zones for the same ticker simultaneously is
-    # misleading. Tickers that are merely held/active without a current signal
-    # are allowed to appear as re-acc candidates.
-    try:
-        _prod_snap_path = BASE / "production_decision_snapshot.json"
-        if _prod_snap_path.exists():
-            import json as _json_ps
-            _prod = _json_ps.loads(_prod_snap_path.read_text())
-            _live_buy_signal_tickers = {
-                d["ticker"] for d in _prod.get("decisions", []) if d.get("eligible")
-            }
-            snap.approaching_entries = [
-                e for e in snap.approaching_entries
-                if e["ticker"] not in _live_buy_signal_tickers
-            ]
-    except Exception as exc:
-        print(f"[PresentationSnapshot] near-entry live-signal exclusion failed: {exc}")
+    # Tickers with an ACTIVE_OPPORTUNITY constitutional event must not appear in
+    # near_constitutional — they already have a buy signal with a specific entry
+    # zone, and showing a second entry zone simultaneously is misleading.
+    # Tickers that are merely held (no current ACTIVE_OPPORTUNITY event) can
+    # appear as re-acc candidates.
+    _active_opportunity_tickers = {
+        e["ticker"] for e in snap.timeline
+        if e.get("status") == "ACTIVE_OPPORTUNITY"
+    }
+    snap.approaching_entries = [
+        e for e in snap.approaching_entries
+        if e["ticker"] not in _active_opportunity_tickers
+    ]
 
     # ── 3. Knowledge Base ─────────────────────────────────────────────────────
     kb = _db(_KB_DB)

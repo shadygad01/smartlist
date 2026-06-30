@@ -437,18 +437,19 @@ def build_presentation_snapshot() -> PresentationSnapshot:
         if _active_raw else 0.0
     )
 
-    # Tickers with an ACTIVE_OPPORTUNITY constitutional event must not appear in
-    # near_constitutional — they already have a buy signal with a specific entry
-    # zone, and showing a second entry zone simultaneously is misleading.
-    # Tickers that are merely held (no current ACTIVE_OPPORTUNITY event) can
-    # appear as re-acc candidates.
-    _active_opportunity_tickers = {
-        e["ticker"] for e in snap.timeline
-        if e.get("status") == "ACTIVE_OPPORTUNITY"
+    # Tickers currently showing as a CONSTITUTIONAL BUY SIGNAL must not appear
+    # in near_constitutional — showing two different entry zones for the same
+    # ticker simultaneously is misleading. The buy signal is driven by
+    # universe_snapshot.waiting_for_reason (same logic as the BuySignalCard):
+    # "READY NOW" = new first-buy, "READY FOR RE-ACCUMULATION" = re-acc signal.
+    _buy_signal_tickers = {
+        u["ticker"] for u in snap.universe_snapshot
+        if "READY NOW" in (u.get("waiting_for_reason") or "")
+        or "READY FOR RE-ACCUMULATION" in (u.get("waiting_for_reason") or "")
     }
     snap.approaching_entries = [
         e for e in snap.approaching_entries
-        if e["ticker"] not in _active_opportunity_tickers
+        if e["ticker"] not in _buy_signal_tickers
     ]
 
     # ── 3. Knowledge Base ─────────────────────────────────────────────────────

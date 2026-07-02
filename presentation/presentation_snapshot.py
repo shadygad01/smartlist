@@ -575,6 +575,9 @@ def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: s
         import sys as _sys
         _sys.path.insert(0, str(BASE))
         import event_timeline_engine as _etl_mod
+        _etl_synced = _etl_mod.sync_buy_signals_from_constitutional_timeline()
+        if _etl_synced:
+            print(f"[PresentationSnapshot] event_timeline: synced {_etl_synced} missing BUY_SIGNAL row(s)")
         _event_timeline_data = _etl_mod.get_recent_events(limit=50)
         _etl_status = _etl_mod.get_engine_status()
     except Exception as _etl_load_err:

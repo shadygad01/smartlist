@@ -349,8 +349,20 @@ def inv05_notify_requires_all_persist_success(scan_id: Optional[str] = None) -> 
 def inv06_signal_state_implies_timeline(today: Optional[str] = None) -> tuple[bool, str]:
     """
     INV-06: If signal_state_current has CONSTITUTIONAL_BUY for ticker T,
-    constitutional_opportunity_events.db must have a v1 row for ticker T.
+    constitutional_opportunity_events.db must have an ACTIVE v1 cluster for T
+    covering `today` (event_date <= today <= event_end_date) — not merely
+    any v1 row ever recorded for T. A ticker with only stale/past clusters
+    would otherwise pass this check even though today's transition was never
+    persisted (Partial Execution the check exists to catch).
     """
+    if today is None:
+        try:
+            from time_authority import today_cairo
+            today = today_cairo().isoformat()
+        except Exception:
+            from datetime import date
+            today = date.today().isoformat()
+
     con = _notif_con()
     if con is None:
         return True, "INV-06: SKIP (notification_delivery.db not found)"
@@ -380,7 +392,9 @@ def inv06_signal_state_implies_timeline(today: Optional[str] = None) -> tuple[bo
         for ticker in buy_tickers:
             r = tl_con.execute(
                 "SELECT event_id FROM constitutional_opportunity_events "
-                "WHERE ticker=? AND signal_version='v1' LIMIT 1", (ticker,)
+                "WHERE ticker=? AND event_date<=? AND (event_end_date IS NULL OR event_end_date>=?) "
+                "  AND (signal_version='v1' OR signal_version IS NULL) LIMIT 1",
+                (ticker, today, today)
             ).fetchone()
             if r is None:
                 missing.append(ticker)
@@ -392,8 +406,8 @@ def inv06_signal_state_implies_timeline(today: Optional[str] = None) -> tuple[bo
     if missing:
         return False, (
             f"INV-06: FAIL — signal_state=CONSTITUTIONAL_BUY for {missing} "
-            f"but no v1 timeline event exists. State store and timeline are inconsistent "
-            f"(Partial Execution)."
+            f"but no v1 timeline event covers date={today}. State store and timeline are "
+            f"inconsistent (Partial Execution)."
         )
     return True, (
         f"INV-06: PASS — all CONSTITUTIONAL_BUY tickers {sorted(buy_tickers)} "

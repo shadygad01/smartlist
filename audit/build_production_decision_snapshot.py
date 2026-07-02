@@ -114,11 +114,20 @@ def _sync_eligible_to_timeline(decisions: list[dict]) -> None:
     production_decision_snapshot.json but are never written to the timeline DB.
     This function closes that gap.
 
-    Idempotent: signal_state_store.record_transition() uses INSERT OR IGNORE
-    on UNIQUE(ticker, event_date, to_state); register_alert_events() uses
-    INSERT OR IGNORE on PRIMARY KEY and UNIQUE INDEX.
+    Gating on verify_event_persisted() (not record_transition()'s is_new) is
+    deliberate: notification state and timeline persistence are independent
+    facts that can diverge — e.g. a transition was recorded and notified by an
+    earlier process/run whose local constitutional_opportunity_events.db write
+    never made it to durable storage. record_transition() would then report
+    is_new=False forever for that ticker+date, silently skipping the repair.
+    Checking the timeline directly makes this self-healing regardless of why
+    the two got out of sync.
+
+    Idempotent either way: signal_state_store.record_transition() uses
+    INSERT OR IGNORE on UNIQUE(ticker, event_date, to_state);
+    register_alert_events() uses INSERT OR IGNORE on PRIMARY KEY and UNIQUE INDEX.
     """
-    from constitutional_timeline_engine import register_alert_events
+    from constitutional_timeline_engine import register_alert_events, verify_event_persisted
     from notifications.signal_state_store import (
         get_current_state, record_transition,
         STATE_CONST_BUY,
@@ -133,8 +142,8 @@ def _sync_eligible_to_timeline(decisions: list[dict]) -> None:
             continue
         ticker     = d["ticker"]
         from_state = get_current_state(ticker)
-        is_new     = record_transition(ticker, from_state, STATE_CONST_BUY, event_date)
-        if is_new:
+        record_transition(ticker, from_state, STATE_CONST_BUY, event_date)
+        if not verify_event_persisted(ticker, event_date):
             alert_events.append({
                 "ticker":                     ticker,
                 "event_type":                 d.get("event_type", "FIRST_BUY"),
@@ -154,7 +163,7 @@ def _sync_eligible_to_timeline(decisions: list[dict]) -> None:
     else:
         eligible_in = [d["ticker"] for d in decisions if d.get("eligible")]
         if eligible_in:
-            print(f"  Timeline sync: state already current for {eligible_in}")
+            print(f"  Timeline sync: already persisted for {eligible_in}")
 
 
 def _build_rules_evaluated(r2: float, score: float, cp: float, ep: float) -> list[dict]:

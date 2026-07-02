@@ -37,7 +37,7 @@ export default function ArchivePage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--background)', paddingTop: '72px' }}>
       <div className="px-4 md:px-6 xl:px-10 py-6" style={{ borderBottom: '1px solid var(--border)' }}>
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between mb-1 max-w-[1680px] mx-auto">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)' }}>
               <BarChart2 size={18} style={{ color: 'var(--signal-elite)' }} />
@@ -61,7 +61,7 @@ export default function ArchivePage() {
         </div>
       </div>
 
-      <div className="px-4 md:px-6 xl:px-10 py-6 space-y-6">
+      <div className="px-4 md:px-6 xl:px-10 py-6 space-y-6 max-w-[1680px] mx-auto">
         {error && (
           <div className="p-4 rounded-xl" style={{ backgroundColor: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}>
             <span className="font-mono" style={{ fontSize: '11px', color: '#ef4444' }}>{error}</span>

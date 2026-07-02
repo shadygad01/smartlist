@@ -57,7 +57,7 @@ export default function DashboardHeader() {
         WebkitBackdropFilter: 'blur(16px)',
       }}
     >
-      <div className="flex items-center justify-between px-4 md:px-6" style={{ height: '52px' }}>
+      <div className="flex items-center justify-between px-4 md:px-6 max-w-[1680px] mx-auto" style={{ height: '52px' }}>
         <div className="flex items-center gap-3">
           <span style={{ fontSize: '20px' }}>🏛</span>
           <span
@@ -155,19 +155,21 @@ export default function DashboardHeader() {
         </div>
       </div>
 
-      <div
-        className="flex flex-wrap items-center gap-x-5 gap-y-0.5 px-4 md:px-6"
-        style={{ height: '26px', borderTop: '1px solid #1a2040' }}
-      >
-        <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', whiteSpace: 'nowrap' }}>
-          Last Scan&nbsp;<b style={{ color: '#d0d4e8' }}>{lastScanTs} Cairo</b>
-        </span>
-        <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', whiteSpace: 'nowrap' }}>
-          Generated&nbsp;<b style={{ color: '#d0d4e8' }}>{generatedAt} Cairo</b>
-        </span>
-        <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', whiteSpace: 'nowrap' }}>
-          Data As Of&nbsp;<b style={{ color: '#d0d4e8' }}>{dataAsOf}</b>
-        </span>
+      <div style={{ borderTop: '1px solid #1a2040' }}>
+        <div
+          className="flex flex-wrap items-center gap-x-5 gap-y-0.5 px-4 md:px-6 max-w-[1680px] mx-auto"
+          style={{ height: '26px' }}
+        >
+          <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', whiteSpace: 'nowrap' }}>
+            Last Scan&nbsp;<b style={{ color: '#d0d4e8' }}>{lastScanTs} Cairo</b>
+          </span>
+          <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', whiteSpace: 'nowrap' }}>
+            Generated&nbsp;<b style={{ color: '#d0d4e8' }}>{generatedAt} Cairo</b>
+          </span>
+          <span className="font-mono" style={{ fontSize: '10px', color: '#8b8fa8', whiteSpace: 'nowrap' }}>
+            Data As Of&nbsp;<b style={{ color: '#d0d4e8' }}>{dataAsOf}</b>
+          </span>
+        </div>
       </div>
     </header>
   );

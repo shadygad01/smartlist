@@ -21,7 +21,7 @@ export default function DashboardPage() {
       <DashboardHeader />
 
       <main className="px-4 md:px-6 xl:px-10 pb-10" style={{ paddingTop: '88px' }}>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 max-w-[1680px] mx-auto">
           <StatsBar />
 
           <BuySignalCard />

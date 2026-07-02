@@ -1,0 +1,1 @@
+- [EGX snapshot data flow](egx-snapshot.md) — dashboard is purely read-only; all data from presentation_snapshot.json, no backend API needed.

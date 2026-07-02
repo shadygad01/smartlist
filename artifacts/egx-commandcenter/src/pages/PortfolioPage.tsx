@@ -8,7 +8,6 @@ import { parseThunderText } from '@/lib/portfolioParser';
 import {
   getUploads,
   getTransactions,
-  findUploadByHash,
   recordUpload,
   completeUpload,
   failUpload,
@@ -151,11 +150,10 @@ export default function PortfolioPage() {
         const buffer = await file.arrayBuffer();
         const hash = await sha256Hex(buffer);
 
-        const existing = findUploadByHash(hash);
-        if (existing) {
-          showToast(`Duplicate file — already uploaded (${existing.fileName})`, false);
-          continue;
-        }
+        // No file-level duplicate check here on purpose: a user tracking many
+        // stocks re-uploads updated screenshots of the same stock often (new
+        // orders added since last time), and rejecting the whole file by hash
+        // would block those. Dedup happens per-transaction instead, below.
 
         // 1. Extract text: OCR for images (Tesseract), pdfjs for PDFs
         let extractedText = '';

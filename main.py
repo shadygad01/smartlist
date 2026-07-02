@@ -1899,6 +1899,7 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
         _scan_id = str(uuid.uuid4())
 
     tx = ProductionTransaction(_scan_id)
+    _warn_stale_unnotified()
 
     # ── DECISION ───────────────────────────────────────────────────────────────
     backfill_pattern_scores()
@@ -2011,8 +2012,10 @@ def _run_scan_workflow(holiday_mode, last_trading, email_suffix, morning_mid=Non
     if changes:
         try:
             tx.step(Phase.NOTIFY, "send_change_alert", send_change_alert, changes)
-        except Exception:
-            pass  # change-alert failure does not abort morning notification
+        except Exception as _cae:
+            print(f"⚠️  [WARN] send_change_alert failed (morning scan): {_cae}")
+            print("    These events have been recorded in signal_event_log (notified=0).")
+            print("    The retry mechanism in detect_signal_changes() will re-attempt on next scan.")
     tx.complete(Phase.NOTIFY)
 
     # ── PUBLISH (best-effort research + learning) ──────────────────────────────
@@ -2221,9 +2224,29 @@ def daily_scan():
     print("\n✅ Daily scan completed!")
 
 
+def _warn_stale_unnotified() -> None:
+    """Log a warning if any CONST_BUY transitions from previous days were never notified.
+
+    These cannot be retried automatically (ticker may have left buy zone).
+    They indicate a notification pipeline failure that needs investigation.
+    """
+    try:
+        from notifications.signal_state_store import get_stale_unnotified
+        from time_authority import today_iso
+        stale = get_stale_unnotified(today_iso())
+        if stale:
+            print("⚠️  [WARN] Stale unnotified FIRST_BUY transitions detected (previous days, cannot auto-retry):")
+            for s in stale:
+                print(f"    • {s['ticker']} on {s['event_date']} ({s['from_state']}→CONST_BUY) — notified_email=0, notified_tg=0")
+            print("    Action: manually check why send_change_alert failed on those dates.")
+    except Exception as _e:
+        print(f"  [stale_check] non-fatal: {_e}")
+
+
 def continuous_scan():
     """Run intraday scan for signal changes, send Telegram/email alerts for new constitutional events."""
     print(f"\n🔄 Continuous scan at {fmt_cairo()}")
+    _warn_stale_unnotified()
     html, current_results, snap = build_report(holiday_mode=False)
 
     # Register any new constitutional timeline events from today's candidate_pool

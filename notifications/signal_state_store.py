@@ -215,6 +215,37 @@ def get_todays_events(event_date: str) -> list[dict]:
         return []
 
 
+def get_stale_unnotified(current_date: str) -> list[dict]:
+    """Return actionable unnotified CONST_BUY transitions from BEFORE current_date.
+
+    Only returns genuinely missed events: transitions where a NEW buy signal fired
+    (from_state != CONST_BUY) but notification was never sent.
+
+    CONST_BUY→CONST_BUY (continuation) rows are excluded — those are cluster
+    extensions and should NOT generate alerts after Bug 3 fix; notified=0 for them
+    is correct, not a missed notification.
+
+    These stale events are permanently missed (ticker may have exited buy zone).
+    Called at scan startup to emit warnings — not to retry sending.
+    """
+    try:
+        con = _conn()
+        rows = con.execute(
+            """SELECT ticker, from_state, event_date
+               FROM signal_event_log
+               WHERE event_date < ?
+                 AND to_state=?
+                 AND from_state != ?
+                 AND notified_email=0
+                 AND notified_tg=0""",
+            (current_date, STATE_CONST_BUY, STATE_CONST_BUY),
+        ).fetchall()
+        con.close()
+        return [{"ticker": r[0], "from_state": r[1], "event_date": r[2]} for r in rows]
+    except Exception:
+        return []
+
+
 def get_unnotified_transitions(event_date: str) -> list[dict]:
     """Return CONST_BUY transitions recorded today where notification was never sent.
 

@@ -35,6 +35,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Restore live data from data branch
+        run: bash ci/restore_data.sh
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'

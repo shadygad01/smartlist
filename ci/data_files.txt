@@ -1,0 +1,49 @@
+# Runtime data artifacts persisted to the dedicated `data` branch.
+# These generated files are NEVER committed to the code branch (main) so that
+# scheduled scanner runs cannot collide with human/agent code pushes.
+# One pattern per line. Blank lines and lines starting with '#' are ignored.
+# Globs and directories are supported.
+
+# --- JSON state / snapshots ---
+open_positions.json
+positions_history.json
+scan_results.json
+signal_history.json
+signal_log.json
+learned_weights.json
+research_results.json
+changed_symbols.json
+presentation_snapshot.json
+production_decision_snapshot.json
+constitutional_fingerprint.json
+architecture_fingerprint.json
+scan_manifest.json
+scan_context.json
+consistency_report.json
+decision_diff.json
+operations_state.json
+heartbeat.json
+version.json
+
+# --- Generated HTML ---
+dashboard.html
+
+# --- SQLite databases ---
+egx_research.db
+scan_execution.db
+notification_delivery.db
+mpi_snapshots.db
+universe_snapshot.db
+candidate_pool.db
+valuation.db
+
+# --- Operations state ---
+operations/incidents.json
+operations/sla.json
+operations/knowledge.json
+operations/sent_alerts.json
+operations/public_status.json
+
+# --- Per-ticker historical data + daily validation audit ---
+historical_data/historical_data/*.csv
+audit/daily_validation

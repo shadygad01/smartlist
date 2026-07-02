@@ -42,6 +42,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Restore live data from data branch
+        run: bash ci/restore_data.sh
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -114,18 +117,9 @@ jobs:
       - name: Rebuild dashboard HTML
         run: python3 dashboard.py
 
-      - name: Save state to git
+      - name: Persist state to data branch
         run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add heartbeat.json operations_state.json operations/public_status.json \
-                  scan_execution.db notification_delivery.db \
-                  open_positions.json scan_results.json \
-                  presentation_snapshot.json signal_history.json \
-                  dashboard.html || true
-          git add historical_data/historical_data/*.csv || true
-          git diff --staged --quiet || git commit -m "Market scan: state update [skip ci]"
-          git push || true
+          bash ci/save_data.sh "Market scan: state update [skip ci]"
 
       - name: Prepare web deploy
         run: |

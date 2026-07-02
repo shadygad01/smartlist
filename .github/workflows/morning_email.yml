@@ -59,6 +59,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
+      - name: Restore live data from data branch
+        run: bash ci/restore_data.sh
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -194,21 +197,9 @@ jobs:
           PYEOF
         continue-on-error: true
 
-      - name: Save state to git
+      - name: Persist state to data branch
         run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add heartbeat.json operations_state.json operations/public_status.json \
-                  scan_execution.db notification_delivery.db \
-                  presentation_snapshot.json production_decision_snapshot.json \
-                  constitutional_fingerprint.json architecture_fingerprint.json \
-                  scan_manifest.json consistency_report.json scan_context.json \
-                  version.json dashboard.html signal_history.json \
-                  mpi_snapshots.db decision_diff.json \
-                  universe_snapshot.db candidate_pool.db || true
-          git add historical_data/historical_data/*.csv || true
-          git diff --staged --quiet || git commit -m "Morning email: full state update [skip ci]"
-          git push || true
+          bash ci/save_data.sh "Morning email: full state update [skip ci]"
 
       - name: Prepare web deploy
         run: |

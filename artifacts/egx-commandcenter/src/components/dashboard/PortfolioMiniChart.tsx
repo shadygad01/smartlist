@@ -10,20 +10,7 @@ import {
 } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import { Link } from 'wouter';
-import { apiUrl } from '@/lib/apiBase';
-
-interface PnlDataPoint {
-  date: string;
-  realizedPnl: number;
-  unrealizedPnl: number;
-}
-
-interface PortfolioPosition {
-  ticker: string;
-  totalQuantity: number;
-  avgBuyPrice: number;
-  totalCost: number;
-}
+import { getTransactions, computePositions, computePnlHistory, type PnlDataPoint } from '@/lib/portfolioStore';
 
 interface PortfolioSummary {
   positionCount: number;
@@ -59,16 +46,11 @@ export default function PortfolioMiniChart() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetch(apiUrl('/api/portfolio/pnl-history')).then((r) => r.ok ? r.json() : []),
-      fetch(apiUrl('/api/portfolio/positions')).then((r) => r.ok ? r.json() : { positions: [], totalCost: 0 }),
-    ])
-      .then(([hist, posData]) => {
-        setPoints(hist ?? []);
-        setSummary({ positionCount: (posData.positions ?? []).length, totalCost: posData.totalCost ?? 0 });
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    const transactions = getTransactions();
+    setPoints(computePnlHistory(transactions));
+    const { positions, totalCost } = computePositions(transactions);
+    setSummary({ positionCount: positions.length, totalCost });
+    setLoading(false);
   }, []);
 
   const hasData = points.length > 0;

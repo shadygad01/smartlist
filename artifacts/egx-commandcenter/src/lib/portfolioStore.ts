@@ -121,7 +121,7 @@ export function completeUpload(
 
   if (parsed.length === 0) {
     upload.status = 'failed';
-    upload.errorMessage = 'مفيش صفقات اتقرأت من الملف. تأكد إنه تقرير Thunder.';
+    upload.errorMessage = "No transactions found in the file. Make sure it's a Thunder report.";
     save(state);
     return { status: 'failed', transactionCount: 0 };
   }

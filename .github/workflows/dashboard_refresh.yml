@@ -133,6 +133,14 @@ jobs:
           # Copy Vite static build (replaces legacy Next.js export / dashboard.html)
           cp -r artifacts/egx-commandcenter/dist/public/. web_deploy/
 
+          # GitHub Pages is static hosting with no server-side routing, but the
+          # dashboard uses client-side (wouter) routing for /archive and
+          # /portfolio. Without this, a direct link/refresh on those routes
+          # 404s at the GitHub Pages/Fastly edge before React ever loads.
+          # Serving index.html for any unmatched path lets the SPA boot and
+          # wouter take over from there.
+          cp web_deploy/index.html web_deploy/404.html
+
           # Ensure snapshot is at root for runtime fetch
           cp presentation_snapshot.json web_deploy/presentation_snapshot.json
 

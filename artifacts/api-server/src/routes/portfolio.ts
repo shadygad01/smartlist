@@ -40,6 +40,7 @@ const COMPANY_TICKER_MAP: Record<string, string> = {
   "DELTA SUGAR": "SUGR",
   "ORASCOM DEVELOPMENT EGYPT": "ORHD",
   "SIDI KERIR PETROCHEMICALS": "SKPC",
+  "ABU QIR FERTILIZERS": "ABUK",
 };
 
 function normalizeCompanyKey(name: string): string {
@@ -123,6 +124,9 @@ type ParsedTx = {
 // across the row boundary and (worse than cosmetic) steals the next row's
 // values while its own real transaction is silently never recorded. Both
 // bracket flavors are accepted on either side to avoid that.
+// Some rows spell out the currency inside the parens too, e.g.
+// "Buy AZG (6@22.32101 EGP)" or "Buy thndrsavings (16415@1.21834 EGP)" —
+// an optional "EGP" is allowed right before the closing bracket.
 // The trailing group captures the row's "Value" column (the actual amount
 // debited/credited), which is optional so old callers/tests without it still
 // match — see below for why it's used instead of qty * printed price.
@@ -133,7 +137,7 @@ function parseStatementText(text: string): ParsedTx[] {
   // from a PDF doesn't reliably put one transaction per line.
   const normalized = text.replace(/\s+/g, " ");
   const rowPattern =
-    /(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s+(Buy|Sell|شراء|بيع)\s+(.{1,80}?)\s*[(\{\[]\s*([\d,]+(?:\.\d+)?)\s*@\s*([\d,]+(?:\.\d+)?)\s*[)\}\]](?:\s*(-?[\d,]+(?:\.\d+)?))?/gi;
+    /(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s+(Buy|Sell|شراء|بيع)\s+(.{1,80}?)\s*[(\{\[]\s*([\d,]+(?:\.\d+)?)\s*@\s*([\d,]+(?:\.\d+)?)\s*(?:EGP\s*)?[)\}\]](?:\s*(-?[\d,]+(?:\.\d+)?))?/gi;
 
   for (const m of normalized.matchAll(rowPattern)) {
     const [, dateStr, typeStr, description, qtyStr, priceStr, valueStr] = m;

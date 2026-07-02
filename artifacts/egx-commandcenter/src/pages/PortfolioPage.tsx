@@ -3,39 +3,20 @@ import { Link } from 'wouter';
 import { Upload, FileText, Image, CheckCircle, XCircle, AlertTriangle, ArrowLeft, TrendingUp, Package, Calendar, DollarSign, ScanText } from 'lucide-react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { createWorker } from 'tesseract.js';
-import { apiUrl } from '@/lib/apiBase';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface PortfolioUpload {
-  id: number;
-  fileName: string;
-  status: 'pending' | 'parsed' | 'failed' | 'duplicate';
-  transactionCount: number;
-  errorMessage?: string | null;
-  createdAt: string;
-}
-
-interface PortfolioTransaction {
-  id: number;
-  ticker: string;
-  transactionType: 'BUY' | 'SELL';
-  quantity: string;
-  price: string;
-  tradeDate: string;
-}
-
-interface PortfolioPosition {
-  ticker: string;
-  totalQuantity: number;
-  avgBuyPrice: number;
-  totalCost: number;
-  currentPrice?: number | null;
-  currentValue?: number | null;
-  unrealizedPnl?: number | null;
-  unrealizedPnlPct?: number | null;
-  firstBuyDate: string;
-  lastBuyDate: string;
-}
+import { extractPdfText } from '@/lib/pdfText';
+import { parseThunderText } from '@/lib/portfolioParser';
+import {
+  getUploads,
+  getTransactions,
+  findUploadByHash,
+  recordUpload,
+  completeUpload,
+  failUpload,
+  computePositions,
+  type StoredUpload as PortfolioUpload,
+  type StoredTransaction as PortfolioTransaction,
+  type PortfolioPosition,
+} from '@/lib/portfolioStore';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 async function sha256Hex(buffer: ArrayBuffer): Promise<string> {
@@ -150,26 +131,18 @@ export default function PortfolioPage() {
     setTimeout(() => setToast(null), 4000);
   }, []);
 
-  const loadData = useCallback(async () => {
-    try {
-      const [uploadsRes, txRes, posRes] = await Promise.all([
-        fetch(apiUrl('/api/portfolio/uploads')),
-        fetch(apiUrl('/api/portfolio/transactions')),
-        fetch(apiUrl('/api/portfolio/positions')),
-      ]);
-      if (uploadsRes.ok) setUploads(await uploadsRes.json());
-      if (txRes.ok) setTransactions(await txRes.json());
-      if (posRes.ok) {
-        const data = await posRes.json();
-        setPositions(data.positions ?? []);
-      }
-    } catch {
-      // API not ready yet
-    }
+  const loadData = useCallback(() => {
+    setUploads(getUploads());
+    const txs = getTransactions();
+    setTransactions(txs);
+    setPositions(computePositions(txs).positions);
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Everything happens in the browser — no server round-trip. The file never
+  // leaves the device; only the extracted text is parsed and the resulting
+  // transactions are kept in localStorage (see src/lib/portfolioStore.ts).
   const handleFiles = useCallback(async (files: File[]) => {
     setUploading(true);
     for (const file of files) {
@@ -178,8 +151,14 @@ export default function PortfolioPage() {
         const buffer = await file.arrayBuffer();
         const hash = await sha256Hex(buffer);
 
-        // 1. For images: run Tesseract OCR client-side first
-        let extractedText: string | undefined;
+        const existing = findUploadByHash(hash);
+        if (existing) {
+          showToast(`ملف مكرر — تم رفعه من قبل (${existing.fileName})`, false);
+          continue;
+        }
+
+        // 1. Extract text: OCR for images (Tesseract), pdfjs for PDFs
+        let extractedText = '';
         if (isImage) {
           setUploadStatus('جاري قراءة الصورة بـ OCR…');
           const worker = await createWorker(['ara', 'eng'], 1, {
@@ -192,51 +171,37 @@ export default function PortfolioPage() {
           const { data } = await worker.recognize(file);
           await worker.terminate();
           extractedText = data.text;
-          setUploadStatus('تم OCR — جاري الرفع…');
         } else {
-          setUploadStatus('جاري الرفع…');
+          setUploadStatus('جاري قراءة الـ PDF…');
+          extractedText = await extractPdfText(buffer);
         }
 
-        // 2. Request presigned URL
-        const urlRes = await fetch(apiUrl('/api/storage/uploads/request-url'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
-        });
-        if (!urlRes.ok) throw new Error('Failed to get upload URL');
-        const { uploadURL, objectPath } = await urlRes.json();
+        const upload = recordUpload({ fileName: file.name, contentType: file.type, fileHash: hash });
 
-        // 3. Upload directly to GCS
-        setUploadStatus('جاري الرفع على الـ Cloud…');
-        const upRes = await fetch(uploadURL, {
-          method: 'PUT',
-          headers: { 'Content-Type': file.type },
-          body: buffer,
-        });
-        if (!upRes.ok) throw new Error('Upload to storage failed');
+        if (!extractedText || extractedText.trim().length < 20) {
+          failUpload(upload.id, 'مفيش نص اتقرأ من الملف.');
+          showToast('مفيش نص اتقرأ من الملف — حاول ملف تاني.', false);
+          continue;
+        }
 
-        // 4. Parse the document (send extractedText for images)
+        // 2. Parse transactions
         setUploadStatus('جاري تحليل الصفقات…');
-        const parseRes = await fetch(apiUrl('/api/portfolio/uploads'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            objectPath,
-            fileName: file.name,
-            contentType: file.type,
-            fileHash: hash,
-            ...(extractedText ? { extractedText } : {}),
-          }),
-        });
-        const result = await parseRes.json();
-        showToast(result.message ?? 'تمت المعالجة', result.status !== 'failed');
+        const parsed = parseThunderText(extractedText);
+        const result = completeUpload(upload.id, parsed);
+
+        showToast(
+          result.status === 'parsed'
+            ? `تم استخراج ${result.transactionCount} صفقة بنجاح`
+            : 'مفيش صفقات اتقرأت من الملف. تأكد إنه تقرير Thunder.',
+          result.status !== 'failed'
+        );
       } catch (e) {
         showToast(`خطأ: ${String(e)}`, false);
       }
     }
     setUploading(false);
     setUploadStatus('');
-    await loadData();
+    loadData();
   }, [loadData, showToast]);
 
   const totalCost = positions.reduce((s, p) => s + p.totalCost, 0);

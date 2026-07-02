@@ -187,6 +187,14 @@ export function failUpload(uploadId: number, message: string) {
   save(state);
 }
 
+// Manual escape hatch for a bad row (e.g. a parsing glitch from before a fix
+// landed) without having to wipe and re-upload everything else.
+export function deleteTransaction(transactionId: number): void {
+  const state = load();
+  state.transactions = state.transactions.filter((t) => t.id !== transactionId);
+  save(state);
+}
+
 // Live prices come from presentation_snapshot.json's universe_snapshot — the
 // same constitutional-scanner pipeline (price_authority.py / main.py's
 // yfinance -> Yahoo chart API -> TradingView scanner fallback chain) already

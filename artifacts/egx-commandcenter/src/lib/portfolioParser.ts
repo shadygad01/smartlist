@@ -39,6 +39,7 @@ const COMPANY_TICKER_MAP: Record<string, string> = {
   'CANAL SHIPPING AGENCIES': 'CSAG',
   'TALAAT MOUSTAFA GROUP': 'TMGH',
   'TALAAT MOUSTAFA': 'TMGH',
+  'TMG HOLDING': 'TMGH',
   'EGYPTIAN INTERNATIONAL PHARMACEUTICALS': 'PHAR',
   'EGYPTIAN INTERNATIONAL PHARMACEUTICAL': 'PHAR',
   'COMMERCIAL INTERNATIONAL BANK': 'COMI',
@@ -58,6 +59,36 @@ function normalizeCompanyKey(name: string): string {
     .trim();
 }
 
+function levenshtein(a: string, b: string): number {
+  const dp: number[][] = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let i = 0; i <= a.length; i++) dp[i][0] = i;
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i][j] =
+        a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+// OCR sometimes garbles a letter or two inside an otherwise-recognizable
+// company name (seen in practice: "INTERNATIONAL" -> "INTEMATIONAL",
+// "ORIENTAL" -> "ORLENTAL"). Compares the leading slice of key (company
+// names appear at the start of the description) against each known name,
+// tolerant of a small number of character-level edits proportional to
+// length, so a couple of misread letters don't produce a whole separate
+// fallback "ticker" for a company that's actually already mapped.
+function fuzzyMatchTicker(key: string): string | null {
+  for (const [name, ticker] of Object.entries(COMPANY_TICKER_MAP)) {
+    const candidate = key.slice(0, name.length);
+    if (candidate.length < name.length * 0.7) continue;
+    const threshold = Math.max(2, Math.floor(name.length * 0.15));
+    if (levenshtein(candidate, name) <= threshold) return ticker;
+  }
+  return null;
+}
+
 // Resolves a Description-column company name to a ticker symbol, falling
 // back to the normalized company name itself when it isn't in the map above
 // (better an unmapped-but-consistent label than a guessed, possibly wrong,
@@ -68,6 +99,8 @@ function resolveTicker(description: string): string {
   for (const [name, ticker] of Object.entries(COMPANY_TICKER_MAP)) {
     if (key.startsWith(name) || name.startsWith(key)) return ticker;
   }
+  const fuzzy = fuzzyMatchTicker(key);
+  if (fuzzy) return fuzzy;
   return key || description.toUpperCase();
 }
 
@@ -83,8 +116,14 @@ function resolveTicker(description: string): string {
 // of excluding them, so it keeps looking until it finds the one that's
 // actually "<qty>@<price>". Bounded to 80 chars so a malformed row without
 // a real qty@price group can't run on and swallow the next row's data.
+// Image/screenshot uploads of a statement go through OCR, which sometimes
+// misreads "(" as "{" — a real observed failure: the strict ")" requirement
+// then fails to close the *real* qty@price group, so the match runs on
+// across the row boundary and (worse than cosmetic) steals the next row's
+// values while its own real transaction is silently never recorded. Both
+// bracket flavors are accepted on either side to avoid that.
 const statementRowPattern =
-  /(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s+(Buy|Sell|شراء|بيع)\s+(.{1,80}?)\s*\(\s*([\d,]+(?:\.\d+)?)\s*@\s*([\d,]+(?:\.\d+)?)\s*\)/gi;
+  /(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s+(Buy|Sell|شراء|بيع)\s+(.{1,80}?)\s*[(\{\[]\s*([\d,]+(?:\.\d+)?)\s*@\s*([\d,]+(?:\.\d+)?)\s*[)\}\]]/gi;
 
 function parseStatementText(text: string): ParsedTransaction[] {
   const transactions: ParsedTransaction[] = [];

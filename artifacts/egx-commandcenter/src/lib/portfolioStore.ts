@@ -107,16 +107,25 @@ export function recordUpload(params: {
   return upload;
 }
 
-// Identity for cross-upload dedup: same ticker/date/side/qty/price already
-// recorded from an earlier upload means this row is old news, not a new
-// trade. Normalized to fixed decimals so "45.5" and "45.50" match. Deliberately
-// NOT used to dedupe rows against each other within the same upload — two
-// genuinely identical trades placed the same day should both be kept.
+// Identity for cross-upload dedup: same ticker/date/side/qty already recorded
+// from an earlier upload means this row is old news, not a new trade.
+// Deliberately excludes price — the same real trade parsed from a statement
+// PDF (price derived from the Value column, which includes commission) vs.
+// from an Orders-screen screenshot (raw nominal execution price, no Value
+// column available) yields two different price numbers for one real trade,
+// e.g. "Buy EFG HOLDING (39@26.98) -1,056.54" derives an effective price of
+// ~27.09, while the same fulfilled order on its Orders screen reads a plain
+// "26.980" — confirmed against a real user statement/screenshot pair that
+// was silently double-counted (inflating quantity and cost basis) when price
+// was part of the key. Ticker+date+type+qty is a reliable enough proxy for
+// "same real trade" across formats. Normalized to fixed decimals so "45.5"
+// and "45.50" match. Deliberately NOT used to dedupe rows against each other
+// within the same upload — two genuinely identical trades placed the same
+// day should both be kept.
 function transactionKey(t: {
   ticker: string;
   transactionType: string;
   quantity: number | string;
-  price: number | string;
   tradeDate: string | Date;
 }): string {
   const date = t.tradeDate instanceof Date ? t.tradeDate.toISOString() : t.tradeDate;
@@ -125,7 +134,6 @@ function transactionKey(t: {
     date.slice(0, 10),
     t.transactionType,
     Number(t.quantity).toFixed(4),
-    Number(t.price).toFixed(4),
   ].join('|');
 }
 

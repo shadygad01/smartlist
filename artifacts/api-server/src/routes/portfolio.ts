@@ -33,6 +33,7 @@ const COMPANY_TICKER_MAP: Record<string, string> = {
   "TALAAT MOUSTAFA": "TMGH",
   "EGYPTIAN INTERNATIONAL PHARMACEUTICALS": "PHAR",
   "EGYPTIAN INTERNATIONAL PHARMACEUTICAL": "PHAR",
+  "COMMERCIAL INTERNATIONAL BANK": "COMI",
 };
 
 function normalizeCompanyKey(name: string): string {
@@ -71,7 +72,13 @@ type ParsedTx = {
 //   19/2/2026  Sell EFG HOLDING (45@27.7000)   1,241.95   7,584.92
 // i.e. date, then "Buy/Sell <company name> (<qty>@<price>)", then value and
 // running balance (which we don't need — qty/price come from the parens).
-// Non-trade rows (transfers, cash deposits) don't match and are skipped.
+// Non-trade rows (transfers, cash deposits, cash dividends) don't match and
+// are skipped. The company name itself can contain its own parenthetical,
+// e.g. "Commercial International Bank (Egypt)" or "...Pharmaceuticals
+// (EIPICO)" — the description group allows (and skips past) parens instead
+// of excluding them, so it keeps looking until it finds the one that's
+// actually "<qty>@<price>". Bounded to 80 chars so a malformed row without
+// a real qty@price group can't run on and swallow the next row's data.
 function parseStatementText(text: string): ParsedTx[] {
   const transactions: ParsedTx[] = [];
 
@@ -79,7 +86,7 @@ function parseStatementText(text: string): ParsedTx[] {
   // from a PDF doesn't reliably put one transaction per line.
   const normalized = text.replace(/\s+/g, " ");
   const rowPattern =
-    /(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s+(Buy|Sell|شراء|بيع)\s+([^()]+?)\s*\(\s*([\d,]+(?:\.\d+)?)\s*@\s*([\d,]+(?:\.\d+)?)\s*\)/gi;
+    /(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s+(Buy|Sell|شراء|بيع)\s+(.{1,80}?)\s*\(\s*([\d,]+(?:\.\d+)?)\s*@\s*([\d,]+(?:\.\d+)?)\s*\)/gi;
 
   for (const m of normalized.matchAll(rowPattern)) {
     const [, dateStr, typeStr, description, qtyStr, priceStr] = m;

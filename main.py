@@ -2563,6 +2563,44 @@ def detect_signal_changes(snap) -> list[dict]:
                 "status":        u.get("status", ""),
             })
 
+    # ── Retry: pick up transitions recorded today but never notified ─────────────
+    # This handles the case where morning scan recorded a FIRST_BUY transition but
+    # send_change_alert() was not reached or failed silently. Subsequent scans get
+    # is_new=False from record_transition() and would permanently miss the alert.
+    # We only retry when BOTH channels are still 0 and ticker is still in buy zone.
+    from notifications.signal_state_store import get_unnotified_transitions
+    already_queued = {e["ticker"] for e in new_events}
+    _pending = get_unnotified_transitions(event_date)
+    for pending in _pending:
+        ticker = pending["ticker"]
+        if ticker in already_queued:
+            continue
+        # Only retry if ticker is still in buy zone right now
+        u_data = next((u for u in current_universe if u.get("ticker") == ticker), None)
+        if not u_data:
+            continue
+        r2          = float(u_data.get("candidate_r2") or 0)
+        score       = float(u_data.get("expected_reward_score") or 0)
+        cur_price   = float(u_data.get("current_price") or 0)
+        entry_price = float(u_data.get("constitutional_entry_price") or 0)
+        if not is_constitutional_buy(r2, score, cur_price, entry_price):
+            continue
+        from_state = pending["from_state"]
+        event_type = "FIRST_BUY" if from_state == STATE_NONE else "RE_ACCUMULATION"
+        new_events.append({
+            "ticker":                     ticker,
+            "event_type":                 event_type,
+            "event_date":                 event_date,
+            "constitutional_entry_price": entry_price if entry_price > 0 else cur_price,
+            "current_price":              cur_price,
+            "constitutional_r2":          r2,
+            "constitutional_score":       score,
+            "sector":                     u_data.get("sector", ""),
+            "return_pct":                 u_data.get("return_pct", 0.0),
+            "status":                     u_data.get("status", ""),
+        })
+        print(f"[detect_signal_changes] Retrying unnotified pending event: {ticker} {event_type}")
+
     return new_events
 
 
@@ -2572,6 +2610,13 @@ def send_change_email(changed_events):
         return
 
     from alert_email import build_alert_email
+    from notifications.signal_state_store import has_notified_today, STATE_CONST_BUY
+
+    try:
+        _event_date = today_cairo().isoformat()
+    except Exception:
+        from datetime import date as _d
+        _event_date = _d.today().isoformat()
 
     sent = 0
     for event in changed_events:
@@ -2586,11 +2631,16 @@ def send_change_email(changed_events):
                 "sector":                    event.get("ctx_label", ""),
                 "constitutional_score":      event.get("score", 0),
             }
+        ticker = event.get("ticker", "?")
+        # Dedup: skip if email was already sent for this ticker today
+        if has_notified_today(ticker, STATE_CONST_BUY, _event_date, channel="email"):
+            print(f"📧 Alert email skipped (already sent today): {ticker}")
+            continue
         subject, html = build_alert_email(event)
         ok = _send_email_raw(subject=subject, html=html, to=EMAIL)
         if ok:
             sent += 1
-            print(f"📧 Alert email sent: {event.get('ticker', '?')} {event.get('event_type', '?')}")
+            print(f"📧 Alert email sent: {ticker} {event.get('event_type', '?')}")
     print(f"📧 Alert emails sent: {sent}/{len(changed_events)}")
 
 

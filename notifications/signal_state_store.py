@@ -215,6 +215,30 @@ def get_todays_events(event_date: str) -> list[dict]:
         return []
 
 
+def get_unnotified_transitions(event_date: str) -> list[dict]:
+    """Return CONST_BUY transitions recorded today where notification was never sent.
+
+    Used by detect_signal_changes() to retry alerts that were recorded but whose
+    send_change_alert() call failed silently (e.g. morning scan exception, old
+    code path that did not call send_change_alert).
+
+    Only returns rows where BOTH channels are still unnotified — if at least one
+    channel succeeded we consider the event partially delivered and skip retry.
+    """
+    try:
+        con = _conn()
+        rows = con.execute(
+            """SELECT ticker, from_state, to_state
+               FROM signal_event_log
+               WHERE event_date=? AND to_state=? AND notified_email=0 AND notified_tg=0""",
+            (event_date, STATE_CONST_BUY),
+        ).fetchall()
+        con.close()
+        return [{"ticker": r[0], "from_state": r[1], "to_state": r[2]} for r in rows]
+    except Exception:
+        return []
+
+
 def get_duplicate_count(event_date: str) -> int:
     """CI helper: returns number of duplicate transition attempts blocked today."""
     try:

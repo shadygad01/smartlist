@@ -100,13 +100,14 @@ def _load_stock_dna() -> dict[str, dict]:
 
 def _yesterday_events(snap: PresentationSnapshot) -> list[dict]:
     """Events active on the previous EGX trading session.
-    event_date is the cluster start; event_end_date is the last day the signal qualified.
-    Both are checked so a single-day cluster (event_end_date == event_date) is found too.
+    Uses a RANGE check: event_date <= yesterday <= event_end_date.
+    This correctly finds events that were active yesterday even if the morning scan
+    already extended their event_end_date to today before the email was sent.
     """
     yesterday = _prev_trading_day_iso()
     return [
         e for e in (snap.timeline or [])
-        if (e.get("event_end_date") or e.get("event_date")) == yesterday
+        if e.get("event_date", "") <= yesterday <= (e.get("event_end_date") or e.get("event_date", ""))
     ]
 
 

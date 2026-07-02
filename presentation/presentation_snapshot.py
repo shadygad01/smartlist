@@ -17,7 +17,7 @@ import csv as _csv
 
 BASE = Path(__file__).parent.parent
 sys.path.insert(0, str(BASE))
-from time_authority import now_cairo, now_iso, today_cairo, is_trading_day as _is_trading_day, _EET as _CAIRO_TZ, market_state as _market_state_ta, _MARKET_OPEN_H, _MARKET_OPEN_M
+from time_authority import now_cairo, now_iso, today_cairo, is_trading_day as _is_trading_day, _EET as _CAIRO_TZ, market_state as _market_state_ta, _MARKET_OPEN_H, _MARKET_OPEN_M, prev_trading_day
 from constitutional_gate import is_constitutional_buy as _is_constitutional_buy
 
 _ADVISOR_DB  = BASE / "portfolio_advisor.db"
@@ -245,11 +245,14 @@ def build_presentation_snapshot() -> PresentationSnapshot:
         snap.total_tickers    = len(set(e["ticker"] for e in tl_ops))
 
         # new_events_today: eligible tickers (from production_decision_snapshot)
-        # that have a timeline event today. The timeline provides WHEN and
-        # event metadata; production_decision_snapshot decides WHETHER.
+        # that have a timeline event on the previous trading day OR today.
+        # Using >= prev_trading_day captures events that fired after yesterday's
+        # morning email was sent (intraday alerts) and any new events today,
+        # ensuring the "NEW SINCE YESTERDAY" email section is never falsely empty.
+        _prev_day = prev_trading_day(today_cairo()).isoformat()
         snap.new_events_today = [
             e for e in tl_ops
-            if e["event_date"] == _today and e["ticker"] in _prod_eligible_set
+            if e["event_date"] >= _prev_day and e["ticker"] in _prod_eligible_set
         ]
 
         snap.first_buys       = [e for e in tl_ops if e["event_type"] == "FIRST_BUY"]

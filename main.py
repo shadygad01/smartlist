@@ -2544,6 +2544,11 @@ def detect_signal_changes(snap) -> list[dict]:
         is_new = record_transition(ticker, from_state, current_state, event_date)
 
         if is_new:
+            # CONST_BUY → CONST_BUY means the ticker was already in buy zone and
+            # remains so today. This is a cluster CONTINUATION — the timeline engine
+            # will extend event_end_date silently. No new alert should fire.
+            if from_state == STATE_CONST_BUY and current_state == STATE_CONST_BUY:
+                continue
             event_type = "FIRST_BUY" if from_state == STATE_NONE else "RE_ACCUMULATION"
             new_events.append({
                 "ticker":        ticker,

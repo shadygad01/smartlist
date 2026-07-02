@@ -580,6 +580,14 @@ jobs:
           print("presentation_snapshot.json written.")
           PYEOF
 
+      - name: Event timeline consistency (verify what this job is about to deploy)
+        # This job rebuilds presentation_snapshot.json from its own restored state,
+        # independently of scan_core's earlier (already-passed) check — so scan_core
+        # passing does not guarantee THIS snapshot is consistent. Check what's about
+        # to actually go live.
+        run: python3 audit/assert_event_timeline_consistency.py
+        continue-on-error: true
+
       - name: Build dashboard HTML
         run: python3 dashboard.py
 

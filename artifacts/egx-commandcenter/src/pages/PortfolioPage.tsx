@@ -4,7 +4,7 @@ import { Upload, FileText, Image, CheckCircle, XCircle, AlertTriangle, ArrowLeft
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { createWorker } from 'tesseract.js';
 import { extractPdfText } from '@/lib/pdfText';
-import { preprocessForOcr } from '@/lib/imagePreprocess';
+import { preprocessForOcr, cropHeaderBand } from '@/lib/imagePreprocess';
 import { parseThunderText } from '@/lib/portfolioParser';
 import {
   getUploads,
@@ -167,13 +167,18 @@ export default function PortfolioPage() {
               }
             },
           });
-          // Thndr's light-green status labels ("Fulfilled"/"Cancelled") are
-          // otherwise invisible to Tesseract's default binarization — see
-          // imagePreprocess.ts for why.
-          const ocrInput = await preprocessForOcr(file);
-          const { data } = await worker.recognize(ocrInput);
+          // Two passes: the header (ticker code + company name, next to the
+          // back/bell/heart icons) gets silently dropped by full-page OCR —
+          // isolating it recovers it. The body gets the white-background
+          // threshold since Thndr's light-green status labels are otherwise
+          // invisible to Tesseract's default binarization. See
+          // imagePreprocess.ts for both.
+          const headerBand = await cropHeaderBand(file);
+          const bodyInput = await preprocessForOcr(file);
+          const headerResult = await worker.recognize(headerBand);
+          const bodyResult = await worker.recognize(bodyInput);
           await worker.terminate();
-          extractedText = data.text;
+          extractedText = `${headerResult.data.text}\n${bodyResult.data.text}`;
         } else {
           setUploadStatus('Reading PDF…');
           extractedText = await extractPdfText(buffer);

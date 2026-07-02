@@ -53,28 +53,23 @@ function resolveTicker(description: string): string {
   return key || description.toUpperCase();
 }
 
-// ─── Thunder brokerage PDF/text parser ────────────────────────────────────────
-// Handles text extracted from Thndr Securities "Customer Account Statement"
-// reports. Rows look like:
-//   2/2/2026   Buy Eastern Co. (50@39.3800)   -1,974.47   8,333.15
-//   19/2/2026  Sell EFG HOLDING (45@27.7000)   1,241.95   7,584.92
-// i.e. date, then "Buy/Sell <company name> (<qty>@<price>)", then value and
-// running balance (which we don't need — qty/price come from the parens).
-// Non-trade rows (transfers, cash deposits) don't match and are skipped.
-function parseThunderText(text: string): Array<{
+type ParsedTx = {
   ticker: string;
   transactionType: "BUY" | "SELL";
   quantity: number;
   price: number;
   tradeDate: Date;
-}> {
-  const transactions: Array<{
-    ticker: string;
-    transactionType: "BUY" | "SELL";
-    quantity: number;
-    price: number;
-    tradeDate: Date;
-  }> = [];
+};
+
+// ─── Format 1: Thndr "Customer Account Statement" PDF ─────────────────────────
+// Rows look like:
+//   2/2/2026   Buy Eastern Co. (50@39.3800)   -1,974.47   8,333.15
+//   19/2/2026  Sell EFG HOLDING (45@27.7000)   1,241.95   7,584.92
+// i.e. date, then "Buy/Sell <company name> (<qty>@<price>)", then value and
+// running balance (which we don't need — qty/price come from the parens).
+// Non-trade rows (transfers, cash deposits) don't match and are skipped.
+function parseStatementText(text: string): ParsedTx[] {
+  const transactions: ParsedTx[] = [];
 
   // Match across the whole document rather than line-by-line: text extracted
   // from a PDF doesn't reliably put one transaction per line.
@@ -104,6 +99,108 @@ function parseThunderText(text: string): Array<{
   }
 
   return transactions;
+}
+
+// ─── Format 2: Thndr app "Orders" screen (screenshot) ──────────────────────────
+// A per-stock order history screen looks like (ticker/company shown once in
+// the header, not per row):
+//   ORAS
+//   Orascom Construction PLC
+//   ...
+//   Buy • 3 shares          @ EGP 448.000
+//   11 Feb 26 – 11:00AM      Fulfilled
+//   Sell • 17 shares        @ EGP 253.128
+//   20 Aug 24 – 10:07AM      Fulfilled
+// Screenshots go through client-side OCR, which doesn't reliably preserve row
+// order for a two-column layout like this — it may read row-by-row or
+// column-by-column. So instead of one regex per row, each field (action+qty,
+// price, date, status) is matched independently in document order and the
+// per-row values are recombined by position. That works either way, because
+// within a single column the OCR output is still top-to-bottom.
+const MONTH_MAP: Record<string, number> = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+};
+
+function parseShortDate(str: string): Date | null {
+  // "11 Feb 26" / "20 Aug 24" -> 2026-02-11 / 2024-08-20
+  const m = /^(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{2,4})$/.exec(str.trim());
+  if (!m) return null;
+  const day = parseInt(m[1], 10);
+  const month = MONTH_MAP[m[2].slice(0, 3).toLowerCase()];
+  if (!month) return null;
+  let year = parseInt(m[3], 10);
+  if (year < 100) year += 2000;
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+const NON_TICKER_WORDS = new Set(["EGP", "PLC", "LTD", "SAE", "ALL", "USD", "GBP", "EUR"]);
+
+// The header shows the ticker code and, below it, the full company name.
+// Prefer matching the company name against the known map (more OCR-robust
+// than a 2-6 letter ticker code rendered in small text); fall back to the
+// first plausible all-caps ticker-looking token.
+function resolveHeaderTicker(text: string): string | null {
+  const head = text.slice(0, 400);
+  const key = normalizeCompanyKey(head);
+  for (const [name, ticker] of Object.entries(COMPANY_TICKER_MAP)) {
+    if (key.includes(name)) return ticker;
+  }
+  const candidates = head.match(/\b[A-Z]{2,6}\b/g) ?? [];
+  for (const c of candidates) {
+    if (!NON_TICKER_WORDS.has(c)) return c;
+  }
+  return null;
+}
+
+const orderActionPattern = /(Buy|Sell|شراء|بيع)\s*[•·.]?\s*([\d,]+(?:\.\d+)?)\s*shares?/gi;
+const orderPricePattern = /@\s*EGP\s*([\d,]+(?:\.\d+)?)/gi;
+const orderDatePattern = /(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4})\s*[–—-]\s*\d{1,2}:\d{2}\s*[AP]M/gi;
+const orderStatusPattern = /\b(Fulf\w*|Pending|Cancel\w*|Rejected|Expired)\b/gi;
+
+function parseOrdersScreenText(text: string): ParsedTx[] {
+  const transactions: ParsedTx[] = [];
+  const normalized = text.replace(/\s+/g, " ");
+
+  const actions = [...normalized.matchAll(orderActionPattern)];
+  if (actions.length === 0) return transactions;
+
+  const ticker = resolveHeaderTicker(text);
+  if (!ticker) return transactions;
+
+  const prices = [...normalized.matchAll(orderPricePattern)];
+  const dates = [...normalized.matchAll(orderDatePattern)];
+  const statuses = [...normalized.matchAll(orderStatusPattern)];
+
+  const n = Math.min(actions.length, prices.length, dates.length, statuses.length);
+  for (let i = 0; i < n; i++) {
+    if (!/^fulf/i.test(statuses[i][1])) continue; // skip pending/cancelled orders
+
+    const qty = parseFloat(actions[i][2].replace(/,/g, ""));
+    const price = parseFloat(prices[i][1].replace(/,/g, ""));
+    if (!qty || !price) continue;
+
+    const tradeDate = parseShortDate(dates[i][1]);
+    if (!tradeDate) continue;
+
+    const isBuy = /buy|شراء/i.test(actions[i][1]);
+
+    transactions.push({
+      ticker,
+      transactionType: isBuy ? "BUY" : "SELL",
+      quantity: qty,
+      price,
+      tradeDate,
+    });
+  }
+
+  return transactions;
+}
+
+function parseThunderText(text: string): ParsedTx[] {
+  const statementTx = parseStatementText(text);
+  if (statementTx.length > 0) return statementTx;
+  return parseOrdersScreenText(text);
 }
 
 function parseDate(str: string): Date | null {

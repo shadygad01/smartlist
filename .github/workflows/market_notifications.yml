@@ -2,15 +2,13 @@ name: 🔔 Market Notifications
 
 # Intraday market scan — fires every 5 min during EGX trading hours.
 # Sends BUY/alert signals via Telegram. No email. No GH Pages deploy.
-# Triggered by Google Apps Script (repository_dispatch) or GitHub schedule as backup.
+# GitHub schedule only — external HA triggers (Google Apps Script, cron-job.org)
+# route exclusively through external_dispatch.yml to avoid two separate runners
+# racing to send the same alert (this workflow used to also listen for
+# market_scan/ha_trigger/scan_dispatch, which caused duplicate Telegram+email
+# sends when the same repository_dispatch fired both workflows at once).
 
 on:
-  repository_dispatch:
-    types:
-      - market_scan
-      - ha_trigger
-      - scan_dispatch
-
   schedule:
     # EGX market hours: Sun–Thu 10:00–14:30 Cairo (UTC+3 per ZoneInfo Africa/Cairo).
     # Every 5 min from 10:00–13:55 Cairo = 07:00–10:55 UTC

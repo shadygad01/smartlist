@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SMC RL Weight Optimizer — 2026-07-02</title>
+<style>
+  body { font-family:'Segoe UI',sans-serif; background:#0d1117; color:#c9d1d9; margin:0; padding:20px; }
+  h1 { color:#58a6ff; text-align:center; }
+  h2 { color:#79c0ff; border-bottom:1px solid #30363d; padding-bottom:8px; margin-top:40px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0; font-size:13px; }
+  th { background:#161b22; color:#8b949e; padding:8px 10px; text-align:left; border:1px solid #30363d; }
+  td { padding:6px 10px; border:1px solid #30363d; }
+  .kpi-grid { display:flex; gap:12px; flex-wrap:wrap; margin:20px 0; }
+  .kpi { background:#161b22; border:1px solid #30363d; border-radius:8px; padding:16px 20px; flex:1; min-width:150px; text-align:center; }
+  .kpi .val { font-size:2em; font-weight:bold; }
+  .kpi .lbl { font-size:11px; color:#8b949e; margin-top:4px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; }
+  .green { background:#0d2318; color:#64dd17; }
+  .yellow { background:#1a1a00; color:#ffd600; }
+  .red { background:#1a0000; color:#ff5252; }
+  .formula-box { background:#161b22; border:1px solid #30363d; border-radius:8px; padding:16px; margin:16px 0; font-family:monospace; }
+</style>
+</head>
+<body>
+<h1>🤖 SMC RL Weight Optimizer</h1>
+<p style="text-align:center;color:#8b949e;">Generated: 2026-07-02 | Training data: 516 signals | Epochs: 40 | LR: 0.05</p>
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="val" style="color:#58a6ff">15.97%</div>
+    <div class="lbl">Top Quartile 90d Return</div>
+  </div>
+  <div class="kpi">
+    <div class="val" style="color:#64dd17">65.9%</div>
+    <div class="lbl">Top Quartile Win Rate</div>
+  </div>
+  <div class="kpi">
+    <div class="val" style="color:#ffd600">-4.82%</div>
+    <div class="lbl">Top vs Bottom Q Spread</div>
+  </div>
+  <div class="kpi">
+    <div class="val" style="color:#c9d1d9">67.8%</div>
+    <div class="lbl">Overall Win Rate</div>
+  </div>
+  <div class="kpi">
+    <div class="val" style="color:#79c0ff">62.33%</div>
+    <div class="lbl">Top Quartile 252d Return</div>
+  </div>
+</div>
+
+<div class="formula-box">
+  <b style="color:#58a6ff">RL Update Rule:</b><br>
+  predicted_score = Σ (w_i × normalized_score_i)<br>
+  error = predicted_score − actual_return_90d<br>
+  Δw_i = −lr × (error × score_i + λ × (w_i − system_w_i))<br>
+  <small style="color:#8b949e">λ=0.01 (L2 reg toward system weights) | Reward = r_90d + 0.2×r_180d + 0.1×r_252d</small>
+</div>
+
+<h2>Weight Comparison: System → Previous → New RL</h2>
+<table>
+  <tr><th>Indicator</th><th>Max Score</th><th>System Weight</th><th>Previous RL</th><th>New RL Weight</th><th>Magnitude</th></tr>
+  
+        <tr>
+          <td>Price Position</td>
+          <td>30</td>
+          <td>30</td>
+          <td>29.9</td>
+          <td style="color:#64dd17">29.9 (+0.0)</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#58a6ff;height:8px;border-radius:4px;width:74.8%"></div></div></td>
+        </tr>
+        <tr>
+          <td>OB Quality</td>
+          <td>10</td>
+          <td>10</td>
+          <td>9.2</td>
+          <td style="color:#64dd17">9.2 (+0.0)</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#58a6ff;height:8px;border-radius:4px;width:23.0%"></div></div></td>
+        </tr>
+        <tr>
+          <td>Liquidity Context</td>
+          <td>20</td>
+          <td>20</td>
+          <td>15.6</td>
+          <td style="color:#ff5252">15.6 (-0.0)</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#58a6ff;height:8px;border-radius:4px;width:38.9%"></div></div></td>
+        </tr>
+        <tr>
+          <td>HTF Alignment</td>
+          <td>10</td>
+          <td>10</td>
+          <td>9.4</td>
+          <td style="color:#64dd17">9.4 (+0.0)</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#58a6ff;height:8px;border-radius:4px;width:23.5%"></div></div></td>
+        </tr>
+        <tr>
+          <td>AVWAP Support</td>
+          <td>8</td>
+          <td>8</td>
+          <td>4.2</td>
+          <td style="color:#64dd17">4.2 (+0.0)</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#58a6ff;height:8px;border-radius:4px;width:10.4%"></div></div></td>
+        </tr>
+        <tr>
+          <td>MACD Signal</td>
+          <td>4</td>
+          <td>4</td>
+          <td>3.0</td>
+          <td style="color:#64dd17">3.0 (+0.0)</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#58a6ff;height:8px;border-radius:4px;width:7.4%"></div></div></td>
+        </tr>
+        <tr>
+          <td>Divergence</td>
+          <td>3</td>
+          <td>3</td>
+          <td>2.7</td>
+          <td style="color:#64dd17">2.7 (+0.0)</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#58a6ff;height:8px;border-radius:4px;width:6.7%"></div></div></td>
+        </tr>
+        <tr>
+          <td>Demand Zone</td>
+          <td>15</td>
+          <td>15</td>
+          <td>14.8</td>
+          <td style="color:#64dd17">14.8 (+0.0)</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#58a6ff;height:8px;border-radius:4px;width:37.0%"></div></div></td>
+        </tr>
+        <tr>
+          <td>Pattern Score</td>
+          <td>20</td>
+          <td>10</td>
+          <td>11.4</td>
+          <td style="color:#64dd17">11.4 (+0.0)</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#58a6ff;height:8px;border-radius:4px;width:28.4%"></div></div></td>
+        </tr>
+</table>
+
+<h2>Indicator Importance (Permutation Test)</h2>
+<p style="color:#8b949e">Importance = MSE increase when indicator values are randomly shuffled — higher = more critical</p>
+<table>
+  <tr><th>Indicator</th><th>RL Weight</th><th>Importance Score</th><th>Impact</th></tr>
+  
+        <tr>
+          <td>MACD Signal</td>
+          <td>3.0</td>
+          <td style="color:#64dd17">1.4514</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#64dd17;height:8px;border-radius:4px;width:100.0%"></div></div></td>
+        </tr>
+        <tr>
+          <td>Price Position</td>
+          <td>29.9</td>
+          <td style="color:#64dd17">0.5887</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#64dd17;height:8px;border-radius:4px;width:100.0%"></div></div></td>
+        </tr>
+        <tr>
+          <td>Demand Zone</td>
+          <td>14.8</td>
+          <td style="color:#64dd17">0.5231</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#64dd17;height:8px;border-radius:4px;width:100.0%"></div></div></td>
+        </tr>
+        <tr>
+          <td>Divergence</td>
+          <td>2.7</td>
+          <td style="color:#64dd17">0.1515</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#64dd17;height:8px;border-radius:4px;width:100.0%"></div></div></td>
+        </tr>
+        <tr>
+          <td>OB Quality</td>
+          <td>9.2</td>
+          <td style="color:#64dd17">0.1290</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#64dd17;height:8px;border-radius:4px;width:100.0%"></div></div></td>
+        </tr>
+        <tr>
+          <td>Pattern Score</td>
+          <td>11.3</td>
+          <td style="color:#ff5252">0.0000</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#64dd17;height:8px;border-radius:4px;width:0.0%"></div></div></td>
+        </tr>
+        <tr>
+          <td>AVWAP Support</td>
+          <td>4.2</td>
+          <td style="color:#ff5252">-0.0101</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#64dd17;height:8px;border-radius:4px;width:0.0%"></div></div></td>
+        </tr>
+        <tr>
+          <td>HTF Alignment</td>
+          <td>9.4</td>
+          <td style="color:#ff5252">-0.1188</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#64dd17;height:8px;border-radius:4px;width:0.0%"></div></div></td>
+        </tr>
+        <tr>
+          <td>Liquidity Context</td>
+          <td>15.6</td>
+          <td style="color:#ff5252">-0.7075</td>
+          <td><div style="background:#30363d;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#64dd17;height:8px;border-radius:4px;width:0.0%"></div></div></td>
+        </tr>
+</table>
+
+<h2>Performance by Market Regime</h2>
+<table>
+  <tr><th>Regime</th><th>N</th><th>Avg Return 90d</th><th>Win Rate</th></tr>
+  
+        <tr>
+          <td>range</td>
+          <td>516</td>
+          <td style="color:#64dd17">17.8%</td>
+          <td>67.8%</td>
+        </tr>
+</table>
+
+<h2>Training Loss History</h2>
+<p style="color:#8b949e">MSE over 40 epochs: 0.250405 → 0.243928 → 0.243766 → 0.243427 → 0.243412</p>
+
+<h2>Historical Weight Evolution</h2>
+<table><tr><th>Date</th><th>Data Points</th><th>Top Q 90d</th><th>Discrimination</th><th>Epochs</th></tr>
+        <tr>
+          <td>2026-06-29</td>
+          <td>516</td>
+          <td style="color:#64dd17">15.97%</td>
+          <td>-4.82%</td>
+          <td>40</td>
+        </tr>
+        <tr>
+          <td>2026-06-29</td>
+          <td>516</td>
+          <td style="color:#64dd17">15.97%</td>
+          <td>-4.82%</td>
+          <td>40</td>
+        </tr>
+        <tr>
+          <td>2026-06-30</td>
+          <td>516</td>
+          <td style="color:#64dd17">15.97%</td>
+          <td>-4.82%</td>
+          <td>40</td>
+        </tr>
+        <tr>
+          <td>2026-06-30</td>
+          <td>516</td>
+          <td style="color:#64dd17">15.97%</td>
+          <td>-4.82%</td>
+          <td>40</td>
+        </tr>
+        <tr>
+          <td>2026-07-02</td>
+          <td>516</td>
+          <td style="color:#64dd17">15.97%</td>
+          <td>-4.82%</td>
+          <td>40</td>
+        </tr>
+        <tr>
+          <td>2026-07-02</td>
+          <td>516</td>
+          <td style="color:#64dd17">15.97%</td>
+          <td>-4.82%</td>
+          <td>40</td>
+        </tr>
+        <tr>
+          <td>2026-07-02</td>
+          <td>516</td>
+          <td style="color:#64dd17">15.97%</td>
+          <td>-4.82%</td>
+          <td>40</td>
+        </tr>
+        <tr>
+          <td>2026-07-02</td>
+          <td>516</td>
+          <td style="color:#64dd17">15.97%</td>
+          <td>-4.82%</td>
+          <td>40</td>
+        </tr>
+        <tr>
+          <td>2026-07-02</td>
+          <td>516</td>
+          <td style="color:#64dd17">15.97%</td>
+          <td>-4.82%</td>
+          <td>40</td>
+        </tr>
+        <tr>
+          <td>2026-07-02</td>
+          <td>516</td>
+          <td style="color:#64dd17">15.97%</td>
+          <td>-4.82%</td>
+          <td>40</td>
+        </tr></table>
+
+<p style="color:#30363d;text-align:center;margin-top:40px">EGX Scanner · SMC RL Optimizer · 2026-07-02</p>
+</body>
+</html>

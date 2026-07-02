@@ -1,0 +1,5991 @@
+{
+  "schema_version": 2,
+  "created_at": "2026-06-14T03:30:17.870233+00:00",
+  "last_updated": "2026-07-02T16:47:11.656652+00:00",
+  "research_items": {
+    "RI-PRICE-INV": {
+      "id": "RI-PRICE-INV",
+      "title": "Price scoring inversion: near-EQ (r1=1-10) outperforms deep-discount (r1=21-30)",
+      "category": "scoring_fix",
+      "indicator": "r1_price",
+      "finding": "Current linear scoring rewards the wrong range. delta_r20d when r1>0: +0.59%.",
+      "source_report": "logic_analyzer",
+      "date_discovered": "2026-06-13",
+      "date_updated": "2026-07-02",
+      "priority": "MEDIUM",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Open",
+      "next_required_action": "Test modified buy-zone scoring in shadow mode; cross-check WF fold consistency.",
+      "estimated_impact": 0.02270949960459998,
+      "supporting_modules": [
+        "logic_analyzer"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "n_signals": 1225,
+        "function_impact": {
+          "col": "r1_price",
+          "delta_r20d": 0.02270949960459998,
+          "n_pos": 1019,
+          "n_zero": 206,
+          "r20d_when_pos": 0.04671678115799804,
+          "r20d_when_zero": 0.02400728155339806,
+          "pf_pos": 2.7719726635200925,
+          "pf_zero": 1.6532679911233226
+        }
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Open"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-OB-HARM": {
+      "id": "RI-OB-HARM",
+      "title": "Order Block presence REDUCES expected return by -1.4%",
+      "category": "scoring_fix",
+      "indicator": "r2_ob",
+      "finding": "r2_ob>0 signals underperform (delta_r20d=-1.4%). 3 modules agree, but WF folds inconsistent — System Audit verdict: OVERFITTED.",
+      "source_report": "logic_analyzer",
+      "date_discovered": "2026-06-13",
+      "date_updated": "2026-07-02",
+      "priority": "MEDIUM",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Investigating",
+      "next_required_action": "Extend OOS window to 6+ months. Do not remove OB until WF folds converge.",
+      "estimated_impact": 0.009457075561932093,
+      "supporting_modules": [
+        "logic_analyzer"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "n_signals": 1225,
+        "function_impact": {
+          "col": "r2_ob",
+          "delta_r20d": -0.009457075561932093,
+          "n_pos": 205,
+          "n_zero": 1020,
+          "r20d_when_pos": 0.035023414634146335,
+          "r20d_when_zero": 0.04448049019607843,
+          "pf_pos": 2.1557394201825417,
+          "pf_zero": 2.607540578174771
+        }
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Investigating"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-HTF-INV": {
+      "id": "RI-HTF-INV",
+      "title": "HTF Scoring Inversion: HH+HL = -0.8%, HL-only = +11.6%",
+      "category": "scoring_fix",
+      "indicator": "r4_htf",
+      "finding": "Full HH+HL confirmation currently scores highest but returns -0.8%. HL-only returns +11.6%. System Audit WF-consistent.",
+      "source_report": "logic_analyzer",
+      "date_discovered": "2026-06-13",
+      "date_updated": "2026-07-02",
+      "priority": "MEDIUM",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Awaiting Validation",
+      "next_required_action": "Implement HTF scoring inversion fix in shadow mode for 20 sessions.",
+      "estimated_impact": 0.011,
+      "supporting_modules": [
+        "logic_analyzer"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "n_signals": 1225,
+        "function_impact": {
+          "col": "r4_htf",
+          "delta_r20d": 0.015527471671903798,
+          "n_pos": 747,
+          "n_zero": 478,
+          "r20d_when_pos": 0.04895676037483267,
+          "r20d_when_zero": 0.03342928870292887,
+          "pf_pos": 2.8680441334218725,
+          "pf_zero": 2.075417603273525
+        }
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Awaiting Validation"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-DEM-PAR": {
+      "id": "RI-DEM-PAR",
+      "title": "Demand Zone Paradox: SV+HVN (max score=15) = lowest return",
+      "category": "scoring_fix",
+      "indicator": "r8_demand",
+      "finding": "SV+HVN together is the worst demand outcome. HVN-only is the best. The scoring function is rewarding the wrong combination.",
+      "source_report": "logic_analyzer",
+      "date_discovered": "2026-06-13",
+      "date_updated": "2026-07-02",
+      "priority": "MEDIUM",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Investigating",
+      "next_required_action": "Validate HVN-only vs SV+HVN split across WF folds. Fix internal scoring multipliers in sc_demand().",
+      "estimated_impact": 0.005,
+      "supporting_modules": [
+        "logic_analyzer"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "n_signals": 1225,
+        "function_impact": {
+          "col": "r8_demand",
+          "delta_r20d": 0.012299399620643837,
+          "n_pos": 656,
+          "n_zero": 569,
+          "r20d_when_pos": 0.048610823170731704,
+          "r20d_when_zero": 0.03631142355008787,
+          "pf_pos": 2.863637426217054,
+          "pf_zero": 2.1925931911847885
+        }
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Investigating"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-LIQ-WICK": {
+      "id": "RI-LIQ-WICK",
+      "title": "Rejection Wick (r3=8 pts) has near-zero edge — sub-component overweighted",
+      "category": "weight_change",
+      "indicator": "r3_liquidity",
+      "finding": "Wick rejection is the weakest liquidity sub-signal. Reducing its multiplier from 0.6 to 0.15 frees weight for equal-lows.",
+      "source_report": "logic_analyzer",
+      "date_discovered": "2026-06-13",
+      "date_updated": "2026-07-02",
+      "priority": "MEDIUM",
+      "evidence_strength": "LOW",
+      "current_status": "Open",
+      "next_required_action": "Cross-validate wick reduction in Weight Optimizer and Walk-Forward before changing.",
+      "estimated_impact": 0.004,
+      "supporting_modules": [
+        "logic_analyzer"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "n_signals": 1225,
+        "function_impact": {
+          "col": "r3_liquidity",
+          "delta_r20d": 0.012131436007448475,
+          "n_pos": 701,
+          "n_zero": 524,
+          "r20d_when_pos": 0.04808716119828817,
+          "r20d_when_zero": 0.03595572519083969,
+          "pf_pos": 2.928482345133756,
+          "pf_zero": 2.1111582920500114
+        }
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Open"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-DIV-RSI": {
+      "id": "RI-DIV-RSI",
+      "title": "RSI Divergence: NEGATIVE edge (mean=3.8% vs baseline 4.7%)",
+      "category": "scoring_fix",
+      "indicator": "r7_div",
+      "finding": "rsi_div=1 signals underperform. r7_div combines RSI+MACD div — RSI drag cancels MACD edge. Need to separate them.",
+      "source_report": "logic_analyzer",
+      "date_discovered": "2026-06-13",
+      "date_updated": "2026-07-02",
+      "priority": "MEDIUM",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Open",
+      "next_required_action": "Separate RSI and MACD divergence sub-scores in sc_div(). RSI div should be zeroed or penalized.",
+      "estimated_impact": 0.009,
+      "supporting_modules": [
+        "logic_analyzer"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "n_signals": 1225,
+        "function_impact": {
+          "col": "r7_div",
+          "delta_r20d": 0.003548056423922509,
+          "n_pos": 237,
+          "n_zero": 988,
+          "r20d_when_pos": 0.045759493670886074,
+          "r20d_when_zero": 0.042211437246963565,
+          "pf_pos": 2.8313688405552373,
+          "pf_zero": 2.4626216077828977
+        }
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Open"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-MACD-REDUCE": {
+      "id": "RI-MACD-REDUCE",
+      "title": "r6_macd: reduce 4 → 2  (Optimizer=1.2, RL=1.1, WF=2.9 — 3-method convergence)",
+      "category": "weight_change",
+      "indicator": "r6_macd",
+      "finding": "Three independent methods converge on reducing r6_macd. Only weight change currently with HIGH evidence.",
+      "source_report": "weight_optimizer",
+      "date_discovered": "2026-06-13",
+      "date_updated": "2026-07-02",
+      "priority": "HIGH",
+      "evidence_strength": "HIGH",
+      "current_status": "Awaiting Validation",
+      "next_required_action": "Stage shadow scoring with r6_macd=2 for 20 trading sessions. This is the only weight change currently safe to promote.",
+      "estimated_impact": 0.003,
+      "supporting_modules": [
+        "weight_optimizer",
+        "smc_rl",
+        "walk_forward"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "optimizer_w": 54.17988404910133,
+        "current_w": 4,
+        "oos": 0.0001970491953316042
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Awaiting Validation"
+        },
+        {
+          "date": "2026-06-14",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-AVWAP-REDUCE": {
+      "id": "RI-AVWAP-REDUCE",
+      "title": "r5_avwap: reduce 8 → 4-6  (Optimizer=4.3, RL=4.1, WF=6.3 — 3-method convergence)",
+      "category": "weight_change",
+      "indicator": "r5_avwap",
+      "finding": "Three methods agree: reduce AVWAP weight. Positive delta when present but modest. Consensus around 4-6.",
+      "source_report": "weight_optimizer",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "MEDIUM",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Awaiting Validation",
+      "next_required_action": "Shadow test r5_avwap=5 for 20 sessions. Validate after r6_macd reduction is complete (one change at a time).",
+      "estimated_impact": 0.002,
+      "supporting_modules": [
+        "weight_optimizer",
+        "smc_rl",
+        "walk_forward"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "optimizer_w": 4.678417255781252,
+        "current_w": 8
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Awaiting Validation"
+        },
+        {
+          "date": "2026-06-14",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-GATE-LIQ20": {
+      "id": "RI-GATE-LIQ20",
+      "title": "Liquidity gate: r3_liquidity >= 20  (optimizer confidence=0.88 — highest of all gates)",
+      "category": "gate",
+      "indicator": "r3_liquidity",
+      "finding": "Retains 43% of signals, win_rate=68.4%, expected return +0.9% vs baseline. Highest optimizer confidence.",
+      "source_report": "weight_optimizer",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "MEDIUM",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Awaiting Validation",
+      "next_required_action": "Validate across WF fold periods. If consistent, stage for shadow scoring.",
+      "estimated_impact": 0.009,
+      "supporting_modules": [
+        "weight_optimizer"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "confidence": 0.88,
+        "n_retained": 275,
+        "win_rate": 0.684
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Awaiting Validation"
+        }
+      ]
+    },
+    "RI-GATE-SCORE": {
+      "id": "RI-GATE-SCORE",
+      "title": "Score gates (>=55, >=60) — REJECTED: OVERFITTED in System Audit OOS",
+      "category": "gate",
+      "indicator": "multi",
+      "finding": "Score gate >=55: IS +1.75% but OOS -4.52%. Gate >=60: IS +1.06%, OOS OVERFITTED. Both confirmed overfitted.",
+      "source_report": "system_audit",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "LOW",
+      "evidence_strength": "HIGH",
+      "current_status": "Rejected",
+      "next_required_action": "Rejected. Score-based gates on raw_score are overfitted. Do not reopen without new architecture.",
+      "estimated_impact": -0.045,
+      "supporting_modules": [
+        "system_audit"
+      ],
+      "conflicting_modules": [
+        "weight_optimizer"
+      ],
+      "evidence_data": {
+        "oos_diff_55": -0.0452,
+        "oos_diff_60": -0.0452
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Rejected"
+        }
+      ]
+    },
+    "RI-OPT-REBAL": {
+      "id": "RI-OPT-REBAL",
+      "title": "Full weight rebalance (Optimizer) — OOS improvement ≈ 0, high overfit risk",
+      "category": "weight_change",
+      "indicator": "multi",
+      "finding": "ML rebalance to Liq=28, Div=26, Demand=21, Price=12. OOS improvement=-0.000039 ≈ zero. Conflicts with RL and WF.",
+      "source_report": "weight_optimizer",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "LOW",
+      "evidence_strength": "LOW",
+      "current_status": "Investigating",
+      "next_required_action": "Do not promote as a batch. Decompose into per-indicator items. Validate each independently.",
+      "estimated_impact": 0.0001970491953316042,
+      "supporting_modules": [
+        "weight_optimizer"
+      ],
+      "conflicting_modules": [
+        "smc_rl",
+        "walk_forward"
+      ],
+      "evidence_data": {
+        "optimal_weights": {
+          "r1_price": 10.275787585121334,
+          "r2_ob": 3.3899907572667747,
+          "r3_liquidity": 5.009489281074903,
+          "r4_htf": 0.867250224564535,
+          "r5_avwap": 4.678417255781252,
+          "r6_macd": 54.17988404910133,
+          "r7_div": 3.482680595190802,
+          "r8_demand": 18.11650025189907
+        },
+        "oos": 0.0001970491953316042
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Investigating"
+        },
+        {
+          "date": "2026-06-14",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-SWEEP-GATE": {
+      "id": "RI-SWEEP-GATE",
+      "title": "Sweep detected mandatory gate — System Audit: CONFIRMED",
+      "category": "gate",
+      "indicator": "gate",
+      "finding": "sweep=1 signals: IS diff=+0.013, OOS=+0.077, WF consistent=True. Folds=[0.0523, -0.0069, 0.0126, 0.0789].",
+      "source_report": "system_audit",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "MEDIUM",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Awaiting Validation",
+      "next_required_action": "Reduces signals by 54.6%. Shadow test 20 sessions to measure opportunity cost before promoting.",
+      "estimated_impact": 0.007,
+      "supporting_modules": [
+        "system_audit",
+        "adaptive_learning"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "verdict": "CONFIRMED",
+        "oos_diff": 0.0929,
+        "wf_folds": [
+          0.0378,
+          0.0003,
+          0.0182,
+          0.0929
+        ]
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Awaiting Validation"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-25",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-25",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-26",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-27",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-27",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-27",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-27",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-HVN-CONF": {
+      "id": "RI-HVN-CONF",
+      "title": "HVN-only = strongest demand signal — System Audit: CONFIRMED",
+      "category": "scoring_fix",
+      "indicator": "r8_demand",
+      "finding": "HVN hit outperforms. WF consistent=True, OOS diff=+0.090. Folds=[0.0243, -0.0126, 0.0062, 0.0913].",
+      "source_report": "system_audit",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "HIGH",
+      "evidence_strength": "HIGH",
+      "current_status": "Awaiting Validation",
+      "next_required_action": "Promote HVN-only scoring fix: increase HVN-only sub-score, decrease SV+HVN sub-score in sc_demand().",
+      "estimated_impact": 0.009,
+      "supporting_modules": [
+        "system_audit",
+        "logic_analyzer",
+        "historical_backtest"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "verdict": "CONFIRMED",
+        "oos_diff": 0.0924,
+        "wf_folds": [
+          0.0206,
+          -0.0195,
+          0.0149,
+          0.0924
+        ]
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Awaiting Validation"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-25",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-26",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-27",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-27",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-27",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-ARCH-ADDITIVE": {
+      "id": "RI-ARCH-ADDITIVE",
+      "title": "Additive scoring: OOS R² = -0.15 — architecture cannot be fixed by weight tuning",
+      "category": "architecture",
+      "indicator": "arch",
+      "finding": "Current additive weighted sum has OOS R²=-0.15 (negative!). Architecture is not predicting returns. Recommendation: mandatory gate (sweep=1 + r1≥gate) × quality bonus. Non-linear with minimum viable conditions outperforms additive sum.",
+      "source_report": "system_audit",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "CRITICAL",
+      "evidence_strength": "HIGH",
+      "current_status": "Investigating",
+      "next_required_action": "Design non-linear scoring: mandatory gates × quality bonus. Test vs current additive sum. This is the root cause of the learning plateau.",
+      "estimated_impact": 0.02,
+      "supporting_modules": [
+        "system_audit",
+        "research_quant"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "oos_r2": -0.15
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Investigating"
+        }
+      ]
+    },
+    "RI-HTF-FIX-IMPACT": {
+      "id": "RI-HTF-FIX-IMPACT",
+      "title": "HTF inversion fix = highest single-change impact per System Audit",
+      "category": "scoring_fix",
+      "indicator": "r4_htf",
+      "finding": "Fix HTF scoring inversion: HH+HL currently scores highest but returns -0.8%. HL-only returns +11.6%. A single logic fix (swap full/partial scoring) could shift system performance significantly.",
+      "source_report": "system_audit",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "HIGH",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Awaiting Validation",
+      "next_required_action": "Swap HH+HL → 0 pts, HL-only → full pts in sc_htf(). Shadow mode 20 sessions.",
+      "estimated_impact": 0.012,
+      "supporting_modules": [
+        "system_audit",
+        "logic_analyzer"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "note": "Fix HTF scoring inversion: HH+HL currently scores highest but returns -0.8%. HL-only returns +11.6%. A single logic fix (swap full/partial scoring) could shift system performance significantly."
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Awaiting Validation"
+        }
+      ]
+    },
+    "RI-HVN-HTF-BONUS": {
+      "id": "RI-HVN-HTF-BONUS",
+      "title": "IMP-5: HVN + HTF_HH super-bonus tier — model_score=100, n=8.5% of signals",
+      "category": "scoring_fix",
+      "indicator": "multi",
+      "finding": "delta_ret=+0.026 when hvn_hit=1 AND htf_hh=1. WF-consistent=True. Only 8.5% of signals qualify. GX memory flags as overfitted.",
+      "source_report": "adaptive_learning",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "MEDIUM",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Awaiting Validation",
+      "next_required_action": "Need 6+ months forward data (n≥150) before promoting. Do not apply to main scanner.",
+      "estimated_impact": 0.0239,
+      "supporting_modules": [
+        "adaptive_learning"
+      ],
+      "conflicting_modules": [
+        "gx_learning"
+      ],
+      "evidence_data": {
+        "model_score": 100,
+        "retention": 0.085
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Awaiting Validation"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-25",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-25",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-26",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-27",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-27",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-27",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-28",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-29",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
+        }
+      ]
+    },
+    "RI-RL-NEG-DISC": {
+      "id": "RI-RL-NEG-DISC",
+      "title": "SMC RL discrimination = -4.23 (NEGATIVE — top-quartile underperforms bottom)",
+      "category": "overfitting",
+      "indicator": "rl",
+      "finding": "After 40 epochs on 395 signals: top-Q avg=17.26% vs bot-Q avg=21.48%. Loss=0.2386 converging but model is inversely predictive.",
+      "source_report": "smc_rl",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "CRITICAL",
+      "evidence_strength": "HIGH",
+      "current_status": "Investigating",
+      "next_required_action": "Diagnose RL objective function. Likely the target variable is inverted or the loss is minimizing the wrong direction. Do not use RL weights for any promotion until fixed.",
+      "estimated_impact": -0.04,
+      "supporting_modules": [
+        "smc_rl"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "discrimination": -4.82,
+        "top_q": 15.97,
+        "bot_q": 20.8,
+        "loss": 0.243331
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Investigating"
+        },
+        {
+          "date": "2026-06-14",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-WF-DRIFT": {
+      "id": "RI-WF-DRIFT",
+      "title": "Walk-Forward: 194 weight updates but max drift 28% — micro-corrections only",
+      "category": "architecture",
+      "indicator": "arch",
+      "finding": "865 trades, equity grew to 2427x. But weights barely moved from original (max drift 27.7%). WF is not encoding structural fixes (HTF inversion, OB removal).",
+      "source_report": "walk_forward",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "MEDIUM",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Investigating",
+      "next_required_action": "Evaluate whether WF's trade-by-trade micro-learning can coexist with structural overrides. May need a 'structural anchor' layer above WF.",
+      "estimated_impact": 0.005,
+      "supporting_modules": [
+        "walk_forward"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "max_drift_pct": 0.532,
+        "n_trades": 1308,
+        "equity": 2632.04
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Investigating"
+        },
+        {
+          "date": "2026-06-14",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-14",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-15",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-15",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-23",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-25",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-MICRO-FEATURES": {
+      "id": "RI-MICRO-FEATURES",
+      "title": "Edge Discovery: 30 microstructure features predict returns but are absent from scanner",
+      "category": "new_feature",
+      "indicator": "micro",
+      "finding": "8085 significant rules found. Top features: snap_reclaim_spd, feat_dist_52w_low, feat_dist_last_bos, snap_atr. Best rule achieves WR=100% on n=15.",
+      "source_report": "edge_discovery",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-06-27",
+      "priority": "MEDIUM",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Open",
+      "next_required_action": "Start with snap_reclaim_spd (reclaim speed appears in multiple top rules). Research whether it can be computed daily and added as r9 without major architecture change.",
+      "estimated_impact": 0.025,
+      "supporting_modules": [
+        "edge_discovery",
+        "research_quant"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "n_sig_rules": 8085,
+        "n_external_features": 30,
+        "top_rule_wr": 1.0,
+        "top_rule_n": 15
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Open"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-QUANT-R2": {
+      "id": "RI-QUANT-R2",
+      "title": "All ML models R² ≤ -0.012 — scoring has zero predictive power for returns",
+      "category": "architecture",
+      "indicator": "arch",
+      "finding": "RF R²=-1.225, GBM R²=-0.021, XGBoost R²=-0.012. AUC=0.506 (near random). High-confidence prob model hits 72% precision but only on tiny subset.",
+      "source_report": "research_quant",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "CRITICAL",
+      "evidence_strength": "HIGH",
+      "current_status": "Investigating",
+      "next_required_action": "Confirms RI-ARCH-ADDITIVE. Weight tuning cannot fix R²<0. Structural redesign needed — not weight changes.",
+      "estimated_impact": 0.03,
+      "supporting_modules": [
+        "research_quant",
+        "system_audit"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "best_r2": 0.005,
+        "rf_r2": -1.225,
+        "gbm_r2": -0.021,
+        "auc": 0.5
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Investigating"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-22",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-24",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-25",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-27",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-DIV-MACD": {
+      "id": "RI-DIV-MACD",
+      "title": "MACD Divergence: PF=3.82 vs baseline 2.50 — strongest edge of any flag",
+      "category": "weight_change",
+      "indicator": "r7_div",
+      "finding": "macd_div=1: n=74, PF=3.82, WR=44.6%, mean=0.060. RSI div is negative — must be separated before increasing r7_div.",
+      "source_report": "historical_backtest",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "MEDIUM",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Investigating",
+      "next_required_action": "Separate RSI and MACD div sub-scores in sc_div() first (RI-DIV-RSI). Then test r7_div increase from 3 → 5.",
+      "estimated_impact": 0.016,
+      "supporting_modules": [
+        "historical_backtest"
+      ],
+      "conflicting_modules": [
+        "smc_rl",
+        "walk_forward"
+      ],
+      "evidence_data": {
+        "macd_pf": 3.823,
+        "baseline_pf": 2.497,
+        "n": 74
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Investigating"
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-17",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-18",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-19",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-06-21",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        }
+      ]
+    },
+    "RI-SYS-PROMOTE": {
+      "id": "RI-SYS-PROMOTE",
+      "title": "Structural gap: no promotion pipeline — all 33 findings stuck at Proposed, actual_delta=None",
+      "category": "architecture",
+      "indicator": "arch",
+      "finding": "The learning ecosystem has no mechanism to move findings from Proposed → Staged → Promoted. actual_delta_ret=None for every recommendation. The system discovers but does not learn.",
+      "source_report": "gx_research_memory",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "CRITICAL",
+      "evidence_strength": "HIGH",
+      "current_status": "Open",
+      "next_required_action": "Implement shadow scoring: run scanner in parallel with proposed change, log results without alerting, compare after 20 sessions. This is the single highest-ROI engineering task.",
+      "estimated_impact": 0.05,
+      "supporting_modules": [
+        "gx_learning"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {
+        "n_proposed": 33,
+        "n_promoted": 0
+      },
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Open"
+        }
+      ]
+    },
+    "RI-SYS-WFSCOPE": {
+      "id": "RI-SYS-WFSCOPE",
+      "title": "Walk-Forward micro-learning cannot encode structural fixes — two incompatible learning speeds",
+      "category": "architecture",
+      "indicator": "arch",
+      "finding": "WF adjusts weights ±0.05 per trade. Structural fixes (HTF inversion, OB removal) require ±5-10 point changes. These cannot coexist in the same update loop.",
+      "source_report": "gx_research_memory",
+      "date_discovered": "2026-06-14",
+      "date_updated": "2026-07-02",
+      "priority": "MEDIUM",
+      "evidence_strength": "MEDIUM",
+      "current_status": "Investigating",
+      "next_required_action": "Design two-layer weight system: structural base (updated quarterly via promotion) + WF micro-delta (updated per trade).",
+      "estimated_impact": 0.01,
+      "supporting_modules": [
+        "walk_forward",
+        "system_audit"
+      ],
+      "conflicting_modules": [],
+      "evidence_data": {},
+      "history": [
+        {
+          "date": "2026-06-14",
+          "event": "created",
+          "status": "Investigating"
+        }
+      ]
+    }
+  },
+  "indicator_maturity": {
+    "r1_price": {
+      "indicator": "r1_price",
+      "label": "Price Position",
+      "current_weight": 30,
+      "evidence_score": 35,
+      "validation_score": 0,
+      "promotion_readiness": 14,
+      "research_priority": "MEDIUM",
+      "open_items": 1,
+      "validated_items": 0,
+      "promoted_items": 0,
+      "recommended_direction": "FIX_LOGIC",
+      "recommended_weight": 30,
+      "last_finding": "Price scoring inversion: near-EQ (r1=1-10) outperforms deep-discount (r1=21-30)"
+    },
+    "r2_ob": {
+      "indicator": "r2_ob",
+      "label": "Order Block",
+      "current_weight": 10,
+      "evidence_score": 35,
+      "validation_score": 0,
+      "promotion_readiness": 14,
+      "research_priority": "MEDIUM",
+      "open_items": 1,
+      "validated_items": 0,
+      "promoted_items": 0,
+      "recommended_direction": "STABLE",
+      "recommended_weight": 10,
+      "last_finding": "Order Block presence REDUCES expected return by -1.4%"
+    },
+    "r3_liquidity": {
+      "indicator": "r3_liquidity",
+      "label": "Liquidity",
+      "current_weight": 20,
+      "evidence_score": 70,
+      "validation_score": 0,
+      "promotion_readiness": 28,
+      "research_priority": "HIGH",
+      "open_items": 2,
+      "validated_items": 0,
+      "promoted_items": 0,
+      "recommended_direction": "STABLE",
+      "recommended_weight": 20,
+      "last_finding": "Rejection Wick (r3=8 pts) has near-zero edge — sub-component overweighted"
+    },
+    "r4_htf": {
+      "indicator": "r4_htf",
+      "label": "HTF Structure",
+      "current_weight": 10,
+      "evidence_score": 42,
+      "validation_score": 0,
+      "promotion_readiness": 16,
+      "research_priority": "MEDIUM",
+      "open_items": 2,
+      "validated_items": 0,
+      "promoted_items": 0,
+      "recommended_direction": "FIX_LOGIC",
+      "recommended_weight": 10,
+      "last_finding": "HTF Scoring Inversion: HH+HL = -0.8%, HL-only = +11.6%"
+    },
+    "r5_avwap": {
+      "indicator": "r5_avwap",
+      "label": "Anchored VWAP",
+      "current_weight": 8,
+      "evidence_score": 91,
+      "validation_score": 0,
+      "promotion_readiness": 36,
+      "research_priority": "HIGH",
+      "open_items": 1,
+      "validated_items": 0,
+      "promoted_items": 0,
+      "recommended_direction": "DECREASE",
+      "recommended_weight": 4.9,
+      "last_finding": "r5_avwap: reduce 8 → 4-6  (Optimizer=4.3, RL=4.1, WF=6.3 — 3-method convergence)"
+    },
+    "r6_macd": {
+      "indicator": "r6_macd",
+      "label": "MACD Context",
+      "current_weight": 4,
+      "evidence_score": 91,
+      "validation_score": 0,
+      "promotion_readiness": 36,
+      "research_priority": "HIGH",
+      "open_items": 1,
+      "validated_items": 0,
+      "promoted_items": 0,
+      "recommended_direction": "DECREASE",
+      "recommended_weight": 1.7,
+      "last_finding": "r6_macd: reduce 4 → 2  (Optimizer=1.2, RL=1.1, WF=2.9 — 3-method convergence)"
+    },
+    "r7_div": {
+      "indicator": "r7_div",
+      "label": "Divergence",
+      "current_weight": 3,
+      "evidence_score": 42,
+      "validation_score": 0,
+      "promotion_readiness": 16,
+      "research_priority": "MEDIUM",
+      "open_items": 2,
+      "validated_items": 0,
+      "promoted_items": 0,
+      "recommended_direction": "STABLE",
+      "recommended_weight": 3,
+      "last_finding": "RSI Divergence: NEGATIVE edge (mean=3.8% vs baseline 4.7%)"
+    },
+    "r8_demand": {
+      "indicator": "r8_demand",
+      "label": "Demand Zone",
+      "current_weight": 15,
+      "evidence_score": 42,
+      "validation_score": 0,
+      "promotion_readiness": 16,
+      "research_priority": "MEDIUM",
+      "open_items": 2,
+      "validated_items": 0,
+      "promoted_items": 0,
+      "recommended_direction": "FIX_LOGIC",
+      "recommended_weight": 15,
+      "last_finding": "Demand Zone Paradox: SV+HVN (max score=15) = lowest return"
+    }
+  },
+  "backlog": [
+    {
+      "id": "RI-SYS-PROMOTE",
+      "title": "Structural gap: no promotion pipeline — all 33 findings stuck at Proposed, actua",
+      "priority": "CRITICAL",
+      "evidence": "HIGH",
+      "status": "Open",
+      "impact": 0.05,
+      "indicator": "arch",
+      "next_action": "Implement shadow scoring: run scanner in parallel with proposed change, log results without alerting, compare after 20 s",
+      "rank_score": -85.0
+    },
+    {
+      "id": "RI-RL-NEG-DISC",
+      "title": "SMC RL discrimination = -4.23 (NEGATIVE — top-quartile underperforms bottom)",
+      "priority": "CRITICAL",
+      "evidence": "HIGH",
+      "status": "Investigating",
+      "impact": 0.04,
+      "indicator": "rl",
+      "next_action": "Diagnose RL objective function. Likely the target variable is inverted or the loss is minimizing the wrong direction. Do",
+      "rank_score": -80.0
+    },
+    {
+      "id": "RI-QUANT-R2",
+      "title": "All ML models R² ≤ -0.012 — scoring has zero predictive power for returns",
+      "priority": "CRITICAL",
+      "evidence": "HIGH",
+      "status": "Investigating",
+      "impact": 0.03,
+      "indicator": "arch",
+      "next_action": "Confirms RI-ARCH-ADDITIVE. Weight tuning cannot fix R²<0. Structural redesign needed — not weight changes.",
+      "rank_score": -75.0
+    },
+    {
+      "id": "RI-ARCH-ADDITIVE",
+      "title": "Additive scoring: OOS R² = -0.15 — architecture cannot be fixed by weight tuning",
+      "priority": "CRITICAL",
+      "evidence": "HIGH",
+      "status": "Investigating",
+      "impact": 0.02,
+      "indicator": "arch",
+      "next_action": "Design non-linear scoring: mandatory gates × quality bonus. Test vs current additive sum. This is the root cause of the ",
+      "rank_score": -70.0
+    },
+    {
+      "id": "RI-HVN-CONF",
+      "title": "HVN-only = strongest demand signal — System Audit: CONFIRMED",
+      "priority": "HIGH",
+      "evidence": "HIGH",
+      "status": "Awaiting Validation",
+      "impact": 0.009,
+      "indicator": "r8_demand",
+      "next_action": "Promote HVN-only scoring fix: increase HVN-only sub-score, decrease SV+HVN sub-score in sc_demand().",
+      "rank_score": 35.5
+    },
+    {
+      "id": "RI-MACD-REDUCE",
+      "title": "r6_macd: reduce 4 → 2  (Optimizer=1.2, RL=1.1, WF=2.9 — 3-method convergence)",
+      "priority": "HIGH",
+      "evidence": "HIGH",
+      "status": "Awaiting Validation",
+      "impact": 0.003,
+      "indicator": "r6_macd",
+      "next_action": "Stage shadow scoring with r6_macd=2 for 20 trading sessions. This is the only weight change currently safe to promote.",
+      "rank_score": 38.5
+    },
+    {
+      "id": "RI-HTF-FIX-IMPACT",
+      "title": "HTF inversion fix = highest single-change impact per System Audit",
+      "priority": "HIGH",
+      "evidence": "MEDIUM",
+      "status": "Awaiting Validation",
+      "impact": 0.012,
+      "indicator": "r4_htf",
+      "next_action": "Swap HH+HL → 0 pts, HL-only → full pts in sc_htf(). Shadow mode 20 sessions.",
+      "rank_score": 54.0
+    },
+    {
+      "id": "RI-MICRO-FEATURES",
+      "title": "Edge Discovery: 30 microstructure features predict returns but are absent from s",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Open",
+      "impact": 0.025,
+      "indicator": "micro",
+      "next_action": "Start with snap_reclaim_spd (reclaim speed appears in multiple top rules). Research whether it can be computed daily and",
+      "rank_score": 147.5
+    },
+    {
+      "id": "RI-HVN-HTF-BONUS",
+      "title": "IMP-5: HVN + HTF_HH super-bonus tier — model_score=100, n=8.5% of signals",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Awaiting Validation",
+      "impact": 0.0239,
+      "indicator": "multi",
+      "next_action": "Need 6+ months forward data (n≥150) before promoting. Do not apply to main scanner.",
+      "rank_score": 148.05
+    },
+    {
+      "id": "RI-PRICE-INV",
+      "title": "Price scoring inversion: near-EQ (r1=1-10) outperforms deep-discount (r1=21-30)",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Open",
+      "impact": 0.02270949960459998,
+      "indicator": "r1_price",
+      "next_action": "Test modified buy-zone scoring in shadow mode; cross-check WF fold consistency.",
+      "rank_score": 148.64525019770002
+    },
+    {
+      "id": "RI-DIV-MACD",
+      "title": "MACD Divergence: PF=3.82 vs baseline 2.50 — strongest edge of any flag",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Investigating",
+      "impact": 0.016,
+      "indicator": "r7_div",
+      "next_action": "Separate RSI and MACD div sub-scores in sc_div() first (RI-DIV-RSI). Then test r7_div increase from 3 → 5.",
+      "rank_score": 152.0
+    },
+    {
+      "id": "RI-HTF-INV",
+      "title": "HTF Scoring Inversion: HH+HL = -0.8%, HL-only = +11.6%",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Awaiting Validation",
+      "impact": 0.011,
+      "indicator": "r4_htf",
+      "next_action": "Implement HTF scoring inversion fix in shadow mode for 20 sessions.",
+      "rank_score": 154.5
+    },
+    {
+      "id": "RI-SYS-WFSCOPE",
+      "title": "Walk-Forward micro-learning cannot encode structural fixes — two incompatible le",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Investigating",
+      "impact": 0.01,
+      "indicator": "arch",
+      "next_action": "Design two-layer weight system: structural base (updated quarterly via promotion) + WF micro-delta (updated per trade).",
+      "rank_score": 155.0
+    },
+    {
+      "id": "RI-OB-HARM",
+      "title": "Order Block presence REDUCES expected return by -1.4%",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Investigating",
+      "impact": 0.009457075561932093,
+      "indicator": "r2_ob",
+      "next_action": "Extend OOS window to 6+ months. Do not remove OB until WF folds converge.",
+      "rank_score": 155.27146221903396
+    },
+    {
+      "id": "RI-DIV-RSI",
+      "title": "RSI Divergence: NEGATIVE edge (mean=3.8% vs baseline 4.7%)",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Open",
+      "impact": 0.009,
+      "indicator": "r7_div",
+      "next_action": "Separate RSI and MACD divergence sub-scores in sc_div(). RSI div should be zeroed or penalized.",
+      "rank_score": 155.5
+    },
+    {
+      "id": "RI-GATE-LIQ20",
+      "title": "Liquidity gate: r3_liquidity >= 20  (optimizer confidence=0.88 — highest of all ",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Awaiting Validation",
+      "impact": 0.009,
+      "indicator": "r3_liquidity",
+      "next_action": "Validate across WF fold periods. If consistent, stage for shadow scoring.",
+      "rank_score": 155.5
+    },
+    {
+      "id": "RI-SWEEP-GATE",
+      "title": "Sweep detected mandatory gate — System Audit: CONFIRMED",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Awaiting Validation",
+      "impact": 0.007,
+      "indicator": "gate",
+      "next_action": "Reduces signals by 54.6%. Shadow test 20 sessions to measure opportunity cost before promoting.",
+      "rank_score": 156.5
+    },
+    {
+      "id": "RI-DEM-PAR",
+      "title": "Demand Zone Paradox: SV+HVN (max score=15) = lowest return",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Investigating",
+      "impact": 0.005,
+      "indicator": "r8_demand",
+      "next_action": "Validate HVN-only vs SV+HVN split across WF folds. Fix internal scoring multipliers in sc_demand().",
+      "rank_score": 157.5
+    },
+    {
+      "id": "RI-WF-DRIFT",
+      "title": "Walk-Forward: 194 weight updates but max drift 28% — micro-corrections only",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Investigating",
+      "impact": 0.005,
+      "indicator": "arch",
+      "next_action": "Evaluate whether WF's trade-by-trade micro-learning can coexist with structural overrides. May need a 'structural anchor",
+      "rank_score": 157.5
+    },
+    {
+      "id": "RI-AVWAP-REDUCE",
+      "title": "r5_avwap: reduce 8 → 4-6  (Optimizer=4.3, RL=4.1, WF=6.3 — 3-method convergence)",
+      "priority": "MEDIUM",
+      "evidence": "MEDIUM",
+      "status": "Awaiting Validation",
+      "impact": 0.002,
+      "indicator": "r5_avwap",
+      "next_action": "Shadow test r5_avwap=5 for 20 sessions. Validate after r6_macd reduction is complete (one change at a time).",
+      "rank_score": 159.0
+    },
+    {
+      "id": "RI-LIQ-WICK",
+      "title": "Rejection Wick (r3=8 pts) has near-zero edge — sub-component overweighted",
+      "priority": "MEDIUM",
+      "evidence": "LOW",
+      "status": "Open",
+      "impact": 0.004,
+      "indicator": "r3_liquidity",
+      "next_action": "Cross-validate wick reduction in Weight Optimizer and Walk-Forward before changing.",
+      "rank_score": 178.0
+    },
+    {
+      "id": "RI-OPT-REBAL",
+      "title": "Full weight rebalance (Optimizer) — OOS improvement ≈ 0, high overfit risk",
+      "priority": "LOW",
+      "evidence": "LOW",
+      "status": "Investigating",
+      "impact": 0.0001970491953316042,
+      "indicator": "multi",
+      "next_action": "Do not promote as a batch. Decompose into per-indicator items. Validate each independently.",
+      "rank_score": 279.9014754023342
+    }
+  ],
+  "run_log": [
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-14",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-15",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-16",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-17",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-18",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-19",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-19",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-19",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-19",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-19",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-21",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-22",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-23",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-23",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-23",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-24",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-25",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-25",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-26",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-27",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-27",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-27",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-27",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-28",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-28",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-28",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-28",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-28",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-28",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-28",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-28",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-28",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-28",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-28",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-28",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-29",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-29",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-29",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-29",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-29",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-29",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-29",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-29",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-29",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-29",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-29",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-29",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-30",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-06-30",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-07-02",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-07-02",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-07-02",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-07-02",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-07-02",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-07-02",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    }
+  ]
+}

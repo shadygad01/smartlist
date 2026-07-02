@@ -29,6 +29,8 @@ const COMPANY_TICKER_MAP: Record<string, string> = {
   "ARABIAN CEMENT": "ARCC",
   "ORASCOM CONSTRUCTION": "ORAS",
   "CANAL SHIPPING AGENCIES": "CSAG",
+  "TALAAT MOUSTAFA GROUP": "TMGH",
+  "TALAAT MOUSTAFA": "TMGH",
 };
 
 function normalizeCompanyKey(name: string): string {
@@ -153,24 +155,43 @@ function resolveHeaderTicker(text: string): string | null {
   return null;
 }
 
+const ALL_ORDERS_MARKER = /all\s*orders/i;
+
+// OCR isn't reliable about symbols/separators (the "@" before a price, the
+// dash between a date and a time). Once we're past the "All orders" heading,
+// the only "EGP <number>" occurrences left are per-row prices — nothing else
+// on that part of the screen mentions EGP — so it's safe to match "EGP
+// <number>" without requiring "@" too. Before that heading (header fields
+// like "Last trade price EGP 730.00") we don't have that guarantee, so stay
+// strict and require "@" there.
+function ordersSection(text: string): { section: string; strict: boolean } {
+  const idx = text.search(ALL_ORDERS_MARKER);
+  if (idx >= 0) return { section: text.slice(idx), strict: false };
+  return { section: text, strict: true };
+}
+
 const orderActionPattern = /(Buy|Sell|شراء|بيع)\s*[•·.]?\s*([\d,]+(?:\.\d+)?)\s*shares?/gi;
-const orderPricePattern = /@\s*EGP\s*([\d,]+(?:\.\d+)?)/gi;
-const orderDatePattern = /(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4})\s*[–—-]\s*\d{1,2}:\d{2}\s*[AP]M/gi;
+const orderPriceStrictPattern = /@\s*EGP\s*([\d,]+(?:\.\d+)?)/gi;
+const orderPriceLenientPattern = /@?\s*EGP\s*([\d,]+(?:\.\d+)?)/gi;
+// Allow up to a few stray characters between date and time instead of
+// requiring a specific dash glyph, since OCR renders "–" inconsistently.
+const orderDatePattern = /(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4})[^0-9A-Za-z]{0,4}\d{1,2}:\d{2}\s*[AP]M/gi;
 const orderStatusPattern = /\b(Fulf\w*|Pending|Cancel\w*|Rejected|Expired)\b/gi;
 
 function parseOrdersScreenText(text: string): ParsedTx[] {
   const transactions: ParsedTx[] = [];
   const normalized = text.replace(/\s+/g, " ");
+  const { section, strict } = ordersSection(normalized);
 
-  const actions = [...normalized.matchAll(orderActionPattern)];
+  const actions = [...section.matchAll(orderActionPattern)];
   if (actions.length === 0) return transactions;
 
   const ticker = resolveHeaderTicker(text);
   if (!ticker) return transactions;
 
-  const prices = [...normalized.matchAll(orderPricePattern)];
-  const dates = [...normalized.matchAll(orderDatePattern)];
-  const statuses = [...normalized.matchAll(orderStatusPattern)];
+  const prices = [...section.matchAll(strict ? orderPriceStrictPattern : orderPriceLenientPattern)];
+  const dates = [...section.matchAll(orderDatePattern)];
+  const statuses = [...section.matchAll(orderStatusPattern)];
 
   const n = Math.min(actions.length, prices.length, dates.length, statuses.length);
   for (let i = 0; i < n; i++) {

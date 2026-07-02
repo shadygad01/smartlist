@@ -211,6 +211,11 @@ export function deleteTransaction(transactionId: number): void {
 // and always agrees with the scanner on "today's price" for a ticker.
 // Snapshot tickers carry a ".CA" suffix (e.g. "COMI.CA"); parsed transactions
 // don't, so this strips it before building the lookup map.
+// Callers pass universe_snapshot concatenated with portfolio_extra_prices —
+// the latter covers tickers a user holds outside the scanner's trading
+// universe (e.g. PHAR, CSAG), fetched from the same TradingView/yfinance
+// sources by portfolio_extra_prices.py, without pulling them into
+// signals/gates/backtests.
 export function buildPriceMapFromSnapshot(
   universeSnapshot: Array<{ ticker: string; current_price: number }> | undefined
 ): Record<string, number> {

@@ -76,6 +76,16 @@ export interface UniverseItem {
   return_pct: number | null;
 }
 
+// Portfolio-only tickers outside the scanner's trading universe (e.g. PHAR,
+// CSAG — real EGX70 stocks a user can hold that the scanner doesn't track as
+// trading candidates). Deliberately a lighter shape than UniverseItem: only
+// what the Portfolio Tracker's price lookup needs.
+export interface PortfolioExtraPrice {
+  ticker: string;
+  current_price: number;
+  name?: string;
+}
+
 export interface TimelineEvent {
   event_id?: string;
   ticker?: string;
@@ -188,6 +198,7 @@ export interface ProductionSnapshot {
   future_candidates: UniverseItem[];
   watchlist: string[];
   universe_snapshot: UniverseItem[];
+  portfolio_extra_prices?: PortfolioExtraPrice[];
   new_events_today: TimelineEvent[];
   stock_dna: Record<string, StockDNA>;
   mpi_behavior: Record<string, MPIBehavior>;

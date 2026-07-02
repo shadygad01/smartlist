@@ -84,10 +84,6 @@ export function getTransactions(): StoredTransaction[] {
   return [...load().transactions].sort((a, b) => b.tradeDate.localeCompare(a.tradeDate));
 }
 
-export function findUploadByHash(fileHash: string): StoredUpload | undefined {
-  return load().uploads.find((u) => u.fileHash === fileHash);
-}
-
 // Creates a pending upload record, then stores parsed transactions (or a
 // failure reason) against it — mirrors the server's POST /portfolio/uploads.
 export function recordUpload(params: {

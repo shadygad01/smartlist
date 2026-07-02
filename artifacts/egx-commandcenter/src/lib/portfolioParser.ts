@@ -42,6 +42,11 @@ const COMPANY_TICKER_MAP: Record<string, string> = {
   'EGYPTIAN INTERNATIONAL PHARMACEUTICALS': 'PHAR',
   'EGYPTIAN INTERNATIONAL PHARMACEUTICAL': 'PHAR',
   'COMMERCIAL INTERNATIONAL BANK': 'COMI',
+  'MEDINET MASR HOUSING': 'MASR',
+  'MADINET MASR': 'MASR',
+  'DELTA SUGAR': 'SUGR',
+  'ORASCOM DEVELOPMENT EGYPT': 'ORHD',
+  'SIDI KERIR PETROCHEMICALS': 'SKPC',
 };
 
 function normalizeCompanyKey(name: string): string {
@@ -265,4 +270,12 @@ export function parseThunderText(text: string): ParsedTransaction[] {
   const statementTx = parseStatementText(text);
   if (statementTx.length > 0) return statementTx;
   return parseOrdersScreenText(text);
+}
+
+// A statement can legitimately be a real Thndr document with zero buy/sell
+// trades in the period it covers (e.g. a month with only deposits, transfers,
+// and bank fees). That's different from a file that isn't a Thndr document
+// at all, so callers can show a less alarming message in that case.
+export function looksLikeThunderDocument(text: string): boolean {
+  return /customer account statement|thndr/i.test(text);
 }

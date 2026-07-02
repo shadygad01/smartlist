@@ -5,7 +5,7 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { createWorker } from 'tesseract.js';
 import { extractPdfText } from '@/lib/pdfText';
 import { preprocessForOcr, cropHeaderBand } from '@/lib/imagePreprocess';
-import { parseThunderText } from '@/lib/portfolioParser';
+import { parseThunderText, looksLikeThunderDocument } from '@/lib/portfolioParser';
 import {
   getUploads,
   getTransactions,
@@ -198,11 +198,14 @@ export default function PortfolioPage() {
         // overlaps with a previous one only adds what's genuinely new.
         setUploadStatus('Analyzing transactions…');
         const parsed = parseThunderText(extractedText);
-        const result = completeUpload(upload.id, parsed);
+        const noTradesMessage = looksLikeThunderDocument(extractedText)
+          ? 'This looks like a valid Thndr statement, but it has no buy/sell trades in this period.'
+          : "No transactions found in the file. Make sure it's a Thunder report.";
+        const result = completeUpload(upload.id, parsed, noTradesMessage);
 
         let message: string;
         if (result.status === 'failed') {
-          message = "No transactions found in the file. Make sure it's a Thunder report.";
+          message = noTradesMessage;
         } else if (result.status === 'duplicate') {
           message = `All ${result.duplicateCount} transaction(s) in this file were already recorded — nothing new added.`;
         } else if (result.duplicateCount > 0) {

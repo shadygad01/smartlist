@@ -1,0 +1,218 @@
+{
+  "generated_at": "2026-07-02 05:05 UTC",
+  "n_signals": 1220,
+  "baseline_r20d": 0.04312893442622951,
+  "baseline_mfe": 0.1261583606557377,
+  "baseline_pf": 2.5318749399533598,
+  "summary_recommendations": [
+    {
+      "function": "sc_price",
+      "label": "Price Position (r1)",
+      "param": "buy_zone_scoring",
+      "current": "Linear: 30→18 in Buy Zone",
+      "proposed": "Add bonus for r1=1-10 (near-EQ): multiply by 1.3",
+      "impact": "+1.5% expected return for r1=1-10 filtered signals"
+    },
+    {
+      "function": "sc_price",
+      "label": "Price Position (r1)",
+      "param": "buy_zone_pct",
+      "current": "0.15 (15% from lo = Buy Zone)",
+      "proposed": "Consider 0.10 (10% from lo) — tighter Buy Zone focuses on better signals",
+      "impact": "Reduces r1=21-30 emphasis, increases r1=1-20 emphasis"
+    },
+    {
+      "function": "sc_ob",
+      "label": "Order Block (r2)",
+      "param": "W_OB",
+      "current": 10,
+      "proposed": 0,
+      "impact": "Remove OB from scoring. Saves ~1.0% expected return on OB signals"
+    },
+    {
+      "function": "sc_ob",
+      "label": "Order Block (r2)",
+      "param": "OB_penalty",
+      "current": "No penalty",
+      "proposed": "Reduce raw_score by 5 when OB detected (treated as overhead supply)",
+      "impact": "Penalizes OB presence — aligns with data showing OB hurts"
+    },
+    {
+      "function": "sc_liquidity",
+      "label": "Liquidity Event (r3)",
+      "param": "wick_score",
+      "current": 0.6,
+      "proposed": 0.15,
+      "impact": "Reduce rejection wick from 12 to 3 pts — near no-edge in data"
+    },
+    {
+      "function": "sc_liquidity",
+      "label": "Liquidity Event (r3)",
+      "param": "equal_lows_score",
+      "current": 0.4,
+      "proposed": 0.25,
+      "impact": "Reduce equal lows from 8 to 5 pts — weak signal"
+    },
+    {
+      "function": "sc_htf",
+      "label": "HTF Structure (r4)",
+      "param": "hhhl_full",
+      "current": 1.0,
+      "proposed": 0.0,
+      "impact": "When both HH+HL confirmed: give 0 points for HH+HL component"
+    },
+    {
+      "function": "sc_htf",
+      "label": "HTF Structure (r4)",
+      "param": "hhhl_partial_hl",
+      "current": 0.5,
+      "proposed": 1.0,
+      "impact": "When HL only: give FULL w3 points — early recovery is the signal"
+    },
+    {
+      "function": "sc_htf",
+      "label": "HTF Structure (r4)",
+      "param": "hhhl_partial_hh",
+      "current": 0.5,
+      "proposed": 0.8,
+      "impact": "When HH only: give 80% w3 points — breakout attempt is positive"
+    },
+    {
+      "function": "sc_macd",
+      "label": "MACD Signal (r6)",
+      "param": "no_cross_half",
+      "current": 0.5,
+      "proposed": 0.25,
+      "impact": "Reduce 'below zero no cross' from 2 to 1 pt — weak signal"
+    },
+    {
+      "function": "sc_div",
+      "label": "Divergence (r7)",
+      "param": "W_DIV",
+      "current": 3,
+      "proposed": 5,
+      "impact": "Increase divergence weight to 5 — rare but powerful when present"
+    },
+    {
+      "function": "sc_div",
+      "label": "Divergence (r7)",
+      "param": "div_tolerance",
+      "current": 1.01,
+      "proposed": 1.005,
+      "impact": "Tighten divergence tolerance from 1% to 0.5% — reduces false positives"
+    },
+    {
+      "function": "sc_demand",
+      "label": "Demand Zone (r8)",
+      "param": "sv_only",
+      "current": 0.6,
+      "proposed": 0.25,
+      "impact": "Reduce SV-only from 9 to 4 pts — SV alone not predictive"
+    },
+    {
+      "function": "sc_demand",
+      "label": "Demand Zone (r8)",
+      "param": "hvn_only",
+      "current": 0.4,
+      "proposed": 0.55,
+      "impact": "Increase HVN-only from 6 to 8 pts — strongest demand signal"
+    },
+    {
+      "function": "sc_demand",
+      "label": "Demand Zone (r8)",
+      "param": "sv_hvn_full",
+      "current": 1.0,
+      "proposed": 0.55,
+      "impact": "Reduce SV+HVN from 15 to 8 pts — joint occurrence is worst outcome"
+    }
+  ],
+  "function_impact": {
+    "sc_price": {
+      "col": "r1_price",
+      "delta_r20d": 0.02177698016297316,
+      "n_pos": 1019,
+      "n_zero": 201,
+      "r20d_when_pos": 0.04671678115799804,
+      "r20d_when_zero": 0.024939800995024877,
+      "pf_pos": 2.7719726635200925,
+      "pf_zero": 1.6698961660274487
+    },
+    "sc_ob": {
+      "col": "r2_ob",
+      "delta_r20d": -0.009742595218070416,
+      "n_pos": 205,
+      "n_zero": 1015,
+      "r20d_when_pos": 0.035023414634146335,
+      "r20d_when_zero": 0.04476600985221675,
+      "pf_pos": 2.1557394201825417,
+      "pf_zero": 2.614923940858686
+    },
+    "sc_liquidity": {
+      "col": "r3_liquidity",
+      "delta_r20d": 0.011655176612546357,
+      "n_pos": 701,
+      "n_zero": 519,
+      "r20d_when_pos": 0.04808716119828816,
+      "r20d_when_zero": 0.0364319845857418,
+      "pf_pos": 2.928482345133756,
+      "pf_zero": 2.1209043969007686
+    },
+    "sc_htf": {
+      "col": "r4_htf",
+      "delta_r20d": 0.015031601812464802,
+      "n_pos": 747,
+      "n_zero": 473,
+      "r20d_when_pos": 0.04895676037483267,
+      "r20d_when_zero": 0.033925158562367864,
+      "pf_pos": 2.8680441334218725,
+      "pf_zero": 2.0863363414188325
+    },
+    "sc_avwap": {
+      "col": "r5_avwap",
+      "delta_r20d": 0.013601225845174252,
+      "n_pos": 866,
+      "n_zero": 354,
+      "r20d_when_pos": 0.04707551963048498,
+      "r20d_when_zero": 0.03347429378531073,
+      "pf_pos": 2.8517421658180293,
+      "pf_zero": 1.9608598349091029
+    },
+    "sc_macd": {
+      "col": "r6_macd",
+      "delta_r20d": 0.018230452253686646,
+      "n_pos": 977,
+      "n_zero": 243,
+      "r20d_when_pos": 0.046760081883316276,
+      "r20d_when_zero": 0.02852962962962963,
+      "pf_pos": 2.7843525538122633,
+      "pf_zero": 1.7927253184531298
+    },
+    "sc_div": {
+      "col": "r7_div",
+      "delta_r20d": 0.003264783599675504,
+      "n_pos": 237,
+      "n_zero": 983,
+      "r20d_when_pos": 0.04575949367088608,
+      "r20d_when_zero": 0.04249471007121058,
+      "pf_pos": 2.831368840555237,
+      "pf_zero": 2.469484459922959
+    },
+    "sc_demand": {
+      "col": "r8_demand",
+      "delta_r20d": 0.011857986291299083,
+      "n_pos": 656,
+      "n_zero": 564,
+      "r20d_when_pos": 0.048610823170731704,
+      "r20d_when_zero": 0.03675283687943262,
+      "pf_pos": 2.863637426217053,
+      "pf_zero": 2.2025433217499257
+    }
+  },
+  "critical_findings": [
+    "sc_ob: Order Block presence REDUCES expected return (r2=0 beats r2>0)",
+    "sc_htf: HH+HL together shows NEGATIVE return (-0.8%) — HL-only is best (+11.6%)",
+    "sc_demand: r8=15 (max score) has LOWEST return — SV+HVN joint is worst",
+    "sc_liquidity: Rejection Wick (r3=8) has near-zero edge — reduce weight",
+    "sc_price: r1=1-10 (near-EQ) beats r1=21-30 (deep discount) — current scoring rewards wrong range"
+  ]
+}

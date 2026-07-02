@@ -4,6 +4,7 @@ import { Upload, FileText, Image, CheckCircle, XCircle, AlertTriangle, ArrowLeft
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { createWorker } from 'tesseract.js';
 import { extractPdfText } from '@/lib/pdfText';
+import { preprocessForOcr } from '@/lib/imagePreprocess';
 import { parseThunderText } from '@/lib/portfolioParser';
 import {
   getUploads,
@@ -166,7 +167,11 @@ export default function PortfolioPage() {
               }
             },
           });
-          const { data } = await worker.recognize(file);
+          // Thndr's light-green status labels ("Fulfilled"/"Cancelled") are
+          // otherwise invisible to Tesseract's default binarization — see
+          // imagePreprocess.ts for why.
+          const ocrInput = await preprocessForOcr(file);
+          const { data } = await worker.recognize(ocrInput);
           await worker.terminate();
           extractedText = data.text;
         } else {

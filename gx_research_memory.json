@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "created_at": "2026-06-14T03:30:17.870233+00:00",
-  "last_updated": "2026-07-02T05:05:29.032725+00:00",
+  "last_updated": "2026-07-02T12:31:52.883344+00:00",
   "research_items": {
     "RI-PRICE-INV": {
       "id": "RI-PRICE-INV",
@@ -16,22 +16,22 @@
       "evidence_strength": "MEDIUM",
       "current_status": "Open",
       "next_required_action": "Test modified buy-zone scoring in shadow mode; cross-check WF fold consistency.",
-      "estimated_impact": 0.02177698016297316,
+      "estimated_impact": 0.02270949960459998,
       "supporting_modules": [
         "logic_analyzer"
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "n_signals": 1220,
+        "n_signals": 1225,
         "function_impact": {
           "col": "r1_price",
-          "delta_r20d": 0.02177698016297316,
+          "delta_r20d": 0.02270949960459998,
           "n_pos": 1019,
-          "n_zero": 201,
+          "n_zero": 206,
           "r20d_when_pos": 0.04671678115799804,
-          "r20d_when_zero": 0.024939800995024877,
+          "r20d_when_zero": 0.02400728155339806,
           "pf_pos": 2.7719726635200925,
-          "pf_zero": 1.6698961660274487
+          "pf_zero": 1.6532679911233226
         }
       },
       "history": [
@@ -183,6 +183,14 @@
             "estimated_impact",
             "evidence_data"
           ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -199,22 +207,22 @@
       "evidence_strength": "MEDIUM",
       "current_status": "Investigating",
       "next_required_action": "Extend OOS window to 6+ months. Do not remove OB until WF folds converge.",
-      "estimated_impact": 0.009742595218070416,
+      "estimated_impact": 0.009457075561932093,
       "supporting_modules": [
         "logic_analyzer"
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "n_signals": 1220,
+        "n_signals": 1225,
         "function_impact": {
           "col": "r2_ob",
-          "delta_r20d": -0.009742595218070416,
+          "delta_r20d": -0.009457075561932093,
           "n_pos": 205,
-          "n_zero": 1015,
+          "n_zero": 1020,
           "r20d_when_pos": 0.035023414634146335,
-          "r20d_when_zero": 0.04476600985221675,
+          "r20d_when_zero": 0.04448049019607843,
           "pf_pos": 2.1557394201825417,
-          "pf_zero": 2.614923940858686
+          "pf_zero": 2.607540578174771
         }
       },
       "history": [
@@ -353,6 +361,14 @@
         },
         {
           "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
           "event": "updated",
           "fields": [
             "estimated_impact",
@@ -388,16 +404,16 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "n_signals": 1220,
+        "n_signals": 1225,
         "function_impact": {
           "col": "r4_htf",
-          "delta_r20d": 0.015031601812464802,
+          "delta_r20d": 0.015527471671903798,
           "n_pos": 747,
-          "n_zero": 473,
+          "n_zero": 478,
           "r20d_when_pos": 0.04895676037483267,
-          "r20d_when_zero": 0.033925158562367864,
+          "r20d_when_zero": 0.03342928870292887,
           "pf_pos": 2.8680441334218725,
-          "pf_zero": 2.0863363414188325
+          "pf_zero": 2.075417603273525
         }
       },
       "history": [
@@ -531,6 +547,13 @@
           "fields": [
             "evidence_data"
           ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -553,16 +576,16 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "n_signals": 1220,
+        "n_signals": 1225,
         "function_impact": {
           "col": "r8_demand",
-          "delta_r20d": 0.011857986291299083,
+          "delta_r20d": 0.012299399620643837,
           "n_pos": 656,
-          "n_zero": 564,
+          "n_zero": 569,
           "r20d_when_pos": 0.048610823170731704,
-          "r20d_when_zero": 0.03675283687943262,
-          "pf_pos": 2.863637426217053,
-          "pf_zero": 2.2025433217499257
+          "r20d_when_zero": 0.03631142355008787,
+          "pf_pos": 2.863637426217054,
+          "pf_zero": 2.1925931911847885
         }
       },
       "history": [
@@ -696,6 +719,13 @@
           "fields": [
             "evidence_data"
           ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -718,16 +748,16 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "n_signals": 1220,
+        "n_signals": 1225,
         "function_impact": {
           "col": "r3_liquidity",
-          "delta_r20d": 0.011655176612546357,
+          "delta_r20d": 0.012131436007448475,
           "n_pos": 701,
-          "n_zero": 519,
-          "r20d_when_pos": 0.04808716119828816,
-          "r20d_when_zero": 0.0364319845857418,
+          "n_zero": 524,
+          "r20d_when_pos": 0.04808716119828817,
+          "r20d_when_zero": 0.03595572519083969,
           "pf_pos": 2.928482345133756,
-          "pf_zero": 2.1209043969007686
+          "pf_zero": 2.1111582920500114
         }
       },
       "history": [
@@ -861,6 +891,13 @@
           "fields": [
             "evidence_data"
           ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -883,16 +920,16 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "n_signals": 1220,
+        "n_signals": 1225,
         "function_impact": {
           "col": "r7_div",
-          "delta_r20d": 0.003264783599675504,
+          "delta_r20d": 0.003548056423922509,
           "n_pos": 237,
-          "n_zero": 983,
-          "r20d_when_pos": 0.04575949367088608,
-          "r20d_when_zero": 0.04249471007121058,
-          "pf_pos": 2.831368840555237,
-          "pf_zero": 2.469484459922959
+          "n_zero": 988,
+          "r20d_when_pos": 0.045759493670886074,
+          "r20d_when_zero": 0.042211437246963565,
+          "pf_pos": 2.8313688405552373,
+          "pf_zero": 2.4626216077828977
         }
       },
       "history": [
@@ -1015,6 +1052,13 @@
         },
         {
           "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
           "event": "updated",
           "fields": [
             "evidence_data"
@@ -1050,9 +1094,9 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "optimizer_w": 14.866924266007006,
+        "optimizer_w": 54.17988404910133,
         "current_w": 4,
-        "oos": 0.0
+        "oos": 0.0001970491953316042
       },
       "history": [
         {
@@ -1185,6 +1229,13 @@
           "fields": [
             "evidence_data"
           ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -1209,7 +1260,7 @@
       ],
       "conflicting_modules": [],
       "evidence_data": {
-        "optimizer_w": 7.098076527312876,
+        "optimizer_w": 4.678417255781252,
         "current_w": 8
       },
       "history": [
@@ -1234,6 +1285,13 @@
         },
         {
           "date": "2026-06-16",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
           "event": "updated",
           "fields": [
             "evidence_data"
@@ -1317,7 +1375,7 @@
       "evidence_strength": "LOW",
       "current_status": "Investigating",
       "next_required_action": "Do not promote as a batch. Decompose into per-indicator items. Validate each independently.",
-      "estimated_impact": 0.0,
+      "estimated_impact": 0.0001970491953316042,
       "supporting_modules": [
         "weight_optimizer"
       ],
@@ -1327,16 +1385,16 @@
       ],
       "evidence_data": {
         "optimal_weights": {
-          "r1_price": 7.687122177498011,
-          "r2_ob": 14.467661822445018,
-          "r3_liquidity": 15.244818856521183,
-          "r4_htf": 0.7010961613906433,
-          "r5_avwap": 7.098076527312876,
-          "r6_macd": 14.866924266007006,
-          "r7_div": 10.577000305922937,
-          "r8_demand": 29.35729988290234
+          "r1_price": 10.275787585121334,
+          "r2_ob": 3.3899907572667747,
+          "r3_liquidity": 5.009489281074903,
+          "r4_htf": 0.867250224564535,
+          "r5_avwap": 4.678417255781252,
+          "r6_macd": 54.17988404910133,
+          "r7_div": 3.482680595190802,
+          "r8_demand": 18.11650025189907
         },
-        "oos": 0.0
+        "oos": 0.0001970491953316042
       },
       "history": [
         {
@@ -1487,6 +1545,14 @@
             "estimated_impact",
             "evidence_data"
           ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "estimated_impact",
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -1511,12 +1577,12 @@
       "conflicting_modules": [],
       "evidence_data": {
         "verdict": "CONFIRMED",
-        "oos_diff": 0.0931,
+        "oos_diff": 0.0929,
         "wf_folds": [
-          0.0398,
-          0.0009,
-          0.0171,
-          0.0931
+          0.0396,
+          -0.0018,
+          0.0182,
+          0.0929
         ]
       },
       "history": [
@@ -2357,6 +2423,13 @@
           "fields": [
             "evidence_data"
           ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
         }
       ]
     },
@@ -2382,12 +2455,12 @@
       "conflicting_modules": [],
       "evidence_data": {
         "verdict": "CONFIRMED",
-        "oos_diff": 0.0927,
+        "oos_diff": 0.0924,
         "wf_folds": [
-          0.0181,
-          -0.0205,
-          0.0132,
-          0.0927
+          0.0173,
+          -0.0195,
+          0.0149,
+          0.0924
         ]
       },
       "history": [
@@ -2762,6 +2835,13 @@
         },
         {
           "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
           "event": "updated",
           "fields": [
             "evidence_data"
@@ -2849,7 +2929,7 @@
       "evidence_strength": "MEDIUM",
       "current_status": "Awaiting Validation",
       "next_required_action": "Need 6+ months forward data (n≥150) before promoting. Do not apply to main scanner.",
-      "estimated_impact": 0.0246,
+      "estimated_impact": 0.0241,
       "supporting_modules": [
         "adaptive_learning"
       ],
@@ -3565,6 +3645,13 @@
           "fields": [
             "estimated_impact"
           ]
+        },
+        {
+          "date": "2026-07-02",
+          "event": "updated",
+          "fields": [
+            "estimated_impact"
+          ]
         }
       ]
     },
@@ -3676,7 +3763,7 @@
       "conflicting_modules": [],
       "evidence_data": {
         "max_drift_pct": 0.532,
-        "n_trades": 1303,
+        "n_trades": 1308,
         "equity": 2632.04
       },
       "history": [
@@ -3806,6 +3893,13 @@
         },
         {
           "date": "2026-06-30",
+          "event": "updated",
+          "fields": [
+            "evidence_data"
+          ]
+        },
+        {
+          "date": "2026-07-02",
           "event": "updated",
           "fields": [
             "evidence_data"
@@ -4574,10 +4668,10 @@
       "priority": "MEDIUM",
       "evidence": "MEDIUM",
       "status": "Awaiting Validation",
-      "impact": 0.0246,
+      "impact": 0.0241,
       "indicator": "multi",
       "next_action": "Need 6+ months forward data (n≥150) before promoting. Do not apply to main scanner.",
-      "rank_score": 147.7
+      "rank_score": 147.95
     },
     {
       "id": "RI-PRICE-INV",
@@ -4585,10 +4679,10 @@
       "priority": "MEDIUM",
       "evidence": "MEDIUM",
       "status": "Open",
-      "impact": 0.02177698016297316,
+      "impact": 0.02270949960459998,
       "indicator": "r1_price",
       "next_action": "Test modified buy-zone scoring in shadow mode; cross-check WF fold consistency.",
-      "rank_score": 149.11150991851343
+      "rank_score": 148.64525019770002
     },
     {
       "id": "RI-DIV-MACD",
@@ -4629,10 +4723,10 @@
       "priority": "MEDIUM",
       "evidence": "MEDIUM",
       "status": "Investigating",
-      "impact": 0.009742595218070416,
+      "impact": 0.009457075561932093,
       "indicator": "r2_ob",
       "next_action": "Extend OOS window to 6+ months. Do not remove OB until WF folds converge.",
-      "rank_score": 155.1287023909648
+      "rank_score": 155.27146221903396
     },
     {
       "id": "RI-DIV-RSI",
@@ -4717,10 +4811,10 @@
       "priority": "LOW",
       "evidence": "LOW",
       "status": "Investigating",
-      "impact": 0.0,
+      "impact": 0.0001970491953316042,
       "indicator": "multi",
       "next_action": "Do not promote as a batch. Decompose into per-indicator items. Validate each independently.",
-      "rank_score": 280.0
+      "rank_score": 279.9014754023342
     }
   ],
   "run_log": [
@@ -5797,6 +5891,13 @@
     },
     {
       "date": "2026-06-30",
+      "n_items": 23,
+      "n_active": 22,
+      "n_validated": 0,
+      "n_promoted": 0
+    },
+    {
+      "date": "2026-07-02",
       "n_items": 23,
       "n_active": 22,
       "n_validated": 0,

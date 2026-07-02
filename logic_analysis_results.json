@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-07-02 05:05 UTC",
-  "n_signals": 1220,
-  "baseline_r20d": 0.04312893442622951,
-  "baseline_mfe": 0.1261583606557377,
-  "baseline_pf": 2.5318749399533598,
+  "generated_at": "2026-07-02 12:31 UTC",
+  "n_signals": 1225,
+  "baseline_r20d": 0.04289787755102041,
+  "baseline_mfe": 0.1258042448979592,
+  "baseline_pf": 2.5260341042409604,
   "summary_recommendations": [
     {
       "function": "sc_price",
@@ -27,7 +27,7 @@
       "param": "W_OB",
       "current": 10,
       "proposed": 0,
-      "impact": "Remove OB from scoring. Saves ~1.0% expected return on OB signals"
+      "impact": "Remove OB from scoring. Saves ~0.9% expected return on OB signals"
     },
     {
       "function": "sc_ob",
@@ -129,83 +129,83 @@
   "function_impact": {
     "sc_price": {
       "col": "r1_price",
-      "delta_r20d": 0.02177698016297316,
+      "delta_r20d": 0.02270949960459998,
       "n_pos": 1019,
-      "n_zero": 201,
+      "n_zero": 206,
       "r20d_when_pos": 0.04671678115799804,
-      "r20d_when_zero": 0.024939800995024877,
+      "r20d_when_zero": 0.02400728155339806,
       "pf_pos": 2.7719726635200925,
-      "pf_zero": 1.6698961660274487
+      "pf_zero": 1.6532679911233226
     },
     "sc_ob": {
       "col": "r2_ob",
-      "delta_r20d": -0.009742595218070416,
+      "delta_r20d": -0.009457075561932093,
       "n_pos": 205,
-      "n_zero": 1015,
+      "n_zero": 1020,
       "r20d_when_pos": 0.035023414634146335,
-      "r20d_when_zero": 0.04476600985221675,
+      "r20d_when_zero": 0.04448049019607843,
       "pf_pos": 2.1557394201825417,
-      "pf_zero": 2.614923940858686
+      "pf_zero": 2.607540578174771
     },
     "sc_liquidity": {
       "col": "r3_liquidity",
-      "delta_r20d": 0.011655176612546357,
+      "delta_r20d": 0.012131436007448475,
       "n_pos": 701,
-      "n_zero": 519,
-      "r20d_when_pos": 0.04808716119828816,
-      "r20d_when_zero": 0.0364319845857418,
+      "n_zero": 524,
+      "r20d_when_pos": 0.04808716119828817,
+      "r20d_when_zero": 0.03595572519083969,
       "pf_pos": 2.928482345133756,
-      "pf_zero": 2.1209043969007686
+      "pf_zero": 2.1111582920500114
     },
     "sc_htf": {
       "col": "r4_htf",
-      "delta_r20d": 0.015031601812464802,
+      "delta_r20d": 0.015527471671903798,
       "n_pos": 747,
-      "n_zero": 473,
+      "n_zero": 478,
       "r20d_when_pos": 0.04895676037483267,
-      "r20d_when_zero": 0.033925158562367864,
+      "r20d_when_zero": 0.03342928870292887,
       "pf_pos": 2.8680441334218725,
-      "pf_zero": 2.0863363414188325
+      "pf_zero": 2.075417603273525
     },
     "sc_avwap": {
       "col": "r5_avwap",
-      "delta_r20d": 0.013601225845174252,
+      "delta_r20d": 0.01425518536864654,
       "n_pos": 866,
-      "n_zero": 354,
+      "n_zero": 359,
       "r20d_when_pos": 0.04707551963048498,
-      "r20d_when_zero": 0.03347429378531073,
+      "r20d_when_zero": 0.03282033426183844,
       "pf_pos": 2.8517421658180293,
-      "pf_zero": 1.9608598349091029
+      "pf_zero": 1.9486791359028657
     },
     "sc_macd": {
       "col": "r6_macd",
-      "delta_r20d": 0.018230452253686646,
+      "delta_r20d": 0.019077420592993697,
       "n_pos": 977,
-      "n_zero": 243,
+      "n_zero": 248,
       "r20d_when_pos": 0.046760081883316276,
-      "r20d_when_zero": 0.02852962962962963,
-      "pf_pos": 2.7843525538122633,
-      "pf_zero": 1.7927253184531298
+      "r20d_when_zero": 0.02768266129032258,
+      "pf_pos": 2.784352553812263,
+      "pf_zero": 1.7772595016246444
     },
     "sc_div": {
       "col": "r7_div",
-      "delta_r20d": 0.003264783599675504,
+      "delta_r20d": 0.003548056423922509,
       "n_pos": 237,
-      "n_zero": 983,
-      "r20d_when_pos": 0.04575949367088608,
-      "r20d_when_zero": 0.04249471007121058,
-      "pf_pos": 2.831368840555237,
-      "pf_zero": 2.469484459922959
+      "n_zero": 988,
+      "r20d_when_pos": 0.045759493670886074,
+      "r20d_when_zero": 0.042211437246963565,
+      "pf_pos": 2.8313688405552373,
+      "pf_zero": 2.4626216077828977
     },
     "sc_demand": {
       "col": "r8_demand",
-      "delta_r20d": 0.011857986291299083,
+      "delta_r20d": 0.012299399620643837,
       "n_pos": 656,
-      "n_zero": 564,
+      "n_zero": 569,
       "r20d_when_pos": 0.048610823170731704,
-      "r20d_when_zero": 0.03675283687943262,
-      "pf_pos": 2.863637426217053,
-      "pf_zero": 2.2025433217499257
+      "r20d_when_zero": 0.03631142355008787,
+      "pf_pos": 2.863637426217054,
+      "pf_zero": 2.1925931911847885
     }
   },
   "critical_findings": [

@@ -2,7 +2,6 @@ name: 📧 Morning Email + Dashboard Deploy
 
 # Sends morning constitutional brief via email + Telegram, then rebuilds
 # the universe snapshot, presentation snapshot, dashboard, and deploys to GH Pages.
-# Triggered by Google Apps Script (repository_dispatch) or GitHub schedule as backup.
 #
 # EXECUTION ORDER:
 #   1. Refresh CSVs (backfill_egx30)
@@ -17,13 +16,14 @@ name: 📧 Morning Email + Dashboard Deploy
 #   4. Rebuild presentation_snapshot.json (idempotent — canonical JSON artifact)
 #   5. Build dashboard — ONE snapshot, ONE html, ONE deploy
 #   6. Deploy to GH Pages
+#
+# GitHub schedule only — external HA triggers (Google Apps Script, cron-job.org)
+# route exclusively through external_dispatch.yml to avoid two separate runners
+# racing to send the same morning email/Telegram brief (this workflow used to
+# also listen for morning_report/morning_dispatch repository_dispatch events,
+# which fired at the same time as external_dispatch.yml and caused duplicates).
 
 on:
-  repository_dispatch:
-    types:
-      - morning_report
-      - morning_dispatch
-
   schedule:
     # 07:30 Cairo (UTC+3 per ZoneInfo Africa/Cairo) = 04:30 UTC, Sun–Thu
     - cron: '30 4 * * 0-4'

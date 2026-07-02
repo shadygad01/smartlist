@@ -122,8 +122,11 @@ function resolveTicker(description: string): string {
 // across the row boundary and (worse than cosmetic) steals the next row's
 // values while its own real transaction is silently never recorded. Both
 // bracket flavors are accepted on either side to avoid that.
+// The trailing group captures the row's "Value" column (the actual amount
+// debited/credited), which is optional so old callers/tests without it still
+// match — see below for why it's used instead of qty * printed price.
 const statementRowPattern =
-  /(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s+(Buy|Sell|شراء|بيع)\s+(.{1,80}?)\s*[(\{\[]\s*([\d,]+(?:\.\d+)?)\s*@\s*([\d,]+(?:\.\d+)?)\s*[)\}\]]/gi;
+  /(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s+(Buy|Sell|شراء|بيع)\s+(.{1,80}?)\s*[(\{\[]\s*([\d,]+(?:\.\d+)?)\s*@\s*([\d,]+(?:\.\d+)?)\s*[)\}\]](?:\s*(-?[\d,]+(?:\.\d+)?))?/gi;
 
 function parseStatementText(text: string): ParsedTransaction[] {
   const transactions: ParsedTransaction[] = [];
@@ -132,11 +135,23 @@ function parseStatementText(text: string): ParsedTransaction[] {
   const normalized = text.replace(/\s+/g, ' ');
 
   for (const m of normalized.matchAll(statementRowPattern)) {
-    const [, dateStr, typeStr, description, qtyStr, priceStr] = m;
+    const [, dateStr, typeStr, description, qtyStr, priceStr, valueStr] = m;
 
     const qty = parseFloat(qtyStr.replace(/,/g, ''));
-    const price = parseFloat(priceStr.replace(/,/g, ''));
+    let price = parseFloat(priceStr.replace(/,/g, ''));
     if (!qty || !price) continue;
+
+    // The printed per-share price doesn't include brokerage commission, but
+    // the actual amount debited/credited (the Value column) does — confirmed
+    // against the real Thndr app's own cost/P&L figures, e.g. a statement row
+    // "Buy Arabian Cement (42@47.4700) -1,999.23" costs 1,999.23 in Thndr,
+    // not 42 * 47.47 = 1,993.74. Deriving an effective per-share price from
+    // Value keeps quantity * price (used everywhere downstream) equal to
+    // what was actually paid/received.
+    if (valueStr) {
+      const value = Math.abs(parseFloat(valueStr.replace(/,/g, '')));
+      if (value > 0) price = value / qty;
+    }
 
     const tradeDate = parseDate(dateStr);
     if (!tradeDate) continue;

@@ -1,1 +1,0 @@
-- [Scanner data-branch persistence](scanner-data-branch.md) — CI runtime artifacts live on the `data` branch, never main; restore before a run, save after. Never re-point data commits at main.

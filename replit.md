@@ -26,7 +26,8 @@ A dark-themed algorithmic trading dashboard for the Egyptian Stock Exchange (EGX
 - `artifacts/egx-commandcenter/src/components/dashboard/` — all dashboard section components
 - `artifacts/egx-commandcenter/src/pages/` — DashboardPage + ArchivePage
 - `artifacts/egx-commandcenter/src/index.css` — EGX dark theme CSS variables + Tailwind v4
-- `.migration-backup/frontend/` — original Next.js source (reference only)
+- `.migration-backup/frontend/` — original Next.js source (reference only, superseded by the artifact above)
+- Repo root (`main.py`, `scheduler.py`, `signal_engine.py`, `discount_reversal_engine.py`, `config/`, `presentation/`, etc.) — the Python production scanner that writes `presentation_snapshot.json`. This was temporarily parked under `.migration-backup/` during the frontend migration and has been restored to root; see `PRODUCTION_MAP.md` for the full execution flow and `.github/workflows/` for the scheduled jobs that run it.
 
 ## Architecture decisions
 

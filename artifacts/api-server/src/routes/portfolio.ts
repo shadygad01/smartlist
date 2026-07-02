@@ -43,6 +43,11 @@ const COMPANY_TICKER_MAP: Record<string, string> = {
   "ABU QIR FERTILIZERS": "ABUK",
 };
 
+// Thndr statements also include non-stock instruments (its own savings/money
+// market product, and internal transfer sweeps) that are not EGX-listed
+// tickers and must never be tracked as stock positions.
+const NON_STOCK_INSTRUMENTS = new Set(["THNDRSAVINGS", "AZG"]);
+
 function normalizeCompanyKey(name: string): string {
   return name
     .toUpperCase()
@@ -141,6 +146,8 @@ function parseStatementText(text: string): ParsedTx[] {
 
   for (const m of normalized.matchAll(rowPattern)) {
     const [, dateStr, typeStr, description, qtyStr, priceStr, valueStr] = m;
+
+    if (NON_STOCK_INSTRUMENTS.has(normalizeCompanyKey(description))) continue;
 
     const qty = parseFloat(qtyStr.replace(/,/g, ""));
     let price = parseFloat(priceStr.replace(/,/g, ""));
@@ -286,7 +293,7 @@ function parseOrdersScreenText(text: string): ParsedTx[] {
   if (actions.length === 0) return transactions;
 
   const ticker = resolveHeaderTicker(text);
-  if (!ticker) return transactions;
+  if (!ticker || NON_STOCK_INSTRUMENTS.has(ticker.toUpperCase())) return transactions;
 
   const prices = [...section.matchAll(strict ? orderPriceStrictPattern : orderPriceLenientPattern)];
   const dates = [...section.matchAll(orderDatePattern)];

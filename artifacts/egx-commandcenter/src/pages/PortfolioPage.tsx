@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { Upload, FileText, Image, CheckCircle, XCircle, AlertTriangle, ArrowLeft, TrendingUp, Package, Calendar, DollarSign, ScanText } from 'lucide-react';
+import { Upload, FileText, Image, CheckCircle, XCircle, AlertTriangle, ArrowLeft, TrendingUp, Package, Calendar, DollarSign, ScanText, Trash2 } from 'lucide-react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { createWorker } from 'tesseract.js';
 import { extractPdfText } from '@/lib/pdfText';
@@ -12,6 +12,7 @@ import {
   recordUpload,
   completeUpload,
   failUpload,
+  deleteTransaction,
   computePositions,
   buildPriceMapFromSnapshot,
   type StoredUpload as PortfolioUpload,
@@ -227,6 +228,14 @@ export default function PortfolioPage() {
     loadData();
   }, [loadData, showToast]);
 
+  // Escape hatch for a bad row (e.g. a parsing glitch from before a fix
+  // landed) without wiping and re-uploading everything else.
+  const handleDeleteTransaction = useCallback((id: number, ticker: string) => {
+    if (!window.confirm(`Delete this ${ticker} transaction? This can't be undone.`)) return;
+    deleteTransaction(id);
+    loadData();
+  }, [loadData]);
+
   const totalCost = positions.reduce((s, p) => s + p.totalCost, 0);
   const totalQty = positions.reduce((s, p) => s + p.totalQuantity, 0);
   const pricedPositions = positions.filter((p) => p.unrealizedPnl != null);
@@ -435,7 +444,7 @@ export default function PortfolioPage() {
                 <table className="w-full">
                   <thead>
                     <tr style={{ backgroundColor: '#0e1120', borderBottom: '1px solid #252645' }}>
-                      {['TICKER', 'Type', 'Date', 'Quantity', 'Price', 'Value'].map((h) => (
+                      {['TICKER', 'Type', 'Date', 'Quantity', 'Price', 'Value', ''].map((h) => (
                         <th
                           key={h}
                           className="font-mono text-left px-4 py-2"
@@ -488,6 +497,15 @@ export default function PortfolioPage() {
                           </td>
                           <td className="px-4 py-2.5 font-mono" style={{ fontSize: '12px', color: '#8b8fa8' }}>
                             {fmt(qty * price)}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <button
+                              onClick={() => handleDeleteTransaction(tx.id, tx.ticker)}
+                              className="transition-opacity hover:opacity-70"
+                              title="Delete this transaction"
+                            >
+                              <Trash2 size={13} color="#ef4444" />
+                            </button>
                           </td>
                         </tr>
                       );

@@ -131,7 +131,8 @@ function transactionKey(t: {
 
 export function completeUpload(
   uploadId: number,
-  parsed: ParsedTransaction[]
+  parsed: ParsedTransaction[],
+  noTradesMessage = "No transactions found in the file. Make sure it's a Thunder report."
 ): { status: 'parsed' | 'failed' | 'duplicate'; transactionCount: number; newCount: number; duplicateCount: number } {
   const state = load();
   const upload = state.uploads.find((u) => u.id === uploadId);
@@ -139,7 +140,7 @@ export function completeUpload(
 
   if (parsed.length === 0) {
     upload.status = 'failed';
-    upload.errorMessage = "No transactions found in the file. Make sure it's a Thunder report.";
+    upload.errorMessage = noTradesMessage;
     save(state);
     return { status: 'failed', transactionCount: 0, newCount: 0, duplicateCount: 0 };
   }

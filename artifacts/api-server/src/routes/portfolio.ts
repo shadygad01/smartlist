@@ -111,7 +111,7 @@ router.get("/portfolio/uploads", async (req: Request, res: Response) => {
 // ─── POST /portfolio/uploads ───────────────────────────────────────────────────
 // Parse an uploaded file and extract transactions (deduplication via fileHash)
 router.post("/portfolio/uploads", async (req: Request, res: Response) => {
-  const { objectPath, fileName, contentType, fileHash } = req.body ?? {};
+  const { objectPath, fileName, contentType, fileHash, extractedText } = req.body ?? {};
 
   if (!objectPath || !fileName || !contentType || !fileHash) {
     res.status(400).json({ error: "objectPath, fileName, contentType, fileHash required" });
@@ -151,23 +151,22 @@ router.post("/portfolio/uploads", async (req: Request, res: Response) => {
     let rawText = "";
     const isPdf = contentType.includes("pdf") || fileName.toLowerCase().endsWith(".pdf");
 
-    if (isPdf) {
+    if (extractedText && typeof extractedText === "string" && extractedText.trim().length > 20) {
+      // Client already ran OCR (Tesseract.js for images) — use it directly
+      rawText = extractedText;
+    } else if (isPdf) {
       const parsed = await pdfParse(buffer);
       rawText = parsed.text;
     } else {
-      // For images: try to extract any embedded text, else use filename hint
-      // Full AI vision parsing requires Gemini (enabled after phone verification)
-      // For now, store the upload and return a pending status for images
       await db
         .update(portfolioUploadsTable)
-        .set({ status: "failed", errorMessage: "Image parsing requires AI — enable Gemini integration first" })
+        .set({ status: "failed", errorMessage: "No text extracted from image" })
         .where(eq(portfolioUploadsTable.id, upload.id));
-
       res.json({
         uploadId: upload.id,
         status: "failed",
         transactionCount: 0,
-        message: "الصور محتاجة تفعيل Gemini AI — الـ PDF يشتغل عادي",
+        message: "مفيش نص اتقرأ من الصورة — حاول ترفع PDF بدلاً منها.",
       });
       return;
     }

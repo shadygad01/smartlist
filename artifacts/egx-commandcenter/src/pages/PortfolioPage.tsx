@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { Upload, FileText, Image, CheckCircle, XCircle, AlertTriangle, ArrowLeft, TrendingUp, Package, Calendar, DollarSign } from 'lucide-react';
+import { Upload, FileText, Image, CheckCircle, XCircle, AlertTriangle, ArrowLeft, TrendingUp, Package, Calendar, DollarSign, ScanText } from 'lucide-react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import { createWorker } from 'tesseract.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PortfolioUpload {
@@ -139,6 +140,7 @@ export default function PortfolioPage() {
   const [transactions, setTransactions] = useState<PortfolioTransaction[]>([]);
   const [positions, setPositions] = useState<PortfolioPosition[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [activeTab, setActiveTab] = useState<'positions' | 'transactions' | 'uploads'>('positions');
 
@@ -171,9 +173,28 @@ export default function PortfolioPage() {
     setUploading(true);
     for (const file of files) {
       try {
-        // 1. Hash the file for dedup
+        const isImage = file.type.startsWith('image/');
         const buffer = await file.arrayBuffer();
         const hash = await sha256Hex(buffer);
+
+        // 1. For images: run Tesseract OCR client-side first
+        let extractedText: string | undefined;
+        if (isImage) {
+          setUploadStatus('جاري قراءة الصورة بـ OCR…');
+          const worker = await createWorker(['ara', 'eng'], 1, {
+            logger: (m) => {
+              if (m.status === 'recognizing text') {
+                setUploadStatus(`OCR: ${Math.round((m.progress ?? 0) * 100)}%`);
+              }
+            },
+          });
+          const { data } = await worker.recognize(file);
+          await worker.terminate();
+          extractedText = data.text;
+          setUploadStatus('تم OCR — جاري الرفع…');
+        } else {
+          setUploadStatus('جاري الرفع…');
+        }
 
         // 2. Request presigned URL
         const urlRes = await fetch('/api/storage/uploads/request-url', {
@@ -185,6 +206,7 @@ export default function PortfolioPage() {
         const { uploadURL, objectPath } = await urlRes.json();
 
         // 3. Upload directly to GCS
+        setUploadStatus('جاري الرفع على الـ Cloud…');
         const upRes = await fetch(uploadURL, {
           method: 'PUT',
           headers: { 'Content-Type': file.type },
@@ -192,11 +214,18 @@ export default function PortfolioPage() {
         });
         if (!upRes.ok) throw new Error('Upload to storage failed');
 
-        // 4. Parse the document
+        // 4. Parse the document (send extractedText for images)
+        setUploadStatus('جاري تحليل الصفقات…');
         const parseRes = await fetch('/api/portfolio/uploads', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ objectPath, fileName: file.name, contentType: file.type, fileHash: hash }),
+          body: JSON.stringify({
+            objectPath,
+            fileName: file.name,
+            contentType: file.type,
+            fileHash: hash,
+            ...(extractedText ? { extractedText } : {}),
+          }),
         });
         const result = await parseRes.json();
         showToast(result.message ?? 'تمت المعالجة', result.status !== 'failed');
@@ -205,6 +234,7 @@ export default function PortfolioPage() {
       }
     }
     setUploading(false);
+    setUploadStatus('');
     await loadData();
   }, [loadData, showToast]);
 
@@ -280,7 +310,12 @@ export default function PortfolioPage() {
                     className="animate-spin rounded-full"
                     style={{ width: 28, height: 28, border: '2px solid #252645', borderTopColor: '#10b981' }}
                   />
-                  <span className="font-mono" style={{ fontSize: '11px', color: '#6b7280' }}>جاري التحليل…</span>
+                  <div className="flex items-center gap-1.5">
+                    <ScanText size={13} color="#10b981" />
+                    <span className="font-mono" style={{ fontSize: '11px', color: '#10b981' }}>
+                      {uploadStatus || 'جاري المعالجة…'}
+                    </span>
+                  </div>
                 </div>
               </div>
             ) : (

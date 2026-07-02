@@ -81,3 +81,44 @@ web_deploy/
 *.log
 .env
 .env.local
+
+# Data-branch-owned runtime artifacts — canonical list is ci/data_files.txt.
+# These are restored from the `data` branch by ci/restore_data.sh and must
+# never be committed to the code branch (main); keep this block in sync with
+# ci/data_files.txt.
+open_positions.json
+positions_history.json
+scan_results.json
+signal_history.json
+signal_log.json
+learned_weights.json
+research_results.json
+changed_symbols.json
+presentation_snapshot.json
+production_decision_snapshot.json
+constitutional_fingerprint.json
+architecture_fingerprint.json
+scan_manifest.json
+scan_context.json
+consistency_report.json
+decision_diff.json
+operations_state.json
+heartbeat.json
+version.json
+dashboard.html
+egx_research.db
+scan_execution.db
+notification_delivery.db
+constitutional_opportunity_events.db
+event_timeline.db
+mpi_snapshots.db
+universe_snapshot.db
+candidate_pool.db
+valuation.db
+operations/incidents.json
+operations/sla.json
+operations/knowledge.json
+operations/sent_alerts.json
+operations/public_status.json
+historical_data/historical_data/*.csv
+audit/daily_validation

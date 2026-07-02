@@ -161,6 +161,12 @@ class PresentationSnapshot:
     # Universe Snapshot (all 27 tickers)
     universe_snapshot: list[dict] = field(default_factory=list)
 
+    # Portfolio-only tickers outside the scanner's trading universe (e.g.
+    # EGX70 names like PHAR, CSAG that a user holds but the scanner doesn't
+    # track as trading candidates) — same TradingView/yfinance price source,
+    # fetched only for the Portfolio Tracker's price lookups.
+    portfolio_extra_prices: list[dict] = field(default_factory=list)
+
     # Pre-computed active position metrics — single source for all renderers
     active_positions:   list[dict] = field(default_factory=list)
     win_rate_active:    int = 0
@@ -425,6 +431,13 @@ def build_presentation_snapshot() -> PresentationSnapshot:
     except Exception:
         snap.universe_snapshot = []
 
+    # ── Portfolio-only extra prices (PHAR, CSAG, ...) ───────────────────────────
+    try:
+        from portfolio_extra_prices import fetch_portfolio_extra_prices
+        snap.portfolio_extra_prices = fetch_portfolio_extra_prices()
+    except Exception:
+        snap.portfolio_extra_prices = []
+
     # ── Active position metrics — computed once, consumed by all renderers ────────
     # Renderers must use these fields; they must NOT re-filter universe_snapshot.
     _active_raw = [
@@ -612,6 +625,7 @@ def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: s
         "future_candidates":   future_candidates,
         "watchlist":           watchlist,
         "universe_snapshot":   snap.universe_snapshot,
+        "portfolio_extra_prices": snap.portfolio_extra_prices,
         "new_events_today":    list(snap.new_events_today),
         "stock_dna":           _stock_dna,
         "mpi_behavior":        _mpi_behavior,

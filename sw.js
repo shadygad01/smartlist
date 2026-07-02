@@ -1,4 +1,4 @@
-const CACHE = 'egx-smc-v18';
+const CACHE = 'egx-smc-v19';
 const STATIC = ['manifest.json', 'icon.svg'];
 
 // ── Install: cache only non-HTML static assets ────────────────────────────

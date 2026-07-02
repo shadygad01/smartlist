@@ -56,7 +56,10 @@ export default function PortfolioMiniChart() {
 
   useEffect(() => {
     const transactions = getTransactions();
-    const priceMap = buildPriceMapFromSnapshot(snapshot?.universe_snapshot);
+    const priceMap = buildPriceMapFromSnapshot([
+      ...(snapshot?.universe_snapshot ?? []),
+      ...(snapshot?.portfolio_extra_prices ?? []),
+    ]);
     setPoints(computePnlHistory(transactions, priceMap));
     const { positions, totalCost } = computePositions(transactions, priceMap);
     const pricedPositions = positions.filter((p) => p.unrealizedPnl != null);

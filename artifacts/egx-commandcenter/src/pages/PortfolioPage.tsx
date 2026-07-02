@@ -139,7 +139,10 @@ export default function PortfolioPage() {
     setUploads(getUploads());
     const txs = getTransactions();
     setTransactions(txs);
-    const priceMap = buildPriceMapFromSnapshot(snapshot?.universe_snapshot);
+    const priceMap = buildPriceMapFromSnapshot([
+      ...(snapshot?.universe_snapshot ?? []),
+      ...(snapshot?.portfolio_extra_prices ?? []),
+    ]);
     setPositions(computePositions(txs, priceMap).positions);
   }, [snapshot]);
 

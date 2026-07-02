@@ -37,10 +37,10 @@ function fmtDate(iso: string) {
 // ─── Status badge ─────────────────────────────────────────────────────────────
 function UploadStatusBadge({ status }: { status: PortfolioUpload['status'] }) {
   const map = {
-    parsed: { color: '#10b981', icon: <CheckCircle size={12} />, label: 'تم' },
-    duplicate: { color: '#f59e0b', icon: <AlertTriangle size={12} />, label: 'مكرر' },
-    failed: { color: '#ef4444', icon: <XCircle size={12} />, label: 'فشل' },
-    pending: { color: '#6b7280', icon: null, label: 'جاري…' },
+    parsed: { color: '#10b981', icon: <CheckCircle size={12} />, label: 'Done' },
+    duplicate: { color: '#f59e0b', icon: <AlertTriangle size={12} />, label: 'Duplicate' },
+    failed: { color: '#ef4444', icon: <XCircle size={12} />, label: 'Failed' },
+    pending: { color: '#6b7280', icon: null, label: 'Processing…' },
   };
   const s = map[status];
   return (
@@ -98,10 +98,10 @@ function DropZone({ onFiles }: { onFiles: (files: File[]) => void }) {
       <Upload size={32} color={dragging ? '#10b981' : '#3b4565'} />
       <div className="text-center">
         <p className="font-mono" style={{ fontSize: '13px', color: '#c4c9df' }}>
-          اسحب ملف PDF أو صورة هنا
+          Drag a PDF or image here
         </p>
         <p className="font-mono mt-1" style={{ fontSize: '11px', color: '#4a5070' }}>
-          أو اضغط للاختيار · Thunder Securities
+          or click to choose · Thunder Securities
         </p>
       </div>
       <div className="flex gap-3">
@@ -109,7 +109,7 @@ function DropZone({ onFiles }: { onFiles: (files: File[]) => void }) {
           <FileText size={11} /> PDF
         </span>
         <span className="flex items-center gap-1 font-mono" style={{ fontSize: '10px', color: '#6b7280' }}>
-          <Image size={11} /> صورة
+          <Image size={11} /> Image
         </span>
       </div>
     </div>
@@ -153,14 +153,14 @@ export default function PortfolioPage() {
 
         const existing = findUploadByHash(hash);
         if (existing) {
-          showToast(`ملف مكرر — تم رفعه من قبل (${existing.fileName})`, false);
+          showToast(`Duplicate file — already uploaded (${existing.fileName})`, false);
           continue;
         }
 
         // 1. Extract text: OCR for images (Tesseract), pdfjs for PDFs
         let extractedText = '';
         if (isImage) {
-          setUploadStatus('جاري قراءة الصورة بـ OCR…');
+          setUploadStatus('Reading image with OCR…');
           const worker = await createWorker(['ara', 'eng'], 1, {
             logger: (m) => {
               if (m.status === 'recognizing text') {
@@ -172,31 +172,31 @@ export default function PortfolioPage() {
           await worker.terminate();
           extractedText = data.text;
         } else {
-          setUploadStatus('جاري قراءة الـ PDF…');
+          setUploadStatus('Reading PDF…');
           extractedText = await extractPdfText(buffer);
         }
 
         const upload = recordUpload({ fileName: file.name, contentType: file.type, fileHash: hash });
 
         if (!extractedText || extractedText.trim().length < 20) {
-          failUpload(upload.id, 'مفيش نص اتقرأ من الملف.');
-          showToast('مفيش نص اتقرأ من الملف — حاول ملف تاني.', false);
+          failUpload(upload.id, 'No text could be read from the file.');
+          showToast('No text could be read from the file — try another file.', false);
           continue;
         }
 
         // 2. Parse transactions
-        setUploadStatus('جاري تحليل الصفقات…');
+        setUploadStatus('Analyzing transactions…');
         const parsed = parseThunderText(extractedText);
         const result = completeUpload(upload.id, parsed);
 
         showToast(
           result.status === 'parsed'
-            ? `تم استخراج ${result.transactionCount} صفقة بنجاح`
-            : 'مفيش صفقات اتقرأت من الملف. تأكد إنه تقرير Thunder.',
+            ? `Successfully extracted ${result.transactionCount} transaction(s)`
+            : "No transactions found in the file. Make sure it's a Thunder report.",
           result.status !== 'failed'
         );
       } catch (e) {
-        showToast(`خطأ: ${String(e)}`, false);
+        showToast(`Error: ${String(e)}`, false);
       }
     }
     setUploading(false);
@@ -266,7 +266,7 @@ export default function PortfolioPage() {
             <div className="flex items-center gap-2 mb-3">
               <Upload size={14} color="#9c6fff" />
               <span className="font-mono font-bold" style={{ fontSize: '11px', color: '#c4c9df', letterSpacing: '0.08em' }}>
-                رفع كشف معاملات
+                Upload transaction statement
               </span>
             </div>
             {uploading ? (
@@ -279,7 +279,7 @@ export default function PortfolioPage() {
                   <div className="flex items-center gap-1.5">
                     <ScanText size={13} color="#10b981" />
                     <span className="font-mono" style={{ fontSize: '11px', color: '#10b981' }}>
-                      {uploadStatus || 'جاري المعالجة…'}
+                      {uploadStatus || 'Processing…'}
                     </span>
                   </div>
                 </div>
@@ -292,9 +292,9 @@ export default function PortfolioPage() {
           {/* Tabs */}
           <div className="flex gap-1 p-1 rounded-lg" style={{ backgroundColor: '#0e1120', border: '1px solid #1a1e35' }}>
             {([
-              ['positions', 'المراكز الحالية'],
-              ['transactions', 'الصفقات'],
-              ['uploads', 'المستندات'],
+              ['positions', 'Current Positions'],
+              ['transactions', 'Transactions'],
+              ['uploads', 'Documents'],
             ] as const).map(([tab, label]) => (
               <button
                 key={tab}
@@ -326,14 +326,14 @@ export default function PortfolioPage() {
                 <div className="flex flex-col items-center justify-center py-16 gap-3">
                   <Package size={32} color="#252645" />
                   <p className="font-mono" style={{ fontSize: '12px', color: '#4a5070' }}>
-                    مفيش مراكز — ارفع كشف معاملات الأول
+                    No positions yet — upload a statement first
                   </p>
                 </div>
               ) : (
                 <table className="w-full">
                   <thead>
                     <tr style={{ backgroundColor: '#0e1120', borderBottom: '1px solid #252645' }}>
-                      {['TICKER', 'أول شراء', 'آخر شراء', 'الكمية', 'متوسط السعر', 'التكلفة الكلية'].map((h) => (
+                      {['TICKER', 'First Buy', 'Last Buy', 'Quantity', 'Avg Price', 'Total Cost'].map((h) => (
                         <th
                           key={h}
                           className="font-mono text-left px-4 py-2"
@@ -388,14 +388,14 @@ export default function PortfolioPage() {
                 <div className="flex flex-col items-center justify-center py-16 gap-3">
                   <Calendar size={32} color="#252645" />
                   <p className="font-mono" style={{ fontSize: '12px', color: '#4a5070' }}>
-                    مفيش صفقات بعد
+                    No transactions yet
                   </p>
                 </div>
               ) : (
                 <table className="w-full">
                   <thead>
                     <tr style={{ backgroundColor: '#0e1120', borderBottom: '1px solid #252645' }}>
-                      {['TICKER', 'النوع', 'التاريخ', 'الكمية', 'السعر', 'القيمة'].map((h) => (
+                      {['TICKER', 'Type', 'Date', 'Quantity', 'Price', 'Value'].map((h) => (
                         <th
                           key={h}
                           className="font-mono text-left px-4 py-2"
@@ -434,7 +434,7 @@ export default function PortfolioPage() {
                                 border: `1px solid ${isBuy ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
                               }}
                             >
-                              {isBuy ? 'شراء' : 'بيع'}
+                              {isBuy ? 'BUY' : 'SELL'}
                             </span>
                           </td>
                           <td className="px-4 py-2.5 font-mono" style={{ fontSize: '11px', color: '#6b7280' }}>
@@ -465,14 +465,14 @@ export default function PortfolioPage() {
                 <div className="flex flex-col items-center justify-center py-16 gap-3">
                   <FileText size={32} color="#252645" />
                   <p className="font-mono" style={{ fontSize: '12px', color: '#4a5070' }}>
-                    مفيش مستندات مرفوعة
+                    No documents uploaded
                   </p>
                 </div>
               ) : (
                 <table className="w-full">
                   <thead>
                     <tr style={{ backgroundColor: '#0e1120', borderBottom: '1px solid #252645' }}>
-                      {['الملف', 'الحالة', 'الصفقات', 'التاريخ'].map((h) => (
+                      {['File', 'Status', 'Transactions', 'Date'].map((h) => (
                         <th
                           key={h}
                           className="font-mono text-left px-4 py-2"

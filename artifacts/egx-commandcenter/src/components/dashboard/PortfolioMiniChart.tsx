@@ -86,7 +86,7 @@ export default function PortfolioMiniChart() {
       {summary && (
         <div className="flex gap-2 mb-3">
           <span className="font-mono px-2 py-0.5 rounded" style={{ fontSize: '10px', color: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
-            {summary.positionCount} مركز
+            {summary.positionCount} positions
           </span>
           {summary.totalCost > 0 && (
             <span className="font-mono px-2 py-0.5 rounded" style={{ fontSize: '10px', color: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
@@ -107,14 +107,14 @@ export default function PortfolioMiniChart() {
       ) : !hasData ? (
         <div className="flex flex-col items-center justify-center gap-2" style={{ height: 120 }}>
           <p className="font-mono text-center" style={{ fontSize: '11px', color: '#3b4565' }}>
-            ارفع كشف معاملات لتظهر المنحنيات
+            Upload a statement to see the chart
           </p>
           <Link
             href="/portfolio"
             className="font-mono px-3 py-1 rounded transition-opacity hover:opacity-80"
             style={{ fontSize: '10px', color: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}
           >
-            رفع ملف →
+            Upload file →
           </Link>
         </div>
       ) : (

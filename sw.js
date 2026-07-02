@@ -1,4 +1,4 @@
-const CACHE = 'egx-smc-v4';
+const CACHE = 'egx-smc-v5';
 const STATIC = ['manifest.json', 'icon.svg'];
 
 // ── Install: cache only non-HTML static assets ────────────────────────────
@@ -21,13 +21,15 @@ self.addEventListener('activate', e => {
     );
 });
 
-// ── Fetch: network-first for HTML + data.json, cache-first for rest ───────
+// ── Fetch: network-first for page navigations + data.json, cache-first for rest ───────
 self.addEventListener('fetch', e => {
     const url = new URL(e.request.url);
-    const isHTML = url.pathname.endsWith('.html') || url.pathname.endsWith('/');
+    // request.mode === 'navigate' catches every SPA route (/, /archive,
+    // /portfolio, ...), not just paths ending in '.html' or '/'.
+    const isNavigation = e.request.mode === 'navigate';
     const isData = url.pathname.endsWith('data.json');
 
-    if (isHTML || isData) {
+    if (isNavigation || isData) {
         e.respondWith(
             fetch(e.request)
                 .then(res => {

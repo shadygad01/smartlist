@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: storage
+    description: Object storage operations
+  - name: portfolio
+    description: Portfolio tracker operations
 paths:
   /healthz:
     get:
@@ -24,6 +28,101 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request presigned upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestUploadUrlBody"
+      responses:
+        "200":
+          description: Presigned URL generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestUploadUrlResponse"
+
+  /portfolio/uploads:
+    get:
+      operationId: listPortfolioUploads
+      tags: [portfolio]
+      summary: List all uploaded documents
+      responses:
+        "200":
+          description: List of uploads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PortfolioUpload"
+    post:
+      operationId: parsePortfolioUpload
+      tags: [portfolio]
+      summary: Parse an uploaded document and extract transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParseUploadBody"
+      responses:
+        "200":
+          description: Parse result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParseUploadResponse"
+
+  /portfolio/transactions:
+    get:
+      operationId: listPortfolioTransactions
+      tags: [portfolio]
+      summary: List all portfolio transactions
+      responses:
+        "200":
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PortfolioTransaction"
+
+  /portfolio/positions:
+    get:
+      operationId: getPortfolioPositions
+      tags: [portfolio]
+      summary: Get current positions with P&L
+      responses:
+        "200":
+          description: Portfolio positions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioPositions"
+
+  /portfolio/pnl-history:
+    get:
+      operationId: getPortfolioPnlHistory
+      tags: [portfolio]
+      summary: Get P&L history for charts
+      responses:
+        "200":
+          description: P&L history data points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PnlDataPoint"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +133,213 @@ components:
       required:
         - status
 
+    RequestUploadUrlBody:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: number
+        contentType:
+          type: string
+      required:
+        - name
+        - size
+        - contentType
+
+    RequestUploadUrlResponse:
+      type: object
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+        metadata:
+          type: object
+          properties:
+            name:
+              type: string
+            size:
+              type: number
+            contentType:
+              type: string
+          required:
+            - name
+            - size
+            - contentType
+      required:
+        - uploadURL
+        - objectPath
+        - metadata
+
+    ParseUploadBody:
+      type: object
+      properties:
+        objectPath:
+          type: string
+        fileName:
+          type: string
+        contentType:
+          type: string
+        fileHash:
+          type: string
+      required:
+        - objectPath
+        - fileName
+        - contentType
+        - fileHash
+
+    ParseUploadResponse:
+      type: object
+      properties:
+        uploadId:
+          type: number
+        status:
+          type: string
+        transactionCount:
+          type: number
+        message:
+          type: string
+      required:
+        - uploadId
+        - status
+        - transactionCount
+        - message
+
+    PortfolioUpload:
+      type: object
+      properties:
+        id:
+          type: number
+        fileName:
+          type: string
+        fileHash:
+          type: string
+        objectPath:
+          type: string
+        contentType:
+          type: string
+        status:
+          type: string
+        transactionCount:
+          type: number
+        errorMessage:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        parsedAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - fileName
+        - fileHash
+        - objectPath
+        - contentType
+        - status
+        - transactionCount
+        - createdAt
+
+    PortfolioTransaction:
+      type: object
+      properties:
+        id:
+          type: number
+        uploadId:
+          type: number
+          nullable: true
+        ticker:
+          type: string
+        transactionType:
+          type: string
+        quantity:
+          type: string
+        price:
+          type: string
+        tradeDate:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - ticker
+        - transactionType
+        - quantity
+        - price
+        - tradeDate
+        - createdAt
+
+    PortfolioPosition:
+      type: object
+      properties:
+        ticker:
+          type: string
+        totalQuantity:
+          type: number
+        avgBuyPrice:
+          type: number
+        totalCost:
+          type: number
+        currentPrice:
+          type: number
+          nullable: true
+        currentValue:
+          type: number
+          nullable: true
+        unrealizedPnl:
+          type: number
+          nullable: true
+        unrealizedPnlPct:
+          type: number
+          nullable: true
+        firstBuyDate:
+          type: string
+        lastBuyDate:
+          type: string
+      required:
+        - ticker
+        - totalQuantity
+        - avgBuyPrice
+        - totalCost
+        - firstBuyDate
+        - lastBuyDate
+
+    PortfolioPositions:
+      type: object
+      properties:
+        positions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortfolioPosition"
+        totalCost:
+          type: number
+        totalCurrentValue:
+          type: number
+          nullable: true
+        totalUnrealizedPnl:
+          type: number
+          nullable: true
+        totalUnrealizedPnlPct:
+          type: number
+          nullable: true
+      required:
+        - positions
+        - totalCost
+
+    PnlDataPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        realizedPnl:
+          type: number
+        unrealizedPnl:
+          type: number
+      required:
+        - date
+        - realizedPnl
+        - unrealizedPnl

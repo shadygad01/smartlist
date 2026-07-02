@@ -4,6 +4,7 @@ import SnapshotProvider from '@/providers/SnapshotProvider';
 import ToastProvider from '@/components/dashboard/ToastProvider';
 import DashboardPage from '@/pages/DashboardPage';
 import ArchivePage from '@/pages/ArchivePage';
+import PortfolioPage from '@/pages/PortfolioPage';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Switch>
           <Route path="/" component={DashboardPage} />
           <Route path="/archive" component={ArchivePage} />
+          <Route path="/portfolio" component={PortfolioPage} />
           <Route>
             <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
               <div className="text-center">

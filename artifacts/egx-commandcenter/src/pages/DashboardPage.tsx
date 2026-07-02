@@ -13,6 +13,7 @@ import FutureCandidatesSection from '@/components/dashboard/FutureCandidatesSect
 import EventTimelineSection from '@/components/dashboard/EventTimelineSection';
 import ValuationSection from '@/components/dashboard/ValuationSection';
 import DiagnosticsSection from '@/components/dashboard/DiagnosticsSection';
+import PortfolioMiniChart from '@/components/dashboard/PortfolioMiniChart';
 
 export default function DashboardPage() {
   return (
@@ -29,6 +30,8 @@ export default function DashboardPage() {
             <NearEntrySection />
             <WatchlistSection />
           </div>
+
+          <PortfolioMiniChart />
 
           <ReAccumulationSection />
           <EventTimelineSection />

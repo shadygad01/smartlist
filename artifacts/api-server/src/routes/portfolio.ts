@@ -124,14 +124,32 @@ const MONTH_MAP: Record<string, number> = {
   jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
 };
 
+// OCR at this font/resolution confuses a few characters when they appear in
+// numbers: "O" for "0", and "T"/"I"/lowercase-"l" for "1" (most visibly when
+// "11" renders as "Tl"). Safe to blanket-replace within a digit run we
+// already know is numeric from context.
+function normalizeDigits(s: string): string {
+  return s.replace(/[Oo]/g, "0").replace(/[TIl]/g, "1");
+}
+
+// Thndr always renders prices with exactly 3 decimals (e.g. "76.500"), but
+// OCR sometimes reads the decimal point as a comma. Whatever separator
+// precedes the final 3 digits is the decimal point; an earlier comma (rare
+// for share prices) is a thousands separator.
+function parsePrice(raw: string): number {
+  const m = /^([\d,]*\d)[.,](\d{3})$/.exec(raw.trim());
+  if (m) return parseFloat(`${m[1].replace(/,/g, "")}.${m[2]}`);
+  return parseFloat(raw.replace(/,/g, ""));
+}
+
 function parseShortDate(str: string): Date | null {
   // "11 Feb 26" / "20 Aug 24" -> 2026-02-11 / 2024-08-20
-  const m = /^(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{2,4})$/.exec(str.trim());
+  const m = /^([\dOoTIl]{1,3})\s+([A-Za-z]{3,9})\s+([\dOo]{2,4})$/.exec(str.trim());
   if (!m) return null;
-  const day = parseInt(m[1], 10);
+  const day = parseInt(normalizeDigits(m[1]), 10);
   const month = MONTH_MAP[m[2].slice(0, 3).toLowerCase()];
   if (!month) return null;
-  let year = parseInt(m[3], 10);
+  let year = parseInt(normalizeDigits(m[3]), 10);
   if (year < 100) year += 2000;
   return new Date(Date.UTC(year, month - 1, day));
 }
@@ -170,12 +188,16 @@ function ordersSection(text: string): { section: string; strict: boolean } {
   return { section: text, strict: true };
 }
 
-const orderActionPattern = /(Buy|Sell|شراء|بيع)\s*[•·.]?\s*([\d,]+(?:\.\d+)?)\s*shares?/gi;
-const orderPriceStrictPattern = /@\s*EGP\s*([\d,]+(?:\.\d+)?)/gi;
-const orderPriceLenientPattern = /@?\s*EGP\s*([\d,]+(?:\.\d+)?)/gi;
+// Bullet between "Buy/Sell" and the quantity OCRs inconsistently (•, *, «,
+// or dropped entirely) — accept up to two non-digit, non-space characters
+// instead of a fixed set of glyphs. Digits must never be swallowed by this
+// gap, so digits are explicitly excluded from the class.
+const orderActionPattern = /(Buy|Sell|شراء|بيع)\s*[^\s\d]{0,2}\s*([\d,TIl]+(?:\.\d+)?)\s*shares?/gi;
+const orderPriceStrictPattern = /@\s*EGP\s*([\d,]+(?:[.,]\d+)?)/gi;
+const orderPriceLenientPattern = /@?\s*EGP\s*([\d,]+(?:[.,]\d+)?)/gi;
 // Allow up to a few stray characters between date and time instead of
 // requiring a specific dash glyph, since OCR renders "–" inconsistently.
-const orderDatePattern = /(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4})[^0-9A-Za-z]{0,4}\d{1,2}:\d{2}\s*[AP]M/gi;
+const orderDatePattern = /([\dOoTIl]{1,3}\s+[A-Za-z]{3,9}\s+[\dOo]{2,4})[^0-9A-Za-z]{0,4}[\dOoTIl]{1,2}:\d{2}\s*[AP]M/gi;
 const orderStatusPattern = /\b(Fulf\w*|Pending|Cancel\w*|Rejected|Expired)\b/gi;
 
 function parseOrdersScreenText(text: string): ParsedTx[] {
@@ -193,15 +215,24 @@ function parseOrdersScreenText(text: string): ParsedTx[] {
   const dates = [...section.matchAll(orderDatePattern)];
   const statuses = [...section.matchAll(orderStatusPattern)];
 
-  const n = Math.min(actions.length, prices.length, dates.length, statuses.length);
-  for (let i = 0; i < n; i++) {
-    if (!/^fulf/i.test(statuses[i][1])) continue; // skip pending/cancelled orders
+  // Pair each action with the nearest price/date/status that falls between
+  // it and the next action, instead of a strict positional zip — an OCR miss
+  // on a single row's field (a genuinely observed failure mode) then only
+  // drops that one incomplete row instead of misaligning every row after it.
+  for (let i = 0; i < actions.length; i++) {
+    const start = actions[i].index ?? 0;
+    const end = i + 1 < actions.length ? (actions[i + 1].index ?? Infinity) : Infinity;
+    const priceMatch = prices.find((p) => (p.index ?? -1) >= start && (p.index ?? -1) < end);
+    const dateMatch = dates.find((d) => (d.index ?? -1) >= start && (d.index ?? -1) < end);
+    const statusMatch = statuses.find((s) => (s.index ?? -1) >= start && (s.index ?? -1) < end);
+    if (!priceMatch || !dateMatch || !statusMatch) continue;
+    if (!/^fulf/i.test(statusMatch[1])) continue; // skip pending/cancelled orders
 
-    const qty = parseFloat(actions[i][2].replace(/,/g, ""));
-    const price = parseFloat(prices[i][1].replace(/,/g, ""));
+    const qty = parseFloat(normalizeDigits(actions[i][2]).replace(/,/g, ""));
+    const price = parsePrice(priceMatch[1]);
     if (!qty || !price) continue;
 
-    const tradeDate = parseShortDate(dates[i][1]);
+    const tradeDate = parseShortDate(dateMatch[1]);
     if (!tradeDate) continue;
 
     const isBuy = /buy|شراء/i.test(actions[i][1]);

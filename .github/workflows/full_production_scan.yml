@@ -536,6 +536,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
+      - name: Restore live data from data branch
+        # Without this, universe_snapshot.db / production_decision_snapshot.json /
+        # constitutional_opportunity_events.db don't exist in this job's fresh
+        # checkout, so "Rebuild presentation snapshot" below produces an all-zero
+        # snapshot that then gets deployed live, clobbering the correct one.
+        run: bash ci/restore_data.sh
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'

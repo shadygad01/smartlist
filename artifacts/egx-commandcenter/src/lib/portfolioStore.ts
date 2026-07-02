@@ -187,10 +187,36 @@ export function failUpload(uploadId: number, message: string) {
   save(state);
 }
 
+// Live prices come from presentation_snapshot.json's universe_snapshot — the
+// same constitutional-scanner pipeline (price_authority.py / main.py's
+// yfinance -> Yahoo chart API -> TradingView scanner fallback chain) already
+// powers the rest of this dashboard, fetched app-wide by SnapshotProvider.
+// Reusing it here means the Portfolio Tracker never needs its own price feed
+// and always agrees with the scanner on "today's price" for a ticker.
+// Snapshot tickers carry a ".CA" suffix (e.g. "COMI.CA"); parsed transactions
+// don't, so this strips it before building the lookup map.
+export function buildPriceMapFromSnapshot(
+  universeSnapshot: Array<{ ticker: string; current_price: number }> | undefined
+): Record<string, number> {
+  const map: Record<string, number> = {};
+  if (!universeSnapshot) return map;
+  for (const item of universeSnapshot) {
+    if (typeof item.current_price !== 'number' || item.current_price <= 0) continue;
+    const bareTicker = item.ticker.replace(/\.CA$/i, '').toUpperCase();
+    map[bareTicker] = item.current_price;
+  }
+  return map;
+}
+
 // ─── Positions (FIFO-ish quantity aggregation) ─────────────────────────────
 // Ported as-is from the server route: SELL reduces quantity but does not
-// reduce totalCost, matching prior behavior exactly.
-export function computePositions(transactions: StoredTransaction[]): {
+// reduce totalCost, matching prior behavior exactly. currentPrice/currentValue/
+// unrealizedPnl stay null for any ticker missing from priceMap (outside the
+// scanner's tracked universe) rather than guessing.
+export function computePositions(
+  transactions: StoredTransaction[],
+  priceMap: Record<string, number> = {}
+): {
   positions: PortfolioPosition[];
   totalCost: number;
 } {
@@ -228,41 +254,85 @@ export function computePositions(transactions: StoredTransaction[]): {
 
   const positions: PortfolioPosition[] = Array.from(posMap.values())
     .filter((p) => p.totalQuantity > 0)
-    .map((p) => ({
-      ticker: p.ticker,
-      totalQuantity: p.totalQuantity,
-      avgBuyPrice: p.totalCost / p.totalQuantity,
-      totalCost: p.totalCost,
-      currentPrice: null,
-      currentValue: null,
-      unrealizedPnl: null,
-      unrealizedPnlPct: null,
-      firstBuyDate: p.firstBuyDate,
-      lastBuyDate: p.lastBuyDate,
-    }));
+    .map((p) => {
+      const currentPrice = priceMap[p.ticker] ?? null;
+      const currentValue = currentPrice != null ? currentPrice * p.totalQuantity : null;
+      const unrealizedPnl = currentValue != null ? currentValue - p.totalCost : null;
+      const unrealizedPnlPct =
+        unrealizedPnl != null && p.totalCost > 0 ? (unrealizedPnl / p.totalCost) * 100 : null;
+      return {
+        ticker: p.ticker,
+        totalQuantity: p.totalQuantity,
+        avgBuyPrice: p.totalCost / p.totalQuantity,
+        totalCost: p.totalCost,
+        currentPrice,
+        currentValue,
+        unrealizedPnl,
+        unrealizedPnlPct,
+        firstBuyDate: p.firstBuyDate,
+        lastBuyDate: p.lastBuyDate,
+      };
+    });
 
   const totalCost = positions.reduce((s, p) => s + p.totalCost, 0);
   return { positions, totalCost };
 }
 
-// ─── P&L history (cumulative invested capital by day) ──────────────────────
-export function computePnlHistory(transactions: StoredTransaction[]): PnlDataPoint[] {
+// ─── P&L history ────────────────────────────────────────────────────────────
+// realizedPnl is a running total using average-cost accounting: each SELL
+// realizes (sellPrice - avgCostAtTheTime) * quantitySold against whatever was
+// held for that ticker so far. unrealizedPnl at each date is what's still
+// held as of that date, marked at *today's* price from priceMap (there's no
+// historical price feed to value it at the price on that past date) minus
+// its cost basis — so the curve shows how paper gain/loss on shares
+// accumulated over time would look valued at today's market, not a true
+// day-by-day mark-to-market. Tickers missing from priceMap (outside the
+// scanner's tracked universe) are excluded from unrealizedPnl entirely
+// rather than being silently valued at 0.
+export function computePnlHistory(
+  transactions: StoredTransaction[],
+  priceMap: Record<string, number> = {}
+): PnlDataPoint[] {
   const sorted = [...transactions].sort((a, b) => a.tradeDate.localeCompare(b.tradeDate));
   if (sorted.length === 0) return [];
 
-  const byDate = new Map<string, number>();
-  let cumulative = 0;
+  const qtyByTicker = new Map<string, number>();
+  const costByTicker = new Map<string, number>();
+  let cumulativeRealizedPnl = 0;
+  const byDate = new Map<string, { realizedPnl: number; unrealizedPnl: number }>();
+
   for (const row of sorted) {
     const dateKey = row.tradeDate.slice(0, 10);
     const qty = parseFloat(row.quantity);
     const price = parseFloat(row.price);
-    if (row.transactionType === 'BUY') cumulative += qty * price;
-    byDate.set(dateKey, cumulative);
+
+    if (row.transactionType === 'BUY') {
+      qtyByTicker.set(row.ticker, (qtyByTicker.get(row.ticker) ?? 0) + qty);
+      costByTicker.set(row.ticker, (costByTicker.get(row.ticker) ?? 0) + qty * price);
+    } else {
+      const heldQty = qtyByTicker.get(row.ticker) ?? 0;
+      const heldCost = costByTicker.get(row.ticker) ?? 0;
+      const avgCost = heldQty > 0 ? heldCost / heldQty : 0;
+      const soldQty = Math.min(qty, heldQty);
+      cumulativeRealizedPnl += soldQty * (price - avgCost);
+      qtyByTicker.set(row.ticker, heldQty - soldQty);
+      costByTicker.set(row.ticker, heldCost - soldQty * avgCost);
+    }
+
+    let unrealizedPnl = 0;
+    for (const [ticker, heldQty] of qtyByTicker) {
+      if (heldQty <= 0) continue;
+      const currentPrice = priceMap[ticker];
+      if (currentPrice == null) continue;
+      unrealizedPnl += heldQty * currentPrice - (costByTicker.get(ticker) ?? 0);
+    }
+
+    byDate.set(dateKey, { realizedPnl: cumulativeRealizedPnl, unrealizedPnl });
   }
 
-  return Array.from(byDate.entries()).map(([date]) => ({
+  return Array.from(byDate.entries()).map(([date, v]) => ({
     date,
-    realizedPnl: 0, // will be calculated when sell transactions are tracked
-    unrealizedPnl: 0, // requires current prices — enriched by frontend from snapshot
+    realizedPnl: v.realizedPnl,
+    unrealizedPnl: v.unrealizedPnl,
   }));
 }

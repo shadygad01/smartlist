@@ -39,6 +39,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
+      - name: Restore live data from data branch
+        run: bash ci/restore_data.sh
+
       # ── Python: rebuild production snapshot ───────────────────────────────
       - name: Setup Python
         uses: actions/setup-python@v5

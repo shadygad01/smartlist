@@ -37,6 +37,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Restore live data from data branch
+        run: bash ci/restore_data.sh
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -53,15 +56,9 @@ jobs:
             --end=${{ github.event.inputs.end_date }} \
             ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
 
-      - name: Commit updated signal_history.json
+      - name: Persist updated signal_history.json to data branch
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add signal_history.json
-          git diff --staged --quiet || git commit -m "Add historical backtest signals [skip ci]"
-          git pull origin main --rebase || true
-          git push || true
+        run: bash ci/save_data.sh "Add historical backtest signals [skip ci]"
 
       - name: Backfill BQ + Features for new signals
         if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -75,15 +72,9 @@ jobs:
           PYTHONUNBUFFERED: "1"
         run: python backfill_signal_log_smc.py
 
-      - name: Commit research DB + signal_log
+      - name: Persist research DB + signal_log to data branch
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add -f egx_research.db signal_history.json signal_log.json 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "Backfill historical BQ + features + signal_log [skip ci]"
-          git pull origin main --rebase || true
-          git push || true
+        run: bash ci/save_data.sh "Backfill historical BQ + features + signal_log [skip ci]"
 
       - name: Summary
         run: |

@@ -40,6 +40,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
+      - name: Restore live data from data branch
+        run: bash ci/restore_data.sh
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -91,13 +94,9 @@ jobs:
           print(f"\nSummary: {valued} tickers valued, {companies} companies registered")
           PYEOF
 
-      - name: Commit valuation.db to main
+      - name: Persist valuation.db to data branch
         run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add -f valuation.db
-          git diff --staged --quiet || git commit -m "chore: IVE valuation refresh $(date -u +%Y-%m-%d) [skip ci]"
-          git push || true
+          bash ci/save_data.sh "chore: IVE valuation refresh $(date -u +%Y-%m-%d) [skip ci]"
 
       - name: Trigger dashboard rebuild with fresh valuation data
         uses: peter-evans/repository-dispatch@v3

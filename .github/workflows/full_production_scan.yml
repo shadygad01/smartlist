@@ -47,6 +47,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Restore live data from data branch
+        run: bash ci/restore_data.sh
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -322,28 +325,9 @@ jobs:
               print(f'Scan audit non-fatal: {e}')
           PYEOF
 
-      - name: Save core state to git
+      - name: Persist core state to data branch
         run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add open_positions.json positions_history.json scan_results.json \
-                  signal_history.json signal_log.json learned_weights.json \
-                  egx_research.db research_results.json \
-                  changed_symbols.json presentation_snapshot.json \
-                  production_decision_snapshot.json constitutional_fingerprint.json \
-                  architecture_fingerprint.json scan_manifest.json \
-                  consistency_report.json \
-                  heartbeat.json operations_state.json \
-                  scan_execution.db notification_delivery.db \
-                  scan_context.json mpi_snapshots.db decision_diff.json \
-                  universe_snapshot.db candidate_pool.db || true
-          git add -f valuation.db || true
-          git add operations/incidents.json operations/sla.json \
-                  operations/knowledge.json operations/sent_alerts.json || true
-          git add historical_data/historical_data/*.csv || true
-          git add audit/daily_validation/ || true
-          git diff --staged --quiet || git commit -m "Full scan: core state update [skip ci]"
-          git push || true
+          bash ci/save_data.sh "Full scan: core state update [skip ci]"
 
       - name: Upload database artifact
         uses: actions/upload-artifact@v4

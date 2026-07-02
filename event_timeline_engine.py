@@ -386,3 +386,77 @@ def backfill_from_constitutional_timeline(days: int = 60) -> dict:
         counts[NEAR_ENTRY] += 1
 
     return counts
+
+
+def sync_buy_signals_from_constitutional_timeline(days: int = 60) -> int:
+    """
+    Ensure every constitutional_opportunity_events (v1) row within `days` has a
+    matching BUY_SIGNAL row in event_timeline. Incremental — does not clear or
+    touch existing events (unlike backfill_from_constitutional_timeline).
+
+    constitutional_opportunity_events.db is the single source of truth for buy
+    signals; event_timeline.db is a display-only activity feed fed by a separate
+    inline log_buy_signal() call in continuous_scan(). That call only fires when
+    detect_signal_changes() reports a change in that exact run — a signal
+    registered through any other path (e.g. the self-heal in
+    build_production_decision_snapshot.py, or a prior run whose local
+    event_timeline.db was never persisted) never reaches the feed, and the two
+    silently diverge. Call this wherever the snapshot is (re)built so the feed
+    self-heals regardless of which path actually persisted the signal.
+    """
+    import sqlite3 as _sqlite3
+    from datetime import date as _date, timedelta as _td
+
+    _COE_DB = BASE / "constitutional_opportunity_events.db"
+    if not _COE_DB.exists():
+        return 0
+
+    cutoff = (_date.today() - _td(days=days)).isoformat()
+    _c = _sqlite3.connect(str(_COE_DB))
+    _c.row_factory = _sqlite3.Row
+    try:
+        rows = _c.execute(
+            "SELECT ticker, event_date, constitutional_entry_price, "
+            "constitutional_r2, constitutional_score FROM constitutional_opportunity_events "
+            "WHERE event_date >= ? AND (signal_version='v1' OR signal_version IS NULL) "
+            "ORDER BY event_date ASC, ticker ASC",
+            (cutoff,),
+        ).fetchall()
+    finally:
+        _c.close()
+
+    if not rows:
+        return 0
+
+    _init_db()
+    conn = _connect()
+    try:
+        existing = {
+            (r["ticker"], (r["timestamp"] or "")[:10])
+            for r in conn.execute(
+                "SELECT ticker, timestamp FROM event_timeline WHERE event_type=?", (BUY_SIGNAL,)
+            ).fetchall()
+        }
+    finally:
+        conn.close()
+
+    inserted = 0
+    for ev in rows:
+        ticker = ev["ticker"]
+        day    = ev["event_date"]
+        if (ticker, day) in existing:
+            continue
+        ep = ev["constitutional_entry_price"]
+        r2 = ev["constitutional_r2"]
+        sc = ev["constitutional_score"]
+        ep_str = f"BUY LIMIT @ {ep:.2f} EGP — " if ep else ""
+        desc = f"{ep_str}Constitutional model confirmed"
+        if r2 is not None:
+            desc += f" (R²={r2:.1f}, Score={sc:.0f})" if sc is not None else f" (R²={r2:.1f})"
+        log_buy_signal(
+            ticker=ticker, description=desc, entry_price=ep, r2=r2, score=sc,
+            timestamp=f"{day}T14:30:00+03:00",
+        )
+        inserted += 1
+
+    return inserted

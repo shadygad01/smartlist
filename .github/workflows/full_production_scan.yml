@@ -268,6 +268,9 @@ jobs:
       - name: Event chain integrity (signal → timeline → presentation)
         run: python3 audit/assert_event_chain_integrity.py
 
+      - name: Event timeline consistency (buy signals match dashboard EVENT TIMELINE)
+        run: python3 audit/assert_event_timeline_consistency.py
+
       - name: Data freshness (no stale sources)
         run: python3 audit/assert_data_freshness.py
 

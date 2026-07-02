@@ -93,6 +93,10 @@ jobs:
         run: python3 audit/assert_price_consistency.py
         continue-on-error: true
 
+      - name: Event timeline consistency (buy signals match dashboard EVENT TIMELINE)
+        run: python3 audit/assert_event_timeline_consistency.py
+        continue-on-error: true
+
       # ── Node.js: build Next.js static export ──────────────────────────────
       - name: Setup Node.js
         uses: actions/setup-node@v4

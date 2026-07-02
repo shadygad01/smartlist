@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { Upload, FileText, Image, CheckCircle, XCircle, AlertTriangle, ArrowLeft, TrendingUp, Package, Calendar, DollarSign, ScanText } from 'lucide-react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { createWorker } from 'tesseract.js';
+import { apiUrl } from '@/lib/apiBase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PortfolioUpload {
@@ -152,9 +153,9 @@ export default function PortfolioPage() {
   const loadData = useCallback(async () => {
     try {
       const [uploadsRes, txRes, posRes] = await Promise.all([
-        fetch('/api/portfolio/uploads'),
-        fetch('/api/portfolio/transactions'),
-        fetch('/api/portfolio/positions'),
+        fetch(apiUrl('/api/portfolio/uploads')),
+        fetch(apiUrl('/api/portfolio/transactions')),
+        fetch(apiUrl('/api/portfolio/positions')),
       ]);
       if (uploadsRes.ok) setUploads(await uploadsRes.json());
       if (txRes.ok) setTransactions(await txRes.json());
@@ -197,7 +198,7 @@ export default function PortfolioPage() {
         }
 
         // 2. Request presigned URL
-        const urlRes = await fetch('/api/storage/uploads/request-url', {
+        const urlRes = await fetch(apiUrl('/api/storage/uploads/request-url'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
@@ -216,7 +217,7 @@ export default function PortfolioPage() {
 
         // 4. Parse the document (send extractedText for images)
         setUploadStatus('جاري تحليل الصفقات…');
-        const parseRes = await fetch('/api/portfolio/uploads', {
+        const parseRes = await fetch(apiUrl('/api/portfolio/uploads'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

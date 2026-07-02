@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import { Link } from 'wouter';
+import { apiUrl } from '@/lib/apiBase';
 
 interface PnlDataPoint {
   date: string;
@@ -59,8 +60,8 @@ export default function PortfolioMiniChart() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/portfolio/pnl-history').then((r) => r.ok ? r.json() : []),
-      fetch('/api/portfolio/positions').then((r) => r.ok ? r.json() : { positions: [], totalCost: 0 }),
+      fetch(apiUrl('/api/portfolio/pnl-history')).then((r) => r.ok ? r.json() : []),
+      fetch(apiUrl('/api/portfolio/positions')).then((r) => r.ok ? r.json() : { positions: [], totalCost: 0 }),
     ])
       .then(([hist, posData]) => {
         setPoints(hist ?? []);

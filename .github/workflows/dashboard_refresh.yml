@@ -122,6 +122,12 @@ jobs:
           # basePath is /smartlist — snapshot must be fetched relative to that path
           VITE_SNAPSHOT_URL: /smartlist/presentation_snapshot.json
           BASE_PATH: /smartlist/
+          # Public URL of the deployed api-server (Portfolio Tracker backend), e.g.
+          # https://<repl-name>.replit.app — set via repo Settings > Secrets and
+          # variables > Actions > Variables > PORTFOLIO_API_BASE_URL. Empty until
+          # set, so the Portfolio widget/page just shows its empty state, same as
+          # today, until a real deployment URL is added.
+          VITE_API_BASE_URL: ${{ vars.PORTFOLIO_API_BASE_URL }}
           PORT: '3000'
 
       # ── Deploy ────────────────────────────────────────────────────────────

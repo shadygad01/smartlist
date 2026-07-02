@@ -39,6 +39,8 @@ const COMPANY_TICKER_MAP: Record<string, string> = {
   'CANAL SHIPPING AGENCIES': 'CSAG',
   'TALAAT MOUSTAFA GROUP': 'TMGH',
   'TALAAT MOUSTAFA': 'TMGH',
+  'EGYPTIAN INTERNATIONAL PHARMACEUTICALS': 'PHAR',
+  'EGYPTIAN INTERNATIONAL PHARMACEUTICAL': 'PHAR',
 };
 
 function normalizeCompanyKey(name: string): string {
@@ -163,6 +165,11 @@ function resolveHeaderTicker(text: string): string | null {
   const key = normalizeCompanyKey(head);
   for (const [name, ticker] of Object.entries(COMPANY_TICKER_MAP)) {
     if (key.includes(name)) return ticker;
+    // The app's own header truncates long company names with "…", so the
+    // OCR'd text may only contain a prefix of the full name — match on
+    // that prefix too rather than requiring the whole name.
+    const prefixLen = Math.min(name.length, 15);
+    if (prefixLen >= 8 && key.includes(name.slice(0, prefixLen))) return ticker;
   }
   const candidates = head.match(/\b[A-Z]{2,6}\b/g) ?? [];
   for (const c of candidates) {

@@ -13,10 +13,12 @@ import {
   completeUpload,
   failUpload,
   computePositions,
+  buildPriceMapFromSnapshot,
   type StoredUpload as PortfolioUpload,
   type StoredTransaction as PortfolioTransaction,
   type PortfolioPosition,
 } from '@/lib/portfolioStore';
+import { useSnapshot } from '@/providers/SnapshotProvider';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 async function sha256Hex(buffer: ArrayBuffer): Promise<string> {
@@ -118,6 +120,7 @@ function DropZone({ onFiles }: { onFiles: (files: File[]) => void }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function PortfolioPage() {
+  const { snapshot } = useSnapshot();
   const [uploads, setUploads] = useState<PortfolioUpload[]>([]);
   const [transactions, setTransactions] = useState<PortfolioTransaction[]>([]);
   const [positions, setPositions] = useState<PortfolioPosition[]>([]);
@@ -135,8 +138,9 @@ export default function PortfolioPage() {
     setUploads(getUploads());
     const txs = getTransactions();
     setTransactions(txs);
-    setPositions(computePositions(txs).positions);
-  }, []);
+    const priceMap = buildPriceMapFromSnapshot(snapshot?.universe_snapshot);
+    setPositions(computePositions(txs, priceMap).positions);
+  }, [snapshot]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -225,6 +229,9 @@ export default function PortfolioPage() {
 
   const totalCost = positions.reduce((s, p) => s + p.totalCost, 0);
   const totalQty = positions.reduce((s, p) => s + p.totalQuantity, 0);
+  const pricedPositions = positions.filter((p) => p.unrealizedPnl != null);
+  const totalUnrealizedPnl =
+    pricedPositions.length > 0 ? pricedPositions.reduce((s, p) => s + (p.unrealizedPnl ?? 0), 0) : null;
 
   return (
     <div style={{ backgroundColor: 'var(--background)', minHeight: '100vh' }}>
@@ -257,11 +264,17 @@ export default function PortfolioPage() {
           </div>
 
           {/* Summary KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {[
               { label: 'POSITIONS', value: positions.length, color: '#10b981', icon: <Package size={14} /> },
               { label: 'TOTAL COST', value: totalCost > 0 ? `${fmt(totalCost)} EGP` : '—', color: '#3b82f6', icon: <DollarSign size={14} /> },
               { label: 'TOTAL SHARES', value: totalQty > 0 ? fmt(totalQty, 0) : '—', color: '#f59e0b', icon: <TrendingUp size={14} /> },
+              {
+                label: 'UNREALIZED P&L',
+                value: totalUnrealizedPnl != null ? `${totalUnrealizedPnl >= 0 ? '+' : ''}${fmt(totalUnrealizedPnl)} EGP` : '—',
+                color: totalUnrealizedPnl == null ? '#6b7280' : totalUnrealizedPnl >= 0 ? '#10b981' : '#ef4444',
+                icon: <TrendingUp size={14} />,
+              },
               { label: 'UPLOADS', value: uploads.length, color: '#9c6fff', icon: <FileText size={14} /> },
             ].map((kpi) => (
               <div
@@ -352,7 +365,7 @@ export default function PortfolioPage() {
                 <table className="w-full">
                   <thead>
                     <tr style={{ backgroundColor: '#0e1120', borderBottom: '1px solid #252645' }}>
-                      {['TICKER', 'First Buy', 'Last Buy', 'Quantity', 'Avg Price', 'Total Cost'].map((h) => (
+                      {['TICKER', 'First Buy', 'Last Buy', 'Quantity', 'Avg Price', 'Total Cost', 'Current Price', 'Unrealized P&L'].map((h) => (
                         <th
                           key={h}
                           className="font-mono text-left px-4 py-2"
@@ -391,6 +404,14 @@ export default function PortfolioPage() {
                         </td>
                         <td className="px-4 py-3 font-mono" style={{ fontSize: '12px', color: '#3b82f6' }}>
                           {fmt(pos.totalCost)} EGP
+                        </td>
+                        <td className="px-4 py-3 font-mono" style={{ fontSize: '12px', color: '#c4c9df' }}>
+                          {pos.currentPrice != null ? `${fmt(pos.currentPrice)} EGP` : '—'}
+                        </td>
+                        <td className="px-4 py-3 font-mono" style={{ fontSize: '12px', color: pos.unrealizedPnl == null ? '#4a5070' : pos.unrealizedPnl >= 0 ? '#10b981' : '#ef4444' }}>
+                          {pos.unrealizedPnl != null
+                            ? `${pos.unrealizedPnl >= 0 ? '+' : ''}${fmt(pos.unrealizedPnl)} EGP (${pos.unrealizedPnlPct! >= 0 ? '+' : ''}${pos.unrealizedPnlPct!.toFixed(1)}%)`
+                            : '—'}
                         </td>
                       </tr>
                     ))}

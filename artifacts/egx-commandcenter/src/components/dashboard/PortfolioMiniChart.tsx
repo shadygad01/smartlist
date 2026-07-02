@@ -10,11 +10,19 @@ import {
 } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import { Link } from 'wouter';
-import { getTransactions, computePositions, computePnlHistory, type PnlDataPoint } from '@/lib/portfolioStore';
+import {
+  getTransactions,
+  computePositions,
+  computePnlHistory,
+  buildPriceMapFromSnapshot,
+  type PnlDataPoint,
+} from '@/lib/portfolioStore';
+import { useSnapshot } from '@/providers/SnapshotProvider';
 
 interface PortfolioSummary {
   positionCount: number;
   totalCost: number;
+  totalUnrealizedPnl: number | null;
 }
 
 function fmt(n: number) {
@@ -41,17 +49,24 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function PortfolioMiniChart() {
+  const { snapshot } = useSnapshot();
   const [points, setPoints] = useState<PnlDataPoint[]>([]);
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const transactions = getTransactions();
-    setPoints(computePnlHistory(transactions));
-    const { positions, totalCost } = computePositions(transactions);
-    setSummary({ positionCount: positions.length, totalCost });
+    const priceMap = buildPriceMapFromSnapshot(snapshot?.universe_snapshot);
+    setPoints(computePnlHistory(transactions, priceMap));
+    const { positions, totalCost } = computePositions(transactions, priceMap);
+    const pricedPositions = positions.filter((p) => p.unrealizedPnl != null);
+    const totalUnrealizedPnl =
+      pricedPositions.length > 0
+        ? pricedPositions.reduce((s, p) => s + (p.unrealizedPnl ?? 0), 0)
+        : null;
+    setSummary({ positionCount: positions.length, totalCost, totalUnrealizedPnl });
     setLoading(false);
-  }, []);
+  }, [snapshot]);
 
   const hasData = points.length > 0;
 
@@ -93,6 +108,15 @@ export default function PortfolioMiniChart() {
               {fmt(summary.totalCost)} EGP
             </span>
           )}
+          {summary.totalUnrealizedPnl != null && (() => {
+            const up = summary.totalUnrealizedPnl >= 0;
+            const color = up ? '#10b981' : '#ef4444';
+            return (
+              <span className="font-mono px-2 py-0.5 rounded" style={{ fontSize: '10px', color, backgroundColor: `${color}14`, border: `1px solid ${color}33` }}>
+                {up ? '+' : ''}{fmt(summary.totalUnrealizedPnl)} EGP
+              </span>
+            );
+          })()}
         </div>
       )}
 

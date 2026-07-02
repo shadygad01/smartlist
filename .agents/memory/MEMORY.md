@@ -1,3 +1,4 @@
 - [EGX snapshot data flow](egx-snapshot.md) — dashboard is purely read-only; all data from presentation_snapshot.json, no backend API needed.
 - [Orval codegen duplicate exports fix](orval-codegen-fix.md) — orval regenerates index.ts with both generated/api and generated/types causing TS2308; fix via post-codegen script in api-spec/package.json.
 - [pdf-parse esbuild externalize](pdf-parse-esbuild.md) — pdf-parse v2 ESM has no default export; must externalize in build.mjs and load via createRequire in route files.
+- [Scanner data-branch persistence](scanner-data-branch.md) — CI runtime artifacts live on the `data` branch, never main; restore before a run, save after. Never re-point data commits at main.

@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="theme-color" content="#161b22">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SMC">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon.svg">
+<title>EGX Constitutional — Signal Score Heatmap</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;min-height:100vh}
+
+/* ── Header ───────────────────────────────── */
+.header{background:#161b22;border-bottom:1px solid #30363d;padding:14px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.header h1{font-size:17px;font-weight:600;color:#e6edf3;flex:1 0 auto}
+.badge{background:#21262d;border:1px solid #30363d;border-radius:6px;padding:3px 10px;font-size:11px;color:#8b949e;white-space:nowrap}
+.badge.green{border-color:#238636;color:#3fb950}
+.badge.yellow{border-color:#9e6a03;color:#d29922}
+.badge.blue{border-color:#1f6feb;color:#58a6ff}
+.badge.red{border-color:#da3633;color:#f85149}
+
+/* ── Run-scan button ──────────────────────── */
+.btn-scan{background:#1f6feb;border:1px solid #388bfd;border-radius:6px;padding:5px 13px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn-scan:hover{background:#388bfd}
+.btn-scan:disabled{opacity:.7;cursor:default}
+.btn-scan.ok{background:#238636;border-color:#2ea043}
+.btn-scan.err{background:#da3633;border-color:#b91c1c}
+.btn-key{background:none;border:1px solid #30363d;border-radius:6px;padding:5px 8px;font-size:13px;color:#8b949e;cursor:pointer;transition:border-color .15s;white-space:nowrap}
+.btn-key:hover{border-color:#8b949e;color:#c9d1d9}
+.btn-key.saved{border-color:#238636;color:#3fb950}
+
+/* ── Token modal ──────────────────────────── */
+#token-modal{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:16px}
+#token-modal.open{display:flex}
+.modal-box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:20px;width:100%;max-width:360px;box-shadow:0 16px 40px rgba(0,0,0,.8)}
+.modal-title{font-size:14px;font-weight:700;color:#e6edf3;margin-bottom:8px}
+.modal-desc{font-size:11px;color:#8b949e;margin-bottom:14px;line-height:1.7}
+.modal-inp{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:9px 11px;font-size:13px;color:#e6edf3;font-family:monospace;box-sizing:border-box;-webkit-appearance:none;appearance:none}
+.modal-inp:focus{outline:none;border-color:#58a6ff;box-shadow:0 0 0 2px rgba(31,111,235,.25)}
+.modal-footer{display:flex;gap:8px;margin-top:14px;align-items:center}
+.modal-btn{border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;-webkit-appearance:none}
+.modal-save{background:#1f6feb;color:#fff}
+.modal-cancel{background:#21262d;color:#c9d1d9;border:1px solid #30363d}
+.modal-clear{background:none;border:none;color:#f85149;font-size:11px;padding:0;text-decoration:underline;cursor:pointer;margin-right:auto}
+
+/* ── Stats bar ────────────────────────────── */
+.stats{display:flex;gap:1px;background:#30363d;border-bottom:1px solid #30363d}
+.stat{flex:1;background:#161b22;padding:10px 16px;text-align:center;min-width:0}
+.stat .val{font-size:16px;font-weight:700;color:#e6edf3;line-height:1}
+.stat .val.pos{color:#3fb950}
+.stat .val.neg{color:#f85149}
+.stat .lbl{font-size:10px;color:#8b949e;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── Controls ─────────────────────────────── */
+.controls{padding:10px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#0d1117;border-bottom:1px solid #21262d}
+@keyframes flashChip{0%{background:#388bfd;transform:scale(1.08)}100%{background:#1f2d3d;transform:scale(1)}}
+.range-flash{animation:flashChip .4s ease-out}
+.ctrl-label{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.btn-group{display:flex;gap:3px}
+.btn{background:#21262d;border:1px solid #30363d;border-radius:6px;padding:4px 11px;font-size:12px;color:#c9d1d9;cursor:pointer;transition:all .12s}
+.btn:hover{background:#30363d;border-color:#8b949e}
+.btn.active{background:#238636;border-color:#2ea043;color:#fff}
+.btn.active.ret{background:#1f6feb;border-color:#388bfd}
+.btn.active.r1c{background:#9e6a03;border-color:#d29922}
+
+/* ── Legend ───────────────────────────────── */
+.legend{padding:7px 24px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #21262d}
+.legend-text{font-size:10px;color:#6e7681;white-space:nowrap}
+.leg-cells{display:flex;gap:2px;align-items:center}
+.leg-cell{width:18px;height:12px;border-radius:2px}
+.leg-sep{width:12px;height:1px;background:#30363d;margin:0 4px}
+.ind{display:flex;align-items:center;gap:4px;font-size:10px;color:#8b949e;margin-left:8px}
+.ind-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pend-dot{background:#d29922}
+.pos-dot{background:#f78166}
+
+/* ── Heatmap ──────────────────────────────── */
+.hm-outer{overflow-x:auto;padding:20px 24px 12px}
+.hm-table{border-collapse:collapse;white-space:nowrap}
+.sector-row td{padding:10px 6px 3px;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#6e7681;font-weight:600;border:none!important}
+.hm-range-title td{padding:6px 6px 2px;font-size:10px;color:#444d56;font-weight:500;border:none!important}
+.stock-name{position:sticky;left:0;z-index:2;background:#0d1117;padding:0 8px 0 0;text-align:right;font-size:11px;font-weight:500;width:82px;min-width:82px;cursor:default}
+.stock-name .sn-ticker{display:block}
+.stock-name .sn-badge{font-size:9px;color:#6e7681}
+.sn-buy{color:#3fb950!important}
+.sn-open{color:#f78166!important}
+.sn-pend{color:#d29922!important}
+.sn-sig{color:#3fb950!important}
+
+.hm-cell{height:25px;border-radius:2px;cursor:pointer;position:relative;transition:transform .1s,outline .1s}
+.hm-cell:hover{transform:scale(1.5);z-index:10;outline:2px solid #e6edf3}
+.pos-marker{position:absolute;bottom:2px;right:1px;width:4px;height:4px;border-radius:50%;background:#f78166}
+.pend-marker{position:absolute;bottom:2px;right:1px;width:4px;height:4px;border-radius:50%;background:#d29922}
+
+/* ── Today column ─────────────────────────── */
+.today-sep{width:6px;position:sticky;left:82px;z-index:2;background:#0d1117}
+.today-col{position:sticky;left:88px;z-index:2;background:#0d1117;padding:2px 0}
+.today-cell{width:70px;min-width:70px;height:25px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700;transition:transform .1s;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap}
+.today-cell:hover{transform:scale(1.06);z-index:10;outline:2px solid #e6edf3}
+.date-header{font-size:9px;color:#6e7681;text-align:center;padding:0;transform:rotate(-55deg) translateX(3px);transform-origin:center bottom;height:46px;vertical-align:bottom;width:17px}
+.today-header{font-size:9px;color:#3fb950;font-weight:700;text-align:center;vertical-align:bottom;padding-bottom:4px;letter-spacing:.03em;position:sticky;left:88px;z-index:2;background:#0d1117}
+
+/* ── Tooltip ──────────────────────────────── */
+#tooltip{position:fixed;pointer-events:none;background:#1c2128;border:1px solid #30363d;border-radius:8px;padding:10px 13px;font-size:12px;line-height:1.5;z-index:9999;min-width:170px;max-width:260px;box-shadow:0 8px 24px #0009;display:none}
+.tt-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.tt-ticker{font-size:14px;font-weight:700;color:#e6edf3}
+.tt-date{font-size:10px;color:#8b949e;text-align:right}
+.tt-score-big{font-size:26px;font-weight:800;line-height:1}
+.tt-score-lbl{font-size:10px;color:#8b949e;margin-bottom:6px}
+.tt-divider{border:none;border-top:1px solid #30363d;margin:6px 0}
+.tt-row{display:flex;justify-content:space-between;gap:12px;font-size:11px}
+.tt-lbl{color:#8b949e}
+.tt-val{color:#e6edf3;font-weight:600;text-align:right}
+.tt-tag{font-size:10px;margin-top:5px;padding:2px 7px;border-radius:4px;display:inline-block}
+.tt-open{background:#21262d;color:#f78166;border:1px solid #f7816633}
+.tt-pend{background:#21262d;color:#d29922;border:1px solid #d2992233}
+.tt-peak{background:#21262d;color:#58a6ff;border:1px solid #388bfd33}
+
+/* ── Bottom panels ────────────────────────── */
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#30363d;border-top:1px solid #30363d}
+.panel{background:#0d1117;padding:20px 24px}
+.panel-title{font-size:11px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.panel-title .cnt{background:#21262d;border:1px solid #30363d;border-radius:10px;padding:1px 8px;font-size:10px;color:#c9d1d9;font-weight:700}
+
+/* Position cards */
+.pos-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.pos-card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:11px 14px;cursor:default;transition:border-color .15s}
+.pos-card:hover{border-color:#58a6ff44}
+.pc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.pc-ticker{font-size:13px;font-weight:700;color:#e6edf3}
+.pc-ret{font-size:14px;font-weight:800}
+.pc-ret.pos{color:#3fb950}
+.pc-ret.neg{color:#f85149}
+.pc-meta{font-size:10px;color:#8b949e;display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.pc-meta span{white-space:nowrap}
+.pc-fib{display:flex;gap:2px;margin-top:4px}
+.pc-fib-cell{flex:1;height:5px;border-radius:1px}
+
+/* Pending cards */
+.pend-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.pend-card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 13px}
+.pend-card:hover{border-color:#d2992233}
+.pend-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.pend-ticker{font-size:13px;font-weight:700;color:#e6edf3}
+.pend-score{font-size:16px;font-weight:800}
+.pend-meta{font-size:10px;color:#8b949e}
+.empty-state{color:#6e7681;font-size:12px;font-style:italic;padding:8px 0}
+
+@media(max-width:700px){
+  .panels{grid-template-columns:1fr}
+  .stats .lbl{font-size:9px}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────── -->
+<div class="header">
+  <h1>EGX Constitutional — Signal Score Heatmap</h1>
+  <span class="badge green">Generated: 2026-07-02 15:31 Cairo</span>
+  <span class="badge yellow">0 Open Positions</span>
+  <span class="badge">EGX Constitutional · Cairo Time</span>
+  <button id="btn-install" style="display:none;align-items:center;gap:6px;background:#238636;border:1px solid #2ea043;border-radius:6px;padding:5px 12px;font-size:12px;color:#fff;cursor:pointer">
+    ＋ Install App
+  </button>
+  <button id="btn-scan" class="btn-scan" onclick="triggerScan()" title="Run manual scan now">
+    ⟳ Run Scan
+  </button>
+  <button id="btn-key" class="btn-key" onclick="openTokenModal(false)" title="Manage GitHub token">🔑</button>
+</div>
+
+<!-- ── Stats bar ───────────────────────────────────────────────────── -->
+<div class="stats">
+  <div class="stat">
+    <div class="val" id="pend-stat-val">0</div>
+    <div class="lbl">Pending Signals</div>
+  </div>
+  <div class="stat">
+    <div class="val">0</div>
+    <div class="lbl">Open Positions</div>
+  </div>
+  <div class="stat">
+    <div class="val pos" id="avg-ret-val">+0%</div>
+    <div class="lbl">Avg Return</div>
+  </div>
+  <div class="stat">
+    <div class="val pos" id="best-ret-val">+0%</div>
+    <div class="lbl">Best Return (—)</div>
+  </div>
+</div>
+
+<!-- ── Controls ────────────────────────────────────────────────────── -->
+<div class="controls">
+  <span class="ctrl-label">Range</span>
+  <div class="btn-group">
+    <button class="btn" id="btn-all" onclick="setRange('all')">All</button>
+    <button class="btn active" id="btn-90" onclick="setRange(90)">90d</button>
+    <button class="btn" id="btn-60" onclick="setRange(60)">60d</button>
+    <button class="btn" id="btn-30" onclick="setRange(30)">30d</button>
+  </div>
+  <span id="days-count" style="font-size:10px;color:#6e7681;margin-left:4px"></span>
+  <span id="range-label" style="font-size:11px;font-weight:600;color:#58a6ff;background:#1f2d3d;border:1px solid #1f6feb;border-radius:6px;padding:3px 10px;margin-left:6px"></span>
+  <span class="ctrl-label" style="margin-left:8px">View</span>
+  <div class="btn-group">
+    <button class="btn active" id="view-score"  onclick="setView('score')">Score</button>
+    <button class="btn ret"    id="view-return" onclick="setView('return')">Return %</button>
+  </div>
+</div>
+
+<!-- ── Legend ──────────────────────────────────────────────────────── -->
+<div class="legend" id="legend-bar">
+  <span class="legend-text" id="leg-label">Score:</span>
+  <div class="leg-cells" id="leg-cells"></div>
+  <span class="legend-text" id="leg-range">35 → 100</span>
+  <div class="leg-sep"></div>
+  <div class="ind"><div class="ind-dot pos-dot"></div><span>Open Position</span></div>
+  <div class="ind"><div class="ind-dot pend-dot"></div><span>Pending Signal</span></div>
+</div>
+
+<!-- ── Heatmap ─────────────────────────────────────────────────────── -->
+<div class="hm-outer">
+  <table class="hm-table" id="hm-table"></table>
+</div>
+
+<!-- ── Bottom panels ───────────────────────────────────────────────── -->
+<div class="panels">
+  <div class="panel">
+    <div class="panel-title">Pending Signals <span class="cnt" id="pend-cnt">0</span></div>
+    <div class="pend-cards" id="pend-cards"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Open Positions <span class="cnt" id="op-cnt">0</span></div>
+    <div class="pos-cards" id="pos-cards"></div>
+  </div>
+</div>
+
+<!-- ── Tooltip ─────────────────────────────────────────────────────── -->
+<div id="tooltip"></div>
+
+<!-- ── Token modal ─────────────────────────────────────────────────── -->
+<div id="token-modal" onclick="if(event.target===this)closeTokenModal()">
+  <div class="modal-box">
+    <div class="modal-title">🔑 GitHub Access Token</div>
+    <div class="modal-desc">
+      GitHub → Settings → Developer Settings<br>
+      → Personal Access Tokens → Fine-grained<br>
+      Permission needed: <strong style="color:#c9d1d9">Actions (Read &amp; Write)</strong>
+    </div>
+    <div id="token-error" style="display:none;color:#f85149;font-size:11px;margin-bottom:10px;padding:6px 10px;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);border-radius:6px">
+      ✕ Token rejected (401/403) — paste a new valid token below
+    </div>
+    <input id="token-inp" class="modal-inp" type="password"
+           placeholder="ghp_xxxxxxxxxxxxxxxx"
+           autocomplete="off" autocorrect="off" spellcheck="false"
+           autocapitalize="none">
+    <div class="modal-footer">
+      <button class="modal-btn modal-clear" id="modal-clear-btn" onclick="clearToken()">Clear saved token</button>
+      <button class="modal-btn modal-cancel" onclick="closeTokenModal()">Cancel</button>
+      <button class="modal-btn modal-save" onclick="saveToken()">Save &amp; Run</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Embedded data ────────────────────────────────────────────────────────
+const HISTORY   = {};
+const TODAY_SC  = {};
+const ALL_DATES = [];
+const OPEN_POS  = new Set([]);
+const STRONG_BUY = new Set([]);
+const STRONG_BUY_LIST = [];
+const BUY_MAP   = Object.fromEntries(STRONG_BUY_LIST.map(b => [b.ticker, b]));
+const PENDING   = new Set([]);
+const POS_DATA  = {};
+const PEAK      = {};
+const SECTORS   = [["Real Estate",["TMGH.CA","EMFD.CA","PHDC.CA","ORHD.CA","HELI.CA"]],["Industrial",["EAST.CA","ABUK.CA","ORAS.CA","EFID.CA","HRHO.CA","JUFO.CA","ARCC.CA","ORWE.CA","CCAP.CA"]],["Healthcare",["MCQE.CA","ISPH.CA","RMDA.CA"]],["Finance/Tech",["FWRY.CA","EFIH.CA","RAYA.CA","BTFH.CA"]],["Banking",["COMI.CA","EGAL.CA","ADIB.CA"]],["Telecom/Auto",["ETEL.CA","GBCO.CA","OIH.CA"]]];
+const PENDING_LIST = [];
+const PEND_MAP  = Object.fromEntries(PENDING_LIST.map(p => [p.ticker, p]));
+const TODAY     = "2026-07-02";
+
+let currentRange = 90;
+let currentView  = 'score';
+
+// ── Color helpers ─────────────────────────────────────────────────────────
+function scoreColor(v) {
+    if (!v || v < 35) return '#1c2128';
+    const t = Math.min((v - 35) / 65, 1);
+    return `rgb(${r(27,64,t)},${r(58,210,t)},${r(46,100,t)})`;
+}
+function r1Color(v) {
+    if (!v || v < 12) return '#1c2128';
+    const t = Math.min((v - 12) / 20, 1);
+    return `rgb(${r(80,220,t)},${r(55,160,t)},${r(15,40,t)})`;
+}
+function returnColor(pct) {
+    if (pct === null || pct === undefined) return '#1c2128';
+    if (pct >= 0) {
+        const t = Math.min(pct / 100, 1);
+        return `rgb(${r(27,64,t)},${r(58,210,t)},${r(46,100,t)})`;
+    }
+    const t = Math.min(-pct / 30, 1);
+    return `rgb(${r(80,220,t)},${r(30,40,t)},${r(30,40,t)})`;
+}
+function r(a,b,t) { return Math.round(a + t*(b-a)); }
+function darkText(t) { return t > 0.6 ? '#0d1117' : '#8b949e'; }
+function scoreTextColor(v) { return darkText(Math.min((v-35)/65,1)); }
+function retTextColor(pct) {
+    if (pct >= 0) return darkText(Math.min(pct/100,1));
+    return darkText(Math.min(-pct/30,1));
+}
+
+// ── Current view color ────────────────────────────────────────────────────
+function cellColor(stock, entry, dateStr) {
+    if (!entry) return '#1c2128';
+    if (currentView === 'score')  return scoreColor(entry.score);
+    if (currentView === 'r1')     return r1Color(entry.r1);
+    // return view
+    const pd = POS_DATA[stock];
+    if (!pd) return '#1c2128';
+    if (dateStr < pd.entry_date) return '#1c2128';
+    return returnColor((entry.price - pd.entry_price) / pd.entry_price * 100);
+}
+function todayColor(stock) {
+    const td = TODAY_SC[stock] || {};
+    if (currentView === 'score')  return scoreColor(td.score);
+    if (currentView === 'r1')     return r1Color(td.r1);
+    const pd = POS_DATA[stock];
+    if (!pd) return '#1c2128';
+    return returnColor(pd.return_pct);
+}
+function todayLabel(stock) {
+    const td = TODAY_SC[stock] || {};
+    if (currentView === 'score')  return td.score || '—';
+    if (currentView === 'r1')     return td.r1 ? Math.round(Math.min(td.r1/30,1)*100)+'%' : '—';
+    const pd = POS_DATA[stock];
+    if (!pd) return '—';
+    return (pd.return_pct >= 0 ? '+' : '') + pd.return_pct + '%';
+}
+function todayLabelColor(stock) {
+    const td = TODAY_SC[stock] || {};
+    if (currentView === 'score') {
+        const s = td.score || 0;
+        return s >= 35 ? scoreTextColor(s) : '#484f58';
+    }
+    if (currentView === 'r1') {
+        const rv = td.r1 || 0;
+        return rv >= 12 ? darkText(Math.min((rv-12)/20,1)) : '#484f58';
+    }
+    const pd = POS_DATA[stock];
+    if (!pd) return '#484f58';
+    return retTextColor(pd.return_pct);
+}
+
+// ── Date filter ───────────────────────────────────────────────────────────
+function filteredDates() {
+    if (currentRange === 'all') return ALL_DATES;
+    const d = new Date(TODAY);
+    d.setDate(d.getDate() - currentRange);
+    const cut = d.toISOString().slice(0,10);
+    return ALL_DATES.filter(x => x >= cut);
+}
+
+// ── Legend ────────────────────────────────────────────────────────────────
+function buildLegend() {
+    const cells = document.getElementById('leg-cells');
+    const lbl   = document.getElementById('leg-label');
+    const rng   = document.getElementById('leg-range');
+    cells.innerHTML = '';
+    let steps, colorFn, label, range;
+    if (currentView === 'score') {
+        steps = [0,35,45,55,65,75,85,95]; colorFn = v => v===0?'#1c2128':scoreColor(v);
+        label = 'Score:'; range = '35 → 100';
+    } else if (currentView === 'r1') {
+        steps = [0,12,16,20,24,28]; colorFn = v => v===0?'#1c2128':r1Color(v);
+        label = 'R1:'; range = '40% → 100%';
+    } else {
+        steps = [-30,-20,-10,0,10,25,50,80]; colorFn = v => v===0?'#21262d':returnColor(v);
+        label = 'Return:'; range = '-30% → +80%';
+    }
+    lbl.textContent = label; rng.textContent = range;
+    steps.forEach(v => {
+        const d = document.createElement('div');
+        d.className = 'leg-cell';
+        d.style.background = colorFn(v);
+        d.title = currentView==='return' ? (v>0?'+':'')+v+'%' : (v===0?'No data':'≥'+v);
+        cells.appendChild(d);
+    });
+}
+
+// ── Dynamic cell width based on available space ───────────────────────────
+function calcCellW(numDates) {
+    const available = (window.innerWidth || 800) - 82 - 76 - 56;
+    const ideal = Math.floor(available / numDates);
+    return Math.max(14, Math.min(ideal, 48));
+}
+
+// ── Group daily dates into ISO weeks (Mon–Fri) ───────────────────────────
+function toWeeks(dates) {
+    const map = new Map();
+    dates.forEach(d => {
+        const dt  = new Date(d + 'T12:00:00');
+        const dow = dt.getDay();
+        const mon = new Date(dt);
+        mon.setDate(dt.getDate() - (dow === 0 ? 6 : dow - 1));
+        const wk = mon.toISOString().slice(0,10);
+        if (!map.has(wk)) map.set(wk, []);
+        map.get(wk).push(d);
+    });
+    return [...map.entries()].sort(([a],[b]) => a < b ? -1 : 1);
+}
+
+// Best entry for a stock across a set of dates (max score)
+function bestEntry(stock, days) {
+    const h = HISTORY[stock] || {};
+    let best = null;
+    days.forEach(d => {
+        const e = h[d];
+        if (e && (!best || e.score > best.score)) best = {...e, _date: d};
+    });
+    // also attach last-day entry for return-% view
+    for (let i = days.length - 1; i >= 0; i--) {
+        if (h[days[i]]) { best._last = {...h[days[i]], _date: days[i]}; break; }
+    }
+    return best;
+}
+
+// ── Heatmap ───────────────────────────────────────────────────────────────
+function buildHeatmap() {
+    const dates = filteredDates();
+    const weeks = toWeeks(dates);   // [[wkStart, [d1,d2,...]], ...]
+    const CW    = calcCellW(weeks.length);
+    const tbl   = document.getElementById('hm-table');
+    tbl.innerHTML = '';
+
+    // ── Header row ────────────────────────────────────────────────────────
+    const hRow = document.createElement('tr');
+    const corner = document.createElement('td');
+    corner.style.cssText = 'width:82px;min-width:82px';
+    hRow.appendChild(corner);
+    const fmtD = s => { const [y,m,d2] = s.split('-'); return new Date(+y,+m-1,+d2).toLocaleDateString('en-GB',{day:'numeric',month:'short'}); };
+    // TODAY first, then historical weeks
+    const sep0 = document.createElement('td'); sep0.className='today-sep'; hRow.appendChild(sep0);
+    const thToday = document.createElement('td'); thToday.className='today-header'; thToday.textContent='TODAY'; hRow.appendChild(thToday);
+    weeks.forEach(([wkStart]) => {
+        const th = document.createElement('td');
+        th.className = 'date-header';
+        th.style.width = CW + 'px';
+        th.textContent = fmtD(wkStart);
+        hRow.appendChild(th);
+    });
+    document.getElementById('days-count').textContent = `(${weeks.length} wks)`;
+    const rl = document.getElementById('range-label');
+    if (weeks.length) {
+        const lastDays = weeks[weeks.length-1][1];
+        rl.textContent = fmtD(weeks[0][0]) + ' → ' + fmtD(lastDays[lastDays.length-1]);
+        rl.style.display = 'inline-block';
+        rl.classList.remove('range-flash');
+        void rl.offsetWidth;
+        rl.classList.add('range-flash');
+    } else { rl.style.display = 'none'; }
+    tbl.appendChild(hRow);
+
+    // ── Range title row (first row, before all sections) ─────────────────
+    if (weeks.length) {
+        const firstDay = weeks[0][0];
+        const lastWkDays = weeks[weeks.length-1][1];
+        const lastDay = lastWkDays[lastWkDays.length-1];
+        const rangeText = fmtD(firstDay) + ' → ' + fmtD(lastDay) + ` (${weeks.length} wks)`;
+        const rr  = document.createElement('tr');
+        rr.className = 'hm-range-title';
+        const rTd = document.createElement('td');
+        rTd.setAttribute('colspan', weeks.length + 3);
+        rTd.textContent = rangeText;
+        rr.appendChild(rTd);
+        tbl.appendChild(rr);
+    }
+
+    // ── Section label ─────────────────────────────────────────────────────
+    function addSectionLabel(label) {
+        const sr  = document.createElement('tr');
+        sr.className = 'sector-row';
+        const sTd = document.createElement('td');
+        sTd.setAttribute('colspan', weeks.length + 3);
+        sTd.textContent = label;
+        sr.appendChild(sTd);
+        tbl.appendChild(sr);
+    }
+
+    // ── Stock row (weekly cells) ──────────────────────────────────────────
+    function addStockRow(stock) {
+        const hasPos    = OPEN_POS.has(stock);
+        const isPend    = PENDING.has(stock);
+        const isBuy     = STRONG_BUY.has(stock);
+        const todayInfo = TODAY_SC[stock] || {};
+        const tr = document.createElement('tr');
+
+        // Name cell
+        const nameTd = document.createElement('td');
+        nameTd.className = 'stock-name';
+        const ticker = stock.replace('.CA','');
+        let badgeText = '', cls = '';
+        if (isBuy)       { cls = 'sn-buy';  badgeText = 'buy'; }
+        else if (hasPos) { cls = 'sn-open'; badgeText = 'open'; }
+        else if (isPend) { cls = 'sn-pend'; badgeText = 'pending'; }
+        else if ((todayInfo.score||0) >= 35) { cls = 'sn-sig'; badgeText = 'signal'; }
+        const buyPat = isBuy ? BUY_MAP[stock]?.pattern : null;
+        const patColor = (buyPat?.low_reliability) ? '#f59e0b' : '#7ee787';
+        const effV = buyPat?.ok ? buyPat.effective_score/20 : null;
+        const effLbl = effV === null ? '' : effV>=3?'Excellent':effV>=2?'Strong':effV>=1?'Moderate':'Weak';
+        const patVal   = effV !== null ? `${effV.toFixed(1)}/5 ${effLbl}` : null;
+        const patLabel = patVal ? `<span class="sn-badge" style="color:${patColor}">🧠${patVal}</span>` : '';
+        nameTd.innerHTML = `<span class="sn-ticker ${cls}">${ticker}</span>${badgeText?`<span class="sn-badge">${badgeText}</span>`:''}<wbr>${patLabel}`;
+        nameTd.title = stock;
+        tr.appendChild(nameTd);
+
+        // Today cell (before historical weeks)
+        const sep   = document.createElement('td'); sep.className='today-sep'; tr.appendChild(sep);
+        const tTd   = document.createElement('td'); tTd.className='today-col';
+        const tCell = document.createElement('div');
+        tCell.className = 'today-cell';
+        tCell.style.cssText = `background:${todayColor(stock)};color:${todayLabelColor(stock)}`;
+        tCell.textContent = todayLabel(stock);
+        if (hasPos || (todayInfo.score||0) >= 35 || POS_DATA[stock]) {
+            tCell.addEventListener('mouseenter', e => showTip(e, stock, TODAY,
+                {score:todayInfo.score,r1:todayInfo.r1,price:todayInfo.price,signal:todayInfo.signal},
+                hasPos, isPend));
+            tCell.addEventListener('mousemove',  e => moveTip(e));
+            tCell.addEventListener('mouseleave', hideTip);
+        }
+        tTd.appendChild(tCell); tr.appendChild(tTd);
+
+        // Weekly cells (after today)
+        weeks.forEach(([wkStart, wkDays]) => {
+            const entry = bestEntry(stock, wkDays);
+            // For return view use last-day entry; for score/r1 use best-score entry
+            const colorEntry = (currentView === 'return' && entry?._last) ? entry._last : entry;
+            const td   = document.createElement('td');
+            td.style.padding = '1px';
+            const cell = document.createElement('div');
+            cell.className = 'hm-cell';
+            cell.style.width = CW + 'px';
+            cell.style.background = cellColor(stock, colorEntry, colorEntry?._date);
+            if (entry) {
+                if (hasPos) { const dot=document.createElement('div'); dot.className='pos-marker'; cell.appendChild(dot); }
+                else if (isPend) { const dot=document.createElement('div'); dot.className='pend-marker'; cell.appendChild(dot); }
+                const wkEnd = wkDays[wkDays.length-1];
+                const tipLabel = fmtD(wkStart) + ' – ' + fmtD(wkEnd);
+                cell.addEventListener('mouseenter', e => showTip(e, stock, tipLabel, entry, hasPos, isPend));
+                cell.addEventListener('mousemove',  e => moveTip(e));
+                cell.addEventListener('mouseleave', hideTip);
+            }
+            td.appendChild(cell); tr.appendChild(td);
+        });
+
+        tbl.appendChild(tr);
+    }
+
+    // ── Render: strong buy → pending → sectors → open positions ─────────────
+    const buyStocks = [...STRONG_BUY].sort((a,b) => {
+        const ba = (TODAY_SC[b]?.factor_exp_score||0)*0.6+(TODAY_SC[b]?.score||0)*0.4;
+        const bb = (TODAY_SC[a]?.factor_exp_score||0)*0.6+(TODAY_SC[a]?.score||0)*0.4;
+        return ba - bb;
+    });
+    if (buyStocks.length) {
+        addSectionLabel('🚀 Strong Buy');
+        buyStocks.forEach(addStockRow);
+    }
+    const pendingStocks = [...PENDING].sort((a,b) => {
+        const ba = (TODAY_SC[b]?.factor_exp_score||0)*0.6+(TODAY_SC[b]?.score||0)*0.4;
+        const bb = (TODAY_SC[a]?.factor_exp_score||0)*0.6+(TODAY_SC[a]?.score||0)*0.4;
+        return ba - bb;
+    });
+    if (pendingStocks.length) {
+        addSectionLabel('👀 WAIT — Watchlist');
+        pendingStocks.forEach(addStockRow);
+    }
+    SECTORS.forEach(([sector, stocks]) => {
+        const rest = stocks.filter(s => !PENDING.has(s) && !STRONG_BUY.has(s));
+        if (!rest.length) return;
+        addSectionLabel(sector);
+        rest.forEach(addStockRow);
+    });
+
+    const openStocks = [...OPEN_POS].filter(s => !PENDING.has(s) && !STRONG_BUY.has(s))
+        .sort((a,b) => (POS_DATA[b]?.return_pct||0)-(POS_DATA[a]?.return_pct||0));
+    if (openStocks.length) {
+        addSectionLabel('📈 Open Positions');
+        openStocks.forEach(addStockRow);
+    }
+}
+
+// ── Tooltip ───────────────────────────────────────────────────────────────
+const tip = document.getElementById('tooltip');
+
+function showTip(e, stock, dt, entry, hasPos, isPend) {
+    const s   = entry.score || 0;
+    const rv  = entry.r1    || 0;
+    const p   = entry.price || 0;
+    const sig = entry.signal || '—';
+    const sc  = scoreColor(s);
+    const pd  = POS_DATA[stock];
+    const pk  = PEAK[stock];
+
+    let retRow = '';
+    if (pd) {
+        const ret = dt === TODAY
+            ? pd.return_pct
+            : p && pd.entry_price ? ((p - pd.entry_price) / pd.entry_price * 100) : null;
+        if (ret !== null) {
+            const retStr = (ret>=0?'+':'')+ret.toFixed(1)+'%';
+            const retC   = returnColor(ret);
+            retRow = `<div class="tt-row"><span class="tt-lbl">Return</span><span class="tt-val" style="color:${retC}">${retStr}</span></div>`;
+        }
+    }
+
+    let posBlock = '';
+    if (pd) {
+        const lvl  = pd.current_level;
+        const nxt  = pd.fib_targets[lvl] ?? '—';
+        const ep   = pd.entry_price;
+        posBlock = `
+          <hr class="tt-divider">
+          <div class="tt-row"><span class="tt-lbl">Entry</span><span class="tt-val">EGP ${ep.toFixed(2)} (${pd.entry_date})</span></div>
+          <div class="tt-row"><span class="tt-lbl">Level</span><span class="tt-val">${lvl+1} / 8</span></div>
+          <div class="tt-row"><span class="tt-lbl">Next Target</span><span class="tt-val">EGP ${typeof nxt==='number'?nxt.toFixed(2):nxt}</span></div>`;
+    }
+
+    let peakBlock = '';
+    if (pk) {
+        peakBlock = `<span class="tt-tag tt-peak">Peak: ${pk.score} on ${pk.date}</span>`;
+    }
+    let tagBlock = '';
+    if (hasPos)  tagBlock += `<span class="tt-tag tt-open">● Open Position</span> `;
+    if (isPend)  tagBlock += `<span class="tt-tag tt-pend">⚡ Pending Signal</span> `;
+
+    tip.innerHTML = `
+      <div class="tt-head">
+        <div>
+          <div class="tt-ticker">${stock}</div>
+          <div style="font-size:10px;color:#8b949e">${dt}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="tt-score-big" style="color:${sc}">${s||'—'}</div>
+          <div class="tt-score-lbl">Signal Quality Score</div>
+        </div>
+      </div>
+      <div class="tt-row"><span class="tt-lbl">Price</span><span class="tt-val">EGP ${p.toFixed(2)}</span></div>
+      <div class="tt-row"><span class="tt-lbl">R1</span><span class="tt-val">${Math.round(Math.min(rv/30,1)*100)}%</span></div>
+      <div class="tt-row"><span class="tt-lbl">Signal</span><span class="tt-val" style="color:${sc}">${sig}</span></div>
+      ${retRow}
+      ${posBlock}
+      ${tagBlock || peakBlock ? `<hr class="tt-divider"><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:2px">${tagBlock}${peakBlock}</div>` : ''}
+    `;
+    tip.style.display = 'block';
+    moveTip(e);
+}
+function moveTip(e) {
+    const x=e.clientX+16, y=e.clientY+16;
+    const tw=tip.offsetWidth, th=tip.offsetHeight;
+    tip.style.left=(x+tw>innerWidth  ? e.clientX-tw-8 : x)+'px';
+    tip.style.top =(y+th>innerHeight ? e.clientY-th-8 : y)+'px';
+}
+function hideTip() { tip.style.display='none'; }
+
+// ── Open Positions cards ──────────────────────────────────────────────────
+function buildPositions() {
+    const el = document.getElementById('pos-cards');
+    el.innerHTML = '';
+    if (!OPEN_POS.size) { el.innerHTML='<div class="empty-state">No open positions.</div>'; return; }
+
+    // sort by return desc
+    const sorted = [...OPEN_POS].map(t => ({t, ...POS_DATA[t]}))
+        .sort((a,b) => (b.return_pct||0)-(a.return_pct||0));
+
+    sorted.forEach(pd => {
+        if (!pd) return;
+        const s  = TODAY_SC[pd.t] || {};
+        const ret = pd.return_pct;
+        const retStr = (ret>=0?'+':'')+ret+'%';
+        const retCls = ret>=0 ? 'pos' : 'neg';
+        const sc = scoreColor(s.score||0);
+        const lvl = pd.current_level;
+        // Fibonacci progress cells (8 levels)
+        let fibCells = '';
+        for (let i=0;i<8;i++) {
+            const filled = i < lvl;
+            const current = i === lvl;
+            const bg = filled ? '#3fb950' : current ? '#58a6ff' : '#21262d';
+            fibCells += `<div class="pc-fib-cell" style="background:${bg}" title="Target ${i+1}: EGP ${pd.fib_targets[i]?.toFixed(2)||'?'}"></div>`;
+        }
+        const card = document.createElement('div');
+        card.className = 'pos-card';
+        card.innerHTML = `
+          <div class="pc-top">
+            <div class="pc-ticker">${pd.t}</div>
+            <div class="pc-ret ${retCls}">${retStr}</div>
+          </div>
+          <div class="pc-meta">
+            <span>Entry EGP ${pd.entry_price.toFixed(2)}</span>
+            <span>Now EGP ${pd.current_price.toFixed(2)}</span>
+            <span>Lvl ${lvl+1}/8</span>
+            <span style="color:${sc}">Score ${s.score||'—'}</span>
+          </div>
+          <div class="pc-fib">${fibCells}</div>
+        `;
+        el.appendChild(card);
+    });
+}
+
+// ── Pending cards ─────────────────────────────────────────────────────────
+function buildPending() {
+    const el = document.getElementById('pend-cards');
+    el.innerHTML = '';
+    if (!PENDING_LIST.length) {
+        el.innerHTML = '<div class="empty-state">No new pending signals right now.</div>';
+        return;
+    }
+    PENDING_LIST.forEach(p => {
+        const sc = p.score >= 35 ? scoreColor(p.score) : '#d29922';
+        const card = document.createElement('div');
+        card.className = 'pend-card';
+        card.innerHTML = `
+          <div class="pend-top">
+            <div class="pend-ticker">${p.ticker}</div>
+            <div class="pend-score" style="color:${sc}">${p.score}</div>
+          </div>
+          <div class="pend-meta">
+            EGP ${p.price.toFixed(2)} &nbsp;·&nbsp; R1: ${(p.buy_hi > 0 && p.price > 0) ? Math.min(100, Math.round((p.buy_hi / p.price) * 100)) : 0}% &nbsp;·&nbsp;
+            <span style="color:${sc}">Pending</span>
+          </div>
+        `;
+        el.appendChild(card);
+    });
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────
+function setRange(r) {
+    currentRange = r;
+    ['all','90','60','30'].forEach(x => document.getElementById('btn-'+x).classList.remove('active'));
+    document.getElementById('btn-'+r).classList.add('active');
+    buildHeatmap();
+    document.querySelector('.hm-outer').scrollLeft = 0;
+}
+function setView(v) {
+    currentView = v;
+    ['score','return'].forEach(x => document.getElementById('view-'+x).classList.remove('active'));
+    document.getElementById('view-'+v).classList.add('active');
+    buildLegend();
+    buildHeatmap();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+buildLegend();
+buildHeatmap();
+buildPositions();
+buildPending();
+
+// ── Auto-refresh: reload when opened from shortcut / background ───────────
+window.addEventListener('pageshow', e => {
+    if (e.persisted) location.reload();   // restored from bfcache
+});
+let _hiddenAt = null;
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        _hiddenAt = Date.now();
+    } else if (_hiddenAt && Date.now() - _hiddenAt > 10 * 60 * 1000) {
+        location.reload();   // been away 10+ min
+    }
+});
+
+// ── PWA: Service Worker registration ──────────────────────────────────────
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// ── iOS: Show "Add to Home Screen" banner ────────────────────────────────
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isInStandalone = window.navigator.standalone === true;
+if (isIOS && !isInStandalone && !localStorage.getItem('ios_banner_dismissed')) {
+    const banner = document.createElement('div');
+    banner.id = 'ios-banner';
+    banner.style.cssText = `
+        position:fixed;bottom:0;left:0;right:0;z-index:9999;
+        background:#161b22;border-top:1px solid #30363d;
+        padding:14px 20px;display:flex;align-items:center;gap:12px;
+        box-shadow:0 -4px 20px #0009;
+    `;
+    banner.innerHTML = `
+        <img src="./icon.svg" style="width:36px;height:36px;border-radius:8px;flex-shrink:0">
+        <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:#e6edf3">Install EGX Constitutional App</div>
+            <div style="font-size:11px;color:#8b949e;margin-top:2px">
+                Tap <strong style="color:#c9d1d9">Share</strong>
+                <span style="font-size:14px">⎋</span> then
+                <strong style="color:#c9d1d9">Add to Home Screen</strong>
+            </div>
+        </div>
+        <button onclick="localStorage.setItem('ios_banner_dismissed','1');document.getElementById('ios-banner').remove()"
+            style="background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer;padding:4px;flex-shrink:0">✕</button>
+    `;
+    document.body.appendChild(banner);
+}
+
+// ── PWA: Install prompt ────────────────────────────────────────────────────
+let _deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    _deferredPrompt = e;
+    document.getElementById('btn-install').style.display = 'inline-flex';
+});
+document.getElementById('btn-install').addEventListener('click', async () => {
+    if (!_deferredPrompt) return;
+    _deferredPrompt.prompt();
+    const { outcome } = await _deferredPrompt.userChoice;
+    if (outcome === 'accepted') document.getElementById('btn-install').style.display = 'none';
+    _deferredPrompt = null;
+});
+window.addEventListener('appinstalled', () => {
+    document.getElementById('btn-install').style.display = 'none';
+});
+
+// ── PWA: Change detection + Notifications ─────────────────────────────────
+const DATA_URL = './data.json';
+const STORE_KEY = 'egx_smc_state';
+
+async function checkChanges() {
+    try {
+        const res = await fetch(DATA_URL + '?t=' + Date.now());
+        if (!res.ok) return;
+        const curr = await res.json();
+        const prev = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+        localStorage.setItem(STORE_KEY, JSON.stringify(curr));
+        if (!prev) return;   // first visit — nothing to compare
+
+        const alerts = [];
+
+        // New pending signals
+        const prevTickers = new Set((prev.pending || []).map(p => p.ticker));
+        (curr.pending || []).forEach(p => {
+            if (!prevTickers.has(p.ticker))
+                alerts.push(`⏳ ${p.ticker} — ${p.signal} (score ${p.score})`);
+        });
+
+        // Fibonacci level advances
+        Object.entries(curr.positions || {}).forEach(([t, d]) => {
+            const pd = (prev.positions || {})[t];
+            if (pd && d.level > pd.level)
+                alerts.push(`🎯 ${t} hit Target ${d.level + 1}/8 (+${d.return_pct}%)`);
+        });
+
+        // New open position
+        const prevOpen = new Set(Object.keys(prev.positions || {}));
+        Object.keys(curr.positions || {}).forEach(t => {
+            if (!prevOpen.has(t))
+                alerts.push(`🟢 New position opened: ${t}`);
+        });
+
+        if (alerts.length && Notification.permission === 'granted') {
+            alerts.forEach(msg => {
+                new Notification('EGX Constitutional Alert', {
+                    body: msg,
+                    icon: './icon.svg',
+                    badge: './icon.svg',
+                    tag: msg,
+                });
+            });
+        }
+    } catch(e) {}
+}
+
+async function initNotifications() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+        await Notification.requestPermission();
+    }
+    checkChanges();
+    setInterval(checkChanges, 5 * 60 * 1000);   // re-check every 5 min
+}
+
+window.addEventListener('load', () => setTimeout(initNotifications, 1500));
+
+// ── Token modal ───────────────────────────────────────────────────────────
+let _runAfterSave = false;
+
+function openTokenModal(runAfter, showError) {
+    _runAfterSave = runAfter !== false;
+    const inp = document.getElementById('token-inp');
+    const clearBtn = document.getElementById('modal-clear-btn');
+    const errEl = document.getElementById('token-error');
+    const stored = localStorage.getItem('gh_pat');
+    inp.value = '';
+    inp.placeholder = stored
+        ? '(token saved — paste a new one to replace)'
+        : 'ghp_xxxxxxxxxxxxxxxx';
+    clearBtn.style.display = stored ? 'inline-block' : 'none';
+    errEl.style.display = showError ? 'block' : 'none';
+    document.getElementById('token-modal').classList.add('open');
+    setTimeout(() => inp.focus(), 200);
+}
+function closeTokenModal() {
+    document.getElementById('token-modal').classList.remove('open');
+    document.getElementById('token-error').style.display = 'none';
+    _runAfterSave = false;
+}
+function clearToken() {
+    localStorage.removeItem('gh_pat');
+    closeTokenModal();
+    updateKeyBtn();
+}
+function saveToken() {
+    const val = document.getElementById('token-inp').value.trim();
+    if (val) localStorage.setItem('gh_pat', val);
+    closeTokenModal();
+    updateKeyBtn();
+    if (_runAfterSave && (val || localStorage.getItem('gh_pat'))) {
+        triggerScan();
+    }
+}
+function updateKeyBtn() {
+    const btn = document.getElementById('btn-key');
+    if (!btn) return;
+    const has = !!localStorage.getItem('gh_pat');
+    btn.title = has ? 'GitHub token: saved ✓  (click to update)' : 'GitHub token: not saved (click to set)';
+    if (has) btn.classList.add('saved'); else btn.classList.remove('saved');
+}
+
+// ── Manual Scan Trigger ────────────────────────────────────────────────────
+async function triggerScan() {
+    const token = localStorage.getItem('gh_pat');
+    if (!token) {
+        openTokenModal(true);
+        return;
+    }
+
+    const btn = document.getElementById('btn-scan');
+    btn.textContent = '⏳ Running…';
+    btn.disabled = true;
+    btn.className = 'btn-scan';
+
+    try {
+        const res = await fetch(
+            'https://api.github.com/repos/shadygad01/smartlist/actions/workflows/daily_scan.yml/dispatches',
+            {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ref: 'main', inputs: {} })
+            }
+        );
+
+        if (res.status === 204) {
+            btn.textContent = '⏳ Scan Running…';
+            btn.className = 'btn-scan';
+            pollScanCompletion(token, Date.now());
+        } else if (res.status === 401 || res.status === 403) {
+            btn.textContent = '✕ Token Invalid';
+            btn.className = 'btn-scan err';
+            btn.disabled = false;
+            setTimeout(() => {
+                btn.textContent = '⟳ Run Scan';
+                btn.className = 'btn-scan';
+                openTokenModal(true, true);
+            }, 1500);
+        } else {
+            throw new Error(`HTTP ${res.status}`);
+        }
+    } catch(e) {
+        btn.textContent = '✕ Error';
+        btn.className = 'btn-scan err';
+        setTimeout(() => {
+            btn.textContent = '⟳ Run Scan';
+            btn.className = 'btn-scan';
+            btn.disabled = false;
+        }, 3000);
+    }
+}
+
+async function pollScanCompletion(token, triggerTime) {
+    const btn = document.getElementById('btn-scan');
+    const maxWait = 15 * 60 * 1000;
+    const interval = 30 * 1000;
+
+    async function check() {
+        if (Date.now() - triggerTime > maxWait) {
+            btn.textContent = '⟳ Run Scan';
+            btn.className = 'btn-scan';
+            btn.disabled = false;
+            return;
+        }
+        const elapsed = Math.round((Date.now() - triggerTime) / 1000);
+        btn.textContent = `⏳ Scanning… (${elapsed}s)`;
+        try {
+            const r = await fetch(
+                'https://api.github.com/repos/shadygad01/smartlist/actions/workflows/daily_scan.yml/runs?per_page=1',
+                { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' } }
+            );
+            if (r.ok) {
+                const data = await r.json();
+                const run = (data.workflow_runs || [])[0];
+                if (run && new Date(run.created_at).getTime() >= triggerTime - 90000) {
+                    if (run.status === 'completed') {
+                        if (run.conclusion === 'success') {
+                            btn.textContent = '✓ Done! Refreshing…';
+                            btn.className = 'btn-scan ok';
+                            setTimeout(() => location.reload(), 2000);
+                        } else {
+                            btn.textContent = `✕ ${run.conclusion}`;
+                            btn.className = 'btn-scan err';
+                            setTimeout(() => { btn.textContent = '⟳ Run Scan'; btn.className = 'btn-scan'; btn.disabled = false; }, 5000);
+                        }
+                        return;
+                    }
+                }
+            }
+        } catch(e) {}
+        setTimeout(check, interval);
+    }
+    setTimeout(check, 20000);
+}
+
+window.addEventListener('load', () => updateKeyBtn());
+</script>
+</body>
+</html>

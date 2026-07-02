@@ -184,17 +184,25 @@ export default function PortfolioPage() {
           continue;
         }
 
-        // 2. Parse transactions
+        // 2. Parse transactions — dedup happens per-transaction (ticker+date+
+        // side+qty+price) against everything already recorded, not just
+        // against the whole file, so re-uploading an updated statement that
+        // overlaps with a previous one only adds what's genuinely new.
         setUploadStatus('Analyzing transactions…');
         const parsed = parseThunderText(extractedText);
         const result = completeUpload(upload.id, parsed);
 
-        showToast(
-          result.status === 'parsed'
-            ? `Successfully extracted ${result.transactionCount} transaction(s)`
-            : "No transactions found in the file. Make sure it's a Thunder report.",
-          result.status !== 'failed'
-        );
+        let message: string;
+        if (result.status === 'failed') {
+          message = "No transactions found in the file. Make sure it's a Thunder report.";
+        } else if (result.status === 'duplicate') {
+          message = `All ${result.duplicateCount} transaction(s) in this file were already recorded — nothing new added.`;
+        } else if (result.duplicateCount > 0) {
+          message = `Added ${result.newCount} new transaction(s) (${result.duplicateCount} already recorded, skipped).`;
+        } else {
+          message = `Added ${result.newCount} new transaction(s).`;
+        }
+        showToast(message, result.status !== 'failed');
       } catch (e) {
         showToast(`Error: ${String(e)}`, false);
       }

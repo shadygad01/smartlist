@@ -111,22 +111,52 @@ export function recordUpload(params: {
   return upload;
 }
 
+// Identity for cross-upload dedup: same ticker/date/side/qty/price already
+// recorded from an earlier upload means this row is old news, not a new
+// trade. Normalized to fixed decimals so "45.5" and "45.50" match. Deliberately
+// NOT used to dedupe rows against each other within the same upload — two
+// genuinely identical trades placed the same day should both be kept.
+function transactionKey(t: {
+  ticker: string;
+  transactionType: string;
+  quantity: number | string;
+  price: number | string;
+  tradeDate: string | Date;
+}): string {
+  const date = t.tradeDate instanceof Date ? t.tradeDate.toISOString() : t.tradeDate;
+  return [
+    t.ticker,
+    date.slice(0, 10),
+    t.transactionType,
+    Number(t.quantity).toFixed(4),
+    Number(t.price).toFixed(4),
+  ].join('|');
+}
+
 export function completeUpload(
   uploadId: number,
   parsed: ParsedTransaction[]
-): { status: 'parsed' | 'failed'; transactionCount: number } {
+): { status: 'parsed' | 'failed' | 'duplicate'; transactionCount: number; newCount: number; duplicateCount: number } {
   const state = load();
   const upload = state.uploads.find((u) => u.id === uploadId);
-  if (!upload) return { status: 'failed', transactionCount: 0 };
+  if (!upload) return { status: 'failed', transactionCount: 0, newCount: 0, duplicateCount: 0 };
 
   if (parsed.length === 0) {
     upload.status = 'failed';
     upload.errorMessage = "No transactions found in the file. Make sure it's a Thunder report.";
     save(state);
-    return { status: 'failed', transactionCount: 0 };
+    return { status: 'failed', transactionCount: 0, newCount: 0, duplicateCount: 0 };
   }
 
+  const existingKeys = new Set(state.transactions.map(transactionKey));
+
+  let newCount = 0;
+  let duplicateCount = 0;
   for (const t of parsed) {
+    if (existingKeys.has(transactionKey(t))) {
+      duplicateCount += 1;
+      continue;
+    }
     state.transactions.push({
       id: state.nextTransactionId,
       uploadId,
@@ -137,11 +167,18 @@ export function completeUpload(
       tradeDate: t.tradeDate.toISOString(),
     });
     state.nextTransactionId += 1;
+    newCount += 1;
+    // Not added to existingKeys: duplicates *within this same upload* should
+    // still all be kept (see function doc comment above).
   }
-  upload.status = 'parsed';
-  upload.transactionCount = parsed.length;
+
+  upload.status = newCount > 0 ? 'parsed' : 'duplicate';
+  upload.transactionCount = newCount;
+  if (newCount === 0) {
+    upload.errorMessage = `All ${duplicateCount} transaction(s) in this file were already recorded.`;
+  }
   save(state);
-  return { status: 'parsed', transactionCount: parsed.length };
+  return { status: upload.status, transactionCount: parsed.length, newCount, duplicateCount };
 }
 
 export function failUpload(uploadId: number, message: string) {

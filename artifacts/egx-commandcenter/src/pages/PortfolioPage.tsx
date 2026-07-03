@@ -480,11 +480,11 @@ export default function PortfolioPage() {
                               <AlertTriangle size={10} /> possible duplicate of {pos.duplicateOf}
                             </div>
                           )}
-                          {pos.verifiedUnits != null && !pos.quantityMismatch && (
+                          {pos.verifiedUnits != null && !pos.quantityMismatch && !pos.quantityShortfall && (
                             <div
                               className="flex items-center gap-1 mt-1 font-mono"
                               style={{ fontSize: '9px', color: '#10b981' }}
-                              title="Quantity confirmed against a broker 'My position' screenshot."
+                              title="Quantity matches a broker 'My position' screenshot exactly."
                             >
                               <CheckCircle size={10} /> verified
                             </div>
@@ -496,7 +496,7 @@ export default function PortfolioPage() {
                         <td className="px-4 py-3 font-mono" style={{ fontSize: '11px', color: '#8b8fa8' }}>
                           {fmtDate(pos.lastBuyDate)}
                         </td>
-                        <td className="px-4 py-3 font-mono font-bold" style={{ fontSize: '13px', color: pos.quantityMismatch ? '#ef4444' : '#c4c9df' }}>
+                        <td className="px-4 py-3 font-mono font-bold" style={{ fontSize: '13px', color: pos.quantityMismatch || pos.quantityShortfall ? '#ef4444' : '#c4c9df' }}>
                           {fmt(pos.totalQuantity, 0)}
                           {pos.quantityMismatch && (
                             <div
@@ -505,6 +505,15 @@ export default function PortfolioPage() {
                               title={`Statement math computes ${fmt(pos.rawComputedQuantity, 0)} units, but the broker's own position screen confirms only ${fmt(pos.verifiedUnits ?? 0, 0)} — quantity capped to the verified number. Check your uploaded transactions for a duplicate or misparsed trade.`}
                             >
                               <AlertTriangle size={10} /> computed {fmt(pos.rawComputedQuantity, 0)}, capped
+                            </div>
+                          )}
+                          {pos.quantityShortfall && (
+                            <div
+                              className="flex items-center gap-1 mt-1 font-mono font-normal"
+                              style={{ fontSize: '9px', color: '#ef4444' }}
+                              title={`Statement math computes only ${fmt(pos.rawComputedQuantity, 0)} units, but the broker's own position screen confirms ${fmt(pos.verifiedUnits ?? 0, 0)} — some transactions are likely missing. Re-check your uploaded Orders/statement screenshots for gaps (e.g. rows below the fold that weren't captured) and re-upload.`}
+                            >
+                              <AlertTriangle size={10} /> short {fmt((pos.verifiedUnits ?? 0) - pos.rawComputedQuantity, 0)} vs. broker
                             </div>
                           )}
                         </td>

@@ -231,7 +231,7 @@ export default function PortfolioPage() {
         // against the whole file, so re-uploading an updated statement that
         // overlaps with a previous one only adds what's genuinely new.
         setUploadStatus('Analyzing transactions…');
-        const parsed = parseThunderText(extractedText);
+        const { transactions: parsed, incompleteRowCount } = parseThunderText(extractedText);
         const noTradesMessage = looksLikeThunderDocument(extractedText)
           ? 'This looks like a valid Thndr statement, but it has no buy/sell trades in this period.'
           : "No transactions found in the file. Make sure it's a Thunder report.";
@@ -241,6 +241,16 @@ export default function PortfolioPage() {
           result.outOfRangeCount > 0
             ? ` (${result.outOfRangeCount} before ${TRACKING_START_DATE}, outside the tracked range, skipped)`
             : '';
+        // Surfaces a genuinely observed failure mode: an order row whose
+        // action (Buy/Sell • N shares) was detected but whose price/date/
+        // status couldn't be read — OCR quality varies between runs even on
+        // the exact same screenshot, so this row was silently dropped rather
+        // than never having existed. Without this note it looks identical to
+        // "nothing more to add".
+        const incompleteNote =
+          incompleteRowCount > 0
+            ? ` ⚠ ${incompleteRowCount} order row(s) were detected but couldn't be fully read (missing price/date/status) — try re-uploading a clearer or larger screenshot if a trade seems to be missing.`
+            : '';
 
         let message: string;
         if (result.status === 'failed') {
@@ -249,13 +259,13 @@ export default function PortfolioPage() {
               ? `All ${result.outOfRangeCount} transaction(s) in this file are before ${TRACKING_START_DATE} — outside the Portfolio Tracker's tracked range.`
               : noTradesMessage;
         } else if (result.status === 'duplicate') {
-          message = `All ${result.duplicateCount} transaction(s) in this file were already recorded — nothing new added.${rangeNote}`;
+          message = `All ${result.duplicateCount} transaction(s) in this file were already recorded — nothing new added.${rangeNote}${incompleteNote}`;
         } else if (result.duplicateCount > 0) {
-          message = `Added ${result.newCount} new transaction(s) (${result.duplicateCount} already recorded, skipped).${rangeNote}`;
+          message = `Added ${result.newCount} new transaction(s) (${result.duplicateCount} already recorded, skipped).${rangeNote}${incompleteNote}`;
         } else {
-          message = `Added ${result.newCount} new transaction(s).${rangeNote}`;
+          message = `Added ${result.newCount} new transaction(s).${rangeNote}${incompleteNote}`;
         }
-        showToast(message, result.status !== 'failed');
+        showToast(message, result.status !== 'failed' && incompleteRowCount === 0);
       } catch (e) {
         showToast(`Error: ${String(e)}`, false);
       }

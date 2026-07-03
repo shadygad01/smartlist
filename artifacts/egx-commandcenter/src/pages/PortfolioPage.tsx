@@ -5,16 +5,22 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { createWorker } from 'tesseract.js';
 import { extractPdfText } from '@/lib/pdfText';
 import { preprocessForOcr, cropHeaderBand } from '@/lib/imagePreprocess';
-import { parseThunderText, looksLikeThunderDocument } from '@/lib/portfolioParser';
+import {
+  parseThunderText,
+  looksLikeThunderDocument,
+  looksLikePositionVerification,
+  parsePositionVerification,
+} from '@/lib/portfolioParser';
 import {
   getUploads,
   getTransactions,
   recordUpload,
   completeUpload,
-  failUpload,
   deleteTransaction,
   computePositions,
   buildPriceMapFromSnapshot,
+  getPositionVerifications,
+  recordPositionVerification,
   type StoredUpload as PortfolioUpload,
   type StoredTransaction as PortfolioTransaction,
   type PortfolioPosition,
@@ -143,7 +149,8 @@ export default function PortfolioPage() {
       ...(snapshot?.universe_snapshot ?? []),
       ...(snapshot?.portfolio_extra_prices ?? []),
     ]);
-    setPositions(computePositions(txs, priceMap).positions);
+    const verifications = getPositionVerifications();
+    setPositions(computePositions(txs, priceMap, verifications).positions);
   }, [snapshot]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -192,13 +199,28 @@ export default function PortfolioPage() {
           extractedText = await extractPdfText(buffer);
         }
 
-        const upload = recordUpload({ fileName: file.name, contentType: file.type, fileHash: hash });
-
         if (!extractedText || extractedText.trim().length < 20) {
-          failUpload(upload.id, 'No text could be read from the file.');
           showToast('No text could be read from the file — try another file.', false);
           continue;
         }
+
+        // A "My position" screenshot from the broker app is a ground-truth
+        // check, not a trade record — route it separately so it never gets
+        // parsed for buy/sell rows (it has none) and never shows up as a
+        // near-empty "0 transactions" upload. Checked before the statement
+        // parser so it can never be mistaken for one.
+        if (looksLikePositionVerification(extractedText)) {
+          const verification = parsePositionVerification(extractedText);
+          if (!verification) {
+            showToast("Recognized a position screen but couldn't read the ticker/units — try a clearer screenshot.", false);
+            continue;
+          }
+          recordPositionVerification(verification);
+          showToast(`Verified ${verification.ticker}: ${verification.units} units confirmed from broker.`, true);
+          continue;
+        }
+
+        const upload = recordUpload({ fileName: file.name, contentType: file.type, fileHash: hash });
 
         // 2. Parse transactions — dedup happens per-transaction (ticker+date+
         // side+qty+price) against everything already recorded, not just
@@ -331,6 +353,10 @@ export default function PortfolioPage() {
             ) : (
               <DropZone onFiles={handleFiles} />
             )}
+            <p className="font-mono mt-3" style={{ fontSize: '10px', color: '#4a5070' }}>
+              Tip: also upload a screenshot of a stock's "My position" screen (Units / Average cost) —
+              it's auto-detected and used to verify that stock's quantity, capping it if a statement ever computes more than the broker actually shows.
+            </p>
           </div>
 
           {/* Tabs */}
@@ -401,6 +427,24 @@ export default function PortfolioPage() {
                           <span className="font-mono font-bold" style={{ fontSize: '13px', color: '#10b981' }}>
                             {pos.ticker}
                           </span>
+                          {pos.duplicateOf && (
+                            <div
+                              className="flex items-center gap-1 mt-1 font-mono"
+                              style={{ fontSize: '9px', color: '#ef4444' }}
+                              title={`This row's label didn't resolve to a known ticker but looks like the same stock as ${pos.duplicateOf} — likely a duplicate from an unresolved company name in a statement upload.`}
+                            >
+                              <AlertTriangle size={10} /> possible duplicate of {pos.duplicateOf}
+                            </div>
+                          )}
+                          {pos.verifiedUnits != null && !pos.quantityMismatch && (
+                            <div
+                              className="flex items-center gap-1 mt-1 font-mono"
+                              style={{ fontSize: '9px', color: '#10b981' }}
+                              title="Quantity confirmed against a broker 'My position' screenshot."
+                            >
+                              <CheckCircle size={10} /> verified
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 font-mono" style={{ fontSize: '11px', color: '#8b8fa8' }}>
                           {fmtDate(pos.firstBuyDate)}
@@ -408,8 +452,17 @@ export default function PortfolioPage() {
                         <td className="px-4 py-3 font-mono" style={{ fontSize: '11px', color: '#8b8fa8' }}>
                           {fmtDate(pos.lastBuyDate)}
                         </td>
-                        <td className="px-4 py-3 font-mono font-bold" style={{ fontSize: '13px', color: '#c4c9df' }}>
+                        <td className="px-4 py-3 font-mono font-bold" style={{ fontSize: '13px', color: pos.quantityMismatch ? '#ef4444' : '#c4c9df' }}>
                           {fmt(pos.totalQuantity, 0)}
+                          {pos.quantityMismatch && (
+                            <div
+                              className="flex items-center gap-1 mt-1 font-mono font-normal"
+                              style={{ fontSize: '9px', color: '#ef4444' }}
+                              title={`Statement math computes ${fmt(pos.rawComputedQuantity, 0)} units, but the broker's own position screen confirms only ${fmt(pos.verifiedUnits ?? 0, 0)} — quantity capped to the verified number. Check your uploaded transactions for a duplicate or misparsed trade.`}
+                            >
+                              <AlertTriangle size={10} /> computed {fmt(pos.rawComputedQuantity, 0)}, capped
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 font-mono" style={{ fontSize: '12px', color: '#f59e0b' }}>
                           {fmt(pos.avgBuyPrice)} EGP

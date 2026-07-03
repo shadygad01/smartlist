@@ -5,7 +5,10 @@
 //
 // Position/P&L math is ported as-is from artifacts/api-server/src/routes/portfolio.ts
 // so behavior matches what the server version would have done.
-import type { ParsedTransaction } from './portfolioParser';
+import type { ParsedTransaction, PositionVerification } from './portfolioParser';
+import { normalizeCompanyKey, fuzzyMatchTicker } from './portfolioParser';
+
+export type { PositionVerification } from './portfolioParser';
 
 export interface StoredUpload {
   id: number;
@@ -39,6 +42,21 @@ export interface PortfolioPosition {
   unrealizedPnlPct: number | null;
   firstBuyDate: string;
   lastBuyDate: string;
+  // Ground-truth check against a "My position" screenshot upload (see
+  // PositionVerification below). null when no verification has been
+  // uploaded for this ticker — the row is then purely statement-derived,
+  // same as before this feature existed.
+  verifiedUnits: number | null;
+  // The statement-derived quantity before capping — only differs from
+  // totalQuantity when quantityMismatch is true, kept so the UI can show
+  // "computed 80, broker confirms 74" rather than just hiding the gap.
+  rawComputedQuantity: number;
+  quantityMismatch: boolean;
+  // Set when this ticker's raw label fuzzy-matches a *different* ticker's
+  // verified company name — signals the same stock likely got split across
+  // two rows because a statement's company name didn't resolve to the
+  // canonical ticker (e.g. OCR noise). Points at the canonical ticker.
+  duplicateOf: string | null;
 }
 
 export interface PnlDataPoint {
@@ -203,6 +221,44 @@ export function deleteTransaction(transactionId: number): void {
   save(state);
 }
 
+// ─── Position verification (ground truth from a broker "My position" screen) ──
+// Stored separately from transactions/uploads — keyed by ticker so it's
+// order-independent (a verification screenshot can be uploaded before or
+// after the transaction statement it checks) and always reflects the most
+// recently uploaded snapshot for that ticker.
+const VERIFICATION_KEY = 'egx-portfolio-verifications-v1';
+
+function loadVerifications(): Record<string, PositionVerification> {
+  if (typeof localStorage === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(VERIFICATION_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, PositionVerification>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveVerifications(v: Record<string, PositionVerification>) {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(VERIFICATION_KEY, JSON.stringify(v));
+}
+
+export function getPositionVerifications(): Record<string, PositionVerification> {
+  return loadVerifications();
+}
+
+export function recordPositionVerification(v: PositionVerification): void {
+  const all = loadVerifications();
+  all[v.ticker] = v;
+  saveVerifications(all);
+}
+
+export function deletePositionVerification(ticker: string): void {
+  const all = loadVerifications();
+  delete all[ticker];
+  saveVerifications(all);
+}
+
 // Live prices come from presentation_snapshot.json's universe_snapshot — the
 // same constitutional-scanner pipeline (price_authority.py / main.py's
 // yfinance -> Yahoo chart API -> TradingView scanner fallback chain) already
@@ -236,7 +292,8 @@ export function buildPriceMapFromSnapshot(
 // scanner's tracked universe) rather than guessing.
 export function computePositions(
   transactions: StoredTransaction[],
-  priceMap: Record<string, number> = {}
+  priceMap: Record<string, number> = {},
+  verifications: Record<string, PositionVerification> = {}
 ): {
   positions: PortfolioPosition[];
   totalCost: number;
@@ -273,17 +330,47 @@ export function computePositions(
     }
   }
 
+  const verificationList = Object.values(verifications);
+
   const positions: PortfolioPosition[] = Array.from(posMap.values())
     .filter((p) => p.totalQuantity > 0)
     .map((p) => {
+      const verification = verifications[p.ticker];
+      // The broker's own position screen is ground truth for units actually
+      // held — the displayed/priced quantity must never exceed it, even if a
+      // statement-parsing bug (duplicate or misparsed trade) makes the
+      // computed total say more. Quantity itself is capped; totalCost/
+      // avgBuyPrice are left as literal statement-derived figures (still
+      // useful context) rather than guessed at, since we don't know *which*
+      // trade in the statement is the bad one.
+      const quantityMismatch = verification != null && p.totalQuantity > verification.units;
+      const displayQuantity = verification != null ? Math.min(p.totalQuantity, verification.units) : p.totalQuantity;
+
+      // Same stock split across two different ticker labels (e.g. a garbled
+      // OCR company name that didn't resolve to the canonical ticker) — flag
+      // it against any verification whose canonical name this label
+      // fuzzy-matches, so it never silently reads as two separate holdings.
+      let duplicateOf: string | null = null;
+      for (const v of verificationList) {
+        if (v.ticker === p.ticker) continue;
+        if (fuzzyMatchTicker(normalizeCompanyKey(p.ticker)) === v.ticker) {
+          duplicateOf = v.ticker;
+          break;
+        }
+      }
+
       const currentPrice = priceMap[p.ticker] ?? null;
-      const currentValue = currentPrice != null ? currentPrice * p.totalQuantity : null;
+      const currentValue = currentPrice != null ? currentPrice * displayQuantity : null;
       const unrealizedPnl = currentValue != null ? currentValue - p.totalCost : null;
       const unrealizedPnlPct =
         unrealizedPnl != null && p.totalCost > 0 ? (unrealizedPnl / p.totalCost) * 100 : null;
       return {
         ticker: p.ticker,
-        totalQuantity: p.totalQuantity,
+        totalQuantity: displayQuantity,
+        rawComputedQuantity: p.totalQuantity,
+        verifiedUnits: verification?.units ?? null,
+        quantityMismatch,
+        duplicateOf,
         avgBuyPrice: p.totalCost / p.totalQuantity,
         totalCost: p.totalCost,
         currentPrice,

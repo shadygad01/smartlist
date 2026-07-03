@@ -155,10 +155,26 @@ function transactionKey(t: {
   ].join('|');
 }
 
+// Running BUY-minus-SELL quantity already on record for a ticker — used to
+// arbitrate the same-key-looks-like-a-duplicate case below against a
+// verified ground truth, so it must reflect state.transactions as it stands
+// *at the point of the check*, including any rows already pushed earlier in
+// this same completeUpload() call.
+function recordedQuantity(transactions: StoredTransaction[], ticker: string): number {
+  let qty = 0;
+  for (const t of transactions) {
+    if (t.ticker !== ticker) continue;
+    const q = parseFloat(t.quantity);
+    qty = t.transactionType === 'BUY' ? qty + q : Math.max(0, qty - q);
+  }
+  return qty;
+}
+
 export function completeUpload(
   uploadId: number,
   parsed: ParsedTransaction[],
-  noTradesMessage = "No transactions found in the file. Make sure it's a Thunder report."
+  noTradesMessage = "No transactions found in the file. Make sure it's a Thunder report.",
+  verifications: Record<string, PositionVerification> = {}
 ): { status: 'parsed' | 'failed' | 'duplicate'; transactionCount: number; newCount: number; duplicateCount: number } {
   const state = load();
   const upload = state.uploads.find((u) => u.id === uploadId);
@@ -176,7 +192,29 @@ export function completeUpload(
   let newCount = 0;
   let duplicateCount = 0;
   for (const t of parsed) {
-    if (existingKeys.has(transactionKey(t))) {
+    let looksLikeDuplicate = existingKeys.has(transactionKey(t));
+
+    // A same ticker/date/side/qty match is usually a genuine duplicate row
+    // from a re-uploaded/overlapping statement — but it can also be two real
+    // trades that happen to share a day, quantity, and (coincidentally)
+    // price, e.g. topping up a position twice the same day. When a verified
+    // broker unit count exists for the ticker, prefer it over the same-key
+    // heuristic here: if what's on record is still short of the verified
+    // total, and keeping this BUY wouldn't push the total past it, it's more
+    // likely a real second trade than a duplicate. Scoped to BUY only — a
+    // wrongly-kept duplicate SELL would understate the position instead,
+    // which this ground truth can't help arbitrate the same way.
+    if (looksLikeDuplicate && t.transactionType === 'BUY') {
+      const verification = verifications[t.ticker];
+      if (verification) {
+        const recorded = recordedQuantity(state.transactions, t.ticker);
+        if (recorded < verification.units && recorded + t.quantity <= verification.units) {
+          looksLikeDuplicate = false;
+        }
+      }
+    }
+
+    if (looksLikeDuplicate) {
       duplicateCount += 1;
       continue;
     }

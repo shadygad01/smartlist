@@ -231,7 +231,7 @@ export default function PortfolioPage() {
         const noTradesMessage = looksLikeThunderDocument(extractedText)
           ? 'This looks like a valid Thndr statement, but it has no buy/sell trades in this period.'
           : "No transactions found in the file. Make sure it's a Thunder report.";
-        const result = completeUpload(upload.id, parsed, noTradesMessage);
+        const result = completeUpload(upload.id, parsed, noTradesMessage, getPositionVerifications());
 
         let message: string;
         if (result.status === 'failed') {

@@ -319,7 +319,7 @@ export default function PortfolioPage() {
 
         const rangeNote =
           result.outOfRangeCount > 0
-            ? ` (${result.outOfRangeCount} before ${TRACKING_START_DATE}, outside the tracked range, skipped)`
+            ? ` (${result.outOfRangeCount} outside the tracked range — before ${TRACKING_START_DATE} or future-dated — skipped)`
             : '';
         // Cross-check requested after a real incident: count "Fulfilled"
         // labels found anywhere in the raw OCR text and compare against how
@@ -359,7 +359,7 @@ export default function PortfolioPage() {
         if (result.status === 'failed') {
           message =
             result.outOfRangeCount > 0 && result.outOfRangeCount === result.transactionCount
-              ? `All ${result.outOfRangeCount} transaction(s) in this file are before ${TRACKING_START_DATE} — outside the Portfolio Tracker's tracked range.`
+              ? `All ${result.outOfRangeCount} transaction(s) in this file are outside the tracked range (before ${TRACKING_START_DATE}, or dated in the future — a misread date).`
               : noTradesMessage;
         } else if (result.status === 'duplicate') {
           message = `All ${result.duplicateCount} transaction(s) in this file were already recorded — nothing new added.${scanNote}${rangeNote}${incompleteNote}${statusMismatchNote}`;
@@ -403,6 +403,19 @@ export default function PortfolioPage() {
   const handleClearPosition = useCallback((ticker: string, count: number) => {
     if (!window.confirm(`Clear all ${count} ${ticker} transaction(s) so you can re-upload them? Its verification (if any) is kept. This can't be undone.`)) return;
     clearTransactionsForTicker(ticker);
+    loadData();
+  }, [loadData]);
+
+  // One-tap fix for a diagnosed quantityMismatch: the store identified the
+  // exact transaction(s) whose quantity accounts for the computed-vs-broker
+  // excess (see likelyDuplicateTxIds), so deleting them reconciles the
+  // position without hunting through the Transactions tab.
+  const handleRemoveSuspect = useCallback((tx: PortfolioTransaction, verifiedUnits: number) => {
+    if (!window.confirm(
+      `Remove the suspect ${tx.ticker} BUY of ${fmt(parseFloat(tx.quantity), 0)} units on ${fmtDate(tx.tradeDate)}? ` +
+      `Its quantity exactly accounts for the gap vs. the broker's confirmed ${fmt(verifiedUnits, 0)} units. This can't be undone.`
+    )) return;
+    deleteTransaction(tx.id);
     loadData();
   }, [loadData]);
 
@@ -626,18 +639,33 @@ export default function PortfolioPage() {
                         <td className="px-4 py-3 font-mono font-bold" style={{ fontSize: '13px', color: pos.quantityMismatch || pos.quantityShortfall ? '#ef4444' : '#c4c9df' }}>
                           {fmt(pos.totalQuantity, 0)}
                           {pos.quantityMismatch && (() => {
-                            const dupTx = pos.likelyDuplicateTxId != null ? transactions.find((t) => t.id === pos.likelyDuplicateTxId) : null;
-                            const dupNote = dupTx
-                              ? ` Likely cause: the ${fmt(parseFloat(dupTx.quantity), 0)}-unit BUY on ${fmtDate(dupTx.tradeDate)} exactly matches the excess — check the Transactions tab for a duplicate of that row.`
+                            const dupTxs = pos.likelyDuplicateTxIds
+                              .map((id) => transactions.find((t) => t.id === id))
+                              .filter((t): t is PortfolioTransaction => t != null);
+                            const dupNote = dupTxs.length > 0
+                              ? ` Likely cause: ${dupTxs.map((t) => `the ${fmt(parseFloat(t.quantity), 0)}-unit BUY on ${fmtDate(t.tradeDate)}`).join(' + ')} exactly ${dupTxs.length > 1 ? 'match' : 'matches'} the excess.`
                               : ' Check your uploaded transactions for a duplicate or misparsed trade.';
                             return (
-                              <div
-                                className="flex items-center gap-1 mt-1 font-mono font-normal"
-                                style={{ fontSize: '9px', color: '#ef4444' }}
-                                title={`Statement math computes ${fmt(pos.rawComputedQuantity, 0)} units, but the broker's own position screen (captured ${fmtDate(pos.verificationCapturedAt!)}) confirms only ${fmt(pos.verifiedUnits ?? 0, 0)} — quantity capped to the verified number.${dupNote}`}
-                              >
-                                <AlertTriangle size={10} /> computed {fmt(pos.rawComputedQuantity, 0)}, capped
-                              </div>
+                              <>
+                                <div
+                                  className="flex items-center gap-1 mt-1 font-mono font-normal"
+                                  style={{ fontSize: '9px', color: '#ef4444' }}
+                                  title={`Statement math computes ${fmt(pos.rawComputedQuantity, 0)} units, but the broker's own position screen (captured ${fmtDate(pos.verificationCapturedAt!)}) confirms only ${fmt(pos.verifiedUnits ?? 0, 0)} — quantity capped to the verified number.${dupNote}`}
+                                >
+                                  <AlertTriangle size={10} /> computed {fmt(pos.rawComputedQuantity, 0)}, capped
+                                </div>
+                                {dupTxs.map((t) => (
+                                  <button
+                                    key={t.id}
+                                    onClick={() => handleRemoveSuspect(t, pos.verifiedUnits ?? 0)}
+                                    className="flex items-center gap-1 mt-1 font-mono font-normal transition-opacity hover:opacity-70"
+                                    style={{ fontSize: '9px', color: '#ef4444', textDecoration: 'underline' }}
+                                    title={`This ${fmt(parseFloat(t.quantity), 0)}-unit BUY on ${fmtDate(t.tradeDate)} exactly accounts for the gap vs. the broker's confirmed ${fmt(pos.verifiedUnits ?? 0, 0)} units — removing it reconciles the position. Deleting can't be undone.`}
+                                  >
+                                    <Trash2 size={10} /> remove suspect: {fmt(parseFloat(t.quantity), 0)} @ {fmtDate(t.tradeDate)}
+                                  </button>
+                                ))}
+                              </>
                             );
                           })()}
                           {pos.quantityShortfall && (

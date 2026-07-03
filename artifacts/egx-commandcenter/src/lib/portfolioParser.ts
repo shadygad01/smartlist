@@ -388,18 +388,49 @@ export function looksLikePositionVerification(text: string): boolean {
   return /my\s+current\s+position/i.test(text) && /units/i.test(text) && /average\s*cost/i.test(text);
 }
 
+// The four stat cards (Units, Average cost, Purchase Value, Market value)
+// render as a 2-column grid. Tesseract doesn't reliably preserve a
+// consistent scan order across a grid like this (same caveat as the Orders
+// screen above) — it may read a card's label directly followed by its own
+// value, or all four labels first and then all four values. Either way, a
+// given label and its value stay in the same *relative* position within
+// their respective streams, so instead of requiring the value to
+// immediately follow its label, this scans forward from the label for the
+// nearest number-like token, tolerant of another label's text sitting in
+// between.
+function valueAfterLabel(section: string, label: RegExp): string | null {
+  const m = label.exec(section);
+  if (!m) return null;
+  const tail = section.slice(m.index + m[0].length, m.index + m[0].length + 100);
+  // Must start with a real digit (0-9) — unlike the date/price parsing
+  // above, this scans through ordinary prose (other labels' text) looking
+  // for the nearest number, and the O/T/I/l digit-noise substitutes are
+  // common letters that would otherwise match *inside real words* (e.g. the
+  // "o" in "cost") before ever reaching the actual value.
+  const numMatch = /(\d[\d,OoTIl]*(?:[.,]\d+)?)/.exec(tail);
+  return numMatch ? numMatch[1] : null;
+}
+
 export function parsePositionVerification(text: string): PositionVerification | null {
   const normalized = text.replace(/\s+/g, ' ');
   const ticker = resolveHeaderTicker(text);
   if (!ticker) return null;
 
-  const unitsMatch = /Units\s+([\d,OoTIl]+(?:\.\d+)?)/i.exec(normalized);
-  if (!unitsMatch) return null;
-  const units = parseFloat(normalizeDigits(unitsMatch[1]).replace(/,/g, ''));
+  // Scope to the position card itself, stopping before "Earned Cash
+  // Dividends" (which has its own EGP-prefixed numbers that must never be
+  // mistaken for Units/Average cost/etc.) when that section is present.
+  const startIdx = normalized.search(/my\s+current\s+position/i);
+  const section = startIdx >= 0 ? normalized.slice(startIdx) : normalized;
+  const endIdx = section.search(/earned\s+cash\s+dividends/i);
+  const scoped = endIdx >= 0 ? section.slice(0, endIdx) : section;
+
+  const unitsRaw = valueAfterLabel(scoped, /units/i);
+  if (!unitsRaw) return null;
+  const units = parseFloat(normalizeDigits(unitsRaw).replace(/,/g, ''));
   if (!units) return null;
 
-  const avgCostMatch = /Average\s*cost\s*(?:EGP)?\s*([\d,]+(?:\.\d+)?)/i.exec(normalized);
-  const avgCost = avgCostMatch ? parseFloat(avgCostMatch[1].replace(/,/g, '')) : null;
+  const avgCostRaw = valueAfterLabel(scoped, /average\s*cost/i);
+  const avgCost = avgCostRaw ? parseFloat(normalizeDigits(avgCostRaw).replace(/,/g, '')) : null;
 
   return {
     ticker,

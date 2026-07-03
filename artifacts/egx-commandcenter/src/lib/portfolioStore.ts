@@ -296,6 +296,27 @@ export function deleteTransaction(transactionId: number): void {
   save(state);
 }
 
+// Full reset for when a parsing bug is found upstream and every statement
+// needs re-uploading from scratch. Deliberately leaves position
+// verifications untouched — they're ground truth captured independently
+// from a broker screenshot, not something a bad transaction parse should
+// invalidate, and re-uploaded statements can immediately be checked against
+// them again without having to re-verify every ticker.
+export function clearAllTransactions(): void {
+  save({ nextUploadId: 1, nextTransactionId: 1, uploads: [], transactions: [] });
+}
+
+// Narrower escape hatch for a single ticker whose statement-derived
+// transactions turned out wrong (e.g. still unverified and clearly off) —
+// clears just that ticker's transactions so it can be re-uploaded without
+// touching any other position. Its verification (if any) is left in place
+// for the same reason as clearAllTransactions above.
+export function clearTransactionsForTicker(ticker: string): void {
+  const state = load();
+  state.transactions = state.transactions.filter((t) => t.ticker !== ticker);
+  save(state);
+}
+
 // ─── Position verification (ground truth from a broker "My position" screen) ──
 // Stored separately from transactions/uploads — keyed by ticker so it's
 // order-independent (a verification screenshot can be uploaded before or

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { Upload, FileText, Image, CheckCircle, XCircle, AlertTriangle, ArrowLeft, TrendingUp, Package, Calendar, DollarSign, ScanText, Trash2 } from 'lucide-react';
+import { Upload, FileText, Image, CheckCircle, XCircle, AlertTriangle, ArrowLeft, TrendingUp, Package, Calendar, DollarSign, ScanText, Trash2, RotateCcw } from 'lucide-react';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { createWorker } from 'tesseract.js';
 import { extractPdfText } from '@/lib/pdfText';
@@ -17,6 +17,8 @@ import {
   recordUpload,
   completeUpload,
   deleteTransaction,
+  clearAllTransactions,
+  clearTransactionsForTicker,
   computePositions,
   buildPriceMapFromSnapshot,
   getPositionVerifications,
@@ -270,6 +272,26 @@ export default function PortfolioPage() {
     loadData();
   }, [loadData]);
 
+  // Full reset for when a parsing bug is found and everything needs
+  // re-uploading. Verifications are deliberately untouched (see
+  // clearAllTransactions's doc comment) so re-uploaded statements can still
+  // be checked against them right away.
+  const handleClearAll = useCallback(() => {
+    if (transactions.length === 0) return;
+    if (!window.confirm(`Clear all ${transactions.length} transaction(s) and ${uploads.length} uploaded document(s)? Verified positions are kept. This can't be undone.`)) return;
+    clearAllTransactions();
+    loadData();
+  }, [loadData, transactions.length, uploads.length]);
+
+  // Narrower reset for a single position whose statement-derived numbers
+  // look wrong — clears just that ticker's transactions without touching
+  // anything else, so it can be re-uploaded cleanly.
+  const handleClearPosition = useCallback((ticker: string, count: number) => {
+    if (!window.confirm(`Clear all ${count} ${ticker} transaction(s) so you can re-upload them? Its verification (if any) is kept. This can't be undone.`)) return;
+    clearTransactionsForTicker(ticker);
+    loadData();
+  }, [loadData]);
+
   const totalCost = positions.reduce((s, p) => s + p.totalCost, 0);
   const totalQty = positions.reduce((s, p) => s + p.totalQuantity, 0);
   const pricedPositions = positions.filter((p) => p.unrealizedPnl != null);
@@ -338,11 +360,23 @@ export default function PortfolioPage() {
 
           {/* Upload zone */}
           <div className="rounded-xl p-4" style={{ backgroundColor: '#181930', border: '1px solid #252645' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Upload size={14} color="#9c6fff" />
-              <span className="font-mono font-bold" style={{ fontSize: '11px', color: '#c4c9df', letterSpacing: '0.08em' }}>
-                Upload transaction statement
-              </span>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Upload size={14} color="#9c6fff" />
+                <span className="font-mono font-bold" style={{ fontSize: '11px', color: '#c4c9df', letterSpacing: '0.08em' }}>
+                  Upload transaction statement
+                </span>
+              </div>
+              {transactions.length > 0 && (
+                <button
+                  onClick={handleClearAll}
+                  className="flex items-center gap-1 font-mono transition-opacity hover:opacity-70"
+                  style={{ fontSize: '10px', color: '#ef4444' }}
+                  title="Clear all transactions and uploaded documents (verified positions are kept) so you can re-upload from scratch"
+                >
+                  <RotateCcw size={11} /> Clear all
+                </button>
+              )}
             </div>
             {uploading ? (
               <div className="flex items-center justify-center py-10">
@@ -412,7 +446,7 @@ export default function PortfolioPage() {
                 <table className="w-full">
                   <thead>
                     <tr style={{ backgroundColor: '#0e1120', borderBottom: '1px solid #252645' }}>
-                      {['TICKER', 'First Buy', 'Last Buy', 'Quantity', 'Avg Price', 'Total Cost', 'Current Price', 'Unrealized P&L'].map((h) => (
+                      {['TICKER', 'First Buy', 'Last Buy', 'Quantity', 'Avg Price', 'Total Cost', 'Current Price', 'Unrealized P&L', ''].map((h) => (
                         <th
                           key={h}
                           className="font-mono text-left px-4 py-2"
@@ -486,6 +520,15 @@ export default function PortfolioPage() {
                           {pos.unrealizedPnl != null
                             ? `${pos.unrealizedPnl >= 0 ? '+' : ''}${fmt(pos.unrealizedPnl)} EGP (${pos.unrealizedPnlPct! >= 0 ? '+' : ''}${pos.unrealizedPnlPct!.toFixed(1)}%)`
                             : '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => handleClearPosition(pos.ticker, transactions.filter((t) => t.ticker === pos.ticker).length)}
+                            className="transition-opacity hover:opacity-70"
+                            title={`Clear ${pos.ticker}'s transactions so you can re-upload them (its verification, if any, is kept)`}
+                          >
+                            <RotateCcw size={13} color="#ef4444" />
+                          </button>
                         </td>
                       </tr>
                     ))}

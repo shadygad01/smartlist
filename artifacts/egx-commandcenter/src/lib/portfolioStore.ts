@@ -52,6 +52,10 @@ export interface PortfolioPosition {
   // "computed 80, broker confirms 74" rather than just hiding the gap.
   rawComputedQuantity: number;
   quantityMismatch: boolean;
+  // True when the computed total is *below* the verified truth instead of
+  // above it — a different problem from quantityMismatch (missing
+  // transactions rather than extra/duplicate ones). See computePositions.
+  quantityShortfall: boolean;
   // Set when this ticker's raw label fuzzy-matches a *different* ticker's
   // verified company name — signals the same stock likely got split across
   // two rows because a statement's company name didn't resolve to the
@@ -507,6 +511,15 @@ export function computePositions(
       // useful context) rather than guessed at, since we don't know *which*
       // trade in the statement is the bad one.
       const quantityMismatch = verification != null && p.totalQuantity > verification.units;
+      // The reverse gap: statement-derived total is *short* of the verified
+      // truth (e.g. an Orders-screen upload that's missing a fulfilled row —
+      // OCR failure, or a screenshot that didn't scroll far enough to
+      // capture every order). This doesn't get capped like the over-count
+      // case since there's nothing to cap *to* — the number shown is simply
+      // wrong-low. Kept distinct from a clean match so the UI never shows a
+      // reassuring "verified" checkmark on a total that's actually
+      // incomplete; only an exact match earns that.
+      const quantityShortfall = verification != null && p.totalQuantity < verification.units;
       const displayQuantity = verification != null ? Math.min(p.totalQuantity, verification.units) : p.totalQuantity;
 
       // Same stock split across two different ticker labels (e.g. a garbled
@@ -533,6 +546,7 @@ export function computePositions(
         rawComputedQuantity: p.totalQuantity,
         verifiedUnits: verification?.units ?? null,
         quantityMismatch,
+        quantityShortfall,
         duplicateOf,
         avgBuyPrice: p.totalCost / p.totalQuantity,
         totalCost: p.totalCost,

@@ -140,25 +140,19 @@ export function recordUpload(params: {
   return upload;
 }
 
-// Identity for cross-upload dedup: same ticker/date/side/qty already recorded
-// from an earlier upload means this row is old news, not a new trade.
-// Deliberately excludes price — the same real trade parsed from a statement
-// PDF (price derived from the Value column, which includes commission) vs.
-// from an Orders-screen screenshot (raw nominal execution price, no Value
-// column available) yields two different price numbers for one real trade,
-// e.g. "Buy EFG HOLDING (39@26.98) -1,056.54" derives an effective price of
-// ~27.09, while the same fulfilled order on its Orders screen reads a plain
-// "26.980" — confirmed against a real user statement/screenshot pair that
-// was silently double-counted (inflating quantity and cost basis) when price
-// was part of the key. Ticker+date+type+qty is a reliable enough proxy for
-// "same real trade" across formats. Normalized to fixed decimals so "45.5"
-// and "45.50" match. Deliberately NOT used to dedupe rows against each other
-// within the same upload — two genuinely identical trades placed the same
-// day should both be kept.
-function transactionKey(t: {
+// Identity for cross-upload dedup: same ticker/date/side/qty/price already
+// recorded from an earlier upload means this exact row is old news, not a
+// new trade. Includes price deliberately — unlike the "possible duplicate"
+// grouping below, this is only meant to catch a *literal* re-upload of the
+// same statement/screenshot, which always reproduces the same price too.
+// Normalized to fixed decimals so "45.5" and "45.50" match. Deliberately NOT
+// used to dedupe rows against each other within the same upload — two
+// genuinely identical trades placed the same day should both be kept.
+function exactTransactionKey(t: {
   ticker: string;
   transactionType: string;
   quantity: number | string;
+  price: number | string;
   tradeDate: string | Date;
 }): string {
   const date = t.tradeDate instanceof Date ? t.tradeDate.toISOString() : t.tradeDate;
@@ -167,29 +161,48 @@ function transactionKey(t: {
     date.slice(0, 10),
     t.transactionType,
     Number(t.quantity).toFixed(4),
+    Number(t.price).toFixed(4),
   ].join('|');
 }
 
-// Running BUY-minus-SELL quantity already on record for a ticker — used to
-// arbitrate the same-key-looks-like-a-duplicate case below against a
-// verified ground truth, so it must reflect state.transactions as it stands
-// *at the point of the check*, including any rows already pushed earlier in
-// this same completeUpload() call.
-function recordedQuantity(transactions: StoredTransaction[], ticker: string): number {
-  let qty = 0;
+// Looser identity used only to *flag* possible duplicates for the user to
+// review (see withDuplicateFlags below) — ticker+date+side+qty, excluding
+// price. The same real trade parsed from a statement PDF (price derived
+// from the Value column, which includes commission) vs. from an
+// Orders-screen screenshot (raw nominal execution price, no commission)
+// yields two different price numbers for one real trade, e.g.
+// "Buy EFG HOLDING (39@26.98) -1,056.54" derives an effective price of
+// ~27.09, while the same fulfilled order on its Orders screen reads a plain
+// "26.980". That's indistinguishable, from the data alone, from a genuine
+// second same-day trade at a different price — so rather than guessing,
+// both get kept and flagged for the user to confirm or delete themselves.
+function looseTransactionKey(t: { ticker: string; transactionType: string; quantity: string; tradeDate: string }): string {
+  return [t.ticker, t.tradeDate.slice(0, 10), t.transactionType, Number(t.quantity).toFixed(4)].join('|');
+}
+
+export interface TransactionWithFlags extends StoredTransaction {
+  possibleDuplicate: boolean;
+}
+
+// Groups transactions by looseTransactionKey and marks every member of any
+// group with 2+ entries — those share a ticker/date/side/qty but (since
+// they weren't caught by the exact-key dedup above) differ in price, the
+// commission-inclusion ambiguity described above. Purely a read-time
+// computed flag, not persisted — so it re-evaluates correctly as rows get
+// added or removed instead of going stale.
+export function withDuplicateFlags(transactions: StoredTransaction[]): TransactionWithFlags[] {
+  const counts = new Map<string, number>();
   for (const t of transactions) {
-    if (t.ticker !== ticker || !isInTrackedRange(t.tradeDate)) continue;
-    const q = parseFloat(t.quantity);
-    qty = t.transactionType === 'BUY' ? qty + q : Math.max(0, qty - q);
+    const key = looseTransactionKey(t);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  return qty;
+  return transactions.map((t) => ({ ...t, possibleDuplicate: (counts.get(looseTransactionKey(t)) ?? 0) > 1 }));
 }
 
 export function completeUpload(
   uploadId: number,
   parsed: ParsedTransaction[],
-  noTradesMessage = "No transactions found in the file. Make sure it's a Thunder report.",
-  verifications: Record<string, PositionVerification> = {}
+  noTradesMessage = "No transactions found in the file. Make sure it's a Thunder report."
 ): {
   status: 'parsed' | 'failed' | 'duplicate';
   transactionCount: number;
@@ -222,36 +235,14 @@ export function completeUpload(
     return { status: 'failed', transactionCount: parsed.length, newCount: 0, duplicateCount: 0, outOfRangeCount };
   }
 
-  const existingKeys = new Set(
-    state.transactions.filter((t) => isInTrackedRange(t.tradeDate)).map(transactionKey)
+  const existingExactKeys = new Set(
+    state.transactions.filter((t) => isInTrackedRange(t.tradeDate)).map(exactTransactionKey)
   );
 
   let newCount = 0;
   let duplicateCount = 0;
   for (const t of inRange) {
-    let looksLikeDuplicate = existingKeys.has(transactionKey(t));
-
-    // A same ticker/date/side/qty match is usually a genuine duplicate row
-    // from a re-uploaded/overlapping statement — but it can also be two real
-    // trades that happen to share a day, quantity, and (coincidentally)
-    // price, e.g. topping up a position twice the same day. When a verified
-    // broker unit count exists for the ticker, prefer it over the same-key
-    // heuristic here: if what's on record is still short of the verified
-    // total, and keeping this BUY wouldn't push the total past it, it's more
-    // likely a real second trade than a duplicate. Scoped to BUY only — a
-    // wrongly-kept duplicate SELL would understate the position instead,
-    // which this ground truth can't help arbitrate the same way.
-    if (looksLikeDuplicate && t.transactionType === 'BUY') {
-      const verification = verifications[t.ticker];
-      if (verification) {
-        const recorded = recordedQuantity(state.transactions, t.ticker);
-        if (recorded < verification.units && recorded + t.quantity <= verification.units) {
-          looksLikeDuplicate = false;
-        }
-      }
-    }
-
-    if (looksLikeDuplicate) {
+    if (existingExactKeys.has(exactTransactionKey(t))) {
       duplicateCount += 1;
       continue;
     }
@@ -266,8 +257,11 @@ export function completeUpload(
     });
     state.nextTransactionId += 1;
     newCount += 1;
-    // Not added to existingKeys: duplicates *within this same upload* should
-    // still all be kept (see function doc comment above).
+    // Not added to existingExactKeys: duplicates *within this same upload*
+    // should still all be kept (see function doc comment above). A same-key
+    // different-price row against something already on record is *not*
+    // silently rejected or accepted here — see withDuplicateFlags, which
+    // surfaces it for the user to resolve instead of guessing.
   }
 
   upload.status = newCount > 0 ? 'parsed' : 'duplicate';

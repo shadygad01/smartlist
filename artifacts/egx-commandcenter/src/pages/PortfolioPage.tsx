@@ -10,6 +10,7 @@ import {
   looksLikeThunderDocument,
   looksLikePositionVerification,
   parsePositionVerification,
+  canonicalNameForTicker,
 } from '@/lib/portfolioParser';
 import {
   getUploads,
@@ -23,6 +24,7 @@ import {
   buildPriceMapFromSnapshot,
   getPositionVerifications,
   recordPositionVerification,
+  acceptComputedAsVerified,
   withDuplicateFlags,
   TRACKING_START_DATE,
   type StoredUpload as PortfolioUpload,
@@ -341,6 +343,16 @@ export default function PortfolioPage() {
     loadData();
   }, [loadData]);
 
+  // Manual resolution for a mismatch/shortfall/outdated verification when
+  // there's no fresh "My position" screenshot handy but the statement total
+  // is confirmed correct some other way — overrides the broker verification
+  // on file with today's computed number (see acceptComputedAsVerified).
+  const handleAcceptComputed = useCallback((ticker: string, units: number) => {
+    if (!window.confirm(`Confirm ${ticker} at ${fmt(units, 0)} units? This replaces the broker verification on file until you upload a fresh "My position" screenshot.`)) return;
+    acceptComputedAsVerified(ticker, units, canonicalNameForTicker(ticker));
+    loadData();
+  }, [loadData]);
+
   const totalCost = positions.reduce((s, p) => s + p.totalCost, 0);
   const totalQty = positions.reduce((s, p) => s + p.totalQuantity, 0);
   const pricedPositions = positions.filter((p) => p.unrealizedPnl != null);
@@ -532,9 +544,13 @@ export default function PortfolioPage() {
                             <div
                               className="flex items-center gap-1 mt-1 font-mono"
                               style={{ fontSize: '9px', color: '#10b981' }}
-                              title="Quantity matches a broker 'My position' screenshot exactly."
+                              title={
+                                pos.verificationSource === 'manual'
+                                  ? `Self-confirmed at ${fmt(pos.verifiedUnits, 0)} units on ${fmtDate(pos.verificationCapturedAt!)} (no broker screenshot on file) — upload a "My position" screenshot for real broker-backed verification.`
+                                  : "Quantity matches a broker 'My position' screenshot exactly."
+                              }
                             >
-                              <CheckCircle size={10} /> verified
+                              <CheckCircle size={10} /> {pos.verificationSource === 'manual' ? 'self-confirmed' : 'verified'}
                             </div>
                           )}
                         </td>
@@ -546,23 +562,48 @@ export default function PortfolioPage() {
                         </td>
                         <td className="px-4 py-3 font-mono font-bold" style={{ fontSize: '13px', color: pos.quantityMismatch || pos.quantityShortfall ? '#ef4444' : '#c4c9df' }}>
                           {fmt(pos.totalQuantity, 0)}
-                          {pos.quantityMismatch && (
-                            <div
-                              className="flex items-center gap-1 mt-1 font-mono font-normal"
-                              style={{ fontSize: '9px', color: '#ef4444' }}
-                              title={`Statement math computes ${fmt(pos.rawComputedQuantity, 0)} units, but the broker's own position screen confirms only ${fmt(pos.verifiedUnits ?? 0, 0)} — quantity capped to the verified number. Check your uploaded transactions for a duplicate or misparsed trade.`}
-                            >
-                              <AlertTriangle size={10} /> computed {fmt(pos.rawComputedQuantity, 0)}, capped
-                            </div>
-                          )}
+                          {pos.quantityMismatch && (() => {
+                            const dupTx = pos.likelyDuplicateTxId != null ? transactions.find((t) => t.id === pos.likelyDuplicateTxId) : null;
+                            const dupNote = dupTx
+                              ? ` Likely cause: the ${fmt(parseFloat(dupTx.quantity), 0)}-unit BUY on ${fmtDate(dupTx.tradeDate)} exactly matches the excess — check the Transactions tab for a duplicate of that row.`
+                              : ' Check your uploaded transactions for a duplicate or misparsed trade.';
+                            return (
+                              <div
+                                className="flex items-center gap-1 mt-1 font-mono font-normal"
+                                style={{ fontSize: '9px', color: '#ef4444' }}
+                                title={`Statement math computes ${fmt(pos.rawComputedQuantity, 0)} units, but the broker's own position screen (captured ${fmtDate(pos.verificationCapturedAt!)}) confirms only ${fmt(pos.verifiedUnits ?? 0, 0)} — quantity capped to the verified number.${dupNote}`}
+                              >
+                                <AlertTriangle size={10} /> computed {fmt(pos.rawComputedQuantity, 0)}, capped
+                              </div>
+                            );
+                          })()}
                           {pos.quantityShortfall && (
                             <div
                               className="flex items-center gap-1 mt-1 font-mono font-normal"
                               style={{ fontSize: '9px', color: '#ef4444' }}
-                              title={`Statement math computes only ${fmt(pos.rawComputedQuantity, 0)} units, but the broker's own position screen confirms ${fmt(pos.verifiedUnits ?? 0, 0)} — some transactions are likely missing. Re-check your uploaded Orders/statement screenshots for gaps (e.g. rows below the fold that weren't captured) and re-upload.`}
+                              title={`Statement math computes only ${fmt(pos.rawComputedQuantity, 0)} units, but the broker's own position screen (captured ${fmtDate(pos.verificationCapturedAt!)}) confirms ${fmt(pos.verifiedUnits ?? 0, 0)} — some transactions are likely missing. Re-check your uploaded Orders/statement screenshots for gaps (e.g. rows below the fold that weren't captured) and re-upload.`}
                             >
                               <AlertTriangle size={10} /> short {fmt((pos.verifiedUnits ?? 0) - pos.rawComputedQuantity, 0)} vs. broker
                             </div>
+                          )}
+                          {pos.verificationStale && pos.verifiedUnits != null && pos.totalQuantity !== pos.verifiedUnits && (
+                            <div
+                              className="flex items-center gap-1 mt-1 font-mono font-normal"
+                              style={{ fontSize: '9px', color: '#f59e0b' }}
+                              title={`Broker verification (${fmt(pos.verifiedUnits, 0)} units) was captured ${fmtDate(pos.verificationCapturedAt!)}, before this ticker's most recent transaction — the gap is likely just an outdated screenshot rather than a parsing bug, so the statement total is shown as-is (not capped). Upload a fresh "My position" screenshot to re-confirm.`}
+                            >
+                              <AlertTriangle size={10} /> verification outdated (as of {fmtDate(pos.verificationCapturedAt!)})
+                            </div>
+                          )}
+                          {(pos.quantityMismatch || pos.quantityShortfall || (pos.verificationStale && pos.verifiedUnits != null && pos.totalQuantity !== pos.verifiedUnits)) && (
+                            <button
+                              onClick={() => handleAcceptComputed(pos.ticker, pos.rawComputedQuantity)}
+                              className="flex items-center gap-1 mt-1 font-mono font-normal transition-opacity hover:opacity-70"
+                              style={{ fontSize: '9px', color: '#4a9fff' }}
+                              title={`Confirm ${fmt(pos.rawComputedQuantity, 0)} units is correct without a fresh screenshot — replaces the broker verification on file.`}
+                            >
+                              accept {fmt(pos.rawComputedQuantity, 0)} as current →
+                            </button>
                           )}
                         </td>
                         <td className="px-4 py-3 font-mono" style={{ fontSize: '12px', color: '#f59e0b' }}>

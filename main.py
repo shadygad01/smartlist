@@ -2303,10 +2303,13 @@ def continuous_scan():
         if _registered:
             print(f"  [Timeline] Registered alert events: {_registered}")
 
-        # Hard verification gate: every change ticker must have a persisted event
+        # Hard verification gate: every change ticker must have a persisted event.
+        # Verify against each event's own event_date (now the real data date, which
+        # register_alert_events used to write the row) rather than wall-clock
+        # _event_date, so the two stay consistent when data_date != today.
         _unverified = [
             ev["ticker"] for ev in changes
-            if not verify_event_persisted(ev["ticker"], _event_date)
+            if not verify_event_persisted(ev["ticker"], ev.get("event_date", _event_date))
         ]
         if _unverified:
             raise RuntimeError(
@@ -2551,6 +2554,14 @@ def detect_signal_changes(snap) -> list[dict]:
         if not ticker:
             continue
 
+        # Key the idempotency gate off the ticker's actual price-data date
+        # (last_scan), not the wall-clock date. If the market never opened
+        # today (surprise holiday, feed outage), last_scan still points at
+        # the prior trading day, so (ticker, data_date, to_state) already
+        # exists in signal_event_log and INSERT OR IGNORE skips it below —
+        # no duplicate BUY signal on unchanged data.
+        data_date = (u.get("last_scan") or "")[:10] or event_date
+
         in_buy_zone = is_constitutional_buy(r2, score, cur_price, entry_price)
         current_state = STATE_CONST_BUY if in_buy_zone else STATE_NONE
 
@@ -2559,12 +2570,12 @@ def detect_signal_changes(snap) -> list[dict]:
         if current_state == STATE_NONE:
             # Ticker exited buy zone: update state silently, no notification
             if from_state != STATE_NONE:
-                record_transition(ticker, from_state, STATE_NONE, event_date)
+                record_transition(ticker, from_state, STATE_NONE, data_date)
             continue
 
         # Ticker is in constitutional buy zone.
-        # record_transition returns True ONLY if this is the first time today.
-        is_new = record_transition(ticker, from_state, current_state, event_date)
+        # record_transition returns True ONLY if this is the first time for this data_date.
+        is_new = record_transition(ticker, from_state, current_state, data_date)
 
         if is_new:
             # CONST_BUY → CONST_BUY means the ticker was already in buy zone and
@@ -2576,7 +2587,7 @@ def detect_signal_changes(snap) -> list[dict]:
             new_events.append({
                 "ticker":        ticker,
                 "event_type":    event_type,
-                "event_date":    event_date,
+                "event_date":    data_date,
                 "constitutional_entry_price": entry_price if entry_price > 0 else cur_price,
                 "current_price":             cur_price,
                 "constitutional_r2":         r2,

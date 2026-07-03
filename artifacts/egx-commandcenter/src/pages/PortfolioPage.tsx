@@ -258,7 +258,7 @@ export default function PortfolioPage() {
         // against the whole file, so re-uploading an updated statement that
         // overlaps with a previous one only adds what's genuinely new.
         setUploadStatus('Analyzing transactions…');
-        const { transactions: parsed, incompleteRowCount } = parseThunderText(extractedText);
+        const { transactions: parsed, incompleteRowCount, fulfilledStatusCount } = parseThunderText(extractedText);
         const noTradesMessage = looksLikeThunderDocument(extractedText)
           ? 'This looks like a valid Thndr statement, but it has no buy/sell trades in this period.'
           : "No transactions found in the file. Make sure it's a Thunder report.";
@@ -268,6 +268,15 @@ export default function PortfolioPage() {
           result.outOfRangeCount > 0
             ? ` (${result.outOfRangeCount} before ${TRACKING_START_DATE}, outside the tracked range, skipped)`
             : '';
+        // Cross-check requested after a real incident: count "Fulfilled"
+        // labels found anywhere in the raw OCR text and compare against how
+        // many transactions were actually extracted from *this* file (before
+        // dedup — dedup legitimately reduces the count for reasons that
+        // aren't a parsing failure). Catches any gap between what the
+        // screenshot visually shows as fulfilled and what made it into the
+        // result, regardless of the specific cause — broader than
+        // incompleteRowCount, which only explains one particular cause.
+        const missingFulfilledCount = Math.max(0, fulfilledStatusCount - parsed.length);
         // Surfaces a genuinely observed failure mode: an order row whose
         // action (Buy/Sell • N shares) was detected but whose price/date/
         // status couldn't be read — OCR quality varies between runs even on
@@ -275,7 +284,9 @@ export default function PortfolioPage() {
         // than never having existed. Without this note it looks identical to
         // "nothing more to add".
         const incompleteNote =
-          incompleteRowCount > 0
+          missingFulfilledCount > 0
+            ? ` ⚠ Screenshot shows ${fulfilledStatusCount} "Fulfilled" order(s) but only ${parsed.length} were extracted — ${missingFulfilledCount} may be missing. Try re-uploading a clearer or larger screenshot.`
+            : incompleteRowCount > 0
             ? ` ⚠ ${incompleteRowCount} order row(s) were detected but couldn't be fully read (missing price/date/status) — try re-uploading a clearer or larger screenshot if a trade seems to be missing.`
             : '';
 
@@ -292,7 +303,7 @@ export default function PortfolioPage() {
         } else {
           message = `Added ${result.newCount} new transaction(s).${rangeNote}${incompleteNote}`;
         }
-        showToast(message, result.status !== 'failed' && incompleteRowCount === 0);
+        showToast(message, result.status !== 'failed' && missingFulfilledCount === 0 && incompleteRowCount === 0);
       } catch (e) {
         showToast(`Error: ${String(e)}`, false);
       }

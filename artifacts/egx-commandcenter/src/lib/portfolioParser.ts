@@ -309,6 +309,15 @@ export interface ThunderParseResult {
   // makes that failure visible to the user instead of a transaction quietly
   // vanishing with no indication anything went wrong.
   incompleteRowCount: number;
+  // Orders-screen format only: how many "Fulfilled" status labels were found
+  // anywhere in the raw OCR text, independent of whether each one could be
+  // successfully paired to an action/price/date. A cross-check that doesn't
+  // care *why* a row failed (missed pairing, failed qty/price/date
+  // validation, or anything else) — if this is higher than
+  // transactions.length, something visibly marked "Fulfilled" in the
+  // screenshot didn't make it into the parsed result. 0 for the statement
+  // format, which has no such labels.
+  fulfilledStatusCount: number;
 }
 
 function parseOrdersScreenText(text: string): ThunderParseResult {
@@ -318,14 +327,17 @@ function parseOrdersScreenText(text: string): ThunderParseResult {
   const { section, strict } = ordersSection(normalized);
 
   const actions = [...section.matchAll(orderActionPattern)];
-  if (actions.length === 0) return { transactions, incompleteRowCount };
+  if (actions.length === 0) return { transactions, incompleteRowCount, fulfilledStatusCount: 0 };
 
   const ticker = resolveHeaderTicker(text);
-  if (!ticker || NON_STOCK_INSTRUMENTS.has(ticker.toUpperCase())) return { transactions, incompleteRowCount };
+  if (!ticker || NON_STOCK_INSTRUMENTS.has(ticker.toUpperCase())) {
+    return { transactions, incompleteRowCount, fulfilledStatusCount: 0 };
+  }
 
   const prices = [...section.matchAll(strict ? orderPriceStrictPattern : orderPriceLenientPattern)];
   const dates = [...section.matchAll(orderDatePattern)];
   const statuses = [...section.matchAll(orderStatusPattern)];
+  const fulfilledStatusCount = statuses.filter((s) => /^fulf/i.test(s[1])).length;
 
   // Pair each action with the nearest price/date/status that falls between
   // it and the next action, instead of a strict positional zip — an OCR miss
@@ -361,12 +373,12 @@ function parseOrdersScreenText(text: string): ThunderParseResult {
     });
   }
 
-  return { transactions, incompleteRowCount };
+  return { transactions, incompleteRowCount, fulfilledStatusCount };
 }
 
 export function parseThunderText(text: string): ThunderParseResult {
   const statementTx = parseStatementText(text);
-  if (statementTx.length > 0) return { transactions: statementTx, incompleteRowCount: 0 };
+  if (statementTx.length > 0) return { transactions: statementTx, incompleteRowCount: 0, fulfilledStatusCount: 0 };
   return parseOrdersScreenText(text);
 }
 

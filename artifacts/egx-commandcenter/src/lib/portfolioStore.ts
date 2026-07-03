@@ -190,19 +190,39 @@ export interface TransactionWithFlags extends StoredTransaction {
   possibleDuplicate: boolean;
 }
 
-// Groups transactions by looseTransactionKey and marks every member of any
-// group with 2+ entries — those share a ticker/date/side/qty but (since
-// they weren't caught by the exact-key dedup above) differ in price, the
-// commission-inclusion ambiguity described above. Purely a read-time
-// computed flag, not persisted — so it re-evaluates correctly as rows get
-// added or removed instead of going stale.
+// Groups transactions by looseTransactionKey — those share a ticker/date/
+// side/qty but (since they weren't caught by the exact-key dedup above)
+// differ in price, the commission-inclusion ambiguity described above.
+// Within a group, only the row that's most likely to be the *extra* one
+// gets the visible flag rather than every member: a statement PDF's price
+// includes commission, which is slightly higher for a BUY and slightly
+// lower for a SELL than the raw execution price a screenshot's Orders
+// screen shows. So the "odd one out" worth a second look is the BUY at the
+// group's lowest price, or the SELL at the group's highest price — flagging
+// both members of every pair would just be visual noise once the pattern is
+// this predictable. Purely a read-time computed flag, not persisted — so it
+// re-evaluates correctly as rows get added or removed instead of going
+// stale.
 export function withDuplicateFlags(transactions: StoredTransaction[]): TransactionWithFlags[] {
-  const counts = new Map<string, number>();
+  const groups = new Map<string, StoredTransaction[]>();
   for (const t of transactions) {
     const key = looseTransactionKey(t);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+    const group = groups.get(key);
+    if (group) group.push(t);
+    else groups.set(key, [t]);
   }
-  return transactions.map((t) => ({ ...t, possibleDuplicate: (counts.get(looseTransactionKey(t)) ?? 0) > 1 }));
+
+  const flaggedIds = new Set<number>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const prices = group.map((t) => parseFloat(t.price));
+    const target = group[0].transactionType === 'BUY' ? Math.min(...prices) : Math.max(...prices);
+    for (const t of group) {
+      if (parseFloat(t.price) === target) flaggedIds.add(t.id);
+    }
+  }
+
+  return transactions.map((t) => ({ ...t, possibleDuplicate: flaggedIds.has(t.id) }));
 }
 
 // Running BUY-minus-SELL quantity already on record for a ticker — used to

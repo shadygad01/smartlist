@@ -585,7 +585,7 @@ export default function PortfolioPage() {
                               <div
                                 className="flex items-center gap-1 mt-1 font-mono"
                                 style={{ fontSize: '9px', color: '#ef4444' }}
-                                title="Same ticker/date/side/quantity as another transaction, just a different price — often the same real trade uploaded twice (once with commission folded into the price, once without). Confirm it's a genuine second trade, or delete one of them."
+                                title={`Same ticker/date/side/quantity as another transaction at a different price — likely the same real trade uploaded twice (once with commission folded into the price, once without). This is the ${isBuy ? 'lower' : 'higher'}-priced one, the side more likely to be the raw no-commission duplicate. Confirm it's a genuine second trade, or delete it.`}
                               >
                                 <AlertTriangle size={10} /> possible duplicate
                               </div>

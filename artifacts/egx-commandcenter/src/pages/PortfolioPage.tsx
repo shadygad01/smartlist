@@ -32,6 +32,28 @@ import {
 import { useSnapshot } from '@/providers/SnapshotProvider';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+// Runs the header+body two-pass OCR (see cropHeaderBand/preprocessForOcr in
+// imagePreprocess.ts) with a given language set and returns the combined text.
+async function runOcr(
+  languages: string[],
+  headerBand: HTMLCanvasElement,
+  bodyInput: HTMLCanvasElement,
+  onProgress: (status: string) => void
+): Promise<string> {
+  const worker = await createWorker(languages, 1, {
+    logger: (m) => {
+      if (m.status === 'recognizing text') {
+        onProgress(`OCR: ${Math.round((m.progress ?? 0) * 100)}%`);
+      }
+    },
+  });
+  const headerResult = await worker.recognize(headerBand);
+  const bodyResult = await worker.recognize(bodyInput);
+  await worker.terminate();
+  return `${headerResult.data.text}\n${bodyResult.data.text}`;
+}
+
 async function sha256Hex(buffer: ArrayBuffer): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
   return Array.from(new Uint8Array(hashBuffer))
@@ -179,13 +201,6 @@ export default function PortfolioPage() {
         let extractedText = '';
         if (isImage) {
           setUploadStatus('Reading image with OCR…');
-          const worker = await createWorker(['ara', 'eng'], 1, {
-            logger: (m) => {
-              if (m.status === 'recognizing text') {
-                setUploadStatus(`OCR: ${Math.round((m.progress ?? 0) * 100)}%`);
-              }
-            },
-          });
           // Two passes: the header (ticker code + company name, next to the
           // back/bell/heart icons) gets silently dropped by full-page OCR —
           // isolating it recovers it. The body gets the white-background
@@ -194,10 +209,22 @@ export default function PortfolioPage() {
           // imagePreprocess.ts for both.
           const headerBand = await cropHeaderBand(file);
           const bodyInput = await preprocessForOcr(file);
-          const headerResult = await worker.recognize(headerBand);
-          const bodyResult = await worker.recognize(bodyInput);
-          await worker.terminate();
-          extractedText = `${headerResult.data.text}\n${bodyResult.data.text}`;
+
+          // English-only first: loading the Arabic model alongside English
+          // measurably degrades accuracy on English-language screenshots —
+          // confirmed by running the exact same real screenshot through OCR
+          // repeatedly: a fulfilled order's timestamp ("01:57PM") was
+          // consistently misread as "74" only when both models were loaded
+          // together, breaking that row's date match and silently dropping
+          // it downstream (english-only read it correctly every time).
+          // Arabic is still needed for Arabic-language broker apps, so it's
+          // a fallback rather than removed outright — only retried when the
+          // English-only pass doesn't look like a document we recognize.
+          extractedText = await runOcr(['eng'], headerBand, bodyInput, setUploadStatus);
+          if (!looksLikeThunderDocument(extractedText) && !looksLikePositionVerification(extractedText)) {
+            setUploadStatus('Retrying with Arabic support…');
+            extractedText = await runOcr(['ara', 'eng'], headerBand, bodyInput, setUploadStatus);
+          }
         } else {
           setUploadStatus('Reading PDF…');
           extractedText = await extractPdfText(buffer);

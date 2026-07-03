@@ -23,6 +23,7 @@ import {
   buildPriceMapFromSnapshot,
   getPositionVerifications,
   recordPositionVerification,
+  withDuplicateFlags,
   TRACKING_START_DATE,
   type StoredUpload as PortfolioUpload,
   type StoredTransaction as PortfolioTransaction,
@@ -234,7 +235,7 @@ export default function PortfolioPage() {
         const noTradesMessage = looksLikeThunderDocument(extractedText)
           ? 'This looks like a valid Thndr statement, but it has no buy/sell trades in this period.'
           : "No transactions found in the file. Make sure it's a Thunder report.";
-        const result = completeUpload(upload.id, parsed, noTradesMessage, getPositionVerifications());
+        const result = completeUpload(upload.id, parsed, noTradesMessage);
 
         const rangeNote =
           result.outOfRangeCount > 0
@@ -564,7 +565,7 @@ export default function PortfolioPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.map((tx, i) => {
+                    {withDuplicateFlags(transactions).map((tx, i) => {
                       const qty = parseFloat(tx.quantity);
                       const price = parseFloat(tx.price);
                       const isBuy = tx.transactionType === 'BUY';
@@ -580,6 +581,15 @@ export default function PortfolioPage() {
                             <span className="font-mono font-bold" style={{ fontSize: '12px', color: '#c4c9df' }}>
                               {tx.ticker}
                             </span>
+                            {tx.possibleDuplicate && (
+                              <div
+                                className="flex items-center gap-1 mt-1 font-mono"
+                                style={{ fontSize: '9px', color: '#ef4444' }}
+                                title="Same ticker/date/side/quantity as another transaction, just a different price — often the same real trade uploaded twice (once with commission folded into the price, once without). Confirm it's a genuine second trade, or delete one of them."
+                              >
+                                <AlertTriangle size={10} /> possible duplicate
+                              </div>
+                            )}
                           </td>
                           <td className="px-4 py-2.5">
                             <span

@@ -92,13 +92,16 @@ export interface PortfolioPosition {
   // override distinctly from real broker-confirmed ground truth. Null when
   // there's no verification on file.
   verificationSource: 'screenshot' | 'manual' | null;
-  // Best-guess pointer at the specific transaction most likely responsible
-  // for a fresh (non-stale) quantityMismatch: a single transaction whose
-  // quantity exactly equals the excess over the verified total. Null when no
-  // such single-transaction explanation exists (e.g. the excess is spread
-  // across several rows) — still worth surfacing when it does, since it
-  // turns "go hunt for a duplicate" into "delete transaction #N".
-  likelyDuplicateTxId: number | null;
+  // Best-guess pointers at the specific transaction(s) most likely
+  // responsible for a fresh (non-stale) quantityMismatch: a single BUY whose
+  // quantity exactly equals the excess over the verified total, or failing
+  // that, a pair of BUYs summing to it. Empty when no such small
+  // explanation exists (excess spread across 3+ rows, or genuinely unclear)
+  // — still worth surfacing when found, since it turns "go hunt for a
+  // duplicate" into a one-tap "remove suspect row" in the UI. When several
+  // single rows tie, one whose ticker/date/side/qty collides with another
+  // row's (the classic re-parsed-duplicate signature) is preferred.
+  likelyDuplicateTxIds: number[];
 }
 
 export interface PnlDataPoint {
@@ -119,7 +122,19 @@ const STORAGE_KEY = 'egx-portfolio-tracker-v1';
 export const TRACKING_START_DATE = '2026-01-01';
 
 function isInTrackedRange(tradeDate: string): boolean {
-  return tradeDate.slice(0, 10) >= TRACKING_START_DATE;
+  const date = tradeDate.slice(0, 10);
+  // A trade dated in the future can only be an OCR misparse (real observed
+  // case: an order's "26" year read as "28", storing a Feb 2028 trade that
+  // inflated the position by a phantom row). Beyond miscounting, a future
+  // date permanently poisons the verification-staleness check — it stays
+  // "newer" than every broker screenshot forever, so the position can never
+  // settle back to verified. Same double application as the start-date
+  // bound: rejected at upload time and filtered on read, so bad rows stored
+  // before this guard existed disappear from view too. One day of slack
+  // covers timezone skew between the trade's exchange day and the browser's
+  // local clock.
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return date >= TRACKING_START_DATE && date <= tomorrow;
 }
 
 interface StoreState {
@@ -316,7 +331,7 @@ export function completeUpload(
 
   if (inRange.length === 0) {
     upload.status = 'failed';
-    upload.errorMessage = `All ${outOfRangeCount} transaction(s) in this file are before ${TRACKING_START_DATE}, which is outside the Portfolio Tracker's tracked range.`;
+    upload.errorMessage = `All ${outOfRangeCount} transaction(s) in this file are outside the tracked range (before ${TRACKING_START_DATE}, or dated in the future — a misread date).`;
     save(state);
     return { status: 'failed', transactionCount: parsed.length, newCount: 0, duplicateCount: 0, outOfRangeCount };
   }
@@ -602,20 +617,38 @@ export function computePositions(
       const quantityShortfall = rawShortfall && !verificationStale;
       const displayQuantity = quantityMismatch ? Math.min(p.totalQuantity, verification!.units) : p.totalQuantity;
 
-      // When there's a fresh (non-stale) mismatch, check whether a single
-      // transaction's quantity exactly accounts for the excess over the
-      // verified total — a strong, actionable signal that *that* row is the
-      // duplicate/misparsed one, rather than making the user hunt through
-      // every transaction for this ticker. Null when the excess isn't
-      // explained by any single row (spread across several, or genuinely
-      // unclear) — still surfaced as a plain "capped" mismatch in that case.
-      let likelyDuplicateTxId: number | null = null;
+      // When there's a fresh (non-stale) mismatch, look for the smallest set
+      // of BUY rows whose quantities exactly account for the excess over the
+      // verified total — a strong, actionable signal that *those* rows are
+      // the duplicated/misparsed ones, rather than making the user hunt
+      // through every transaction for this ticker. Singles first (ties
+      // broken toward a row that shares a ticker/date/side/qty signature
+      // with another row — the classic duplicate fingerprint), then pairs.
+      // Empty when nothing small explains it — still surfaced as a plain
+      // "capped" mismatch in that case.
+      let likelyDuplicateTxIds: number[] = [];
       if (quantityMismatch && verification != null) {
         const excess = p.totalQuantity - verification.units;
-        const candidate = sorted.find(
-          (t) => t.ticker === p.ticker && t.transactionType === 'BUY' && parseFloat(t.quantity) === excess
-        );
-        if (candidate) likelyDuplicateTxId = candidate.id;
+        const buys = sorted.filter((t) => t.ticker === p.ticker && t.transactionType === 'BUY');
+        const singles = buys.filter((t) => parseFloat(t.quantity) === excess);
+        if (singles.length > 0) {
+          const looseKeys = new Map<string, number>();
+          for (const t of buys) {
+            const k = looseTransactionKey(t);
+            looseKeys.set(k, (looseKeys.get(k) ?? 0) + 1);
+          }
+          const flagged = singles.find((t) => (looseKeys.get(looseTransactionKey(t)) ?? 0) > 1);
+          likelyDuplicateTxIds = [(flagged ?? singles[0]).id];
+        } else {
+          pairSearch: for (let a = 0; a < buys.length; a++) {
+            for (let b = a + 1; b < buys.length; b++) {
+              if (parseFloat(buys[a].quantity) + parseFloat(buys[b].quantity) === excess) {
+                likelyDuplicateTxIds = [buys[a].id, buys[b].id];
+                break pairSearch;
+              }
+            }
+          }
+        }
       }
 
       // Same stock split across two different ticker labels (e.g. a garbled
@@ -646,7 +679,7 @@ export function computePositions(
         verificationStale,
         verificationCapturedAt: verification?.capturedAt ?? null,
         verificationSource: verification?.source ?? null,
-        likelyDuplicateTxId,
+        likelyDuplicateTxIds,
         duplicateOf,
         avgBuyPrice: p.totalCost / p.totalQuantity,
         totalCost: p.totalCost,

@@ -61,6 +61,31 @@ export interface PortfolioPosition {
   // two rows because a statement's company name didn't resolve to the
   // canonical ticker (e.g. OCR noise). Points at the canonical ticker.
   duplicateOf: string | null;
+  // True when the verification on file predates this ticker's most recent
+  // transaction — i.e. more trades were recorded *after* the broker
+  // screenshot was captured, so a gap between computed and verified is
+  // expected staleness rather than a real parsing bug. When true,
+  // quantityMismatch/quantityShortfall are suppressed (see computePositions)
+  // and the raw computed quantity is trusted instead of being capped to the
+  // now-outdated verified number.
+  verificationStale: boolean;
+  // ISO timestamp the verification was captured, surfaced so the UI can show
+  // "verified as of <date>" / "outdated since <date>" without a second
+  // lookup. Null when there's no verification on file.
+  verificationCapturedAt: string | null;
+  // Whether the verification came from a parsed broker screenshot or a
+  // manual "accept computed as current" override (see
+  // acceptComputedAsVerified) — surfaced so the UI can label a manual
+  // override distinctly from real broker-confirmed ground truth. Null when
+  // there's no verification on file.
+  verificationSource: 'screenshot' | 'manual' | null;
+  // Best-guess pointer at the specific transaction most likely responsible
+  // for a fresh (non-stale) quantityMismatch: a single transaction whose
+  // quantity exactly equals the excess over the verified total. Null when no
+  // such single-transaction explanation exists (e.g. the excess is spread
+  // across several rows) — still worth surfacing when it does, since it
+  // turns "go hunt for a duplicate" into "delete transaction #N".
+  likelyDuplicateTxId: number | null;
 }
 
 export interface PnlDataPoint {
@@ -426,6 +451,25 @@ export function deletePositionVerification(ticker: string): void {
   saveVerifications(all);
 }
 
+// Manual escape hatch for when there's no fresh "My position" screenshot
+// handy but the user has independently confirmed (e.g. checked the broker
+// app directly) that the statement-computed quantity is correct. Records a
+// verification exactly like a parsed screenshot would, dated now (so it's
+// never stale against existing transactions) and tagged source: 'manual' so
+// the UI can still show it was self-reported rather than screenshot-backed.
+// A later real screenshot upload overwrites it the same way any verification
+// gets replaced (recordPositionVerification always keys by ticker).
+export function acceptComputedAsVerified(ticker: string, computedUnits: number, companyName: string): void {
+  recordPositionVerification({
+    ticker,
+    companyName,
+    units: computedUnits,
+    avgCost: null,
+    capturedAt: new Date().toISOString(),
+    source: 'manual',
+  });
+}
+
 // Live prices come from presentation_snapshot.json's universe_snapshot — the
 // same constitutional-scanner pipeline (price_authority.py / main.py's
 // yfinance -> Yahoo chart API -> TradingView scanner fallback chain) already
@@ -469,7 +513,7 @@ export function computePositions(
 
   const posMap = new Map<
     string,
-    { ticker: string; totalQuantity: number; totalCost: number; firstBuyDate: string; lastBuyDate: string }
+    { ticker: string; totalQuantity: number; totalCost: number; firstBuyDate: string; lastBuyDate: string; lastTxDate: string }
   >();
 
   for (const row of sorted) {
@@ -482,6 +526,7 @@ export function computePositions(
         existing.totalQuantity += qty;
         existing.totalCost += qty * price;
         if (row.tradeDate > existing.lastBuyDate) existing.lastBuyDate = row.tradeDate;
+        if (row.tradeDate > existing.lastTxDate) existing.lastTxDate = row.tradeDate;
       } else {
         posMap.set(row.ticker, {
           ticker: row.ticker,
@@ -489,10 +534,16 @@ export function computePositions(
           totalCost: qty * price,
           firstBuyDate: row.tradeDate,
           lastBuyDate: row.tradeDate,
+          lastTxDate: row.tradeDate,
         });
       }
     } else if (existing) {
       existing.totalQuantity = Math.max(0, existing.totalQuantity - qty);
+      // Tracked separately from lastBuyDate (which only a BUY advances) —
+      // staleness below cares about the most recent trade of *either* side,
+      // since a SELL recorded after a verification screenshot is just as
+      // much reason to distrust that screenshot as a new BUY is.
+      if (row.tradeDate > existing.lastTxDate) existing.lastTxDate = row.tradeDate;
       if (existing.totalQuantity === 0) posMap.delete(row.ticker);
     }
   }
@@ -503,14 +554,27 @@ export function computePositions(
     .filter((p) => p.totalQuantity > 0)
     .map((p) => {
       const verification = verifications[p.ticker];
+      // A verification only speaks for the position *as of the moment it was
+      // captured*. If a trade for this ticker was recorded after that
+      // (either side — a later BUY or SELL), any gap between computed and
+      // verified is expected staleness, not evidence of a parsing bug: the
+      // broker screen simply hasn't been re-checked since. Treating a stale
+      // verification as authoritative would either wrongly cap a real,
+      // larger position down to an outdated number, or wrongly accuse a
+      // correct statement of being short. See acceptComputedAsVerified/the
+      // "My position" re-upload flow for how staleness gets cleared.
+      const verificationStale = verification != null && p.lastTxDate > verification.capturedAt;
+      const rawMismatch = verification != null && p.totalQuantity > verification.units;
+      const rawShortfall = verification != null && p.totalQuantity < verification.units;
       // The broker's own position screen is ground truth for units actually
       // held — the displayed/priced quantity must never exceed it, even if a
       // statement-parsing bug (duplicate or misparsed trade) makes the
       // computed total say more. Quantity itself is capped; totalCost/
       // avgBuyPrice are left as literal statement-derived figures (still
       // useful context) rather than guessed at, since we don't know *which*
-      // trade in the statement is the bad one.
-      const quantityMismatch = verification != null && p.totalQuantity > verification.units;
+      // trade in the statement is the bad one. Only applies when the
+      // verification is still fresh — see verificationStale above.
+      const quantityMismatch = rawMismatch && !verificationStale;
       // The reverse gap: statement-derived total is *short* of the verified
       // truth (e.g. an Orders-screen upload that's missing a fulfilled row —
       // OCR failure, or a screenshot that didn't scroll far enough to
@@ -518,9 +582,26 @@ export function computePositions(
       // case since there's nothing to cap *to* — the number shown is simply
       // wrong-low. Kept distinct from a clean match so the UI never shows a
       // reassuring "verified" checkmark on a total that's actually
-      // incomplete; only an exact match earns that.
-      const quantityShortfall = verification != null && p.totalQuantity < verification.units;
-      const displayQuantity = verification != null ? Math.min(p.totalQuantity, verification.units) : p.totalQuantity;
+      // incomplete; only an exact match earns that. Also gated on freshness,
+      // same reasoning as quantityMismatch.
+      const quantityShortfall = rawShortfall && !verificationStale;
+      const displayQuantity = quantityMismatch ? Math.min(p.totalQuantity, verification!.units) : p.totalQuantity;
+
+      // When there's a fresh (non-stale) mismatch, check whether a single
+      // transaction's quantity exactly accounts for the excess over the
+      // verified total — a strong, actionable signal that *that* row is the
+      // duplicate/misparsed one, rather than making the user hunt through
+      // every transaction for this ticker. Null when the excess isn't
+      // explained by any single row (spread across several, or genuinely
+      // unclear) — still surfaced as a plain "capped" mismatch in that case.
+      let likelyDuplicateTxId: number | null = null;
+      if (quantityMismatch && verification != null) {
+        const excess = p.totalQuantity - verification.units;
+        const candidate = sorted.find(
+          (t) => t.ticker === p.ticker && t.transactionType === 'BUY' && parseFloat(t.quantity) === excess
+        );
+        if (candidate) likelyDuplicateTxId = candidate.id;
+      }
 
       // Same stock split across two different ticker labels (e.g. a garbled
       // OCR company name that didn't resolve to the canonical ticker) — flag
@@ -547,6 +628,10 @@ export function computePositions(
         verifiedUnits: verification?.units ?? null,
         quantityMismatch,
         quantityShortfall,
+        verificationStale,
+        verificationCapturedAt: verification?.capturedAt ?? null,
+        verificationSource: verification?.source ?? null,
+        likelyDuplicateTxId,
         duplicateOf,
         avgBuyPrice: p.totalCost / p.totalQuantity,
         totalCost: p.totalCost,

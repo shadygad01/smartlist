@@ -410,6 +410,14 @@ export interface PositionVerification {
   units: number;
   avgCost: number | null;
   capturedAt: string;
+  // 'screenshot' = parsed from a broker "My position" screen (the default,
+  // real ground truth). 'manual' = the user explicitly accepted the
+  // statement-computed quantity as correct from the Portfolio Tracker UI
+  // (see acceptComputedAsVerified in portfolioStore.ts) — used when there's
+  // no fresh screenshot handy but the user has independently confirmed the
+  // computed total is right. Kept distinct so the UI can label it
+  // differently from a screenshot-backed verification.
+  source: 'screenshot' | 'manual';
 }
 
 export function looksLikePositionVerification(text: string): boolean {
@@ -468,5 +476,6 @@ export function parsePositionVerification(text: string): PositionVerification | 
     units,
     avgCost,
     capturedAt: new Date().toISOString(),
+    source: 'screenshot',
   };
 }

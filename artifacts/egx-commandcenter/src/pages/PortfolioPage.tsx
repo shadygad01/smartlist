@@ -21,6 +21,7 @@ import {
   buildPriceMapFromSnapshot,
   getPositionVerifications,
   recordPositionVerification,
+  TRACKING_START_DATE,
   type StoredUpload as PortfolioUpload,
   type StoredTransaction as PortfolioTransaction,
   type PortfolioPosition,
@@ -233,15 +234,23 @@ export default function PortfolioPage() {
           : "No transactions found in the file. Make sure it's a Thunder report.";
         const result = completeUpload(upload.id, parsed, noTradesMessage, getPositionVerifications());
 
+        const rangeNote =
+          result.outOfRangeCount > 0
+            ? ` (${result.outOfRangeCount} before ${TRACKING_START_DATE}, outside the tracked range, skipped)`
+            : '';
+
         let message: string;
         if (result.status === 'failed') {
-          message = noTradesMessage;
+          message =
+            result.outOfRangeCount > 0 && result.outOfRangeCount === result.transactionCount
+              ? `All ${result.outOfRangeCount} transaction(s) in this file are before ${TRACKING_START_DATE} — outside the Portfolio Tracker's tracked range.`
+              : noTradesMessage;
         } else if (result.status === 'duplicate') {
-          message = `All ${result.duplicateCount} transaction(s) in this file were already recorded — nothing new added.`;
+          message = `All ${result.duplicateCount} transaction(s) in this file were already recorded — nothing new added.${rangeNote}`;
         } else if (result.duplicateCount > 0) {
-          message = `Added ${result.newCount} new transaction(s) (${result.duplicateCount} already recorded, skipped).`;
+          message = `Added ${result.newCount} new transaction(s) (${result.duplicateCount} already recorded, skipped).${rangeNote}`;
         } else {
-          message = `Added ${result.newCount} new transaction(s).`;
+          message = `Added ${result.newCount} new transaction(s).${rangeNote}`;
         }
         showToast(message, result.status !== 'failed');
       } catch (e) {

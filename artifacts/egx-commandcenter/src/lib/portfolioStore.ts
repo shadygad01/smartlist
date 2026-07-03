@@ -67,6 +67,19 @@ export interface PnlDataPoint {
 
 const STORAGE_KEY = 'egx-portfolio-tracker-v1';
 
+// The Portfolio Tracker is scoped to 2026+ (see the "2026+" badge on the
+// page) — trades before this date are out of its tracked range and must
+// never factor into positions, P&L, or the transactions list, regardless of
+// what a statement upload happens to contain. Applied both when accepting
+// new uploads (so they're never stored) and when reading back whatever's
+// already in localStorage (so pre-existing data from before this cutoff
+// existed is excluded too).
+export const TRACKING_START_DATE = '2026-01-01';
+
+function isInTrackedRange(tradeDate: string): boolean {
+  return tradeDate.slice(0, 10) >= TRACKING_START_DATE;
+}
+
 interface StoreState {
   nextUploadId: number;
   nextTransactionId: number;
@@ -99,7 +112,9 @@ export function getUploads(): StoredUpload[] {
 }
 
 export function getTransactions(): StoredTransaction[] {
-  return [...load().transactions].sort((a, b) => b.tradeDate.localeCompare(a.tradeDate));
+  return [...load().transactions]
+    .filter((t) => isInTrackedRange(t.tradeDate))
+    .sort((a, b) => b.tradeDate.localeCompare(a.tradeDate));
 }
 
 // Creates a pending upload record, then stores parsed transactions (or a
@@ -163,7 +178,7 @@ function transactionKey(t: {
 function recordedQuantity(transactions: StoredTransaction[], ticker: string): number {
   let qty = 0;
   for (const t of transactions) {
-    if (t.ticker !== ticker) continue;
+    if (t.ticker !== ticker || !isInTrackedRange(t.tradeDate)) continue;
     const q = parseFloat(t.quantity);
     qty = t.transactionType === 'BUY' ? qty + q : Math.max(0, qty - q);
   }
@@ -175,23 +190,45 @@ export function completeUpload(
   parsed: ParsedTransaction[],
   noTradesMessage = "No transactions found in the file. Make sure it's a Thunder report.",
   verifications: Record<string, PositionVerification> = {}
-): { status: 'parsed' | 'failed' | 'duplicate'; transactionCount: number; newCount: number; duplicateCount: number } {
+): {
+  status: 'parsed' | 'failed' | 'duplicate';
+  transactionCount: number;
+  newCount: number;
+  duplicateCount: number;
+  outOfRangeCount: number;
+} {
   const state = load();
   const upload = state.uploads.find((u) => u.id === uploadId);
-  if (!upload) return { status: 'failed', transactionCount: 0, newCount: 0, duplicateCount: 0 };
+  if (!upload) return { status: 'failed', transactionCount: 0, newCount: 0, duplicateCount: 0, outOfRangeCount: 0 };
 
   if (parsed.length === 0) {
     upload.status = 'failed';
     upload.errorMessage = noTradesMessage;
     save(state);
-    return { status: 'failed', transactionCount: 0, newCount: 0, duplicateCount: 0 };
+    return { status: 'failed', transactionCount: 0, newCount: 0, duplicateCount: 0, outOfRangeCount: 0 };
   }
 
-  const existingKeys = new Set(state.transactions.map(transactionKey));
+  // Trades before TRACKING_START_DATE are out of the tracker's scope
+  // entirely — filtered out before dedup so they never take an "already
+  // recorded" slot from a genuinely new in-range trade, and never get
+  // stored at all (see isInTrackedRange's doc comment above).
+  const inRange = parsed.filter((t) => isInTrackedRange(t.tradeDate.toISOString()));
+  const outOfRangeCount = parsed.length - inRange.length;
+
+  if (inRange.length === 0) {
+    upload.status = 'failed';
+    upload.errorMessage = `All ${outOfRangeCount} transaction(s) in this file are before ${TRACKING_START_DATE}, which is outside the Portfolio Tracker's tracked range.`;
+    save(state);
+    return { status: 'failed', transactionCount: parsed.length, newCount: 0, duplicateCount: 0, outOfRangeCount };
+  }
+
+  const existingKeys = new Set(
+    state.transactions.filter((t) => isInTrackedRange(t.tradeDate)).map(transactionKey)
+  );
 
   let newCount = 0;
   let duplicateCount = 0;
-  for (const t of parsed) {
+  for (const t of inRange) {
     let looksLikeDuplicate = existingKeys.has(transactionKey(t));
 
     // A same ticker/date/side/qty match is usually a genuine duplicate row
@@ -239,7 +276,7 @@ export function completeUpload(
     upload.errorMessage = `All ${duplicateCount} transaction(s) in this file were already recorded.`;
   }
   save(state);
-  return { status: upload.status, transactionCount: parsed.length, newCount, duplicateCount };
+  return { status: upload.status, transactionCount: parsed.length, newCount, duplicateCount, outOfRangeCount };
 }
 
 export function failUpload(uploadId: number, message: string) {

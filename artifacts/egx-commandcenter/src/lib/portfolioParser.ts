@@ -299,20 +299,45 @@ const orderPriceLenientPattern = /@?\s*EGP\s*([\d,]+(?:[.,]\d+)?)/gi;
 const orderDatePattern = /([\dOoTIl]{1,3}\s+[A-Za-z]{3,9}\s+[\dOo]{2,4})[^0-9A-Za-z]{0,4}[\dOoTIl]{1,2}:\d{2}\s*[AP]M/gi;
 const orderStatusPattern = /\b(Fulf\w*|Pending|Cancel\w*|Rejected|Expired)\b/gi;
 
-function parseOrdersScreenText(text: string): ParsedTransaction[] {
+export interface ThunderParseResult {
+  transactions: ParsedTransaction[];
+  // Count of order rows where an action (Buy/Sell • N shares) was detected
+  // but its price/date/status couldn't be matched — meaning the row was
+  // silently dropped rather than genuinely absent from the screenshot. OCR
+  // quality varies run to run (confirmed: the exact same real screenshot
+  // parsed cleanly in one run and lost a row's fields in another), so this
+  // makes that failure visible to the user instead of a transaction quietly
+  // vanishing with no indication anything went wrong.
+  incompleteRowCount: number;
+  // Orders-screen format only: how many "Fulfilled" status labels were found
+  // anywhere in the raw OCR text, independent of whether each one could be
+  // successfully paired to an action/price/date. A cross-check that doesn't
+  // care *why* a row failed (missed pairing, failed qty/price/date
+  // validation, or anything else) — if this is higher than
+  // transactions.length, something visibly marked "Fulfilled" in the
+  // screenshot didn't make it into the parsed result. 0 for the statement
+  // format, which has no such labels.
+  fulfilledStatusCount: number;
+}
+
+function parseOrdersScreenText(text: string): ThunderParseResult {
   const transactions: ParsedTransaction[] = [];
+  let incompleteRowCount = 0;
   const normalized = text.replace(/\s+/g, ' ');
   const { section, strict } = ordersSection(normalized);
 
   const actions = [...section.matchAll(orderActionPattern)];
-  if (actions.length === 0) return transactions;
+  if (actions.length === 0) return { transactions, incompleteRowCount, fulfilledStatusCount: 0 };
 
   const ticker = resolveHeaderTicker(text);
-  if (!ticker || NON_STOCK_INSTRUMENTS.has(ticker.toUpperCase())) return transactions;
+  if (!ticker || NON_STOCK_INSTRUMENTS.has(ticker.toUpperCase())) {
+    return { transactions, incompleteRowCount, fulfilledStatusCount: 0 };
+  }
 
   const prices = [...section.matchAll(strict ? orderPriceStrictPattern : orderPriceLenientPattern)];
   const dates = [...section.matchAll(orderDatePattern)];
   const statuses = [...section.matchAll(orderStatusPattern)];
+  const fulfilledStatusCount = statuses.filter((s) => /^fulf/i.test(s[1])).length;
 
   // Pair each action with the nearest price/date/status that falls between
   // it and the next action, instead of a strict positional zip — an OCR miss
@@ -324,7 +349,10 @@ function parseOrdersScreenText(text: string): ParsedTransaction[] {
     const priceMatch = prices.find((p) => (p.index ?? -1) >= start && (p.index ?? -1) < end);
     const dateMatch = dates.find((d) => (d.index ?? -1) >= start && (d.index ?? -1) < end);
     const statusMatch = statuses.find((s) => (s.index ?? -1) >= start && (s.index ?? -1) < end);
-    if (!priceMatch || !dateMatch || !statusMatch) continue;
+    if (!priceMatch || !dateMatch || !statusMatch) {
+      incompleteRowCount += 1;
+      continue;
+    }
     if (!/^fulf/i.test(statusMatch[1])) continue; // skip pending/cancelled orders
 
     const qty = parseFloat(normalizeDigits(actions[i][2]).replace(/,/g, ''));
@@ -345,12 +373,12 @@ function parseOrdersScreenText(text: string): ParsedTransaction[] {
     });
   }
 
-  return transactions;
+  return { transactions, incompleteRowCount, fulfilledStatusCount };
 }
 
-export function parseThunderText(text: string): ParsedTransaction[] {
+export function parseThunderText(text: string): ThunderParseResult {
   const statementTx = parseStatementText(text);
-  if (statementTx.length > 0) return statementTx;
+  if (statementTx.length > 0) return { transactions: statementTx, incompleteRowCount: 0, fulfilledStatusCount: 0 };
   return parseOrdersScreenText(text);
 }
 

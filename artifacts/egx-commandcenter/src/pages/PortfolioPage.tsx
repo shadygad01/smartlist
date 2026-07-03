@@ -32,6 +32,28 @@ import {
 import { useSnapshot } from '@/providers/SnapshotProvider';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+// Runs the header+body two-pass OCR (see cropHeaderBand/preprocessForOcr in
+// imagePreprocess.ts) with a given language set and returns the combined text.
+async function runOcr(
+  languages: string[],
+  headerBand: HTMLCanvasElement,
+  bodyInput: HTMLCanvasElement,
+  onProgress: (status: string) => void
+): Promise<string> {
+  const worker = await createWorker(languages, 1, {
+    logger: (m) => {
+      if (m.status === 'recognizing text') {
+        onProgress(`OCR: ${Math.round((m.progress ?? 0) * 100)}%`);
+      }
+    },
+  });
+  const headerResult = await worker.recognize(headerBand);
+  const bodyResult = await worker.recognize(bodyInput);
+  await worker.terminate();
+  return `${headerResult.data.text}\n${bodyResult.data.text}`;
+}
+
 async function sha256Hex(buffer: ArrayBuffer): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
   return Array.from(new Uint8Array(hashBuffer))
@@ -179,13 +201,6 @@ export default function PortfolioPage() {
         let extractedText = '';
         if (isImage) {
           setUploadStatus('Reading image with OCR…');
-          const worker = await createWorker(['ara', 'eng'], 1, {
-            logger: (m) => {
-              if (m.status === 'recognizing text') {
-                setUploadStatus(`OCR: ${Math.round((m.progress ?? 0) * 100)}%`);
-              }
-            },
-          });
           // Two passes: the header (ticker code + company name, next to the
           // back/bell/heart icons) gets silently dropped by full-page OCR —
           // isolating it recovers it. The body gets the white-background
@@ -194,10 +209,22 @@ export default function PortfolioPage() {
           // imagePreprocess.ts for both.
           const headerBand = await cropHeaderBand(file);
           const bodyInput = await preprocessForOcr(file);
-          const headerResult = await worker.recognize(headerBand);
-          const bodyResult = await worker.recognize(bodyInput);
-          await worker.terminate();
-          extractedText = `${headerResult.data.text}\n${bodyResult.data.text}`;
+
+          // English-only first: loading the Arabic model alongside English
+          // measurably degrades accuracy on English-language screenshots —
+          // confirmed by running the exact same real screenshot through OCR
+          // repeatedly: a fulfilled order's timestamp ("01:57PM") was
+          // consistently misread as "74" only when both models were loaded
+          // together, breaking that row's date match and silently dropping
+          // it downstream (english-only read it correctly every time).
+          // Arabic is still needed for Arabic-language broker apps, so it's
+          // a fallback rather than removed outright — only retried when the
+          // English-only pass doesn't look like a document we recognize.
+          extractedText = await runOcr(['eng'], headerBand, bodyInput, setUploadStatus);
+          if (!looksLikeThunderDocument(extractedText) && !looksLikePositionVerification(extractedText)) {
+            setUploadStatus('Retrying with Arabic support…');
+            extractedText = await runOcr(['ara', 'eng'], headerBand, bodyInput, setUploadStatus);
+          }
         } else {
           setUploadStatus('Reading PDF…');
           extractedText = await extractPdfText(buffer);
@@ -231,7 +258,7 @@ export default function PortfolioPage() {
         // against the whole file, so re-uploading an updated statement that
         // overlaps with a previous one only adds what's genuinely new.
         setUploadStatus('Analyzing transactions…');
-        const parsed = parseThunderText(extractedText);
+        const { transactions: parsed, incompleteRowCount, fulfilledStatusCount } = parseThunderText(extractedText);
         const noTradesMessage = looksLikeThunderDocument(extractedText)
           ? 'This looks like a valid Thndr statement, but it has no buy/sell trades in this period.'
           : "No transactions found in the file. Make sure it's a Thunder report.";
@@ -241,6 +268,27 @@ export default function PortfolioPage() {
           result.outOfRangeCount > 0
             ? ` (${result.outOfRangeCount} before ${TRACKING_START_DATE}, outside the tracked range, skipped)`
             : '';
+        // Cross-check requested after a real incident: count "Fulfilled"
+        // labels found anywhere in the raw OCR text and compare against how
+        // many transactions were actually extracted from *this* file (before
+        // dedup — dedup legitimately reduces the count for reasons that
+        // aren't a parsing failure). Catches any gap between what the
+        // screenshot visually shows as fulfilled and what made it into the
+        // result, regardless of the specific cause — broader than
+        // incompleteRowCount, which only explains one particular cause.
+        const missingFulfilledCount = Math.max(0, fulfilledStatusCount - parsed.length);
+        // Surfaces a genuinely observed failure mode: an order row whose
+        // action (Buy/Sell • N shares) was detected but whose price/date/
+        // status couldn't be read — OCR quality varies between runs even on
+        // the exact same screenshot, so this row was silently dropped rather
+        // than never having existed. Without this note it looks identical to
+        // "nothing more to add".
+        const incompleteNote =
+          missingFulfilledCount > 0
+            ? ` ⚠ Screenshot shows ${fulfilledStatusCount} "Fulfilled" order(s) but only ${parsed.length} were extracted — ${missingFulfilledCount} may be missing. Try re-uploading a clearer or larger screenshot.`
+            : incompleteRowCount > 0
+            ? ` ⚠ ${incompleteRowCount} order row(s) were detected but couldn't be fully read (missing price/date/status) — try re-uploading a clearer or larger screenshot if a trade seems to be missing.`
+            : '';
 
         let message: string;
         if (result.status === 'failed') {
@@ -249,13 +297,13 @@ export default function PortfolioPage() {
               ? `All ${result.outOfRangeCount} transaction(s) in this file are before ${TRACKING_START_DATE} — outside the Portfolio Tracker's tracked range.`
               : noTradesMessage;
         } else if (result.status === 'duplicate') {
-          message = `All ${result.duplicateCount} transaction(s) in this file were already recorded — nothing new added.${rangeNote}`;
+          message = `All ${result.duplicateCount} transaction(s) in this file were already recorded — nothing new added.${rangeNote}${incompleteNote}`;
         } else if (result.duplicateCount > 0) {
-          message = `Added ${result.newCount} new transaction(s) (${result.duplicateCount} already recorded, skipped).${rangeNote}`;
+          message = `Added ${result.newCount} new transaction(s) (${result.duplicateCount} already recorded, skipped).${rangeNote}${incompleteNote}`;
         } else {
-          message = `Added ${result.newCount} new transaction(s).${rangeNote}`;
+          message = `Added ${result.newCount} new transaction(s).${rangeNote}${incompleteNote}`;
         }
-        showToast(message, result.status !== 'failed');
+        showToast(message, result.status !== 'failed' && missingFulfilledCount === 0 && incompleteRowCount === 0);
       } catch (e) {
         showToast(`Error: ${String(e)}`, false);
       }

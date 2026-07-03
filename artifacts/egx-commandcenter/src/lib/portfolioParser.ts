@@ -57,7 +57,23 @@ const COMPANY_TICKER_MAP: Record<string, string> = {
 // from the user's real Thndr "Stocks" list (they live under "Funds" instead).
 const NON_STOCK_INSTRUMENTS = new Set(['THNDRSAVINGS', 'AZG']);
 
-function normalizeCompanyKey(name: string): string {
+function titleCase(s: string): string {
+  return s.replace(/\w\S*/g, (w) => w.charAt(0) + w.slice(1).toLowerCase());
+}
+
+// Canonical display name per ticker, derived from the first-declared alias
+// in COMPANY_TICKER_MAP for that ticker — keeps the "one name per stock"
+// rule enforced by a single source (this map) rather than duplicated.
+const CANONICAL_NAMES: Record<string, string> = {};
+for (const [name, ticker] of Object.entries(COMPANY_TICKER_MAP)) {
+  if (!(ticker in CANONICAL_NAMES)) CANONICAL_NAMES[ticker] = titleCase(name);
+}
+
+export function canonicalNameForTicker(ticker: string): string {
+  return CANONICAL_NAMES[ticker] ?? ticker;
+}
+
+export function normalizeCompanyKey(name: string): string {
   return name
     .toUpperCase()
     .replace(/[.,]/g, '')
@@ -86,7 +102,7 @@ function levenshtein(a: string, b: string): number {
 // tolerant of a small number of character-level edits proportional to
 // length, so a couple of misread letters don't produce a whole separate
 // fallback "ticker" for a company that's actually already mapped.
-function fuzzyMatchTicker(key: string): string | null {
+export function fuzzyMatchTicker(key: string): string | null {
   for (const [name, ticker] of Object.entries(COMPANY_TICKER_MAP)) {
     const candidate = key.slice(0, name.length);
     if (candidate.length < name.length * 0.7) continue;
@@ -344,4 +360,52 @@ export function parseThunderText(text: string): ParsedTransaction[] {
 // at all, so callers can show a less alarming message in that case.
 export function looksLikeThunderDocument(text: string): boolean {
   return /customer account statement|thndr/i.test(text);
+}
+
+// ─── Format 3: Thndr app "My position" screen (ground-truth verification) ──
+// A per-stock position summary screenshot, e.g.:
+//   ORHD
+//   Orascom Development Egypt
+//   Last trade price   EGP 38.20
+//   My current position
+//   Units                74
+//   Average cost          EGP 23.73
+//   Purchase Value        EGP 1,756.02
+//   Market value           2,826.80
+// This is the broker's own record of what's actually held — used as a
+// ground-truth check against whatever the parsed transaction statement
+// computes, never the other way around. Detected independently of the
+// statement/orders formats above so it's never mistaken for a trade record.
+export interface PositionVerification {
+  ticker: string;
+  companyName: string;
+  units: number;
+  avgCost: number | null;
+  capturedAt: string;
+}
+
+export function looksLikePositionVerification(text: string): boolean {
+  return /my\s+current\s+position/i.test(text) && /units/i.test(text) && /average\s*cost/i.test(text);
+}
+
+export function parsePositionVerification(text: string): PositionVerification | null {
+  const normalized = text.replace(/\s+/g, ' ');
+  const ticker = resolveHeaderTicker(text);
+  if (!ticker) return null;
+
+  const unitsMatch = /Units\s+([\d,OoTIl]+(?:\.\d+)?)/i.exec(normalized);
+  if (!unitsMatch) return null;
+  const units = parseFloat(normalizeDigits(unitsMatch[1]).replace(/,/g, ''));
+  if (!units) return null;
+
+  const avgCostMatch = /Average\s*cost\s*(?:EGP)?\s*([\d,]+(?:\.\d+)?)/i.exec(normalized);
+  const avgCost = avgCostMatch ? parseFloat(avgCostMatch[1].replace(/,/g, '')) : null;
+
+  return {
+    ticker,
+    companyName: canonicalNameForTicker(ticker),
+    units,
+    avgCost,
+    capturedAt: new Date().toISOString(),
+  };
 }

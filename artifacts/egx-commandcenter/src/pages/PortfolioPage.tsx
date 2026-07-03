@@ -4,13 +4,17 @@ import { Upload, FileText, Image, CheckCircle, XCircle, AlertTriangle, ArrowLeft
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { createWorker } from 'tesseract.js';
 import { extractPdfText } from '@/lib/pdfText';
-import { preprocessForOcr, cropHeaderBand } from '@/lib/imagePreprocess';
+import { preprocessForOcr, cropHeaderBand, segmentOrderRows } from '@/lib/imagePreprocess';
 import {
   parseThunderText,
+  parseStatementTransactions,
+  parseOrderRows,
+  resolveHeaderTicker,
   looksLikeThunderDocument,
   looksLikePositionVerification,
   parsePositionVerification,
   canonicalNameForTicker,
+  type OrderRowText,
 } from '@/lib/portfolioParser';
 import {
   getUploads,
@@ -253,14 +257,61 @@ export default function PortfolioPage() {
           continue;
         }
 
-        const upload = recordUpload({ fileName: file.name, contentType: file.type, fileHash: hash, rawText: extractedText });
-
         // 2. Parse transactions — dedup happens per-transaction (ticker+date+
         // side+qty+price) against everything already recorded, not just
         // against the whole file, so re-uploading an updated statement that
         // overlaps with a previous one only adds what's genuinely new.
         setUploadStatus('Analyzing transactions…');
-        const { transactions: parsed, incompleteRowCount, fulfilledStatusCount, statusCountMismatch } = parseThunderText(extractedText);
+        let parseResult = parseThunderText(extractedText);
+        let usedRowScan = false;
+        let rowScanLog = '';
+
+        // Row-isolated re-scan for Orders-screen screenshots. The flat-text
+        // parser above pairs actions with statuses by position in the OCR
+        // text, which Tesseract's unstable reading order can mispair (real
+        // incident: a Cancelled order counted as Fulfilled). Slicing the
+        // image into one-row crops and OCR-ing each in isolation — with the
+        // status read from the label's pixel COLOR (green/red) rather than
+        // its OCR'd word — makes that whole failure class impossible. Only
+        // applies to Orders screenshots: statements have no status labels
+        // (so the flat statement parse is kept when it matched), and
+        // position-verification screenshots were already routed away above.
+        if (isImage && parseStatementTransactions(extractedText).length === 0) {
+          const headerTicker = resolveHeaderTicker(extractedText);
+          if (headerTicker) {
+            setUploadStatus('Re-scanning rows in isolation…');
+            const slices = await segmentOrderRows(file);
+            if (slices.length > 0) {
+              const worker = await createWorker(['eng'], 1);
+              const rowTexts: OrderRowText[] = [];
+              for (const slice of slices) {
+                const res = await worker.recognize(slice.canvas);
+                rowTexts.push({ text: res.data.text, colorStatus: slice.colorStatus });
+              }
+              await worker.terminate();
+              const rowResult = parseOrderRows(rowTexts, headerTicker);
+              // Trust the row scan whenever it understood at least one row
+              // (resolved a definite status) — including the all-Cancelled
+              // case where zero transactions is the *correct* answer. Only
+              // when it resolved nothing (segmentation found no usable rows,
+              // e.g. an unexpected layout) does the flat result stand.
+              if (rowResult.resolvedRowCount > 0) {
+                parseResult = rowResult;
+                usedRowScan = true;
+              }
+              // Kept in rawText either way so a wrong outcome can be
+              // diagnosed from what each isolated row actually OCR'd as.
+              rowScanLog =
+                `\n\n--- row-isolated scan (${slices.length} slice(s), used: ${usedRowScan}) ---\n` +
+                rowTexts
+                  .map((r, idx) => `[row ${idx + 1} | color: ${r.colorStatus ?? 'none'}] ${r.text.replace(/\s+/g, ' ').trim()}`)
+                  .join('\n');
+            }
+          }
+        }
+
+        const upload = recordUpload({ fileName: file.name, contentType: file.type, fileHash: hash, rawText: extractedText + rowScanLog });
+        const { transactions: parsed, incompleteRowCount, fulfilledStatusCount, statusCountMismatch } = parseResult;
         const noTradesMessage = looksLikeThunderDocument(extractedText)
           ? 'This looks like a valid Thndr statement, but it has no buy/sell trades in this period.'
           : "No transactions found in the file. Make sure it's a Thunder report.";
@@ -302,6 +353,7 @@ export default function PortfolioPage() {
         const statusMismatchNote = statusCountMismatch
           ? ' ⚠ Order row count and status-label count don\'t match — a Cancelled/Rejected/Pending order may have been mispaired with the wrong status. Check this ticker\'s Transactions against the screenshot, and see the extracted text in the Documents tab.'
           : '';
+        const scanNote = usedRowScan ? ' (row-isolated scan, statuses read by color)' : '';
 
         let message: string;
         if (result.status === 'failed') {
@@ -310,11 +362,11 @@ export default function PortfolioPage() {
               ? `All ${result.outOfRangeCount} transaction(s) in this file are before ${TRACKING_START_DATE} — outside the Portfolio Tracker's tracked range.`
               : noTradesMessage;
         } else if (result.status === 'duplicate') {
-          message = `All ${result.duplicateCount} transaction(s) in this file were already recorded — nothing new added.${rangeNote}${incompleteNote}${statusMismatchNote}`;
+          message = `All ${result.duplicateCount} transaction(s) in this file were already recorded — nothing new added.${scanNote}${rangeNote}${incompleteNote}${statusMismatchNote}`;
         } else if (result.duplicateCount > 0) {
-          message = `Added ${result.newCount} new transaction(s) (${result.duplicateCount} already recorded, skipped).${rangeNote}${incompleteNote}${statusMismatchNote}`;
+          message = `Added ${result.newCount} new transaction(s) (${result.duplicateCount} already recorded, skipped).${scanNote}${rangeNote}${incompleteNote}${statusMismatchNote}`;
         } else {
-          message = `Added ${result.newCount} new transaction(s).${rangeNote}${incompleteNote}${statusMismatchNote}`;
+          message = `Added ${result.newCount} new transaction(s).${scanNote}${rangeNote}${incompleteNote}${statusMismatchNote}`;
         }
         showToast(message, result.status !== 'failed' && missingFulfilledCount === 0 && incompleteRowCount === 0 && !statusCountMismatch);
       } catch (e) {

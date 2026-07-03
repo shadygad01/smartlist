@@ -253,8 +253,10 @@ const NON_TICKER_WORDS = new Set(['EGP', 'PLC', 'LTD', 'SAE', 'ALL', 'USD', 'GBP
 // The header shows the ticker code and, below it, the full company name.
 // Prefer matching the company name against the known map (more OCR-robust
 // than a 2-6 letter ticker code rendered in small text); fall back to the
-// first plausible all-caps ticker-looking token.
-function resolveHeaderTicker(text: string): string | null {
+// first plausible all-caps ticker-looking token. Exported so the upload
+// flow can resolve the ticker once from the full-page OCR text and hand it
+// to parseOrderRows (row slices don't contain the header).
+export function resolveHeaderTicker(text: string): string | null {
   const head = text.slice(0, 400);
   const key = normalizeCompanyKey(head);
   for (const [name, ticker] of Object.entries(COMPANY_TICKER_MAP)) {
@@ -397,6 +399,122 @@ export function parseThunderText(text: string): ThunderParseResult {
     return { transactions: statementTx, incompleteRowCount: 0, fulfilledStatusCount: 0, statusCountMismatch: false };
   }
   return parseOrdersScreenText(text);
+}
+
+// Exposed so the upload flow can cheaply check "is this a statement?"
+// before deciding to run the (more expensive) row-isolated Orders scan —
+// statement screenshots/PDFs have per-row dates and no status labels, so
+// the row scan doesn't apply to them.
+export function parseStatementTransactions(text: string): ParsedTransaction[] {
+  return parseStatementText(text);
+}
+
+// ─── Row-isolated Orders-screen parsing ─────────────────────────────────────
+// Counterpart to segmentOrderRows in imagePreprocess.ts: each entry is the
+// OCR text of ONE order row's image slice, plus the status already read from
+// the slice's pixel colors. Because every slice contains exactly one row,
+// the flat parser's positional action<->status pairing (and its observed
+// failure mode: a Cancelled order silently counted as Fulfilled when
+// Tesseract shuffled reading order) simply doesn't exist here — a row's
+// fields can only come from that row.
+export interface OrderRowText {
+  text: string;
+  colorStatus: 'fulfilled' | 'cancelled' | null;
+}
+
+// Same field patterns as the flat parser above, non-global since each row
+// is matched in isolation.
+const rowActionPattern = /(Buy|Sell|شراء|بيع)\s*[^\s\d]{0,2}\s*([\d,TIl]+(?:\.\d+)?)\s*shares?/i;
+// Within a single row slice the only "EGP <number>" is the execution price,
+// so the lenient (no-@) form is always safe here — the header stat lines
+// that forced the flat parser's strict/lenient split are never in a slice.
+const rowPricePattern = /@?\s*EGP\s*([\d,]+(?:[.,]\d+)?)/i;
+const rowDatePattern = /([\dOoTIl]{1,3}\s+[A-Za-z]{3,9}\s+[\dOo]{2,4})[^0-9A-Za-z]{0,4}[\dOoTIl]{1,2}:\d{2}\s*[AP]M/i;
+const rowStatusPattern = /\b(Fulf\w*|Pending|Cancel\w*|Rejected|Expired)\b/i;
+
+export interface OrderRowsParseResult extends ThunderParseResult {
+  // Rows where a definite fulfilled/cancelled/etc. status was established
+  // (from color or OCR text), whether or not a transaction resulted. The
+  // caller uses this to decide the scan understood the screenshot at all —
+  // e.g. a capture whose visible rows are all Cancelled legitimately yields
+  // zero transactions but a nonzero resolved count, which must not be
+  // mistaken for "the scan failed, fall back to the flat parser".
+  resolvedRowCount: number;
+}
+
+export function parseOrderRows(rows: OrderRowText[], ticker: string): OrderRowsParseResult {
+  const transactions: ParsedTransaction[] = [];
+  let incompleteRowCount = 0;
+  let fulfilledStatusCount = 0;
+  let resolvedRowCount = 0;
+
+  if (NON_STOCK_INSTRUMENTS.has(ticker.toUpperCase())) {
+    return { transactions, incompleteRowCount: 0, fulfilledStatusCount: 0, statusCountMismatch: false, resolvedRowCount: 0 };
+  }
+
+  for (const row of rows) {
+    const normalized = row.text.replace(/\s+/g, ' ');
+    const action = rowActionPattern.exec(normalized);
+    // No Buy/Sell action: not an order row (screen title, the Buy/Sell
+    // buttons at the bottom, a stat line) — skipped silently, same as the
+    // flat parser never matching an action there.
+    if (!action) continue;
+
+    // Pixel color is the primary status source (see OrderRowSlice's doc
+    // comment); the OCR'd word is only consulted when no status color was
+    // found — precisely because a misread status *word* is the failure this
+    // path exists to eliminate.
+    let status: string | null = row.colorStatus;
+    if (!status) {
+      const statusWord = rowStatusPattern.exec(normalized);
+      if (statusWord) status = statusWord[1].toLowerCase();
+    }
+
+    if (!status) {
+      // An order row whose status couldn't be established either way —
+      // don't guess it into (or out of) the position; surface it instead.
+      incompleteRowCount += 1;
+      continue;
+    }
+    resolvedRowCount += 1;
+    if (!/^fulf/i.test(status)) continue; // cancelled/pending/rejected: not a trade
+    fulfilledStatusCount += 1;
+
+    const priceMatch = rowPricePattern.exec(normalized);
+    const dateMatch = rowDatePattern.exec(normalized);
+    if (!priceMatch || !dateMatch) {
+      // A fulfilled row that can't be recorded — counted so the caller's
+      // fulfilled-vs-extracted cross-check flags it to the user instead of
+      // the trade quietly vanishing (e.g. a truncated last row at the
+      // bottom edge of the capture).
+      incompleteRowCount += 1;
+      continue;
+    }
+
+    const qty = parseFloat(normalizeDigits(action[2]).replace(/,/g, ''));
+    const price = parsePrice(priceMatch[1]);
+    if (!qty || !price) {
+      incompleteRowCount += 1;
+      continue;
+    }
+    const tradeDate = parseShortDate(dateMatch[1]);
+    if (!tradeDate) {
+      incompleteRowCount += 1;
+      continue;
+    }
+
+    transactions.push({
+      ticker,
+      transactionType: /buy|شراء/i.test(action[1]) ? 'BUY' : 'SELL',
+      quantity: qty,
+      price,
+      tradeDate,
+    });
+  }
+
+  // statusCountMismatch is structurally impossible here (each row carries
+  // its own status), hence always false on this path.
+  return { transactions, incompleteRowCount, fulfilledStatusCount, statusCountMismatch: false, resolvedRowCount };
 }
 
 // A statement can legitimately be a real Thndr document with zero buy/sell

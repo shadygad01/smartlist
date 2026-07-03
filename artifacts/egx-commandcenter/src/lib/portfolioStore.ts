@@ -19,7 +19,20 @@ export interface StoredUpload {
   transactionCount: number;
   errorMessage?: string | null;
   createdAt: string;
+  // The raw text handed to the parser (OCR output for images, extracted
+  // text for PDFs), truncated to keep localStorage bounded. Kept so a
+  // parsing anomaly (a row silently dropped, a status misread) can be
+  // diagnosed against what OCR actually produced instead of re-guessing
+  // from the original screenshot — the two can differ in ways that aren't
+  // visible just by looking at the image again. Optional/absent for
+  // uploads recorded before this field existed.
+  rawText?: string;
 }
+
+// Long enough to cover a full Orders-screen or statement OCR dump for
+// diagnosis, short enough that a browser session's worth of uploads doesn't
+// bloat localStorage.
+const RAW_TEXT_MAX_LENGTH = 6000;
 
 export interface StoredTransaction {
   id: number;
@@ -152,6 +165,7 @@ export function recordUpload(params: {
   fileName: string;
   contentType: string;
   fileHash: string;
+  rawText?: string;
 }): StoredUpload {
   const state = load();
   const upload: StoredUpload = {
@@ -162,6 +176,7 @@ export function recordUpload(params: {
     status: 'pending',
     transactionCount: 0,
     createdAt: new Date().toISOString(),
+    rawText: params.rawText?.slice(0, RAW_TEXT_MAX_LENGTH),
   };
   state.uploads.push(upload);
   state.nextUploadId += 1;

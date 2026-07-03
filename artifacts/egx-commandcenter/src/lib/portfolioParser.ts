@@ -318,6 +318,20 @@ export interface ThunderParseResult {
   // screenshot didn't make it into the parsed result. 0 for the statement
   // format, which has no such labels.
   fulfilledStatusCount: number;
+  // Orders-screen format only: true when the number of detected action rows
+  // (Buy/Sell • N shares) doesn't match the number of detected status labels
+  // (Fulfilled/Cancelled/Pending/Rejected/Expired) anywhere in the section.
+  // Each real row has exactly one status, so any gap means OCR either
+  // dropped a status word outright or produced an extra one — a signal that
+  // the row<->status pairing below (which assigns each action the first
+  // status found between it and the next action, since Tesseract doesn't
+  // reliably preserve top-to-bottom order for this two-column-per-row
+  // layout) may have attached the wrong status to a row, e.g. a Cancelled
+  // order silently counted as Fulfilled. A *matching* count doesn't
+  // guarantee correct pairing, only a mismatch guarantees an incorrect one
+  // — so this catches a strict subset of possible mis-pairings, not all of
+  // them. False for the statement format, which has no status labels.
+  statusCountMismatch: boolean;
 }
 
 function parseOrdersScreenText(text: string): ThunderParseResult {
@@ -327,17 +341,18 @@ function parseOrdersScreenText(text: string): ThunderParseResult {
   const { section, strict } = ordersSection(normalized);
 
   const actions = [...section.matchAll(orderActionPattern)];
-  if (actions.length === 0) return { transactions, incompleteRowCount, fulfilledStatusCount: 0 };
+  if (actions.length === 0) return { transactions, incompleteRowCount, fulfilledStatusCount: 0, statusCountMismatch: false };
 
   const ticker = resolveHeaderTicker(text);
   if (!ticker || NON_STOCK_INSTRUMENTS.has(ticker.toUpperCase())) {
-    return { transactions, incompleteRowCount, fulfilledStatusCount: 0 };
+    return { transactions, incompleteRowCount, fulfilledStatusCount: 0, statusCountMismatch: false };
   }
 
   const prices = [...section.matchAll(strict ? orderPriceStrictPattern : orderPriceLenientPattern)];
   const dates = [...section.matchAll(orderDatePattern)];
   const statuses = [...section.matchAll(orderStatusPattern)];
   const fulfilledStatusCount = statuses.filter((s) => /^fulf/i.test(s[1])).length;
+  const statusCountMismatch = statuses.length !== actions.length;
 
   // Pair each action with the nearest price/date/status that falls between
   // it and the next action, instead of a strict positional zip — an OCR miss
@@ -373,12 +388,14 @@ function parseOrdersScreenText(text: string): ThunderParseResult {
     });
   }
 
-  return { transactions, incompleteRowCount, fulfilledStatusCount };
+  return { transactions, incompleteRowCount, fulfilledStatusCount, statusCountMismatch };
 }
 
 export function parseThunderText(text: string): ThunderParseResult {
   const statementTx = parseStatementText(text);
-  if (statementTx.length > 0) return { transactions: statementTx, incompleteRowCount: 0, fulfilledStatusCount: 0 };
+  if (statementTx.length > 0) {
+    return { transactions: statementTx, incompleteRowCount: 0, fulfilledStatusCount: 0, statusCountMismatch: false };
+  }
   return parseOrdersScreenText(text);
 }
 

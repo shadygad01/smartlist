@@ -253,14 +253,14 @@ export default function PortfolioPage() {
           continue;
         }
 
-        const upload = recordUpload({ fileName: file.name, contentType: file.type, fileHash: hash });
+        const upload = recordUpload({ fileName: file.name, contentType: file.type, fileHash: hash, rawText: extractedText });
 
         // 2. Parse transactions — dedup happens per-transaction (ticker+date+
         // side+qty+price) against everything already recorded, not just
         // against the whole file, so re-uploading an updated statement that
         // overlaps with a previous one only adds what's genuinely new.
         setUploadStatus('Analyzing transactions…');
-        const { transactions: parsed, incompleteRowCount, fulfilledStatusCount } = parseThunderText(extractedText);
+        const { transactions: parsed, incompleteRowCount, fulfilledStatusCount, statusCountMismatch } = parseThunderText(extractedText);
         const noTradesMessage = looksLikeThunderDocument(extractedText)
           ? 'This looks like a valid Thndr statement, but it has no buy/sell trades in this period.'
           : "No transactions found in the file. Make sure it's a Thunder report.";
@@ -291,6 +291,17 @@ export default function PortfolioPage() {
             : incompleteRowCount > 0
             ? ` ⚠ ${incompleteRowCount} order row(s) were detected but couldn't be fully read (missing price/date/status) — try re-uploading a clearer or larger screenshot if a trade seems to be missing.`
             : '';
+        // Row-count and status-label-count should always match 1:1 (every
+        // order has exactly one status) — a mismatch means OCR dropped or
+        // duplicated a status word, which is also how a Cancelled/Rejected
+        // order can end up silently paired with the wrong (or no) status and
+        // miscounted as Fulfilled. Doesn't prove a specific row is wrong
+        // (see statusCountMismatch's doc comment in portfolioParser.ts), just
+        // that this file's status column deserves a second look — check the
+        // extracted text in the Documents tab against the screenshot.
+        const statusMismatchNote = statusCountMismatch
+          ? ' ⚠ Order row count and status-label count don\'t match — a Cancelled/Rejected/Pending order may have been mispaired with the wrong status. Check this ticker\'s Transactions against the screenshot, and see the extracted text in the Documents tab.'
+          : '';
 
         let message: string;
         if (result.status === 'failed') {
@@ -299,13 +310,13 @@ export default function PortfolioPage() {
               ? `All ${result.outOfRangeCount} transaction(s) in this file are before ${TRACKING_START_DATE} — outside the Portfolio Tracker's tracked range.`
               : noTradesMessage;
         } else if (result.status === 'duplicate') {
-          message = `All ${result.duplicateCount} transaction(s) in this file were already recorded — nothing new added.${rangeNote}${incompleteNote}`;
+          message = `All ${result.duplicateCount} transaction(s) in this file were already recorded — nothing new added.${rangeNote}${incompleteNote}${statusMismatchNote}`;
         } else if (result.duplicateCount > 0) {
-          message = `Added ${result.newCount} new transaction(s) (${result.duplicateCount} already recorded, skipped).${rangeNote}${incompleteNote}`;
+          message = `Added ${result.newCount} new transaction(s) (${result.duplicateCount} already recorded, skipped).${rangeNote}${incompleteNote}${statusMismatchNote}`;
         } else {
-          message = `Added ${result.newCount} new transaction(s).${rangeNote}${incompleteNote}`;
+          message = `Added ${result.newCount} new transaction(s).${rangeNote}${incompleteNote}${statusMismatchNote}`;
         }
-        showToast(message, result.status !== 'failed' && missingFulfilledCount === 0 && incompleteRowCount === 0);
+        showToast(message, result.status !== 'failed' && missingFulfilledCount === 0 && incompleteRowCount === 0 && !statusCountMismatch);
       } catch (e) {
         showToast(`Error: ${String(e)}`, false);
       }
@@ -781,6 +792,22 @@ export default function PortfolioPage() {
                             <p className="font-mono mt-0.5" style={{ fontSize: '10px', color: '#ef4444' }}>
                               {u.errorMessage}
                             </p>
+                          )}
+                          {u.rawText && (
+                            <details className="mt-1">
+                              <summary
+                                className="font-mono cursor-pointer transition-opacity hover:opacity-70"
+                                style={{ fontSize: '10px', color: '#4a9fff' }}
+                              >
+                                view extracted text
+                              </summary>
+                              <pre
+                                className="font-mono mt-1 p-2 rounded whitespace-pre-wrap"
+                                style={{ fontSize: '9px', color: '#8b8fa8', backgroundColor: '#0e1120', border: '1px solid #1a1e35', maxHeight: '220px', overflowY: 'auto' }}
+                              >
+                                {u.rawText}
+                              </pre>
+                            </details>
                           )}
                         </td>
                         <td className="px-4 py-3">

@@ -389,26 +389,29 @@ export function looksLikePositionVerification(text: string): boolean {
 }
 
 // The four stat cards (Units, Average cost, Purchase Value, Market value)
-// render as a 2-column grid. Tesseract doesn't reliably preserve a
-// consistent scan order across a grid like this (same caveat as the Orders
-// screen above) — it may read a card's label directly followed by its own
-// value, or all four labels first and then all four values. Either way, a
-// given label and its value stay in the same *relative* position within
-// their respective streams, so instead of requiring the value to
-// immediately follow its label, this scans forward from the label for the
-// nearest number-like token, tolerant of another label's text sitting in
-// between.
-function valueAfterLabel(section: string, label: RegExp): string | null {
+// render as a 2-column grid in that fixed order. Tesseract doesn't reliably
+// preserve a consistent scan order across a grid like this (same caveat as
+// the Orders screen above) — it may read a card's label directly followed by
+// its own value, or all four labels first and then all four values. Either
+// way, the four *values* still surface in the same left-to-right,
+// top-to-bottom order as their cells regardless of how the labels get
+// grouped, so — instead of an earlier approach that searched near each
+// individual label and could latch onto a neighboring cell's number (e.g.
+// "Units Average cost 177 EGP 22.20" reading Units' own "177" as Average
+// cost's value when the two labels sit adjacent) — this pulls every number
+// after "Units" in document order and assigns them positionally: 1st is
+// Units, 2nd is Average cost, and so on.
+function numbersAfter(section: string, label: RegExp): string[] {
   const m = label.exec(section);
-  if (!m) return null;
-  const tail = section.slice(m.index + m[0].length, m.index + m[0].length + 100);
+  if (!m) return [];
+  const rest = section.slice(m.index + m[0].length);
   // Must start with a real digit (0-9) — unlike the date/price parsing
   // above, this scans through ordinary prose (other labels' text) looking
-  // for the nearest number, and the O/T/I/l digit-noise substitutes are
-  // common letters that would otherwise match *inside real words* (e.g. the
-  // "o" in "cost") before ever reaching the actual value.
-  const numMatch = /(\d[\d,OoTIl]*(?:[.,]\d+)?)/.exec(tail);
-  return numMatch ? numMatch[1] : null;
+  // for numbers, and the O/T/I/l digit-noise substitutes are common letters
+  // that would otherwise match *inside real words* (e.g. the "o" in "cost")
+  // before ever reaching an actual value.
+  const numPattern = /\d[\d,OoTIl]*(?:[.,]\d+)?/g;
+  return [...rest.matchAll(numPattern)].map((mm) => mm[0]);
 }
 
 export function parsePositionVerification(text: string): PositionVerification | null {
@@ -424,13 +427,12 @@ export function parsePositionVerification(text: string): PositionVerification | 
   const endIdx = section.search(/earned\s+cash\s+dividends/i);
   const scoped = endIdx >= 0 ? section.slice(0, endIdx) : section;
 
-  const unitsRaw = valueAfterLabel(scoped, /units/i);
-  if (!unitsRaw) return null;
-  const units = parseFloat(normalizeDigits(unitsRaw).replace(/,/g, ''));
+  const numbers = numbersAfter(scoped, /units/i);
+  if (numbers.length === 0) return null;
+  const units = parseFloat(normalizeDigits(numbers[0]).replace(/,/g, ''));
   if (!units) return null;
 
-  const avgCostRaw = valueAfterLabel(scoped, /average\s*cost/i);
-  const avgCost = avgCostRaw ? parseFloat(normalizeDigits(avgCostRaw).replace(/,/g, '')) : null;
+  const avgCost = numbers[1] != null ? parseFloat(normalizeDigits(numbers[1]).replace(/,/g, '')) : null;
 
   return {
     ticker,

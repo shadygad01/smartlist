@@ -176,8 +176,14 @@ function exactTransactionKey(t: {
 // "26.980". That's indistinguishable, from the data alone, from a genuine
 // second same-day trade at a different price — so rather than guessing,
 // both get kept and flagged for the user to confirm or delete themselves.
-function looseTransactionKey(t: { ticker: string; transactionType: string; quantity: string; tradeDate: string }): string {
-  return [t.ticker, t.tradeDate.slice(0, 10), t.transactionType, Number(t.quantity).toFixed(4)].join('|');
+function looseTransactionKey(t: {
+  ticker: string;
+  transactionType: string;
+  quantity: number | string;
+  tradeDate: string | Date;
+}): string {
+  const date = t.tradeDate instanceof Date ? t.tradeDate.toISOString() : t.tradeDate;
+  return [t.ticker, date.slice(0, 10), t.transactionType, Number(t.quantity).toFixed(4)].join('|');
 }
 
 export interface TransactionWithFlags extends StoredTransaction {
@@ -199,10 +205,26 @@ export function withDuplicateFlags(transactions: StoredTransaction[]): Transacti
   return transactions.map((t) => ({ ...t, possibleDuplicate: (counts.get(looseTransactionKey(t)) ?? 0) > 1 }));
 }
 
+// Running BUY-minus-SELL quantity already on record for a ticker — used to
+// arbitrate the loose-key-collision case below against a verified ground
+// truth, so it must reflect state.transactions as it stands *at the point of
+// the check*, including any rows already pushed earlier in this same
+// completeUpload() call.
+function recordedQuantity(transactions: StoredTransaction[], ticker: string): number {
+  let qty = 0;
+  for (const t of transactions) {
+    if (t.ticker !== ticker || !isInTrackedRange(t.tradeDate)) continue;
+    const q = parseFloat(t.quantity);
+    qty = t.transactionType === 'BUY' ? qty + q : Math.max(0, qty - q);
+  }
+  return qty;
+}
+
 export function completeUpload(
   uploadId: number,
   parsed: ParsedTransaction[],
-  noTradesMessage = "No transactions found in the file. Make sure it's a Thunder report."
+  noTradesMessage = "No transactions found in the file. Make sure it's a Thunder report.",
+  verifications: Record<string, PositionVerification> = {}
 ): {
   status: 'parsed' | 'failed' | 'duplicate';
   transactionCount: number;
@@ -238,14 +260,47 @@ export function completeUpload(
   const existingExactKeys = new Set(
     state.transactions.filter((t) => isInTrackedRange(t.tradeDate)).map(exactTransactionKey)
   );
+  const existingLooseKeys = new Set(
+    state.transactions.filter((t) => isInTrackedRange(t.tradeDate)).map(looseTransactionKey)
+  );
 
   let newCount = 0;
   let duplicateCount = 0;
   for (const t of inRange) {
+    // Exact match (price too) — a literal re-upload of the same row.
+    // Unambiguous, always silently skipped.
     if (existingExactKeys.has(exactTransactionKey(t))) {
       duplicateCount += 1;
       continue;
     }
+
+    // Same ticker/date/side/qty but a different price is genuinely
+    // ambiguous: the same real trade re-parsed with/without commission
+    // folded in, or a real second same-day trade at a different price.
+    // Default to treating it as a duplicate (skip) — but when a verified
+    // broker unit count exists for the ticker, prefer it: if what's on
+    // record is still short of the verified total and keeping this BUY
+    // wouldn't push the total past it, it's more likely a real second
+    // trade. Scoped to BUY only — a wrongly-kept duplicate SELL would
+    // understate the position instead, which this ground truth can't
+    // arbitrate the same way. Either way, once stored it still shows up
+    // "possible duplicate" via withDuplicateFlags below — this only decides
+    // whether it *counts*, not whether the user gets to see it.
+    let looksLikeDuplicate = existingLooseKeys.has(looseTransactionKey(t));
+    if (looksLikeDuplicate && t.transactionType === 'BUY') {
+      const verification = verifications[t.ticker];
+      if (verification) {
+        const recorded = recordedQuantity(state.transactions, t.ticker);
+        if (recorded < verification.units && recorded + t.quantity <= verification.units) {
+          looksLikeDuplicate = false;
+        }
+      }
+    }
+    if (looksLikeDuplicate) {
+      duplicateCount += 1;
+      continue;
+    }
+
     state.transactions.push({
       id: state.nextTransactionId,
       uploadId,
@@ -257,11 +312,9 @@ export function completeUpload(
     });
     state.nextTransactionId += 1;
     newCount += 1;
-    // Not added to existingExactKeys: duplicates *within this same upload*
-    // should still all be kept (see function doc comment above). A same-key
-    // different-price row against something already on record is *not*
-    // silently rejected or accepted here — see withDuplicateFlags, which
-    // surfaces it for the user to resolve instead of guessing.
+    // Not added to existingExactKeys/existingLooseKeys: duplicates *within
+    // this same upload* should still all be kept (see function doc comment
+    // above).
   }
 
   upload.status = newCount > 0 ? 'parsed' : 'duplicate';

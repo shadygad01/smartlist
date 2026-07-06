@@ -94,6 +94,11 @@ CREATE INDEX IF NOT EXISTS idx_cp_ticker ON candidate_pool(ticker);
 CREATE INDEX IF NOT EXISTS idx_cp_date   ON candidate_pool(signal_date);
 CREATE INDEX IF NOT EXISTS idx_cp_sector ON candidate_pool(sector);
 CREATE INDEX IF NOT EXISTS idx_cp_status ON candidate_pool(allocator_status);
+
+CREATE TABLE IF NOT EXISTS candidate_pool_meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
 
 
@@ -275,6 +280,16 @@ def build_candidate_pool(
                     :correlation_group, :allocator_status, :snapshot_ts
                 )
             """, row)
+
+    # Recorded unconditionally (even when df_new is empty) so freshness checks
+    # can tell "the builder ran today and found nothing" apart from "the
+    # builder hasn't run in days" — signal_date only advances when a ticker
+    # actually enters the discount zone, which can legitimately stall for
+    # a market-quiet stretch far longer than the daily build cadence.
+    conn.execute(
+        "INSERT OR REPLACE INTO candidate_pool_meta (key, value) VALUES ('last_run_at', ?)",
+        (snapshot_ts,),
+    )
 
     conn.commit()
     conn.close()

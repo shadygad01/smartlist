@@ -123,13 +123,30 @@ def main() -> int:
     print()
 
     # 1. candidate_pool.db
+    # Freshness is measured from candidate_pool_meta.last_run_at (stamped on every
+    # builder execution) rather than MAX(signal_date): signal_date only advances
+    # when a ticker actually enters the discount zone, which can legitimately
+    # stall for a market-quiet stretch far longer than the daily build cadence —
+    # using it as a "is the pipeline alive" signal produced false staleness
+    # failures that blocked dashboard deploys during those stretches.
     pool_db = BASE / "candidate_pool.db"
     if pool_db.exists():
         try:
             con = sqlite3.connect(str(pool_db))
-            row = con.execute("SELECT MAX(signal_date) FROM candidate_pool").fetchone()
+            last_run = None
+            try:
+                row = con.execute(
+                    "SELECT value FROM candidate_pool_meta WHERE key = 'last_run_at'"
+                ).fetchone()
+                last_run = row[0] if row and row[0] else None
+            except sqlite3.OperationalError:
+                pass  # candidate_pool_meta not yet present (pre-existing DB) — fall back below
+            if last_run:
+                _check("candidate_pool", _age_from_iso(last_run))
+            else:
+                row = con.execute("SELECT MAX(signal_date) FROM candidate_pool").fetchone()
+                _check("candidate_pool", _age_from_date(row[0] if row and row[0] else None))
             con.close()
-            _check("candidate_pool", _age_from_date(row[0] if row and row[0] else None))
         except Exception:
             table.append(("candidate_pool", "ERR", "WARN"))
     else:

@@ -8,6 +8,14 @@ name: 📊 Dashboard Refresh
 # No git commit. No git push. No self-trigger loop.
 
 on:
+  schedule:
+    # EGX market hours: Sun–Thu 10:00–14:30 Cairo (UTC+3 per ZoneInfo Africa/Cairo).
+    # Mirrors market_notifications.yml's cadence so the live dashboard/Pages
+    # deploy actually refreshes automatically instead of relying on someone
+    # manually running this workflow (previously the only way it ever ran).
+    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 7-10 * * 0-4'
+    - cron: '0,5,10,15,20,25,30 11 * * 0-4'
+
   repository_dispatch:
     types:
       - dashboard_refresh

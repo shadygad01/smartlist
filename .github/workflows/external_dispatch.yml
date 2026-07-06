@@ -170,3 +170,29 @@ jobs:
       - name: Persist state to data branch
         run: |
           bash ci/save_data.sh "HA trigger: ${{ steps.job.outputs.job_type }} [skip ci]"
+
+      # ── Keep the live GitHub Pages snapshot fresh ──────────────────────────
+      # This job runs every 5 min off the external HA cron (cron-job.org /
+      # Google Apps Script), which has proven far more reliable than GitHub's
+      # own `schedule:` trigger (market_notifications.yml's native schedule
+      # silently stopped firing for a full day; a `schedule:` added to
+      # dashboard_refresh.yml went unfired for 30+ min after merging). Deploy
+      # just the data files here (keep_files: true preserves the full Vite
+      # build already published by dashboard_refresh.yml) so the dashboard's
+      # data refreshes on a path that doesn't depend on GitHub's scheduler.
+      - name: Prepare web deploy
+        run: |
+          mkdir -p web_deploy
+          cp version.json web_deploy/ 2>/dev/null || true
+          cp manifest.json web_deploy/ 2>/dev/null || true
+          cp sw.js web_deploy/ 2>/dev/null || true
+          cp icon.svg web_deploy/ 2>/dev/null || true
+          cp presentation_snapshot.json web_deploy/ 2>/dev/null || true
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./web_deploy
+          keep_files: true
+          commit_message: "HA trigger: deploy dashboard [skip ci]"

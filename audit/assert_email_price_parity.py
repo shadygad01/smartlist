@@ -36,7 +36,7 @@ def main() -> int:
 
     snap     = build_presentation_snapshot()
     email_html = build_email(snap)
-    dash_html  = build_dashboard()
+    dash_html  = build_dashboard(snap=snap)
     auth_prices = get_all_prices()
 
     all_entries = (

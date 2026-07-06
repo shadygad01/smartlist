@@ -1489,9 +1489,15 @@ def _assert_sections(snap) -> None:
 
 
 # ── Build ─────────────────────────────────────────────────────────────────────
-def build_dashboard(build_hash: str = "") -> str:
-    """Build and return the complete HTML dashboard string from the current presentation snapshot."""
-    snap = build_presentation_snapshot()
+def build_dashboard(build_hash: str = "", snap: "PresentationSnapshot | None" = None) -> str:
+    """Build and return the complete HTML dashboard string from the current presentation snapshot.
+
+    Pass an existing `snap` (e.g. the one used to build the email/Telegram brief) so all
+    output channels render from the identical PresentationSnapshot instead of each pulling
+    its own independent — and potentially inconsistent — snapshot of live data.
+    """
+    if snap is None:
+        snap = build_presentation_snapshot()
     dna  = _load_stock_dna()
 
     _assert_sections(snap)

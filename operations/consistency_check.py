@@ -47,7 +47,15 @@ def run_checks() -> dict:
     # the two builds surface as a false-positive "near count mismatch".
     from dashboard import build_dashboard
     dash_html = build_dashboard(snap=snap)
-    dash_near_match = re.search(r'NEAR CONSTITUTIONAL ENTRY.*?(\d+) tickers', dash_html, re.DOTALL)
+    # The Near Entry section's own count badge is the only "float:right ... N tickers"
+    # span in the dashboard. A bare "NEAR CONSTITUTIONAL ENTRY.*?N tickers" search is not
+    # scoped to the section: when there are zero near entries the section renders a plain
+    # "No tickers..." empty state with no count at all, so a non-greedy DOTALL match spills
+    # past it into the next section's unrelated "N tickers" badge (e.g. Future Opportunities)
+    # and reports that count instead — a false-positive mismatch.
+    dash_near_match = re.search(
+        r'NEAR CONSTITUTIONAL ENTRY.*?float:right[^>]*>(\d+) tickers</span>', dash_html, re.DOTALL
+    )
     dash_near_count = int(dash_near_match.group(1)) if dash_near_match else 0
 
     # ── 3. Telegram near count ────────────────────────────────────────────────

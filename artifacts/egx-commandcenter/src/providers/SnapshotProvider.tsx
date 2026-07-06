@@ -31,7 +31,12 @@ export default function SnapshotProvider({ children }: { children: React.ReactNo
 
   const fetchSnapshot = useCallback(async () => {
     try {
-      const res = await fetch(SNAPSHOT_URL, { cache: 'no-store' });
+      // `cache: 'no-store'` only governs the browser's own HTTP cache — GitHub
+      // Pages' CDN can still serve a stale cached copy of this fixed URL to a
+      // fresh request. A per-request cache-busting query param gives every
+      // fetch a distinct CDN cache key so it can never be served from a stale
+      // edge cache.
+      const res = await fetch(`${SNAPSHOT_URL}?t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status} fetching snapshot`);
       const data: ProductionSnapshot = await res.json();
       setSnapshot(data);

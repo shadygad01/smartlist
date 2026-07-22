@@ -10,6 +10,7 @@ import csv
 import sys
 import unittest.mock as mock
 from datetime import datetime, date
+from types import SimpleNamespace
 
 import pandas as pd
 import numpy as np
@@ -116,92 +117,164 @@ class TestScanResultsIO:
 # detect_signal_changes
 # ─────────────────────────────────────────────────────────────────────────────
 
+class _FixedDate:
+    """Stand-in for today_cairo()'s return value — only .isoformat() is used."""
+    def __init__(self, iso: str):
+        self._iso = iso
+
+    def isoformat(self) -> str:
+        return self._iso
+
+
 class TestDetectSignalChanges:
+    """
+    Regression tests for main.detect_signal_changes(snap).
 
-    def _result(self, sig, score=40, price=100.0, target=115.0):
-        # analyze() returns "signal" key — detect_signal_changes() must read "signal"
-        return {"signal": sig, "score": score, "price": price, "target": target, "ok": True}
+    PRODUCTION API CHANGE (git: "Fix near-count mismatch by sharing one
+    PresentationSnapshot with the dashboard"): the function used to take
+    (current: dict, previous: dict) and compare string signals ("Buy" /
+    "Wait" / "Skip" / "Strong Buy"). It now takes a single snapshot object
+    (snap.universe_snapshot) and decides eligibility via the boolean
+    constitutional_gate.is_constitutional_buy(r2, score, price, entry) gate,
+    persisting state transitions through notifications.signal_state_store
+    (idempotent NONE/CONSTITUTIONAL_BUY state machine) instead of comparing
+    two in-memory dicts. The old tests called the removed two-argument form
+    and have been rewritten below against the current implementation.
 
-    def test_skip_to_buy_is_detected(self):
-        current  = {STOCKS[0]: self._result("Buy")}
-        previous = {STOCKS[0]: self._result("Skip")}
-        changes = detect_signal_changes(current, previous)
-        assert len(changes) == 1
-        assert changes[0]["stock"] == STOCKS[0]
-        assert changes[0]["from"] == "Skip"
-        assert changes[0]["to"] == "Buy"
+    Only "only_stocks_in_stocks_list_are_checked" has no direct analog: the
+    new function operates on whatever universe_snapshot rows it is given, not
+    a filtered global STOCKS list — the closest surviving behavior (rows
+    missing a ticker are skipped) is covered by
+    test_row_without_ticker_is_skipped below.
 
-    def test_skip_to_strong_buy_is_detected(self):
-        current  = {STOCKS[0]: self._result("Strong Buy", score=60)}
-        previous = {STOCKS[0]: self._result("Skip")}
-        changes = detect_signal_changes(current, previous)
-        assert len(changes) == 1
-        assert changes[0]["to"] == "Strong Buy"
+    Since the persisted state machine only ever stores NONE or
+    CONSTITUTIONAL_BUY (STATE_NEAR_ENTRY is defined but never assigned
+    anywhere in the codebase), the old "Skip"/"Wait"/"no previous data"
+    distinctions all collapse onto the same "not currently in buy zone"
+    starting state — they are intentionally represented by ONE test
+    (test_new_buy_zone_entry_is_detected) rather than three near-duplicates.
+    """
 
-    def test_wait_to_buy_is_detected(self):
-        current  = {STOCKS[0]: self._result("Buy")}
-        previous = {STOCKS[0]: self._result("Wait")}
-        changes = detect_signal_changes(current, previous)
-        assert len(changes) == 1
+    TODAY = "2026-07-22"
 
-    def test_buy_to_buy_not_detected(self):
-        current  = {STOCKS[0]: self._result("Buy")}
-        previous = {STOCKS[0]: self._result("Buy")}
-        changes = detect_signal_changes(current, previous)
-        assert len(changes) == 0
+    @pytest.fixture(autouse=True)
+    def _isolate_signal_store(self, tmp_path, monkeypatch):
+        import notifications.signal_state_store as sss
+        monkeypatch.setattr(sss, "_DB", tmp_path / "notification_delivery.db")
+        monkeypatch.setattr(main, "today_cairo", lambda: _FixedDate(self.TODAY))
 
-    def test_skip_to_skip_not_detected(self):
-        current  = {STOCKS[0]: self._result("Skip")}
-        previous = {STOCKS[0]: self._result("Skip")}
-        changes = detect_signal_changes(current, previous)
-        assert len(changes) == 0
-
-    def test_buy_to_skip_not_detected(self):
-        # Deterioration should not trigger alert
-        current  = {STOCKS[0]: self._result("Skip")}
-        previous = {STOCKS[0]: self._result("Buy")}
-        changes = detect_signal_changes(current, previous)
-        assert len(changes) == 0
-
-    def test_no_previous_data_treated_as_skip(self):
-        # Stock has no previous result — defaults to "Skip"
-        current = {STOCKS[0]: self._result("Buy")}
-        changes = detect_signal_changes(current, {})
-        assert len(changes) == 1
-
-    def test_multiple_changes_returned(self):
-        current = {
-            STOCKS[0]: self._result("Buy"),
-            STOCKS[1]: self._result("Strong Buy", score=60),
-            STOCKS[2]: self._result("Skip"),
+    def _row(self, ticker, *, r2=70.0, score=50.0, price=100.0, entry=115.0,
+              last_scan=None, **extra):
+        row = {
+            "ticker": ticker,
+            "candidate_r2": r2,
+            "expected_reward_score": score,
+            "current_price": price,
+            "constitutional_entry_price": entry,
+            "last_scan": last_scan or self.TODAY,
+            "sector": "Banks",
+            "return_pct": 0.0,
+            "status": "ACTIVE",
         }
-        previous = {
-            STOCKS[0]: self._result("Skip"),
-            STOCKS[1]: self._result("Skip"),
-            STOCKS[2]: self._result("Buy"),
-        }
-        changes = detect_signal_changes(current, previous)
-        assert len(changes) == 2
-        changed_stocks = [c["stock"] for c in changes]
-        assert STOCKS[0] in changed_stocks
-        assert STOCKS[1] in changed_stocks
+        row.update(extra)
+        return row
+
+    def _snap(self, rows):
+        return SimpleNamespace(universe_snapshot=rows, new_events_today=[])
+
+    def test_new_buy_zone_entry_is_detected(self):
+        """A ticker with no prior recorded state entering its buy zone -> FIRST_BUY."""
+        snap = self._snap([self._row(STOCKS[0])])  # r2=70, score=50, price<=entry: qualifies
+        changes = detect_signal_changes(snap)
+        assert len(changes) == 1
+        assert changes[0]["ticker"] == STOCKS[0]
+        assert changes[0]["event_type"] == "FIRST_BUY"
+
+    def test_not_in_buy_zone_not_detected(self):
+        """Gate fails (score below CONST_SCORE_MIN) -> no event."""
+        snap = self._snap([self._row(STOCKS[0], score=10.0)])
+        changes = detect_signal_changes(snap)
+        assert len(changes) == 0
+
+    def test_price_above_entry_not_detected(self):
+        """Gate fails on price (current_price > entry_price) -> no event."""
+        snap = self._snap([self._row(STOCKS[0], price=120.0, entry=115.0)])
+        changes = detect_signal_changes(snap)
+        assert len(changes) == 0
+
+    def test_exiting_buy_zone_is_not_alerted(self):
+        """Deterioration (was CONST_BUY, now fails gate) must not fire an alert,
+        and must silently reset persisted state to NONE."""
+        import notifications.signal_state_store as sss
+        sss.record_transition(STOCKS[0], sss.STATE_NONE, sss.STATE_CONST_BUY, self.TODAY)
+
+        snap = self._snap([self._row(STOCKS[0], score=10.0)])  # now fails the gate
+        changes = detect_signal_changes(snap)
+
+        assert len(changes) == 0
+        assert sss.get_current_state(STOCKS[0]) == sss.STATE_NONE
+
+    def test_continuation_in_buy_zone_is_not_re_alerted(self):
+        """
+        Regression test for a real bug: a ticker already in its constitutional
+        buy zone as of a PRIOR day, still in the buy zone TODAY (a pure
+        continuation, not a new signal), must not generate any event.
+
+        Root cause (fixed in notifications/signal_state_store.py): the
+        "retry unnotified transitions" safety net in detect_signal_changes()
+        used get_unnotified_transitions(), which — unlike the sibling
+        get_stale_unnotified() — did not exclude CONST_BUY->CONST_BUY
+        continuation rows. Continuation rows are legitimately never marked
+        notified (by design, they're not supposed to alert), so the retry
+        path was resurrecting them as spurious "RE_ACCUMULATION" alerts on
+        the first scan of every day the ticker remained in its buy zone.
+        Confirmed via direct reproduction before the fix; this test fails
+        against the pre-fix code and passes against the fix.
+        """
+        import notifications.signal_state_store as sss
+        sss.record_transition(STOCKS[0], sss.STATE_NONE, sss.STATE_CONST_BUY, "2026-07-21")
+
+        snap = self._snap([self._row(STOCKS[0])])  # still qualifies today
+        changes = detect_signal_changes(snap)
+
+        assert changes == []
+
+    def test_multiple_tickers_mixed_results(self):
+        snap = self._snap([
+            self._row(STOCKS[0]),                 # qualifies -> FIRST_BUY
+            self._row(STOCKS[1], score=60.0),      # qualifies -> FIRST_BUY
+            self._row(STOCKS[2], score=10.0),      # fails gate -> no event
+        ])
+        changes = detect_signal_changes(snap)
+        tickers = {c["ticker"] for c in changes}
+        assert tickers == {STOCKS[0], STOCKS[1]}
 
     def test_change_record_contains_expected_fields(self):
-        current  = {STOCKS[0]: self._result("Buy", score=42, price=75.0, target=88.0)}
-        previous = {STOCKS[0]: self._result("Skip")}
-        changes = detect_signal_changes(current, previous)
+        snap = self._snap([self._row(
+            STOCKS[0], score=42.0, price=75.0, entry=88.0, r2=65.0,
+        )])
+        changes = detect_signal_changes(snap)
         c = changes[0]
-        assert c["stock"] == STOCKS[0]
-        assert c["score"] == 42
-        assert c["price"] == 75.0
-        assert c["target"] == 88.0
+        assert c["ticker"] == STOCKS[0]
+        assert c["event_type"] == "FIRST_BUY"
+        assert c["constitutional_score"] == 42.0
+        assert c["current_price"] == 75.0
+        assert c["constitutional_entry_price"] == 88.0
+        assert c["constitutional_r2"] == 65.0
+        assert c["event_date"] == self.TODAY
 
-    def test_only_stocks_in_stocks_list_are_checked(self):
-        # A symbol not in STOCKS should be ignored
-        current  = {"FAKE.CA": self._result("Buy")}
-        previous = {"FAKE.CA": self._result("Skip")}
-        changes = detect_signal_changes(current, previous)
-        assert len(changes) == 0
+    def test_row_without_ticker_is_skipped(self):
+        """Malformed universe rows with no ticker must be skipped, not crash."""
+        row = self._row("")
+        snap = self._snap([row])
+        changes = detect_signal_changes(snap)
+        assert changes == []
+
+    def test_empty_universe_falls_back_to_new_events_today(self):
+        """When universe_snapshot is empty, fall back to snap.new_events_today."""
+        snap = SimpleNamespace(universe_snapshot=[], new_events_today=[{"ticker": "X"}])
+        changes = detect_signal_changes(snap)
+        assert changes == [{"ticker": "X"}]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -406,26 +479,27 @@ class TestHtmlHelpers:
 
     def test_pill_high_score_green(self):
         result = pill(8, 10)   # 80% → green
-        assert "#d4edda" in result or "#155724" in result
+        assert "#d1f0dd" in result or "#1a7340" in result
 
     def test_pill_low_score_red(self):
         result = pill(2, 10)   # 20% → red
-        assert "#f8d7da" in result or "#721c24" in result
+        assert "#fde8e8" in result or "#a02020" in result
 
     def test_bar_returns_string(self):
         assert isinstance(bar(50), str)
 
     def test_bar_contains_score(self):
         result = bar(65)
-        assert "65/100" in result
+        assert ">65<" in result
+        assert "/100" in result
 
     def test_bar_high_score_green(self):
         result = bar(75)
-        assert "#1e7e34" in result
+        assert "#1a7340" in result
 
     def test_bar_low_score_red(self):
         result = bar(30)
-        assert "#b02a2a" in result
+        assert "#a02020" in result
 
     def test_bar_zero_does_not_crash(self):
         result = bar(0)

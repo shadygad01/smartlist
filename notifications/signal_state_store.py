@@ -267,6 +267,13 @@ def get_unnotified_transitions(event_date: str) -> list[dict]:
 
     Only returns rows where BOTH channels are still unnotified — if at least one
     channel succeeded we consider the event partially delivered and skip retry.
+
+    CONST_BUY→CONST_BUY (continuation) rows are excluded — same rule as
+    get_stale_unnotified(). Those rows are cluster extensions that
+    detect_signal_changes() deliberately does not alert on; notified=0 for them
+    is correct, not a missed notification. Without this exclusion, every
+    multi-day continuation ticker would resurface here as a spurious
+    RE_ACCUMULATION alert on its first scan of each day.
     """
     try:
         con = _conn()
@@ -274,8 +281,9 @@ def get_unnotified_transitions(event_date: str) -> list[dict]:
             rows = con.execute(
                 """SELECT ticker, from_state, to_state
                    FROM signal_event_log
-                   WHERE event_date=? AND to_state=? AND notified_email=0 AND notified_tg=0""",
-                (event_date, STATE_CONST_BUY),
+                   WHERE event_date=? AND to_state=? AND from_state != ?
+                     AND notified_email=0 AND notified_tg=0""",
+                (event_date, STATE_CONST_BUY, STATE_CONST_BUY),
             ).fetchall()
             return [{"ticker": r[0], "from_state": r[1], "to_state": r[2]} for r in rows]
         finally:

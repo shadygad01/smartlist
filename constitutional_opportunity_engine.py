@@ -76,58 +76,60 @@ def migrate_from_candidate_pool() -> dict:
 
     pool = _open(POOL_DB)
     reg  = _open(REGISTRY_DB)
-    _create_schema(reg)
+    try:
+        _create_schema(reg)
 
-    # All signals ordered by date — pick first qualifying row per ticker
-    rows = pool.execute("""
-        SELECT ticker, signal_date, candidate_entry_zone,
-               candidate_r2, r3_score, r4_score, r5_score,
-               r6_score, r7_score, r8_score, expected_reward_score,
-               sector, snapshot_ts
-        FROM candidate_pool
-        WHERE candidate_r2 >= ? AND expected_reward_score >= ?
-        ORDER BY signal_date ASC, snapshot_ts ASC
-    """, (CONST_R2_MIN, CONST_SCORE_MIN)).fetchall()
+        # All signals ordered by date — pick first qualifying row per ticker
+        rows = pool.execute("""
+            SELECT ticker, signal_date, candidate_entry_zone,
+                   candidate_r2, r3_score, r4_score, r5_score,
+                   r6_score, r7_score, r8_score, expected_reward_score,
+                   sector, snapshot_ts
+            FROM candidate_pool
+            WHERE candidate_r2 >= ? AND expected_reward_score >= ?
+            ORDER BY signal_date ASC, snapshot_ts ASC
+        """, (CONST_R2_MIN, CONST_SCORE_MIN)).fetchall()
 
-    seen: set[str] = set()
-    recovered = inserted = already_present = 0
+        seen: set[str] = set()
+        recovered = inserted = already_present = 0
 
-    for r in rows:
-        t = r["ticker"]
-        if t in seen:
-            continue
-        seen.add(t)
-        recovered += 1
+        for r in rows:
+            t = r["ticker"]
+            if t in seen:
+                continue
+            seen.add(t)
+            recovered += 1
 
-        rid = _registry_id(t, r["signal_date"])
-        exists = reg.execute(
-            "SELECT 1 FROM constitutional_buy_registry WHERE registry_id=?", (rid,)
-        ).fetchone()
+            rid = _registry_id(t, r["signal_date"])
+            exists = reg.execute(
+                "SELECT 1 FROM constitutional_buy_registry WHERE registry_id=?", (rid,)
+            ).fetchone()
 
-        if exists:
-            already_present += 1
-            continue
+            if exists:
+                already_present += 1
+                continue
 
-        reg.execute("""
-            INSERT INTO constitutional_buy_registry
-            (registry_id, ticker, buy_date, constitutional_entry_price, constitutional_r2, constitutional_score,
-             buy_r3_score, buy_r4_score, buy_r5_score, buy_r6_score,
-             buy_r7_score, buy_r8_score, sector, signal_version,
-             snapshot_timestamp, created_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        """, (
-            rid, t, r["signal_date"], r["candidate_entry_zone"],
-            r["candidate_r2"], r["expected_reward_score"],
-            r["r3_score"], r["r4_score"], r["r5_score"],
-            r["r6_score"], r["r7_score"], r["r8_score"],
-            r["sector"], "v3", r["snapshot_ts"],
-            datetime.now().isoformat()
-        ))
-        inserted += 1
+            reg.execute("""
+                INSERT INTO constitutional_buy_registry
+                (registry_id, ticker, buy_date, constitutional_entry_price, constitutional_r2, constitutional_score,
+                 buy_r3_score, buy_r4_score, buy_r5_score, buy_r6_score,
+                 buy_r7_score, buy_r8_score, sector, signal_version,
+                 snapshot_timestamp, created_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """, (
+                rid, t, r["signal_date"], r["candidate_entry_zone"],
+                r["candidate_r2"], r["expected_reward_score"],
+                r["r3_score"], r["r4_score"], r["r5_score"],
+                r["r6_score"], r["r7_score"], r["r8_score"],
+                r["sector"], "v3", r["snapshot_ts"],
+                datetime.now().isoformat()
+            ))
+            inserted += 1
 
-    reg.commit()
-    pool.close()
-    reg.close()
+        reg.commit()
+    finally:
+        pool.close()
+        reg.close()
 
     return {
         "tickers_scanned": 24,
@@ -149,32 +151,33 @@ def register_new_buy(ticker: str, buy_date: str, constitutional_entry_price: flo
     Returns True if newly inserted, False if already registered.
     """
     reg = _open(REGISTRY_DB)
-    _create_schema(reg)
+    try:
+        _create_schema(reg)
 
-    rid = _registry_id(ticker, buy_date)
-    exists = reg.execute(
-        "SELECT 1 FROM constitutional_buy_registry WHERE registry_id=?", (rid,)
-    ).fetchone()
+        rid = _registry_id(ticker, buy_date)
+        exists = reg.execute(
+            "SELECT 1 FROM constitutional_buy_registry WHERE registry_id=?", (rid,)
+        ).fetchone()
 
-    if exists:
+        if exists:
+            return False
+
+        reg.execute("""
+            INSERT INTO constitutional_buy_registry
+            (registry_id, ticker, buy_date, constitutional_entry_price, constitutional_r2, constitutional_score,
+             buy_r3_score, buy_r4_score, buy_r5_score, buy_r6_score,
+             buy_r7_score, buy_r8_score, sector, signal_version,
+             snapshot_timestamp, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (
+            rid, ticker, buy_date, constitutional_entry_price, constitutional_r2, constitutional_score,
+            r3, r4, r5, r6, r7, r8,
+            sector, "v3", datetime.now().isoformat(), datetime.now().isoformat()
+        ))
+        reg.commit()
+        return True
+    finally:
         reg.close()
-        return False
-
-    reg.execute("""
-        INSERT INTO constitutional_buy_registry
-        (registry_id, ticker, buy_date, constitutional_entry_price, constitutional_r2, constitutional_score,
-         buy_r3_score, buy_r4_score, buy_r5_score, buy_r6_score,
-         buy_r7_score, buy_r8_score, sector, signal_version,
-         snapshot_timestamp, created_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    """, (
-        rid, ticker, buy_date, constitutional_entry_price, constitutional_r2, constitutional_score,
-        r3, r4, r5, r6, r7, r8,
-        sector, "v3", datetime.now().isoformat(), datetime.now().isoformat()
-    ))
-    reg.commit()
-    reg.close()
-    return True
 
 
 def _opportunity_status(return_pct: float) -> str:
@@ -201,30 +204,36 @@ def get_registry() -> list[dict]:
         migrate_from_candidate_pool()
 
     reg  = _open(REGISTRY_DB)
-    _create_schema(reg)
-    entries = reg.execute(
-        "SELECT * FROM constitutional_buy_registry ORDER BY buy_date ASC, ticker ASC"
-    ).fetchall()
-    reg.close()
-
-    if not entries:
-        migrate_from_candidate_pool()
-        reg     = _open(REGISTRY_DB)
+    try:
+        _create_schema(reg)
         entries = reg.execute(
             "SELECT * FROM constitutional_buy_registry ORDER BY buy_date ASC, ticker ASC"
         ).fetchall()
+    finally:
         reg.close()
+
+    if not entries:
+        migrate_from_candidate_pool()
+        reg = _open(REGISTRY_DB)
+        try:
+            entries = reg.execute(
+                "SELECT * FROM constitutional_buy_registry ORDER BY buy_date ASC, ticker ASC"
+            ).fetchall()
+        finally:
+            reg.close()
 
     # Pull price history from candidate_pool for enrichment
     price_data: dict[str, dict] = {}
     if POOL_DB.exists():
         pool = _open(POOL_DB)
-        rows = pool.execute("""
-            SELECT ticker, signal_date, current_price
-            FROM candidate_pool
-            ORDER BY ticker, signal_date
-        """).fetchall()
-        pool.close()
+        try:
+            rows = pool.execute("""
+                SELECT ticker, signal_date, current_price
+                FROM candidate_pool
+                ORDER BY ticker, signal_date
+            """).fetchall()
+        finally:
+            pool.close()
 
         for r in rows:
             t = r["ticker"]
@@ -293,9 +302,11 @@ def forensic_validation() -> dict:
     if not REGISTRY_DB.exists():
         return {"error": "Registry not found — run migrate_from_candidate_pool() first"}
 
-    reg  = _open(REGISTRY_DB)
-    rows = reg.execute("SELECT ticker, buy_date, constitutional_r2, constitutional_score FROM constitutional_buy_registry").fetchall()
-    reg.close()
+    reg = _open(REGISTRY_DB)
+    try:
+        rows = reg.execute("SELECT ticker, buy_date, constitutional_r2, constitutional_score FROM constitutional_buy_registry").fetchall()
+    finally:
+        reg.close()
 
     recovered = len(rows)
     tickers   = [r["ticker"] for r in rows]
@@ -305,13 +316,15 @@ def forensic_validation() -> dict:
     missing = 0
     if POOL_DB.exists():
         pool = _open(POOL_DB)
-        pool_tickers = set(
-            r[0] for r in pool.execute(
-                "SELECT DISTINCT ticker FROM candidate_pool WHERE candidate_r2>=? AND expected_reward_score>=?",
-                (CONST_R2_MIN, CONST_SCORE_MIN)
-            ).fetchall()
-        )
-        pool.close()
+        try:
+            pool_tickers = set(
+                r[0] for r in pool.execute(
+                    "SELECT DISTINCT ticker FROM candidate_pool WHERE candidate_r2>=? AND expected_reward_score>=?",
+                    (CONST_R2_MIN, CONST_SCORE_MIN)
+                ).fetchall()
+            )
+        finally:
+            pool.close()
         reg_tickers = set(tickers)
         missing = len(pool_tickers - reg_tickers)
 
@@ -345,15 +358,17 @@ def run() -> dict:
         return {"error": "candidate_pool.db not found"}
 
     pool = _open(POOL_DB)
-    todays = pool.execute("""
-        SELECT ticker, signal_date, candidate_entry_zone,
-               candidate_r2, r3_score, r4_score, r5_score,
-               r6_score, r7_score, r8_score, expected_reward_score, sector
-        FROM candidate_pool
-        WHERE signal_date = ? AND candidate_r2 >= ? AND expected_reward_score >= ?
-        ORDER BY candidate_r2 DESC
-    """, (today, CONST_R2_MIN, CONST_SCORE_MIN)).fetchall()
-    pool.close()
+    try:
+        todays = pool.execute("""
+            SELECT ticker, signal_date, candidate_entry_zone,
+                   candidate_r2, r3_score, r4_score, r5_score,
+                   r6_score, r7_score, r8_score, expected_reward_score, sector
+            FROM candidate_pool
+            WHERE signal_date = ? AND candidate_r2 >= ? AND expected_reward_score >= ?
+            ORDER BY candidate_r2 DESC
+        """, (today, CONST_R2_MIN, CONST_SCORE_MIN)).fetchall()
+    finally:
+        pool.close()
 
     new_registrations = []
     for r in todays:

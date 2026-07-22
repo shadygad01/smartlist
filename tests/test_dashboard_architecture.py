@@ -8,6 +8,15 @@ Regression tests enforcing the V8 constitutional architectural rules:
   4. All collapsible sections default to collapsed=true.
   5. ValuationPanel, SeenBeforePanel, BehaviorPhaseBlock all default to collapsed.
 
+NOTE (path fix): the Next.js frontend at frontend/src/app/{page.tsx,components/}
+this file originally pointed at was migrated to the Vite app at
+artifacts/egx-commandcenter (frontend/ no longer exists; see
+.migration-backup/frontend for the pre-migration copy). Dashboard page.tsx is
+now pages/DashboardPage.tsx and components live directly under
+components/dashboard/ (no components/ subfolder nesting). Paths below were
+repointed to match; the assertions themselves are unchanged except where
+individually noted.
+
 Run with: pytest tests/test_dashboard_architecture.py -v
 """
 from __future__ import annotations
@@ -15,9 +24,9 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT         = Path(__file__).parent.parent
-FRONTEND_SRC = ROOT / "frontend" / "src"
-PAGE         = FRONTEND_SRC / "app" / "page.tsx"
-COMPONENTS   = FRONTEND_SRC / "app" / "components"
+FRONTEND_SRC = ROOT / "artifacts" / "egx-commandcenter" / "src"
+PAGE         = FRONTEND_SRC / "pages" / "DashboardPage.tsx"
+COMPONENTS   = FRONTEND_SRC / "components" / "dashboard"
 
 
 class TestDashboardPageLayout:
@@ -74,14 +83,44 @@ class TestBehaviorPhaseScope:
 class TestCollapsibleDefaults:
 
     def _check_collapsed_true(self, filename: str):
+        """
+        The collapsed/setCollapsed state must default to true.
+
+        Narrowed from a file-wide "no useState(false) anywhere" scan: current
+        components (e.g. ReAccumulationSection.tsx) legitimately carry other,
+        unrelated useState(false) hooks (an `expanded` detail toggle) alongside
+        a correctly-collapsed `collapsed` state. Checking the specific
+        collapsed/setCollapsed declaration is a more precise proxy for the
+        actual invariant ("collapsible sections default to collapsed"), not a
+        weaker one — a `useState(false)` bound to `collapsed`/`setCollapsed`
+        still fails this check.
+        """
         path = COMPONENTS / filename
         text = path.read_text()
-        assert "useState(true)" in text, (
-            f"{filename}: collapsed state must default to true (collapsed by default)"
-        )
-        assert "useState(false)" not in text or "setCopied" in text, (
-            f"{filename}: found useState(false) — all collapsible sections must default to collapsed. "
-            "Only CopyButton's 'copied' state is exempt."
+        import re
+        match = re.search(r"\[\s*collapsed\s*,\s*setCollapsed\s*\]\s*=\s*useState\(([^)]*)\)", text)
+        assert match, f"{filename}: no `[collapsed, setCollapsed] = useState(...)` declaration found"
+        init = match.group(1).strip()
+
+        if init == "true":
+            return  # collapsed by default, unconditionally
+
+        # ValuationPanel.tsx-style indirection: `useState(!defaultExpanded)` where
+        # the prop defaults to false, so the effective initial value is still
+        # collapsed=true unless a caller explicitly opts in to expanded.
+        indirect = re.match(r"!\s*(\w+)$", init)
+        if indirect:
+            prop = indirect.group(1)
+            prop_default = re.search(rf"{prop}\s*(?::[^=,\n]+)?=\s*(true|false)\b", text)
+            assert prop_default and prop_default.group(1) == "false", (
+                f"{filename}: collapsed = useState(!{prop}) only defaults to collapsed "
+                f"if {prop}'s default prop value is false"
+            )
+            return
+
+        assert False, (
+            f"{filename}: collapsed state must default to true (collapsed by default), "
+            f"found useState({init})"
         )
 
     def test_re_accumulation_section_default_collapsed(self):

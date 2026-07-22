@@ -17,6 +17,7 @@ from main import (
     calc_stopping_volume, calc_volume_profile,
     W_OB, W_LIQ, W_HTF, W_DZ,
 )
+from signal_engine import HVN_ONLY_FRAC
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -571,7 +572,15 @@ class TestScDemandZone:
         assert pts == round(W_DZ * 0.60)
         assert "Stopping Volume only" in desc
 
-    def test_hvn_only_returns_40_pct(self):
+    def test_hvn_only_returns_configured_frac(self):
+        """
+        HVN-only confluence must score exactly W_DZ * HVN_ONLY_FRAC, the
+        live-configured fraction from config/gates_config.json
+        (`sc_demand_hvn_only_frac`) — not a hardcoded literal. That constant
+        was recalibrated to 0.00 on 2026-06-18 (see signal_engine.sc_demand_zone
+        docstring); this test asserts against the config value directly so it
+        can never drift out of sync with production again.
+        """
         import unittest.mock as mock
         import main as m
 
@@ -579,7 +588,7 @@ class TestScDemandZone:
              mock.patch("signal_engine.calc_volume_profile",  return_value=(True, 0.9, 92.0, "HVN desc")):
             pts, desc = sc_demand_zone(make_ohlcv(60), self.EQ, self.LO, self.BUY_HI)
 
-        assert pts == round(W_DZ * 0.40)
+        assert pts == round(W_DZ * HVN_ONLY_FRAC)
         assert "HVN only" in desc
 
     def test_sv_and_hvn_returns_full_score(self):

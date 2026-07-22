@@ -30,9 +30,12 @@ def _db(path: str) -> sqlite3.Connection:
 def _scalar(db_path: str, sql: str, params=()):
     """Return single scalar from parameterized query, or None on error."""
     try:
-        with _db(db_path) as c:
-            row = c.execute(sql, params).fetchone()
+        conn = _db(db_path)
+        try:
+            row = conn.execute(sql, params).fetchone()
             return row[0] if row else None
+        finally:
+            conn.close()
     except Exception:
         return None
 
@@ -40,8 +43,11 @@ def _scalar(db_path: str, sql: str, params=()):
 def _rows(db_path: str, sql: str, params=()):
     """Return all rows from parameterized query as list of dicts, or [] on error."""
     try:
-        with _db(db_path) as c:
-            return [dict(r) for r in c.execute(sql, params).fetchall()]
+        conn = _db(db_path)
+        try:
+            return [dict(r) for r in conn.execute(sql, params).fetchall()]
+        finally:
+            conn.close()
     except Exception:
         return []
 

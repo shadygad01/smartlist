@@ -544,9 +544,11 @@ def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: s
     if _dna_path.exists():
         try:
             _dna_conn = sqlite3.connect(str(_dna_path))
-            _dna_conn.row_factory = sqlite3.Row
-            _dna_rows = _dna_conn.execute("SELECT * FROM stock_dna").fetchall()
-            _dna_conn.close()
+            try:
+                _dna_conn.row_factory = sqlite3.Row
+                _dna_rows = _dna_conn.execute("SELECT * FROM stock_dna").fetchall()
+            finally:
+                _dna_conn.close()
             for _dr in _dna_rows:
                 _stock_dna[_dr["ticker"]] = dict(_dr)
         except Exception as _dna_err:
@@ -558,13 +560,15 @@ def write_presentation_snapshot_json(snap: "PresentationSnapshot", build_hash: s
     if _mpi_path.exists():
         try:
             _mpi_conn = sqlite3.connect(str(_mpi_path))
-            _mpi_conn.row_factory = sqlite3.Row
-            _mpi_rows = _mpi_conn.execute(
-                "SELECT ticker, phase, confidence, confidence_label, explanation, "
-                "historical_cases, similarity_score, avg_mfe40, avg_drawdown, avg_holding_days "
-                "FROM mpi_snapshots WHERE phase != 'Neutral' AND confidence > 0"
-            ).fetchall()
-            _mpi_conn.close()
+            try:
+                _mpi_conn.row_factory = sqlite3.Row
+                _mpi_rows = _mpi_conn.execute(
+                    "SELECT ticker, phase, confidence, confidence_label, explanation, "
+                    "historical_cases, similarity_score, avg_mfe40, avg_drawdown, avg_holding_days "
+                    "FROM mpi_snapshots WHERE phase != 'Neutral' AND confidence > 0"
+                ).fetchall()
+            finally:
+                _mpi_conn.close()
             for _mr in _mpi_rows:
                 _mpi_behavior[_mr["ticker"]] = dict(_mr)
         except Exception as _mpi_err:

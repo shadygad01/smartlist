@@ -96,126 +96,123 @@ def run_valuation(ticker: str, current_price: float | None = None) -> dict | Non
     conn.row_factory = sqlite3.Row
 
     try:
-        raw_financials = _db.get_financials(conn, ticker)
-        assumptions    = _db.get_assumptions(conn, ticker)
-        company_row    = conn.execute(
-            "SELECT sector FROM companies WHERE ticker=?", (ticker,)
-        ).fetchone()
-        sector = dict(company_row)["sector"] if company_row else None
-    except Exception as e:
-        conn.close()
-        print(f"[ValuationEngine] DB read failed for {ticker}: {e}")
-        return None
+        try:
+            raw_financials = _db.get_financials(conn, ticker)
+            assumptions    = _db.get_assumptions(conn, ticker)
+            company_row    = conn.execute(
+                "SELECT sector FROM companies WHERE ticker=?", (ticker,)
+            ).fetchone()
+            sector = dict(company_row)["sector"] if company_row else None
+        except Exception as e:
+            print(f"[ValuationEngine] DB read failed for {ticker}: {e}")
+            return None
 
-    financials = parse_financials(raw_financials)
-    if not financials:
-        conn.close()
-        print(f"[ValuationEngine] No financial data for {ticker}")
-        return None
+        financials = parse_financials(raw_financials)
+        if not financials:
+            print(f"[ValuationEngine] No financial data for {ticker}")
+            return None
 
-    # Minimum data quality gate: at least one core financial statement field must
-    # be non-NULL. EPS alone is insufficient — it could be synthetic.
-    _CORE_FIELDS = ("revenue", "net_income", "operating_cash_flow", "equity")
-    has_real_data = any(
-        r.get(f) is not None
-        for r in financials
-        for f in _CORE_FIELDS
-    )
-    if not has_real_data:
-        conn.close()
-        print(
-            f"[ValuationEngine] {ticker}: financials contain no core income/balance data — "
-            f"refusing to write valuation"
+        # Minimum data quality gate: at least one core financial statement field must
+        # be non-NULL. EPS alone is insufficient — it could be synthetic.
+        _CORE_FIELDS = ("revenue", "net_income", "operating_cash_flow", "equity")
+        has_real_data = any(
+            r.get(f) is not None
+            for r in financials
+            for f in _CORE_FIELDS
         )
-        return None
+        if not has_real_data:
+            print(
+                f"[ValuationEngine] {ticker}: financials contain no core income/balance data — "
+                f"refusing to write valuation"
+            )
+            return None
 
-    today = date.today().isoformat()
+        today = date.today().isoformat()
 
-    # ── Data Completeness ────────────────────────────────────────────────────
-    completeness = measure_completeness(financials)
-    print(
-        f"[ValuationEngine] {ticker}: completeness={completeness['completeness_percent']}% "
-        f"available={len(completeness['_available_set'])}/{len(completeness['_available_set']) + len(completeness['_missing_set'])}"
-    )
+        # ── Data Completeness ────────────────────────────────────────────────────
+        completeness = measure_completeness(financials)
+        print(
+            f"[ValuationEngine] {ticker}: completeness={completeness['completeness_percent']}% "
+            f"available={len(completeness['_available_set'])}/{len(completeness['_available_set']) + len(completeness['_missing_set'])}"
+        )
 
-    # ── Per-model eligibility + execution ────────────────────────────────────
-    forecasts = build_forecasts(financials, assumptions.get("terminal_growth", 0.04))
+        # ── Per-model eligibility + execution ────────────────────────────────────
+        forecasts = build_forecasts(financials, assumptions.get("terminal_growth", 0.04))
 
-    _MODEL_FNS = {
-        "dcf":             (run_dcf,          financials, forecasts, assumptions, current_price),
-        "ddm":             (run_ddm,          financials, forecasts, assumptions),
-        "residual_income": (run_residual_income, financials, forecasts, assumptions),
-        "earnings_power":  (run_epv,          financials, assumptions),
-        "ev_ebitda":       (run_ev_ebitda,    financials, assumptions, sector),
-        "pe":              (run_pe,           financials, assumptions, sector),
-        "pb":              (run_pb,           financials, assumptions, sector),
-    }
+        _MODEL_FNS = {
+            "dcf":             (run_dcf,          financials, forecasts, assumptions, current_price),
+            "ddm":             (run_ddm,          financials, forecasts, assumptions),
+            "residual_income": (run_residual_income, financials, forecasts, assumptions),
+            "earnings_power":  (run_epv,          financials, assumptions),
+            "ev_ebitda":       (run_ev_ebitda,    financials, assumptions, sector),
+            "pe":              (run_pe,           financials, assumptions, sector),
+            "pb":              (run_pb,           financials, assumptions, sector),
+        }
 
-    results: dict[str, float | None] = {}
-    model_statuses: list[dict] = []
+        results: dict[str, float | None] = {}
+        model_statuses: list[dict] = []
 
-    for name, (fn, *args) in _MODEL_FNS.items():
-        eligible, eligibility_reason = check_model_eligibility(name, financials)
+        for name, (fn, *args) in _MODEL_FNS.items():
+            eligible, eligibility_reason = check_model_eligibility(name, financials)
 
-        if not eligible:
-            results[name] = None
+            if not eligible:
+                results[name] = None
+                model_statuses.append({
+                    "model":             name,
+                    "executed":          False,
+                    "success":           False,
+                    "reason":            f"skipped: {eligibility_reason}",
+                    "execution_time_ms": None,
+                })
+                print(f"[ValuationEngine] {ticker}/{name}: SKIP — {eligibility_reason}")
+                continue
+
+            value, success, reason, ms = _run_model(name, fn, *args)
+            results[name] = value
             model_statuses.append({
                 "model":             name,
-                "executed":          False,
-                "success":           False,
-                "reason":            f"skipped: {eligibility_reason}",
-                "execution_time_ms": None,
+                "executed":          True,
+                "success":           success,
+                "reason":            reason,
+                "execution_time_ms": ms,
             })
-            print(f"[ValuationEngine] {ticker}/{name}: SKIP — {eligibility_reason}")
-            continue
+            status_str = f"OK={value:.2f}" if success and value else "FAIL"
+            print(f"[ValuationEngine] {ticker}/{name}: {status_str} ({ms}ms)")
 
-        value, success, reason, ms = _run_model(name, fn, *args)
-        results[name] = value
-        model_statuses.append({
-            "model":             name,
-            "executed":          True,
-            "success":           success,
-            "reason":            reason,
-            "execution_time_ms": ms,
-        })
-        status_str = f"OK={value:.2f}" if success and value else "FAIL"
-        print(f"[ValuationEngine] {ticker}/{name}: {status_str} ({ms}ms)")
+        # ── Fair value + scenarios ───────────────────────────────────────────────
+        fair_value = _weighted_fair_value(results)
+        if fair_value is None:
+            # Save completeness and model statuses even when valuation fails
+            _flush_metadata(conn, ticker, today, completeness, model_statuses)
+            conn.commit()
+            print(f"[ValuationEngine] Insufficient models for {ticker}")
+            return None
 
-    # ── Fair value + scenarios ───────────────────────────────────────────────
-    fair_value = _weighted_fair_value(results)
-    if fair_value is None:
-        # Save completeness and model statuses even when valuation fails
-        _flush_metadata(conn, ticker, today, completeness, model_statuses)
-        conn.commit()
-        conn.close()
-        print(f"[ValuationEngine] Insufficient models for {ticker}")
-        return None
+        bear, base, bull = _scenarios(fair_value, results)
+        results["weighted_fair_value"] = fair_value
+        results["bear_case"] = bear
+        results["base_case"]  = base
+        results["bull_case"]  = bull
 
-    bear, base, bull = _scenarios(fair_value, results)
-    results["weighted_fair_value"] = fair_value
-    results["bear_case"] = bear
-    results["base_case"]  = base
-    results["bull_case"]  = bull
+        # ── Persist ──────────────────────────────────────────────────────────────
+        try:
+            _db.save_valuation_model(conn, ticker, today, results)
+            if current_price:
+                _db.save_valuation_history(conn, ticker, today, current_price, fair_value)
+            _flush_metadata(conn, ticker, today, completeness, model_statuses)
+            conn.commit()
+            print(
+                f"[ValuationEngine] {ticker}: fair={fair_value:.2f} "
+                f"bear={bear:.2f} bull={bull:.2f}"
+            )
+        except Exception as e:
+            print(f"[ValuationEngine] Save failed for {ticker}: {e}")
 
-    # ── Persist ──────────────────────────────────────────────────────────────
-    try:
-        _db.save_valuation_model(conn, ticker, today, results)
-        if current_price:
-            _db.save_valuation_history(conn, ticker, today, current_price, fair_value)
-        _flush_metadata(conn, ticker, today, completeness, model_statuses)
-        conn.commit()
-        print(
-            f"[ValuationEngine] {ticker}: fair={fair_value:.2f} "
-            f"bear={bear:.2f} bull={bull:.2f}"
-        )
-    except Exception as e:
-        print(f"[ValuationEngine] Save failed for {ticker}: {e}")
+        results["_model_statuses"] = model_statuses
+        results["_completeness"]   = completeness
+        return results
     finally:
         conn.close()
-
-    results["_model_statuses"] = model_statuses
-    results["_completeness"]   = completeness
-    return results
 
 
 def _flush_metadata(

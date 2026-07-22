@@ -174,21 +174,23 @@ UNIVERSE = [
 
 
 def run() -> None:
-    conn = sqlite3.connect(str(_DB))
     # Ensure schema exists
     from valuation.db import init_db
     init_db()
 
-    ok = 0
-    for ticker, cur_p, entry_p, sector in UNIVERSE:
-        try:
-            seed_ticker(conn, ticker, cur_p, entry_p, sector)
-            ok += 1
-        except Exception as e:
-            print(f"[Seed] ERROR {ticker}: {e}")
+    conn = sqlite3.connect(str(_DB))
+    try:
+        ok = 0
+        for ticker, cur_p, entry_p, sector in UNIVERSE:
+            try:
+                seed_ticker(conn, ticker, cur_p, entry_p, sector)
+                ok += 1
+            except Exception as e:
+                print(f"[Seed] ERROR {ticker}: {e}")
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        conn.close()
     print(f"[Seed] Done — {ok}/{len(UNIVERSE)} tickers seeded into {_DB}")
 
 

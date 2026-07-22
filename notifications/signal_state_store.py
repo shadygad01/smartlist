@@ -73,11 +73,13 @@ def get_current_state(ticker: str) -> str:
     """Return the last persisted state for this ticker (NONE if never seen)."""
     try:
         con = _conn()
-        row = con.execute(
-            "SELECT state FROM signal_state_current WHERE ticker=?", (ticker,)
-        ).fetchone()
-        con.close()
-        return row[0] if row else STATE_NONE
+        try:
+            row = con.execute(
+                "SELECT state FROM signal_state_current WHERE ticker=?", (ticker,)
+            ).fetchone()
+            return row[0] if row else STATE_NONE
+        finally:
+            con.close()
     except Exception:
         return STATE_NONE
 
@@ -98,38 +100,40 @@ def record_transition(
     """
     try:
         con = _conn()
-        rid = str(uuid.uuid4())
-        now = _now()
+        try:
+            rid = str(uuid.uuid4())
+            now = _now()
 
-        cur = con.execute(
-            """INSERT OR IGNORE INTO signal_event_log
-               (id, ticker, from_state, to_state, event_date, created_at)
-               VALUES (?,?,?,?,?,?)""",
-            (rid, ticker, from_state, to_state, event_date, now),
-        )
-        is_new = cur.rowcount > 0  # rowcount is per-statement; total_changes is connection-wide
-
-        # Always keep signal_state_current up to date (non-NONE states only)
-        if to_state != STATE_NONE:
-            con.execute(
-                """INSERT INTO signal_state_current (ticker, state, state_date, updated_at)
-                   VALUES (?,?,?,?)
-                   ON CONFLICT(ticker) DO UPDATE SET
-                       state=excluded.state,
-                       state_date=excluded.state_date,
-                       updated_at=excluded.updated_at""",
-                (ticker, to_state, event_date, now),
+            cur = con.execute(
+                """INSERT OR IGNORE INTO signal_event_log
+                   (id, ticker, from_state, to_state, event_date, created_at)
+                   VALUES (?,?,?,?,?,?)""",
+                (rid, ticker, from_state, to_state, event_date, now),
             )
-        else:
-            # Ticker exited buy zone — reset current state to NONE
-            con.execute(
-                "UPDATE signal_state_current SET state=?, state_date=?, updated_at=? WHERE ticker=?",
-                (STATE_NONE, event_date, now, ticker),
-            )
+            is_new = cur.rowcount > 0  # rowcount is per-statement; total_changes is connection-wide
 
-        con.commit()
-        con.close()
-        return is_new
+            # Always keep signal_state_current up to date (non-NONE states only)
+            if to_state != STATE_NONE:
+                con.execute(
+                    """INSERT INTO signal_state_current (ticker, state, state_date, updated_at)
+                       VALUES (?,?,?,?)
+                       ON CONFLICT(ticker) DO UPDATE SET
+                           state=excluded.state,
+                           state_date=excluded.state_date,
+                           updated_at=excluded.updated_at""",
+                    (ticker, to_state, event_date, now),
+                )
+            else:
+                # Ticker exited buy zone — reset current state to NONE
+                con.execute(
+                    "UPDATE signal_state_current SET state=?, state_date=?, updated_at=? WHERE ticker=?",
+                    (STATE_NONE, event_date, now, ticker),
+                )
+
+            con.commit()
+            return is_new
+        finally:
+            con.close()
     except Exception as e:
         print(f"[signal_state_store] record_transition error: {e}")
         return False
@@ -145,20 +149,22 @@ def mark_notified(
     """Mark that a notification was sent for this transition."""
     try:
         con = _conn()
-        if channel in ("email", "all"):
-            con.execute(
-                "UPDATE signal_event_log SET notified_email=1 "
-                "WHERE ticker=? AND event_date=? AND to_state=?",
-                (ticker, event_date, to_state),
-            )
-        if channel in ("telegram", "all"):
-            con.execute(
-                "UPDATE signal_event_log SET notified_tg=1 "
-                "WHERE ticker=? AND event_date=? AND to_state=?",
-                (ticker, event_date, to_state),
-            )
-        con.commit()
-        con.close()
+        try:
+            if channel in ("email", "all"):
+                con.execute(
+                    "UPDATE signal_event_log SET notified_email=1 "
+                    "WHERE ticker=? AND event_date=? AND to_state=?",
+                    (ticker, event_date, to_state),
+                )
+            if channel in ("telegram", "all"):
+                con.execute(
+                    "UPDATE signal_event_log SET notified_tg=1 "
+                    "WHERE ticker=? AND event_date=? AND to_state=?",
+                    (ticker, event_date, to_state),
+                )
+            con.commit()
+        finally:
+            con.close()
     except Exception as e:
         print(f"[signal_state_store] mark_notified error: {e}")
 
@@ -173,19 +179,21 @@ def has_notified_today(
     """Return True if notification was already sent for this ticker+state today."""
     try:
         con = _conn()
-        if channel == "email":
-            col = "notified_email"
-        elif channel == "telegram":
-            col = "notified_tg"
-        else:
-            col = "(notified_email AND notified_tg)"
-        row = con.execute(
-            f"SELECT {col} FROM signal_event_log "
-            "WHERE ticker=? AND event_date=? AND to_state=?",
-            (ticker, event_date, to_state),
-        ).fetchone()
-        con.close()
-        return bool(row and row[0])
+        try:
+            if channel == "email":
+                col = "notified_email"
+            elif channel == "telegram":
+                col = "notified_tg"
+            else:
+                col = "(notified_email AND notified_tg)"
+            row = con.execute(
+                f"SELECT {col} FROM signal_event_log "
+                "WHERE ticker=? AND event_date=? AND to_state=?",
+                (ticker, event_date, to_state),
+            ).fetchone()
+            return bool(row and row[0])
+        finally:
+            con.close()
     except Exception:
         return False
 
@@ -194,23 +202,25 @@ def get_todays_events(event_date: str) -> list[dict]:
     """Return all signal transitions recorded for the given trading day."""
     try:
         con = _conn()
-        rows = con.execute(
-            "SELECT ticker, from_state, to_state, notified_email, notified_tg, created_at "
-            "FROM signal_event_log WHERE event_date=? ORDER BY created_at",
-            (event_date,),
-        ).fetchall()
-        con.close()
-        return [
-            {
-                "ticker":           r[0],
-                "from_state":       r[1],
-                "to_state":         r[2],
-                "notified_email":   bool(r[3]),
-                "notified_tg":      bool(r[4]),
-                "created_at":       r[5],
-            }
-            for r in rows
-        ]
+        try:
+            rows = con.execute(
+                "SELECT ticker, from_state, to_state, notified_email, notified_tg, created_at "
+                "FROM signal_event_log WHERE event_date=? ORDER BY created_at",
+                (event_date,),
+            ).fetchall()
+            return [
+                {
+                    "ticker":           r[0],
+                    "from_state":       r[1],
+                    "to_state":         r[2],
+                    "notified_email":   bool(r[3]),
+                    "notified_tg":      bool(r[4]),
+                    "created_at":       r[5],
+                }
+                for r in rows
+            ]
+        finally:
+            con.close()
     except Exception:
         return []
 
@@ -230,18 +240,20 @@ def get_stale_unnotified(current_date: str) -> list[dict]:
     """
     try:
         con = _conn()
-        rows = con.execute(
-            """SELECT ticker, from_state, event_date
-               FROM signal_event_log
-               WHERE event_date < ?
-                 AND to_state=?
-                 AND from_state != ?
-                 AND notified_email=0
-                 AND notified_tg=0""",
-            (current_date, STATE_CONST_BUY, STATE_CONST_BUY),
-        ).fetchall()
-        con.close()
-        return [{"ticker": r[0], "from_state": r[1], "event_date": r[2]} for r in rows]
+        try:
+            rows = con.execute(
+                """SELECT ticker, from_state, event_date
+                   FROM signal_event_log
+                   WHERE event_date < ?
+                     AND to_state=?
+                     AND from_state != ?
+                     AND notified_email=0
+                     AND notified_tg=0""",
+                (current_date, STATE_CONST_BUY, STATE_CONST_BUY),
+            ).fetchall()
+            return [{"ticker": r[0], "from_state": r[1], "event_date": r[2]} for r in rows]
+        finally:
+            con.close()
     except Exception:
         return []
 
@@ -255,17 +267,27 @@ def get_unnotified_transitions(event_date: str) -> list[dict]:
 
     Only returns rows where BOTH channels are still unnotified — if at least one
     channel succeeded we consider the event partially delivered and skip retry.
+
+    CONST_BUY→CONST_BUY (continuation) rows are excluded — same rule as
+    get_stale_unnotified(). Those rows are cluster extensions that
+    detect_signal_changes() deliberately does not alert on; notified=0 for them
+    is correct, not a missed notification. Without this exclusion, every
+    multi-day continuation ticker would resurface here as a spurious
+    RE_ACCUMULATION alert on its first scan of each day.
     """
     try:
         con = _conn()
-        rows = con.execute(
-            """SELECT ticker, from_state, to_state
-               FROM signal_event_log
-               WHERE event_date=? AND to_state=? AND notified_email=0 AND notified_tg=0""",
-            (event_date, STATE_CONST_BUY),
-        ).fetchall()
-        con.close()
-        return [{"ticker": r[0], "from_state": r[1], "to_state": r[2]} for r in rows]
+        try:
+            rows = con.execute(
+                """SELECT ticker, from_state, to_state
+                   FROM signal_event_log
+                   WHERE event_date=? AND to_state=? AND from_state != ?
+                     AND notified_email=0 AND notified_tg=0""",
+                (event_date, STATE_CONST_BUY, STATE_CONST_BUY),
+            ).fetchall()
+            return [{"ticker": r[0], "from_state": r[1], "to_state": r[2]} for r in rows]
+        finally:
+            con.close()
     except Exception:
         return []
 
@@ -274,10 +296,12 @@ def get_duplicate_count(event_date: str) -> int:
     """CI helper: returns number of duplicate transition attempts blocked today."""
     try:
         con = _conn()
-        row = con.execute(
-            "SELECT COUNT(*) FROM signal_event_log WHERE event_date=?", (event_date,)
-        ).fetchone()
-        con.close()
-        return row[0] if row else 0
+        try:
+            row = con.execute(
+                "SELECT COUNT(*) FROM signal_event_log WHERE event_date=?", (event_date,)
+            ).fetchone()
+            return row[0] if row else 0
+        finally:
+            con.close()
     except Exception:
         return 0

@@ -21,7 +21,12 @@ import pytest
 
 ROOT          = Path(__file__).parent.parent
 SNAPSHOT_PATH = ROOT / "presentation_snapshot.json"
-FRONTEND_SRC  = ROOT / "frontend" / "src"
+# The Next.js frontend at frontend/src this file originally targeted was
+# migrated to the Vite app at artifacts/egx-commandcenter (frontend/ no
+# longer exists on the code branch); dashboard components now live under
+# components/dashboard/ (no app/ nesting).
+FRONTEND_SRC  = ROOT / "artifacts" / "egx-commandcenter" / "src"
+DASHBOARD_DIR = FRONTEND_SRC / "components" / "dashboard"
 VALUATION_DB  = ROOT / "valuation.db"
 
 
@@ -38,30 +43,30 @@ class TestValuationPanelGeneralization:
     """ValuationPanel must be a shared component with zero ticker-specific logic."""
 
     def test_valuation_panel_exists_as_shared_component(self):
-        panel = FRONTEND_SRC / "app" / "components" / "ValuationPanel.tsx"
+        panel = DASHBOARD_DIR / "ValuationPanel.tsx"
         assert panel.exists(), "ValuationPanel.tsx must exist as a shared component"
 
     def test_valuation_panel_accepts_generic_props(self):
-        text = (FRONTEND_SRC / "app" / "components" / "ValuationPanel.tsx").read_text()
+        text = (DASHBOARD_DIR / "ValuationPanel.tsx").read_text()
         assert "valuation: ValuationCard" in text or "valuation:" in text
         assert "currentPrice" in text, "ValuationPanel must accept currentPrice prop"
 
     def test_valuation_panel_has_no_hardcoded_tickers(self):
-        text = (FRONTEND_SRC / "app" / "components" / "ValuationPanel.tsx").read_text()
+        text = (DASHBOARD_DIR / "ValuationPanel.tsx").read_text()
         for symbol in ["ABUK", "MCQE", "COMI", "TMGH"]:
             assert symbol not in text, f"ValuationPanel.tsx hardcodes ticker '{symbol}'"
 
     def test_buy_signal_card_imports_valuation_panel(self):
-        text = (FRONTEND_SRC / "app" / "components" / "BuySignalCard.tsx").read_text()
+        text = (DASHBOARD_DIR / "BuySignalCard.tsx").read_text()
         assert "import ValuationPanel from './ValuationPanel'" in text
 
     def test_re_accumulation_section_imports_valuation_panel(self):
-        text = (FRONTEND_SRC / "app" / "components" / "ReAccumulationSection.tsx").read_text()
+        text = (DASHBOARD_DIR / "ReAccumulationSection.tsx").read_text()
         assert "import ValuationPanel from './ValuationPanel'" in text
 
     def test_valuation_panel_render_condition_is_generic(self):
         """Must render based on data presence, not ticker identity."""
-        text = (FRONTEND_SRC / "app" / "components" / "BuySignalCard.tsx").read_text()
+        text = (DASHBOARD_DIR / "BuySignalCard.tsx").read_text()
         # The condition must check valuation data fields, not ticker names
         assert "weighted_fair_value" in text or "valuation &&" in text
 

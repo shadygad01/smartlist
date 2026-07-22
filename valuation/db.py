@@ -199,10 +199,12 @@ def init_db() -> None:
     """Initialize valuation.db schema. Idempotent. Applies migrations for existing DBs."""
     global _schema_initialized
     conn = sqlite3.connect(str(_DB))
-    conn.executescript(_SCHEMA)
-    _apply_migrations(conn)
-    conn.commit()
-    conn.close()
+    try:
+        conn.executescript(_SCHEMA)
+        _apply_migrations(conn)
+        conn.commit()
+    finally:
+        conn.close()
     _schema_initialized = True
 
 
@@ -252,8 +254,10 @@ def verify_schema() -> dict:
         return {"db_exists": False, "schema_version": "absent", "missing_tables": list(_REQUIRED_TABLES), "ok": False}
     try:
         conn = sqlite3.connect(str(_DB))
-        present = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        conn.close()
+        try:
+            present = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        finally:
+            conn.close()
         missing = sorted(_REQUIRED_TABLES - present)
         ok = len(missing) == 0
         return {
@@ -281,30 +285,32 @@ def get_valuation_card(ticker: str) -> dict | None:
     _ensure_schema()
     try:
         conn = sqlite3.connect(str(_DB))
-        conn.row_factory = sqlite3.Row
-        row = conn.execute(
-            """
-            SELECT
-                vm.ticker,
-                vm.valuation_date,
-                vm.weighted_fair_value,
-                vm.bull_case,
-                vm.base_case,
-                vm.bear_case,
-                (SELECT ROUND(AVG(ac.target_price), 2)
-                 FROM analyst_consensus ac
-                 WHERE ac.ticker = vm.ticker) AS analyst_consensus_price,
-                (SELECT MAX(f.year)
-                 FROM financials f
-                 WHERE f.ticker = vm.ticker) AS last_stmt_year
-            FROM valuation_models vm
-            WHERE vm.ticker = ?
-            ORDER BY vm.valuation_date DESC
-            LIMIT 1
-            """,
-            (ticker,),
-        ).fetchone()
-        conn.close()
+        try:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                """
+                SELECT
+                    vm.ticker,
+                    vm.valuation_date,
+                    vm.weighted_fair_value,
+                    vm.bull_case,
+                    vm.base_case,
+                    vm.bear_case,
+                    (SELECT ROUND(AVG(ac.target_price), 2)
+                     FROM analyst_consensus ac
+                     WHERE ac.ticker = vm.ticker) AS analyst_consensus_price,
+                    (SELECT MAX(f.year)
+                     FROM financials f
+                     WHERE f.ticker = vm.ticker) AS last_stmt_year
+                FROM valuation_models vm
+                WHERE vm.ticker = ?
+                ORDER BY vm.valuation_date DESC
+                LIMIT 1
+                """,
+                (ticker,),
+            ).fetchone()
+        finally:
+            conn.close()
         if row is None:
             return None
         return dict(row)

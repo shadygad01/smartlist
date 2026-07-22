@@ -20,7 +20,12 @@ import pytest
 
 ROOT = Path(__file__).parent.parent
 SNAPSHOT_PATH = ROOT / "presentation_snapshot.json"
-FRONTEND_SRC  = ROOT / "frontend" / "src"
+# The Next.js frontend at frontend/src this file originally targeted was
+# migrated to the Vite app at artifacts/egx-commandcenter (frontend/ no
+# longer exists on the code branch). Dashboard components now live directly
+# under components/dashboard/ (no app/ nesting).
+FRONTEND_SRC  = ROOT / "artifacts" / "egx-commandcenter" / "src"
+COMPONENTS    = FRONTEND_SRC / "components" / "dashboard"
 
 
 # ── Helper ────────────────────────────────────────────────────────────────────
@@ -38,11 +43,20 @@ class TestSeenBeforePanelGeneralization:
     HARDCODED_SYMBOLS = ["ABUK", "MCQE"]
 
     def _all_source_files(self):
+        """
+        Scoped to components/dashboard/ (not the whole frontend tree): the
+        app has since grown lib/portfolioParser.ts, a brokerage-statement
+        parser with a legitimate full-company-name -> ticker lookup table
+        covering the entire EGX universe (including ABUK). That's unrelated
+        to SeenBeforePanel's rendering logic, which is what this test class
+        actually guards — matching the scope every other test in this class
+        already uses.
+        """
         exts = {".tsx", ".ts", ".js", ".jsx"}
-        return [p for p in FRONTEND_SRC.rglob("*") if p.suffix in exts]
+        return [p for p in COMPONENTS.rglob("*") if p.suffix in exts]
 
     def test_no_hardcoded_tickers_in_frontend(self):
-        """No ticker symbol may be hardcoded in any frontend source file."""
+        """No ticker symbol may be hardcoded in any dashboard component file."""
         violations = []
         for path in self._all_source_files():
             text = path.read_text(encoding="utf-8")
@@ -59,12 +73,12 @@ class TestSeenBeforePanelGeneralization:
 
     def test_seen_before_panel_is_standalone_component(self):
         """SeenBeforePanel must live in its own shared component file."""
-        panel_file = FRONTEND_SRC / "app" / "components" / "SeenBeforePanel.tsx"
+        panel_file = COMPONENTS / "SeenBeforePanel.tsx"
         assert panel_file.exists(), "SeenBeforePanel.tsx must exist as a shared component"
 
     def test_buy_signal_card_imports_shared_seen_before_panel(self):
         """BuySignalCard must import SeenBeforePanel from the shared component."""
-        buy_card = FRONTEND_SRC / "app" / "components" / "BuySignalCard.tsx"
+        buy_card = COMPONENTS / "BuySignalCard.tsx"
         assert buy_card.exists()
         text = buy_card.read_text()
         assert "import SeenBeforePanel from './SeenBeforePanel'" in text, (
@@ -73,7 +87,7 @@ class TestSeenBeforePanelGeneralization:
 
     def test_buy_signal_card_has_no_inline_seen_before_definition(self):
         """BuySignalCard must NOT define SeenBeforePanel inline — it must use the shared one."""
-        buy_card = FRONTEND_SRC / "app" / "components" / "BuySignalCard.tsx"
+        buy_card = COMPONENTS / "BuySignalCard.tsx"
         text = buy_card.read_text()
         assert "function SeenBeforePanel" not in text, (
             "BuySignalCard.tsx still contains an inline SeenBeforePanel definition. "
@@ -82,7 +96,7 @@ class TestSeenBeforePanelGeneralization:
 
     def test_re_accumulation_section_imports_shared_seen_before_panel(self):
         """ReAccumulationSection must import SeenBeforePanel from the shared component."""
-        reaccum = FRONTEND_SRC / "app" / "components" / "ReAccumulationSection.tsx"
+        reaccum = COMPONENTS / "ReAccumulationSection.tsx"
         assert reaccum.exists()
         text = reaccum.read_text()
         assert "import SeenBeforePanel from './SeenBeforePanel'" in text, (
@@ -91,7 +105,7 @@ class TestSeenBeforePanelGeneralization:
 
     def test_seen_before_rendering_condition_is_generic(self):
         """The SeenBeforePanel render condition must be based on data fields, not ticker names."""
-        panel_file = FRONTEND_SRC / "app" / "components" / "SeenBeforePanel.tsx"
+        panel_file = COMPONENTS / "SeenBeforePanel.tsx"
         text = panel_file.read_text()
         for symbol in self.HARDCODED_SYMBOLS:
             assert symbol not in text, (

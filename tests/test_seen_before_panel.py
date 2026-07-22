@@ -16,6 +16,12 @@ from pathlib import Path
 import pytest
 
 BASE = Path(__file__).parent.parent
+# The Next.js frontend at frontend/src this file originally targeted was
+# migrated to the Vite app at artifacts/egx-commandcenter (frontend/ no
+# longer exists on the code branch); dashboard components now live under
+# components/dashboard/ (no app/ nesting).
+FRONTEND      = BASE / "artifacts" / "egx-commandcenter" / "src"
+DASHBOARD_DIR = FRONTEND / "components" / "dashboard"
 
 # ── Required fields the Seen Before panel must expose ─────────────────────────
 REQUIRED_DNA_FIELDS = {
@@ -145,7 +151,7 @@ class TestPresentationSnapshot:
 
 class TestFrontendTypes:
     def test_typescript_type_declares_required_fields(self):
-        ts_path = BASE / "frontend" / "src" / "types" / "snapshot.ts"
+        ts_path = FRONTEND / "types" / "snapshot.ts"
         assert ts_path.exists(), "snapshot.ts missing"
         content = ts_path.read_text()
         for field in REQUIRED_DNA_FIELDS:
@@ -154,19 +160,34 @@ class TestFrontendTypes:
             assert field in content, f"TypeScript MPIBehavior missing field: {field}"
 
     def test_buy_signal_card_renders_seen_before_panel(self):
-        card_path = BASE / "frontend" / "src" / "app" / "components" / "BuySignalCard.tsx"
+        """
+        BuySignalCard.tsx wires SeenBeforePanel with the dna/mpi data; the field
+        rendering itself lives in the shared SeenBeforePanel.tsx (verified by
+        tests/test_seen_before_generalization.py, which requires BuySignalCard
+        to import — not inline-define — SeenBeforePanel). Checking each field
+        name against BuySignalCard.tsx directly is stale since that extraction;
+        this asserts the wiring here and the actual field rendering against
+        SeenBeforePanel.tsx, preserving the original intent.
+        """
+        card_path = DASHBOARD_DIR / "BuySignalCard.tsx"
         assert card_path.exists(), "BuySignalCard.tsx missing"
         content = card_path.read_text()
         assert "SeenBeforePanel" in content, "SeenBeforePanel component missing from BuySignalCard.tsx"
-        assert "constitutional_memory_hits" in content, "Seen Before count not rendered"
-        assert "avg_return_pct" in content, "Historical Expectancy not rendered"
-        assert "best_return_pct" in content, "Best historical outcome not rendered"
-        assert "worst_return_pct" in content, "Worst historical outcome not rendered"
-        assert "last_event_date" in content, "Last signal date not rendered"
-        assert "avg_mfe40" in content, "Avg MFE40 not rendered"
+        assert "constitutional_memory_hits" in content, "Seen Before render condition not gated on hits"
+        assert "dna={dna}" in content or "dna={" in content, "dna prop not passed to SeenBeforePanel"
+        assert "mpi={mpi}" in content or "mpi={" in content, "mpi prop not passed to SeenBeforePanel"
+
+        panel_path = DASHBOARD_DIR / "SeenBeforePanel.tsx"
+        assert panel_path.exists(), "SeenBeforePanel.tsx missing"
+        panel_content = panel_path.read_text()
+        assert "avg_return_pct" in panel_content, "Historical Expectancy not rendered"
+        assert "best_return_pct" in panel_content, "Best historical outcome not rendered"
+        assert "worst_return_pct" in panel_content, "Worst historical outcome not rendered"
+        assert "last_event_date" in panel_content, "Last signal date not rendered"
+        assert "avg_mfe40" in panel_content, "Avg MFE40 not rendered"
 
     def test_seen_before_panel_is_wired_to_dna_map(self):
-        card_path = BASE / "frontend" / "src" / "app" / "components" / "BuySignalCard.tsx"
+        card_path = DASHBOARD_DIR / "BuySignalCard.tsx"
         content = card_path.read_text()
         assert "dnaMap" in content or "stock_dna" in content, "dnaMap not wired in BuySignalCard"
         assert "dna={dnaMap" in content or "dna={" in content, "dna prop not passed to BuyCard"
@@ -179,7 +200,7 @@ class TestFrontendTypes:
         A mismatch here silently drops all RE-ACCUMULATION signals before BuyCard
         is instantiated, making SeenBeforePanel unreachable regardless of DNA data.
         """
-        card_path = BASE / "frontend" / "src" / "app" / "components" / "BuySignalCard.tsx"
+        card_path = DASHBOARD_DIR / "BuySignalCard.tsx"
         content = card_path.read_text()
         assert "READY FOR RE-ACCUMULATION" in content, (
             "isBuyReady() does not handle 'READY FOR RE-ACCUMULATION' — "

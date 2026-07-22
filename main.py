@@ -1682,14 +1682,16 @@ def _get_position_bq(symbol: str, db_path: str = "egx_research.db") -> dict | No
     try:
         import sqlite3 as _sqlite3
         conn = _sqlite3.connect(db_path)
-        row = conn.execute(
-            """SELECT bq.bq_score, bq.classification
-               FROM signals s JOIN bottom_quality bq ON s.id = bq.signal_id
-               WHERE s.symbol = ? AND bq.bq_score IS NOT NULL
-               ORDER BY s.signal_date DESC LIMIT 1""",
-            (symbol,),
-        ).fetchone()
-        conn.close()
+        try:
+            row = conn.execute(
+                """SELECT bq.bq_score, bq.classification
+                   FROM signals s JOIN bottom_quality bq ON s.id = bq.signal_id
+                   WHERE s.symbol = ? AND bq.bq_score IS NOT NULL
+                   ORDER BY s.signal_date DESC LIMIT 1""",
+                (symbol,),
+            ).fetchone()
+        finally:
+            conn.close()
         if row:
             bq = row[0]
             if bq < 40:

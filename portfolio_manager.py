@@ -516,68 +516,72 @@ def run_portfolio_manager(
         snap_date = str(_date.today())
 
     mgr_conn  = _conn(mgr_db)
-    mgr_conn.executescript(MGR_SCHEMA)
-    mgr_conn.commit()
-
-    pool_conn = _conn(pool_db)
-
-    # Ensure correlation cache is populated
-    existing = mgr_conn.execute("SELECT COUNT(*) as n FROM correlation_cache").fetchone()
-    if existing["n"] == 0:
-        print("  Building correlation cache (one-time)...")
-        _build_correlation_cache(snap_date, mgr_conn)
+    pool_conn = None
+    try:
+        mgr_conn.executescript(MGR_SCHEMA)
         mgr_conn.commit()
-        print(f"  Correlation cache: {mgr_conn.execute('SELECT COUNT(*) FROM correlation_cache').fetchone()[0]} pairs")
 
-    # Latest candidate per ticker
-    candidates = _latest_candidates(pool_conn)
+        pool_conn = _conn(pool_db)
 
-    # Assign states
-    df_states = _assign_states(candidates, held_tickers, mgr_conn)
+        # Ensure correlation cache is populated
+        existing = mgr_conn.execute("SELECT COUNT(*) as n FROM correlation_cache").fetchone()
+        if existing["n"] == 0:
+            print("  Building correlation cache (one-time)...")
+            _build_correlation_cache(snap_date, mgr_conn)
+            mgr_conn.commit()
+            print(f"  Correlation cache: {mgr_conn.execute('SELECT COUNT(*) FROM correlation_cache').fetchone()[0]} pairs")
 
-    # Persist states (append-only via UPSERT)
-    for _, row in df_states.iterrows():
-        prev = mgr_conn.execute(
-            "SELECT state FROM candidate_states WHERE state_id=?",
-            (row["state_id"],)
-        ).fetchone()
-        prev_state = prev["state"] if prev else None
+        # Latest candidate per ticker
+        candidates = _latest_candidates(pool_conn)
 
-        _upsert_state(mgr_conn, row.to_dict())
-        if prev_state != row["state"]:
-            _record_transition(mgr_conn, row["candidate_id"], row["ticker"],
-                               prev_state, row["state"],
-                               row["decision_reason"][:120])
+        # Assign states
+        df_states = _assign_states(candidates, held_tickers, mgr_conn)
 
-    mgr_conn.commit()
+        # Persist states (append-only via UPSERT)
+        for _, row in df_states.iterrows():
+            prev = mgr_conn.execute(
+                "SELECT state FROM candidate_states WHERE state_id=?",
+                (row["state_id"],)
+            ).fetchone()
+            prev_state = prev["state"] if prev else None
 
-    # Build daily report
-    report = _build_daily_report(df_states, held_tickers, snap_date, mgr_conn, pool_conn)
+            _upsert_state(mgr_conn, row.to_dict())
+            if prev_state != row["state"]:
+                _record_transition(mgr_conn, row["candidate_id"], row["ticker"],
+                                   prev_state, row["state"],
+                                   row["decision_reason"][:120])
 
-    # Persist snapshot
-    snap_id = _snap_id(snap_date)
-    mgr_conn.execute(
-        """INSERT OR REPLACE INTO portfolio_snapshots
-           (snapshot_id,snapshot_date,holdings_json,primary_buy_json,
-            reserve_json,watch_json,sector_alloc_json,corr_matrix_json,
-            replacement_queue_json,portfolio_health_json,created_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-        (
-            snap_id, snap_date,
-            json.dumps(report["HELD"]),
-            json.dumps(report["PRIMARY_BUY"]),
-            json.dumps(report["BUY_RESERVE"]),
-            json.dumps(report["WATCH"]),
-            json.dumps(report["sector_allocation"]),
-            json.dumps(report["correlation_matrix"]),
-            json.dumps(report["replacement_queue"]),
-            json.dumps(report["portfolio_health"]),
-            _now(),
-        ),
-    )
-    mgr_conn.commit()
-    mgr_conn.close()
-    pool_conn.close()
+        mgr_conn.commit()
+
+        # Build daily report
+        report = _build_daily_report(df_states, held_tickers, snap_date, mgr_conn, pool_conn)
+
+        # Persist snapshot
+        snap_id = _snap_id(snap_date)
+        mgr_conn.execute(
+            """INSERT OR REPLACE INTO portfolio_snapshots
+               (snapshot_id,snapshot_date,holdings_json,primary_buy_json,
+                reserve_json,watch_json,sector_alloc_json,corr_matrix_json,
+                replacement_queue_json,portfolio_health_json,created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                snap_id, snap_date,
+                json.dumps(report["HELD"]),
+                json.dumps(report["PRIMARY_BUY"]),
+                json.dumps(report["BUY_RESERVE"]),
+                json.dumps(report["WATCH"]),
+                json.dumps(report["sector_allocation"]),
+                json.dumps(report["correlation_matrix"]),
+                json.dumps(report["replacement_queue"]),
+                json.dumps(report["portfolio_health"]),
+                _now(),
+            ),
+        )
+        mgr_conn.commit()
+    finally:
+        mgr_conn.close()
+        if pool_conn is not None:
+            pool_conn.close()
 
     return report
 

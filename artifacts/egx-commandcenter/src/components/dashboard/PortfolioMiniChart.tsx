@@ -75,7 +75,7 @@ export default function PortfolioMiniChart() {
 
   return (
     <div
-      className="rounded-xl p-4"
+      className="rounded-xl p-4 h-full"
       style={{ backgroundColor: '#181930', border: '1px solid #252645' }}
     >
       {/* Header */}
@@ -132,13 +132,13 @@ export default function PortfolioMiniChart() {
           />
         </div>
       ) : !hasData ? (
-        <div className="flex flex-col items-center justify-center gap-2" style={{ height: 120 }}>
+        <div className="portfolio-empty-state flex items-center justify-between gap-4 rounded-lg px-4">
           <p className="font-mono text-center" style={{ fontSize: '11px', color: '#3b4565' }}>
-            Upload a statement to see the chart
+            Upload a statement to activate portfolio performance tracking
           </p>
           <Link
             href="/portfolio"
-            className="font-mono px-3 py-1 rounded transition-opacity hover:opacity-80"
+            className="font-mono px-3 py-1 rounded transition-opacity hover:opacity-80 flex-shrink-0"
             style={{ fontSize: '10px', color: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}
           >
             Upload file →

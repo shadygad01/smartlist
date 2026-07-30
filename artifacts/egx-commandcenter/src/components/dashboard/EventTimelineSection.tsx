@@ -229,7 +229,7 @@ export default function EventTimelineSection() {
                 </span>
               </div>
             ) : (
-              <div style={{ maxHeight: 480, overflowY: 'auto' }}>
+              <div className="event-timeline-scroll">
                 {filtered.map(evt => (
                   <EventRow key={evt.id} evt={evt} />
                 ))}

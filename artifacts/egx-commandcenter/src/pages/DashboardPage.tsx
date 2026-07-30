@@ -35,12 +35,15 @@ export default function DashboardPage() {
 
           <div id="re-accumulation" className="scroll-mt-24"><ReAccumulationSection /></div>
           <div id="event-timeline" className="scroll-mt-24"><EventTimelineSection /></div>
-          <TimelineSection />
-          <ValuationSection />
-          <UniverseSection />
-          <StockDNASection />
-          <FutureCandidatesSection />
-          <DiagnosticsSection />
+
+          <div className="dashboard-research-grid">
+            <TimelineSection />
+            <ValuationSection />
+            <UniverseSection />
+            <StockDNASection />
+            <FutureCandidatesSection />
+            <DiagnosticsSection />
+          </div>
 
           <div className="flex items-center justify-center pt-4">
             <Link

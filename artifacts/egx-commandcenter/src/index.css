@@ -211,6 +211,27 @@
   }
 
   .signal-queue-total b { color: var(--foreground); font-size: 12px; }
+
+  .portfolio-empty-state {
+    min-height: 76px;
+    border: 1px dashed rgba(80,216,208,.14);
+    background: rgba(80,216,208,.018);
+  }
+
+  .event-timeline-scroll {
+    max-height: 310px;
+    overflow-y: auto;
+  }
+
+  .dashboard-research-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: start;
+  }
+
+  .dashboard-research-grid > * { min-width: 0; }
+
 }
 
 @media (max-width: 1180px) {
@@ -224,6 +245,8 @@
   .signal-command-grid { grid-template-columns: 1fr; }
   .signal-lane + .signal-lane { border-left: 0; border-top: 1px solid var(--border); }
   .signal-queue { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-research-grid { grid-template-columns: 1fr; }
+  .portfolio-empty-state { align-items: flex-start; flex-direction: column; padding-top: 14px; padding-bottom: 14px; }
 }
 
 @keyframes fadeInUp {

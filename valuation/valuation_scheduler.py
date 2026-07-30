@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from config.scanner_config import get_constitutional_universe
 from valuation import db as _db
 from valuation.data_collector import collect_all, build_data_source_records
+from valuation.official_interim import build_ttm_row, build_source_records
 from valuation.valuation_engine import run_valuation
 
 _DB_PATH = Path(__file__).parent.parent / "valuation.db"
@@ -46,14 +47,17 @@ _DB_PATH = Path(__file__).parent.parent / "valuation.db"
 # NOTE: 'wacc' stores CAPM cost of equity (Ke = rfr + beta*erp), NOT true WACC.
 # True WACC requires per-company D/E ratio and cost of debt which are not available.
 # Using Ke as discount rate is the conservative (all-equity) assumption.
-# At beta=1.0: Ke = 0.125 + 1.0×0.07 = 0.1950 (default consistent with live formula).
+# At beta=1.0: Ke = 0.19 + 1.0×0.07 = 0.26.
 _EGX_DEFAULTS = {
-    "risk_free_rate":      0.1250,   # Egypt 10Y T-bill ~12.5%
+    # CBE overnight deposit rate confirmed by the 2026-07-09 MPC release.
+    # It is the transparent local nominal risk-free proxy until an automated
+    # sovereign yield-curve source is available.
+    "risk_free_rate":      0.1900,
     "equity_risk_premium": 0.0700,   # EGX equity risk premium 7%
     "beta":                1.0,      # market-neutral default; overridden per-ticker from yfinance
     "tax_rate":            0.2250,   # Egypt corporate tax 22.5%
     "terminal_growth":     0.0400,   # 4% long-run nominal terminal growth
-    "wacc":                0.1950,   # Ke default = rfr(12.5%) + beta(1.0)×erp(7%) = 19.5%
+    "wacc":                0.2600,   # Ke default = rfr(19%) + beta(1.0)×erp(7%) = 26%
 }
 
 
@@ -119,6 +123,13 @@ def _store_collected(ticker: str, data: dict) -> None:
             _db.save_financials(conn, ticker, fin_rows)
             print(f"[Scheduler] {ticker}: stored {len(fin_rows)} validated financial year(s)")
 
+        # Add the latest official interim result as a TTM row, after annual
+        # storage, so models consume the freshest comparable period.
+        ttm_row, filing = build_ttm_row(ticker, fin_rows)
+        if ttm_row is not None:
+            _db.save_financials(conn, ticker, [ttm_row])
+            print(f"[Scheduler] {ticker}: stored official {filing['label']} row")
+
         rejected = data.get("financials_rejected", [])
         if rejected:
             print(f"[Scheduler] {ticker}: skipped {len(rejected)} rejected year(s)")
@@ -133,6 +144,13 @@ def _store_collected(ticker: str, data: dict) -> None:
                 rec.get("recommendation", ""),
                 rec.get("date", date.today().isoformat()),
             )
+
+        # Entry-price-derived seed targets are model outputs, not independent
+        # analyst research, and must never be labelled as consensus.
+        conn.execute(
+            "DELETE FROM analyst_consensus WHERE ticker=? AND source='ive_estimate'",
+            (ticker,),
+        )
 
         # ── Economic assumptions (beta from live source) ─────────────────────
         live_beta  = data.get("beta")
@@ -158,6 +176,10 @@ def _store_collected(ticker: str, data: dict) -> None:
         if ds_records:
             _db.save_many_data_sources(conn, ds_records)
             print(f"[Scheduler] {ticker}: recorded {len(ds_records)} data_sources entries")
+        if ttm_row is not None:
+            official_records = build_source_records(ticker, filing, now)
+            _db.save_many_data_sources(conn, official_records)
+            print(f"[Scheduler] {ticker}: recorded {len(official_records)} official filing fields")
 
         conn.commit()
     finally:

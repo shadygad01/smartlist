@@ -160,6 +160,7 @@ export interface ValuationCard {
   bear_case: number | null;
   analyst_consensus_price: number | null;
   last_stmt_year: number | null;
+  last_stmt_quarter?: string | null;
 }
 
 export interface EventTimelineItem {

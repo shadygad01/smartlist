@@ -65,9 +65,9 @@ export default function ValuationPanel({
             >
               {valuation.valuation_date}
             </span>
-            {valuation.last_stmt_year && (
+            {(valuation.last_stmt_quarter || valuation.last_stmt_year) && (
               <span className="font-mono" style={{ fontSize: '9px', color: '#8b8fa8' }}>
-                FY{valuation.last_stmt_year}
+                {valuation.last_stmt_quarter ?? `FY${valuation.last_stmt_year}`}
               </span>
             )}
           </div>

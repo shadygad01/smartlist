@@ -71,12 +71,12 @@ CREATE TABLE IF NOT EXISTS forecasts (
 
 CREATE TABLE IF NOT EXISTS valuation_assumptions (
     ticker              TEXT PRIMARY KEY,
-    risk_free_rate      REAL DEFAULT 0.1250,
+    risk_free_rate      REAL DEFAULT 0.1900,
     equity_risk_premium REAL DEFAULT 0.0700,
     beta                REAL DEFAULT 1.0,
     tax_rate            REAL DEFAULT 0.2250,
     terminal_growth     REAL DEFAULT 0.0400,
-    wacc                REAL DEFAULT 0.1950,  -- Ke = rfr + beta*erp; conservative all-equity proxy
+    wacc                REAL DEFAULT 0.2600,  -- Ke = rfr + beta*erp; conservative all-equity proxy
     updated_at          TEXT
 );
 
@@ -280,7 +280,7 @@ def get_valuation_card(ticker: str) -> dict | None:
     Returned dict keys:
         ticker, valuation_date, weighted_fair_value,
         bull_case, base_case, bear_case,
-        analyst_consensus_price, last_stmt_year
+        analyst_consensus_price, last_stmt_year, last_stmt_quarter
     """
     _ensure_schema()
     try:
@@ -298,10 +298,16 @@ def get_valuation_card(ticker: str) -> dict | None:
                     vm.bear_case,
                     (SELECT ROUND(AVG(ac.target_price), 2)
                      FROM analyst_consensus ac
-                     WHERE ac.ticker = vm.ticker) AS analyst_consensus_price,
+                     WHERE ac.ticker = vm.ticker
+                       AND ac.source != 'ive_estimate') AS analyst_consensus_price,
                     (SELECT MAX(f.year)
                      FROM financials f
-                     WHERE f.ticker = vm.ticker) AS last_stmt_year
+                     WHERE f.ticker = vm.ticker) AS last_stmt_year,
+                    (SELECT f.quarter
+                     FROM financials f
+                     WHERE f.ticker = vm.ticker
+                     ORDER BY f.year DESC
+                     LIMIT 1) AS last_stmt_quarter
                 FROM valuation_models vm
                 WHERE vm.ticker = ?
                 ORDER BY vm.valuation_date DESC
@@ -594,10 +600,10 @@ def get_assumptions(conn: sqlite3.Connection, ticker: str) -> dict:
     if row:
         return dict(row)
     return {
-        "risk_free_rate":      0.1250,
+        "risk_free_rate":      0.1900,
         "equity_risk_premium": 0.0700,
         "beta":                1.0,
         "tax_rate":            0.2250,
         "terminal_growth":     0.0400,
-        "wacc":                0.1950,  # Ke = rfr + beta*erp at default beta=1.0
+        "wacc":                0.2600,  # Ke = rfr + beta*erp at default beta=1.0
     }

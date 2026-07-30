@@ -23,14 +23,14 @@ export default function StatsBar() {
   ];
 
   return (
-    <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+    <div className="grid grid-cols-3 md:grid-cols-6 rounded-lg overflow-hidden" style={{ border: '1px solid #252645', backgroundColor: '#0c1120' }}>
       {badges.map((badge) => (
         <div
           key={badge.id}
-          className="flex flex-col items-center justify-center py-3 px-2 rounded-lg"
-          style={{ backgroundColor: '#181930', border: '1px solid #252645' }}
+          className="flex flex-col items-center justify-center py-2 px-2"
+          style={{ borderRight: badge.id === 'universe' ? 'none' : '1px solid #252645' }}
         >
-          <div className="font-bold tabular-nums" style={{ fontSize: '20px', color: badge.color, lineHeight: 1 }}>
+          <div className="font-bold tabular-nums" style={{ fontSize: '18px', color: badge.color, lineHeight: 1 }}>
             {badge.value}
           </div>
           <div

@@ -5,7 +5,7 @@ import R2ProgressBar from './R2ProgressBar';
 import SeenBeforePanel from './SeenBeforePanel';
 import ValuationPanel from './ValuationPanel';
 import { useSnapshot } from '@/providers/SnapshotProvider';
-import type { UniverseItem, MPIBehavior, StockDNA, ValuationCard } from '@/types/snapshot';
+import type { UniverseItem, MPIBehavior, StockDNA, ValuationCard, Statistics } from '@/types/snapshot';
 
 function isBuyReady(item: UniverseItem): boolean {
   const r = item.waiting_for_reason ?? '';
@@ -96,12 +96,40 @@ function FairValueSignalBadge({ fv, price }: { fv: number; price: number }) {
   );
 }
 
-function BuyCard({ signal, mpi, dna, valuation }: { signal: UniverseItem; mpi?: MPIBehavior; dna?: StockDNA; valuation?: ValuationCard }) {
+function ActionQueue({ stats }: { stats: Statistics }) {
+  const rows = [
+    { label: 'NEAR ENTRY', value: stats.near_constitutional_count, color: 'var(--signal-near)', href: '#priority-watchlist' },
+    { label: 'PREMIUM', value: stats.premium_count ?? 0, color: 'var(--signal-buy)', href: '#priority-watchlist' },
+    { label: 'FIRST BUY', value: stats.first_buys_count ?? 0, color: '#50d8d0', href: '#event-timeline' },
+    { label: 'RE-ACCUMULATION', value: stats.re_accumulation_count, color: '#a78bfa', href: '#re-accumulation' },
+  ];
+  return (
+    <aside className="signal-lane signal-action-lane">
+      <div className="signal-lane-title"><Zap size={13} /> ACTION QUEUE</div>
+      <p className="signal-lane-caption">Priority monitoring</p>
+      <div className="signal-queue">
+        {rows.map((row) => (
+          <a key={row.label} href={row.href} className="signal-queue-row">
+            <span className="font-mono font-bold tabular-nums" style={{ color: row.color, fontSize: '20px' }}>{row.value}</span>
+            <span className="font-mono">{row.label}</span>
+            <ChevronDown size={12} style={{ transform: 'rotate(-90deg)' }} />
+          </a>
+        ))}
+      </div>
+      <div className="signal-queue-total">
+        <span>UNIVERSE</span><b>{stats.universe_size ?? '—'}</b>
+      </div>
+    </aside>
+  );
+}
+
+function BuyCard({ signal, mpi, dna, valuation, stats }: { signal: UniverseItem; mpi?: MPIBehavior; dna?: StockDNA; valuation?: ValuationCard; stats: Statistics }) {
   const fv = valuation?.weighted_fair_value ?? null;
   return (
-    <div className="rounded-xl glow-buy animate-fade-in-up" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--signal-buy-border)' }}>
+    <div className="signal-command-grid rounded-xl glow-buy animate-fade-in-up" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--signal-buy-border)' }}>
+      <section className="signal-lane signal-primary-lane">
       <div
-        className="flex items-center justify-between px-5 py-3.5 rounded-t-xl"
+        className="flex items-center justify-between pb-4"
         style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(16,185,129,0.03) 100%)' }}
       >
         <div className="flex items-center gap-3">
@@ -124,7 +152,7 @@ function BuyCard({ signal, mpi, dna, valuation }: { signal: UniverseItem; mpi?: 
         <CopyButton ticker={signal.ticker} />
       </div>
 
-      <div className="px-5 py-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="py-5 grid grid-cols-2 xl:grid-cols-4 gap-4">
         <div>
           <p className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>ENTRY ZONE</p>
           <p className="font-mono font-bold tabular-nums" style={{ fontSize: '18px', color: 'var(--signal-buy)' }}>
@@ -156,7 +184,7 @@ function BuyCard({ signal, mpi, dna, valuation }: { signal: UniverseItem; mpi?: 
         </div>
       </div>
 
-      <div className="px-5 pb-4">
+      <div className="pb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="font-mono" style={{ fontSize: '9px', color: 'var(--muted-foreground)', letterSpacing: '0.07em' }}>CONSTITUTIONAL R²</span>
           <span className="font-mono font-bold" style={{ fontSize: '12px', color: 'var(--signal-reaccum)' }}>
@@ -166,17 +194,23 @@ function BuyCard({ signal, mpi, dna, valuation }: { signal: UniverseItem; mpi?: 
         <R2ProgressBar value={(signal.candidate_r2 ?? 0) / 100} color="var(--signal-reaccum)" height={5} />
       </div>
 
-      {mpi && <BehaviorPhaseBlock mpi={mpi} />}
-      {dna && dna.constitutional_memory_hits > 0 && <SeenBeforePanel dna={dna} mpi={mpi} />}
-      {valuation && valuation.weighted_fair_value != null && (
-        <ValuationPanel valuation={valuation} currentPrice={signal.current_price} defaultExpanded />
-      )}
-
-      <div className="px-5 py-3 rounded-b-xl flex items-center gap-2" style={{ backgroundColor: 'rgba(16,185,129,0.04)', borderTop: '1px solid rgba(16,185,129,0.12)' }}>
+      <div className="mt-auto pt-3 flex items-center gap-2" style={{ borderTop: '1px solid rgba(16,185,129,0.12)' }}>
         <Zap size={11} style={{ color: 'var(--signal-buy)', flexShrink: 0 }} />
         <span className="font-mono" style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>{signal.waiting_for_reason}</span>
         <span className="font-mono ml-auto" style={{ fontSize: '9px', color: 'var(--muted-foreground)' }}>{signal.last_scan}</span>
       </div>
+      </section>
+
+      <section className="signal-lane signal-evidence-lane">
+        <div className="signal-lane-title"><Activity size={13} /> WHY THIS SIGNAL</div>
+        {mpi && <BehaviorPhaseBlock mpi={mpi} />}
+        {dna && dna.constitutional_memory_hits > 0 && <SeenBeforePanel dna={dna} mpi={mpi} />}
+        {valuation && valuation.weighted_fair_value != null && (
+          <ValuationPanel valuation={valuation} currentPrice={signal.current_price} defaultExpanded />
+        )}
+      </section>
+
+      <ActionQueue stats={stats} />
     </div>
   );
 }
@@ -226,6 +260,7 @@ export default function BuySignalCard() {
           mpi={mpiMap[signal.ticker]}
           dna={dnaMap[signal.ticker]}
           valuation={valuationMap[signal.ticker]}
+          stats={snapshot.statistics}
         />
       ))}
     </div>

@@ -26,15 +26,15 @@ export default function DashboardPage() {
 
           <BuySignalCard />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div id="priority-watchlist" className="grid grid-cols-1 md:grid-cols-2 gap-4 scroll-mt-24">
             <NearEntrySection />
             <WatchlistSection />
           </div>
 
           <PortfolioMiniChart />
 
-          <ReAccumulationSection />
-          <EventTimelineSection />
+          <div id="re-accumulation" className="scroll-mt-24"><ReAccumulationSection /></div>
+          <div id="event-timeline" className="scroll-mt-24"><EventTimelineSection /></div>
           <TimelineSection />
           <ValuationSection />
           <UniverseSection />

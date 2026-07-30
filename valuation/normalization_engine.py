@@ -203,6 +203,116 @@ class YFinanceNormalizer:
 
         return sorted(rows, key=lambda r: r["year"])
 
+    def normalize_ttm(
+        self,
+        annual_rows: list[dict],
+        annual_inc_df: Any,
+        quarterly_inc_df: Any,
+        quarterly_bal_df: Any,
+        quarterly_cf_df: Any,
+    ) -> dict | None:
+        """Build a TTM row from the latest annual plus comparable quarters.
+
+        Formula for flow fields: annual + latest quarter - same quarter last
+        year.  This avoids summing yfinance columns that may contain cumulative
+        transitional-period values.  Returns None when the comparable period is
+        unavailable or no quarter is newer than the annual statement.
+        """
+        if not annual_rows or annual_inc_df is None or quarterly_inc_df is None:
+            return None
+        if getattr(annual_inc_df, "empty", True) or getattr(quarterly_inc_df, "empty", True):
+            return None
+
+        annual_cols = sorted(annual_inc_df.columns)
+        quarter_cols = sorted(quarterly_inc_df.columns)
+        if not annual_cols or not quarter_cols:
+            return None
+        annual_date = annual_cols[-1]
+        current_col = quarter_cols[-1]
+        if current_col <= annual_date:
+            return None
+
+        comparable_col = next(
+            (
+                col for col in reversed(quarter_cols[:-1])
+                if getattr(col, "month", None) == getattr(current_col, "month", None)
+                and abs((current_col - col).days - 365) <= 7
+            ),
+            None,
+        )
+        if comparable_col is None:
+            return None
+
+        base = dict(max(annual_rows, key=lambda row: row["year"]))
+
+        def _g(df: Any, col: Any, keys: list[str]) -> float | None:
+            for key in keys:
+                try:
+                    if df is not None and key in df.index and col in df.columns:
+                        return _safe_float(df.loc[key, col])
+                except Exception:
+                    pass
+            return None
+
+        row = dict(base)
+        row["year"] = int(current_col.year)
+        row["quarter"] = f"TTM {current_col.date().isoformat()}"
+
+        for field, keys in self._INC.items():
+            current = _g(quarterly_inc_df, current_col, keys)
+            comparable = _g(quarterly_inc_df, comparable_col, keys)
+            annual = base.get(field)
+            row[field] = (
+                round(annual + current - comparable, 4)
+                if annual is not None and current is not None and comparable is not None
+                else None
+            )
+
+        for field, keys in self._CF.items():
+            current = _g(quarterly_cf_df, current_col, keys)
+            comparable = _g(quarterly_cf_df, comparable_col, keys)
+            annual = base.get(field)
+            row[field] = (
+                round(annual + current - comparable, 4)
+                if annual is not None and current is not None and comparable is not None
+                else None
+            )
+
+        # Latest balance-sheet snapshot, never summed.
+        for field, keys in self._BAL.items():
+            current = _g(quarterly_bal_df, current_col, keys)
+            if current is not None:
+                row[field] = current
+
+        op_cf, capex = row.get("operating_cash_flow"), row.get("capex")
+        row["free_cash_flow"] = (
+            round(op_cf + capex, 4)
+            if op_cf is not None and capex is not None
+            else None
+        )
+
+        # EBITDA is rolled only when all three comparable components exist.
+        da_current = _g(quarterly_cf_df, current_col, self._DA)
+        da_comparable = _g(quarterly_cf_df, comparable_col, self._DA)
+        if base.get("ebitda") is not None and da_current is not None and da_comparable is not None:
+            row["ebitda"] = round(
+                base["ebitda"] + abs(da_current) - abs(da_comparable), 4
+            )
+        else:
+            row["ebitda"] = None
+
+        shares = row.get("shares")
+        if row.get("eps") is None and row.get("net_income") is not None and shares and shares > 0:
+            row["eps"] = round(row["net_income"] / shares, 4)
+        equity = row.get("equity")
+        row["roe"] = (
+            round(row["net_income"] / equity, 4)
+            if row.get("net_income") is not None and equity
+            else None
+        )
+        row["roic"] = None
+        return row
+
     def normalize_market_data(self, info: dict) -> dict:
         """Map yfinance info dict to canonical market/company schema."""
         return {

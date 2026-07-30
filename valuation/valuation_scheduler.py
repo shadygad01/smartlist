@@ -35,7 +35,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from config.scanner_config import get_constitutional_universe
+from config.scanner_config import get_constitutional_universe, SECTORS
 from valuation import db as _db
 from valuation.data_collector import collect_all, build_data_source_records
 from valuation.official_interim import build_ttm_row, build_source_records
@@ -115,6 +115,8 @@ def _store_collected(ticker: str, data: dict) -> None:
     conn = sqlite3.connect(str(_DB_PATH))
     try:
         # ── Company info ─────────────────────────────────────────────────────
+        if not data["info"].get("sector"):
+            data["info"]["sector"] = SECTORS.get(ticker, "")
         _db.save_company(conn, ticker, data["info"])
 
         # ── Validated financials ─────────────────────────────────────────────
@@ -125,10 +127,11 @@ def _store_collected(ticker: str, data: dict) -> None:
 
         # Add the latest official interim result as a TTM row, after annual
         # storage, so models consume the freshest comparable period.
-        ttm_row, filing = build_ttm_row(ticker, fin_rows)
+        official_ttm, filing = build_ttm_row(ticker, fin_rows)
+        ttm_row = official_ttm or data.get("ttm")
         if ttm_row is not None:
             _db.save_financials(conn, ticker, [ttm_row])
-            print(f"[Scheduler] {ticker}: stored official {filing['label']} row")
+            print(f"[Scheduler] {ticker}: stored {ttm_row['quarter']} row")
 
         rejected = data.get("financials_rejected", [])
         if rejected:
@@ -176,10 +179,14 @@ def _store_collected(ticker: str, data: dict) -> None:
         if ds_records:
             _db.save_many_data_sources(conn, ds_records)
             print(f"[Scheduler] {ticker}: recorded {len(ds_records)} data_sources entries")
-        if ttm_row is not None:
+        if official_ttm is not None:
             official_records = build_source_records(ticker, filing, now)
             _db.save_many_data_sources(conn, official_records)
             print(f"[Scheduler] {ticker}: recorded {len(official_records)} official filing fields")
+        elif ttm_row is not None:
+            ttm_records = build_data_source_records(ticker, [ttm_row], fin_meta)
+            _db.save_many_data_sources(conn, ttm_records)
+            print(f"[Scheduler] {ticker}: recorded {len(ttm_records)} TTM source fields")
 
         conn.commit()
     finally:
@@ -235,6 +242,12 @@ def run_ticker(ticker: str) -> tuple[bool, dict]:
                 stats["model_successes"][ms["model"]] = ms["success"]
             return True, stats
         else:
+            conn = sqlite3.connect(str(_DB_PATH))
+            try:
+                _db.delete_valuation_outputs(conn, ticker)
+                conn.commit()
+            finally:
+                conn.close()
             print(f"[Scheduler] {ticker} — valuation incomplete (insufficient validated data)")
             return False, stats
 

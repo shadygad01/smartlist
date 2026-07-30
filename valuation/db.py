@@ -429,6 +429,12 @@ def save_analyst_consensus(
     )
 
 
+def delete_valuation_outputs(conn: sqlite3.Connection, ticker: str) -> None:
+    """Remove publishable outputs when current data fails quality gates."""
+    for table in ("valuation_models", "valuation_history"):
+        conn.execute(f"DELETE FROM {table} WHERE ticker=?", (ticker,))
+
+
 def save_valuation_history(
     conn: sqlite3.Connection, ticker: str, date: str, current_price: float, fair_value: float
 ) -> None:

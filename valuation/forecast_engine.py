@@ -12,6 +12,8 @@ from valuation.financial_parser import compute_growth_rates, average_growth, lat
 _DEFAULT_TERMINAL_GROWTH = 0.04
 _GROWTH_DAMPEN = 0.50   # blend historical rate toward terminal growth
 _FORECAST_YEARS = 5
+_MIN_HISTORICAL_GROWTH = -0.20
+_MAX_HISTORICAL_GROWTH = 0.20
 
 
 def _dampen(g_hist: float | None, g_terminal: float = _DEFAULT_TERMINAL_GROWTH) -> float:
@@ -20,6 +22,10 @@ def _dampen(g_hist: float | None, g_terminal: float = _DEFAULT_TERMINAL_GROWTH) 
     """
     if g_hist is None:
         return g_terminal
+    # One-off FX gains, restructurings, and sign changes in FCF can create
+    # triple-digit historical rates.  Extrapolating those for five years is the
+    # main cause of absurd DCF/RI outputs, so winsorize before mean reversion.
+    g_hist = max(_MIN_HISTORICAL_GROWTH, min(_MAX_HISTORICAL_GROWTH, g_hist))
     return round(g_hist * (1 - _GROWTH_DAMPEN) + g_terminal * _GROWTH_DAMPEN, 4)
 
 

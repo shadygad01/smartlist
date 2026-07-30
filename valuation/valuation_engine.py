@@ -44,16 +44,43 @@ _WEIGHTS = {
 
 
 def _weighted_fair_value(results: dict) -> float | None:
-    """Compute weighted intrinsic value from available model outputs."""
+    """Compute a robust weighted value from at least three valid models.
+
+    A single explosive DCF or residual-income result must not dominate the
+    aggregate.  Values outside 1/3×–3× the model median are treated as model
+    failures for this run and excluded before weights are rebalanced.
+    """
+    candidates = {
+        model: value
+        for model, value in results.items()
+        if model in _WEIGHTS and value is not None and value > 0
+    }
+    if len(candidates) < 3:
+        return None
+
+    ordered = sorted(candidates.values())
+    mid = len(ordered) // 2
+    median = (
+        ordered[mid]
+        if len(ordered) % 2
+        else (ordered[mid - 1] + ordered[mid]) / 2
+    )
+    lower, upper = median / 3.0, median * 3.0
+    candidates = {
+        model: value
+        for model, value in candidates.items()
+        if lower <= value <= upper
+    }
+    if len(candidates) < 3:
+        return None
+
     total_w = 0.0
     total_v = 0.0
     for model, weight in _WEIGHTS.items():
-        v = results.get(model)
-        if v is not None and v > 0:
+        v = candidates.get(model)
+        if v is not None:
             total_v += v * weight
             total_w += weight
-    if total_w < 0.15:  # too few models — unreliable
-        return None
     return round(total_v / total_w, 4)
 
 
@@ -110,6 +137,14 @@ def run_valuation(ticker: str, current_price: float | None = None) -> dict | Non
         financials = parse_financials(raw_financials)
         if not financials:
             print(f"[ValuationEngine] No financial data for {ticker}")
+            return None
+
+        latest_year = max(r["year"] for r in financials)
+        if latest_year < date.today().year - 1:
+            print(
+                f"[ValuationEngine] {ticker}: latest statement year {latest_year} is stale — "
+                "refusing to publish a fair value"
+            )
             return None
 
         # Minimum data quality gate: at least one core financial statement field must

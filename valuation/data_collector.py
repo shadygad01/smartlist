@@ -33,7 +33,7 @@ from valuation.validation_engine import (
 # ── yfinance fetchers ────────────────────────────────────────────────────────
 
 def _yf_fetch_financials(ticker: str) -> tuple | None:
-    """Fetch yfinance annual financial statement DataFrames."""
+    """Fetch yfinance annual and quarterly financial statement DataFrames."""
     try:
         import yfinance as yf
         t   = yf.Ticker(ticker)
@@ -42,7 +42,12 @@ def _yf_fetch_financials(ticker: str) -> tuple | None:
         cf  = t.cashflow
         if inc is None or getattr(inc, "empty", True):
             return None
-        return (inc, bal, cf)
+        return (
+            inc, bal, cf,
+            t.quarterly_financials,
+            t.quarterly_balance_sheet,
+            t.quarterly_cashflow,
+        )
     except Exception as exc:
         print(f"[DataCollector] yfinance financials fetch error for {ticker}: {exc}")
         return None
@@ -97,7 +102,7 @@ def build_data_source_records(
     records: list[dict] = []
     for row in fin_rows:
         yr         = row.get("year")
-        period     = str(yr) if yr is not None else "unknown"
+        period     = row.get("quarter") or (str(yr) if yr is not None else "unknown")
         val_status = row.get("_validation_status", "valid")
 
         for field_name, statement in FIELD_STATEMENT.items():
@@ -138,7 +143,7 @@ def collect_all(ticker: str) -> dict:
 
     financials_raw: list[dict] = []
     if fin_result:
-        inc_df, bal_df, cf_df = fin_result.data
+        inc_df, bal_df, cf_df, q_inc_df, q_bal_df, q_cf_df = fin_result.data
         financials_raw = norm.normalize_financials(inc_df, bal_df, cf_df)
         print(
             f"[DataCollector] {ticker}: normalized {len(financials_raw)} "
@@ -146,6 +151,20 @@ def collect_all(ticker: str) -> dict:
         )
 
     financials_valid, financials_rejected = validate_financials(financials_raw)
+    ttm_raw = (
+        norm.normalize_ttm(
+            financials_valid, inc_df, q_inc_df, q_bal_df, q_cf_df
+        )
+        if fin_result and financials_valid
+        else None
+    )
+    ttm_valid: dict | None = None
+    if ttm_raw is not None:
+        ttm_rows, ttm_rejected = validate_financials([ttm_raw])
+        ttm_valid = ttm_rows[0] if ttm_rows else None
+        financials_rejected.extend(ttm_rejected)
+        if ttm_valid:
+            print(f"[DataCollector] {ticker}: normalized {ttm_valid['quarter']}")
     print(
         f"[DataCollector] {ticker}: validation — "
         f"{len(financials_valid)} accepted, {len(financials_rejected)} rejected"
@@ -179,6 +198,7 @@ def collect_all(ticker: str) -> dict:
         "info":                 market_data,
         "financials":           financials_valid,
         "financials_rejected":  financials_rejected,
+        "ttm":                  ttm_valid,
         "consensus":            consensus_valid,
         "current_price":        market_data.get("current_price"),
         "beta":                 market_data.get("beta"),

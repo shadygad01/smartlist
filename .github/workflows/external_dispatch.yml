@@ -198,7 +198,9 @@ jobs:
           commit_message: "HA trigger: deploy dashboard [skip ci]"
 
       - name: FTP Deploy to Custom Server (162.245.186.123)
-        if: "${{ secrets.INTERSERVER_FTP_SERVER != '' }}"
+        env:
+          FTP_SERVER: ${{ secrets.INTERSERVER_FTP_SERVER }}
+        if: "${{ env.FTP_SERVER != '' }}"
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.INTERSERVER_FTP_SERVER }}
@@ -206,4 +208,5 @@ jobs:
           password: ${{ secrets.INTERSERVER_FTP_PASSWORD }}
           local-dir: ./web_deploy/
           server-dir: ${{ secrets.INTERSERVER_FTP_DIR || './public_html/smartlist/' }}
+
 

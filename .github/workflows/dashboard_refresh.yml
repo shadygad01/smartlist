@@ -165,3 +165,14 @@ jobs:
           publish_dir: ./web_deploy
           keep_files: false
           commit_message: Deploy EGX Command Center [skip ci]
+
+      - name: FTP Deploy to Custom Server (162.245.186.123)
+        if: "${{ secrets.INTERSERVER_FTP_SERVER != '' }}"
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.INTERSERVER_FTP_SERVER }}
+          username: ${{ secrets.INTERSERVER_FTP_USERNAME }}
+          password: ${{ secrets.INTERSERVER_FTP_PASSWORD }}
+          local-dir: ./web_deploy/
+          server-dir: ${{ secrets.INTERSERVER_FTP_DIR || './public_html/smartlist/' }}
+

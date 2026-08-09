@@ -201,6 +201,7 @@ jobs:
         env:
           FTP_SERVER: ${{ secrets.INTERSERVER_FTP_SERVER }}
         if: "${{ env.FTP_SERVER != '' }}"
+        continue-on-error: true
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.INTERSERVER_FTP_SERVER }}

@@ -10,11 +10,12 @@ name: 📊 Dashboard Refresh
 on:
   schedule:
     # EGX market hours: Sun–Thu 10:00–14:30 Cairo (UTC+3 per ZoneInfo Africa/Cairo).
-    # Mirrors market_notifications.yml's cadence so the live dashboard/Pages
-    # deploy actually refreshes automatically instead of relying on someone
-    # manually running this workflow (previously the only way it ever ran).
-    - cron: '* 7-10 * * 0-4'
-    - cron: '0-30 11 * * 0-4'
+    # Mirrors market_notifications.yml's cadence (every 5 min) so the live
+    # dashboard/Pages deploy refreshes automatically without running every
+    # single minute — the 1-minute interval was overloading the repo with
+    # overlapping runs and raising the odds of transient run failures.
+    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 7-10 * * 0-4'
+    - cron: '0,5,10,15,20,25,30 11 * * 0-4'
 
   repository_dispatch:
     types:

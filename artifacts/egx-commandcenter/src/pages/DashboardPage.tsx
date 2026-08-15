@@ -11,7 +11,6 @@ import StockDNASection from '@/components/dashboard/StockDNASection';
 import WatchlistSection from '@/components/dashboard/WatchlistSection';
 import FutureCandidatesSection from '@/components/dashboard/FutureCandidatesSection';
 import EventTimelineSection from '@/components/dashboard/EventTimelineSection';
-import ValuationSection from '@/components/dashboard/ValuationSection';
 import DiagnosticsSection from '@/components/dashboard/DiagnosticsSection';
 import PortfolioMiniChart from '@/components/dashboard/PortfolioMiniChart';
 
@@ -38,7 +37,6 @@ export default function DashboardPage() {
 
           <div className="dashboard-research-grid">
             <TimelineSection />
-            <ValuationSection />
             <UniverseSection />
             <StockDNASection />
             <FutureCandidatesSection />

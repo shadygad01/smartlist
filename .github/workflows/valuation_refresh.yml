@@ -50,7 +50,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies (includes yfinance)
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.lock.txt
 
       - name: Initialize valuation.db schema
         run: python -m valuation.valuation_scheduler --init-db

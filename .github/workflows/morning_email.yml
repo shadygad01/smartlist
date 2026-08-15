@@ -68,7 +68,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.lock.txt
 
       - name: Initialize scan context (scan UUID for this run)
         run: python3 scan_context.py --init --force

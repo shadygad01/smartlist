@@ -24,7 +24,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install pytest playwright
-          pip install -r requirements.txt || true
+          pip install -r requirements.lock.txt
 
       - name: Install Playwright Chromium
         run: python -m playwright install chromium --with-deps

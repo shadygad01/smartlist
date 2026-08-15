@@ -56,7 +56,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.lock.txt
 
       - name: Initialize scan context (scan UUID for this run)
         # MUST run first — generates the scan_id used by ALL subsequent steps.
@@ -356,7 +356,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.lock.txt
 
       - name: Download database
         uses: actions/download-artifact@v4
@@ -436,7 +436,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.lock.txt
 
       - name: Download database
         uses: actions/download-artifact@v4
@@ -461,7 +461,6 @@ jobs:
         env:
           FULL_REBUILD: ${{ github.event.inputs.full_rebuild == 'true' && 'true' || 'false' }}
         run: python cache_orchestrator.py --mode intelligence
-        continue-on-error: true
 
       - name: Save learning cache
         if: always()
@@ -552,21 +551,19 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.lock.txt
 
       - name: Download research artifacts
         uses: actions/download-artifact@v4
         with:
           name: research-web
           path: web_deploy/
-        continue-on-error: true
 
       - name: Download intelligence artifacts
         uses: actions/download-artifact@v4
         with:
           name: intelligence-web
           path: web_deploy/
-        continue-on-error: true
 
       - name: Rebuild presentation snapshot
         run: |
@@ -586,7 +583,6 @@ jobs:
         # passing does not guarantee THIS snapshot is consistent. Check what's about
         # to actually go live.
         run: python3 audit/assert_event_timeline_consistency.py
-        continue-on-error: true
 
       - name: Build dashboard HTML
         run: python3 dashboard.py

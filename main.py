@@ -47,7 +47,7 @@ _tv_quote_cache: dict = {}   # populated by tv_prefetch_all_quotes() at the top 
 # =========================================
 
 open_positions = {}  # تتبع المراكز المفتوحة: {symbol: {entry_price, fib_targets, current_level, ...}}
-POSITIONS_FILE = "open_positions.json"
+POSITIONS_FILE = str(BASE / "open_positions.json")
 
 # =========================================
 # CONFIG
@@ -129,7 +129,7 @@ SECTORS = {
     "CCAP.CA": "Financial Services",
 }
 
-EMAIL = "shady.gad@live.com"
+EMAIL = os.getenv("REPORT_EMAIL_TO") or os.getenv("EMAIL_USER", "")
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",

@@ -3,6 +3,8 @@ Scanner configuration — extracted from main.py.
 Import this module instead of duplicating these constants.
 """
 
+import os
+
 STOCKS = [
     "COMI.CA", "TMGH.CA", "ETEL.CA", "EGAL.CA",
     "EAST.CA", "ABUK.CA", "ORAS.CA", "EFIH.CA",
@@ -89,7 +91,7 @@ SECTORS = {
     "CCAP.CA": "Financial Services",
 }
 
-EMAIL = "shady.gad@live.com"
+EMAIL = os.getenv("REPORT_EMAIL_TO") or os.getenv("EMAIL_USER", "")
 
 # Stock quality tiers — used as position sizing multipliers when live sample < 30 per symbol.
 # WARNING (Independent Audit 2026-06): Spearman rho = 0.03 between halves — rankings are

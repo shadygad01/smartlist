@@ -10,12 +10,14 @@ import sys
 import time
 import traceback
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
 
-STATE_FILE = "scheduler_state.json"
-DB_PATH    = "egx_research.db"
-CONFIG_DIR = "config/"
-LOG_FILE   = "scheduler.log"
+BASE_DIR    = Path(__file__).resolve().parent
+STATE_FILE  = str(BASE_DIR / "scheduler_state.json")
+DB_PATH     = str(BASE_DIR / "egx_research.db")
+CONFIG_DIR  = str(BASE_DIR / "config")
+LOG_FILE    = str(BASE_DIR / "scheduler.log")
 
 _DEFAULT_STATE = {
     "schema_version": 1,
@@ -64,32 +66,23 @@ def _log(msg: str) -> None:
 # ── Sub-steps ─────────────────────────────────────────────────────────────────
 
 def _run_scan() -> bool:
-    """Trigger daily scan via main.daily_scan()."""
+    """Trigger the daily scan through the single production orchestrator."""
     try:
-        import main as _main
-        if hasattr(_main, "daily_scan"):
-            _main.daily_scan()
-            return True
-        _log("WARNING: main.daily_scan() not found")
-        return False
+        from notifications.scan_orchestrator import ScanOrchestrator
+        return bool(ScanOrchestrator().run_morning_report())
     except Exception as exc:
         _log(f"ERROR in scan: {exc}")
         return False
 
 
 def _measure_outcomes(db_path: str = DB_PATH) -> int:
-    """Trigger bottom_quality measurement; return count of newly measured rows."""
+    """Run the canonical tracker/BQ pipeline and return newly scored rows."""
     try:
-        import bottom_quality as bq
-        if hasattr(bq, "run_all"):
-            return bq.run_all(db_path=db_path) or 0
-        if hasattr(bq, "measure_all"):
-            return bq.measure_all(db_path=db_path) or 0
-    except ImportError:
-        pass
+        from daily_tracker import run_all
+        return int(run_all(db_path=db_path, verbose=True) or 0)
     except Exception as exc:
-        _log(f"WARNING: bottom_quality measurement failed: {exc}")
-    return 0
+        _log(f"ERROR: outcome measurement failed: {exc}")
+        raise
 
 
 def _run_learning(db_path: str = DB_PATH, dry_run: bool = False) -> Optional[dict]:
@@ -142,6 +135,8 @@ def run_once(dry_run: bool = False, skip_scan: bool = False) -> dict:
             scan_ok = _run_scan()
             status["scan_ok"] = scan_ok
             state["last_scan_at"] = now.isoformat()
+            if not scan_ok:
+                raise RuntimeError("daily scan failed; outcome measurement and learning were not run")
         else:
             _log("Step 1/3: Scan skipped (skip_scan=True)")
             status["scan_ok"] = True

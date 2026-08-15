@@ -20,6 +20,13 @@ _SMTP_PORT = 587
 _ATTEMPTS  = 3
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def send(
     *,
     subject: str,
@@ -58,20 +65,18 @@ def send(
     _sha = hashlib.sha256(html.encode()).hexdigest()
     _near_m = _re.search(r'NEAR CONSTITUTIONAL ENTRY \((\d+) tickers?\)', html)
     _near_n = int(_near_m.group(1)) if _near_m else 0
-    _prices = _re.findall(r'(\d+\.\d+)\s*(?:EGP|egp)', html)
-    print(f"[email_sender] PRE-SMTP AUDIT:")
+    print("[email_sender] PRE-SMTP AUDIT:")
     print(f"  subject   : {subject}")
     print(f"  html_size : {len(html)} bytes")
     print(f"  sha256    : {_sha[:24]}...")
     print(f"  near_count: {_near_n}")
-    print(f"  prices_in_html: {_prices[:8]}")
-    # Save a copy before sending so it can be inspected
-    _art = _Path(__file__).parent.parent / "runtime_email.html"
-    try:
-        _art.write_text(html, encoding="utf-8")
-        print(f"  saved to  : {_art}")
-    except Exception as _e:
-        print(f"  save_err  : {_e}")
+    if _env_bool("SAVE_EMAIL_ARTIFACTS"):
+        _art = _Path(__file__).parent.parent / "runtime_email.html"
+        try:
+            _art.write_text(html, encoding="utf-8")
+            print(f"  saved to  : {_art}")
+        except Exception as _e:
+            print(f"  save_err  : {_e}")
     # ─────────────────────────────────────────────────────────────────────────
 
     if not _sender or not _password:
@@ -93,7 +98,7 @@ def send(
         nonlocal attempt
         attempt += 1
         with smtplib.SMTP(_host, _port, timeout=30) as srv:
-            srv.set_debuglevel(1)   # prints SMTP dialog (220, 250, MAIL FROM, RCPT TO, etc.)
+            srv.set_debuglevel(1 if _env_bool("SMTP_DEBUG") else 0)
             srv.ehlo()
             srv.starttls()
             srv.ehlo()

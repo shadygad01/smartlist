@@ -20,7 +20,7 @@ from datetime import date, datetime, timedelta
 
 EXTENDED_LOG  = "extended_signal_log.json"
 REPORT_FILE   = "reports/behavior_report.html"
-TO_EMAIL      = "shady.gad@live.com"
+TO_EMAIL      = os.getenv("REPORT_EMAIL_TO") or os.getenv("EMAIL_USER", "")
 WIN_THRESHOLD = 0.07   # r20d >= 7% = win
 
 

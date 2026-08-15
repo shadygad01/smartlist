@@ -458,10 +458,10 @@ def run_bq_scoring(db_path: str = DB_PATH, verbose: bool = True) -> int:
     return scored
 
 
-def run_all(db_path: str = DB_PATH, verbose: bool = True):
-    """يُشغّل tracking + BQ scoring معاً."""
+def run_all(db_path: str = DB_PATH, verbose: bool = True) -> int:
+    """يُشغّل tracking + BQ scoring معاً ويُرجع عدد صفوف BQ الجديدة/المحدثة."""
     run_daily_tracking(db_path=db_path, verbose=verbose)
-    run_bq_scoring(db_path=db_path, verbose=verbose)
+    return run_bq_scoring(db_path=db_path, verbose=verbose)
 
 
 # ── CLI ────────────────────────────────────────────────────────────────────────

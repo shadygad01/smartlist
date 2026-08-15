@@ -50,7 +50,12 @@ import valuation.db as _vdb
 ARTIFACTS_DIR = ROOT / "tests" / "artifacts" / "ive"
 
 import os
-_default_chromium = "/opt/pw-browsers/chromium"
+import shutil
+_default_chromium = (
+    shutil.which("chromium")
+    or shutil.which("chromium-browser")
+    or "/opt/pw-browsers/chromium"
+)
 CHROMIUM_PATH = os.environ.get("PLAYWRIGHT_CHROMIUM_PATH", _default_chromium)
 
 # Fields that must be visible in the dark-theme dashboard card

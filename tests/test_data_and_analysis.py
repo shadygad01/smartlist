@@ -179,7 +179,7 @@ class TestDownloadData:
         with mock.patch("main.yf.Ticker", return_value=self._mock_ticker(empty_df)), \
              mock.patch("main.requests.get", return_value=resp), \
              mock.patch("main._patch_today_from_tv", side_effect=lambda d, s: d):
-            result = download_data("COMI.CA")
+            result = download_data("SMARTLIST_NO_CACHE.CA")
 
         assert not result.empty
 
@@ -187,7 +187,7 @@ class TestDownloadData:
         with mock.patch("main.yf.Ticker", side_effect=Exception("network")), \
              mock.patch("main.requests.get", side_effect=Exception("network")), \
              mock.patch("main._patch_today_from_tv", side_effect=lambda d, s: d):
-            result = download_data("COMI.CA")
+            result = download_data("SMARTLIST_NO_CACHE.CA")
         assert result.empty
 
     def test_yfinance_exception_triggers_fallback(self):
@@ -212,7 +212,7 @@ class TestDownloadData:
         with mock.patch("main.yf.Ticker", side_effect=Exception("yfinance down")), \
              mock.patch("main.requests.get", return_value=resp), \
              mock.patch("main._patch_today_from_tv", side_effect=lambda d, s: d):
-            result = download_data("COMI.CA")
+            result = download_data("SMARTLIST_NO_CACHE.CA")
 
         assert not result.empty
 
@@ -225,9 +225,9 @@ class TestDownloadData:
 
         with mock.patch("main.yf.Ticker", side_effect=fake_ticker), \
              mock.patch("main._patch_today_from_tv", side_effect=lambda d, s: d):
-            download_data("COMI.CA")
+            download_data("SMARTLIST_SUFFIX_TEST")
 
-        assert captured["sym"] == "COMI.CA"
+        assert captured["sym"] == "SMARTLIST_SUFFIX_TEST.CA"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

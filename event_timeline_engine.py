@@ -18,7 +18,9 @@ Public API:
 """
 from __future__ import annotations
 
+import csv
 import json
+import math
 import sqlite3
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -83,6 +85,59 @@ def _init_db() -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_et_type ON event_timeline(event_type)")
     conn.commit()
     conn.close()
+
+
+def purge_invalid_volume_spikes() -> int:
+    """Remove persisted volume events whose comparison baseline is invalid.
+
+    Older scan runs used ``max(avg_volume, 1)`` and could persist a raw share
+    count as a multiplier when the previous 21 volumes were all zero. When the
+    source CSV is available for the event date, such rows are removed instead
+    of being rendered as trustworthy anomalies.
+    """
+    _init_db()
+    conn = _connect()
+    rows = conn.execute(
+        "SELECT id, ticker, timestamp, metadata FROM event_timeline "
+        "WHERE event_type=?", (VOL_SPIKE,)
+    ).fetchall()
+    invalid_ids: list[int] = []
+    hist_dir = BASE / "historical_data" / "historical_data"
+    for row in rows:
+        try:
+            metadata = json.loads(row["metadata"] or "{}")
+            ratio = float(metadata.get("vol_ratio"))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            invalid_ids.append(int(row["id"]))
+            continue
+        if not math.isfinite(ratio) or ratio <= 0:
+            invalid_ids.append(int(row["id"]))
+            continue
+
+        csv_path = hist_dir / f"{row['ticker']}.csv"
+        if not csv_path.exists():
+            continue
+        try:
+            with csv_path.open(newline="") as fh:
+                source_rows = list(csv.DictReader(fh))
+            event_date = (row["timestamp"] or "")[:10]
+            if len(source_rows) < 22 or source_rows[-1].get("Date") != event_date:
+                continue
+            previous = [float(r.get("Volume") or 0) for r in source_rows[-22:-1]]
+            baseline = sum(previous) / len(previous)
+            if not math.isfinite(baseline) or baseline <= 0:
+                invalid_ids.append(int(row["id"]))
+        except (OSError, TypeError, ValueError, ZeroDivisionError):
+            continue
+
+    if invalid_ids:
+        conn.executemany(
+            "DELETE FROM event_timeline WHERE id=?",
+            [(row_id,) for row_id in invalid_ids],
+        )
+        conn.commit()
+    conn.close()
+    return len(invalid_ids)
 
 
 def log_event(
@@ -171,6 +226,10 @@ def log_near_entry(ticker: str, description: str = "", pct_above: float | None =
 
 def log_vol_spike(ticker: str, description: str = "", vol_ratio: float | None = None,
                   timestamp: str | None = None) -> int:
+    if vol_ratio is not None and (
+        not math.isfinite(float(vol_ratio)) or float(vol_ratio) <= 0
+    ):
+        return 0
     if not description:
         if vol_ratio is not None:
             description = f"Volume anomaly detected — {vol_ratio:.1f}× average daily volume"
@@ -187,8 +246,9 @@ def log_system(description: str, timestamp: str | None = None) -> int:
 
 
 def get_recent_events(limit: int = 50) -> list[dict]:
-    """Return the most recent events, newest first."""
+    """Return the most recent valid events, newest first."""
     try:
+        purge_invalid_volume_spikes()
         _init_db()
         conn = _connect()
         rows = conn.execute(

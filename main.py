@@ -711,6 +711,34 @@ def calc_entry_zones(df, cur, hi, lo, eq, buy_hi, sell_lo, av, alo, _sv=None, _h
 # MAIN ANALYSIS
 # =========================================
 
+def calculate_volume_spike_ratio(volume: pd.Series, lookback: int = 21) -> float | None:
+    """Return the latest-volume / prior-average ratio, or None without a valid baseline.
+
+    A zero or non-finite prior average means there is no meaningful comparison. It
+    must not be replaced with 1, because doing so turns a raw share count into a
+    misleading multiplier (for example, 438592x).
+    """
+    if lookback < 1 or volume is None or len(volume) <= lookback:
+        return None
+    try:
+        values = pd.to_numeric(volume, errors="coerce")
+        if len(values) <= lookback:
+            return None
+        current_value = values.iloc[-1]
+        baseline_values = values.iloc[-lookback - 1:-1]
+        if len(baseline_values) != lookback or baseline_values.isna().any() or pd.isna(current_value):
+            return None
+        current = float(current_value)
+        baseline = float(baseline_values.mean())
+        if not np.isfinite(current) or current < 0:
+            return None
+        if not np.isfinite(baseline) or baseline <= 0:
+            return None
+        return round(current / baseline, 2)
+    except (TypeError, ValueError, IndexError):
+        return None
+
+
 def analyze(symbol):
     """Download OHLCV data for symbol, compute technical levels, and return full analysis dict."""
     try:
@@ -848,11 +876,7 @@ def analyze(symbol):
 
         pattern_data = {"ok": False, "reason": "removed", "label": ""}
 
-        try:
-            _vol = df["Volume"]
-            _vol_spike = round(float(_vol.iloc[-1]) / max(float(_vol.iloc[-21:-1].mean()), 1), 2) if len(_vol) > 21 else None
-        except Exception:
-            _vol_spike = None
+        _vol_spike = calculate_volume_spike_ratio(df.get("Volume"), lookback=21)
 
         # ── Parse OB label → ob_quality / ob_dist ────────────────────────────
         _ob_qm      = re.search(r'quality\s+(\d+)%', l2)

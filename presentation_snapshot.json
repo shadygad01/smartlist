@@ -1,12 +1,12 @@
 {
   "scan_id": "a4ea6010-0e87-4704-be5a-9c9c8bd4f676",
-  "generated_at": "2026-08-20T14:46:27.727319+03:00",
-  "price_data_as_of": "2026-08-20",
-  "market_date": "2026-08-20",
-  "market_status": "CLOSED (After Hours)",
-  "build_hash": "f788ccb853ebb178",
+  "generated_at": "2026-08-23T07:04:29.092226+03:00",
+  "price_data_as_of": "2026-08-23",
+  "market_date": "2026-08-23",
+  "market_status": "PRE-MARKET (opens 10:00)",
+  "build_hash": "5f214cfe2e45f4b5",
   "commit": "021ba8d",
-  "last_scan_ts": "2026-08-20T14:46:25.474712+03:00",
+  "last_scan_ts": "2026-08-23T07:04:27.886831+03:00",
   "_lineage": {
     "scan_id": "a4ea6010-0e87-4704-be5a-9c9c8bd4f676",
     "producer": "presentation_snapshot.py",
@@ -15,26 +15,46 @@
       "universe_snapshot.db",
       "candidate_pool.db"
     ],
-    "generation_timestamp": "2026-08-20T11:46:27+00:00",
+    "generation_timestamp": "2026-08-23T04:04:29+00:00",
     "git_commit": "021ba8d76",
     "gate_version": "cff742390944766e",
     "workflow_run": "32334211428",
     "source_fingerprints": {
-      "constitutional_opportunity_events.db": "6332bcc6dbdb47a7",
-      "universe_snapshot.db": "251f616388e2c254",
-      "candidate_pool.db": "66316c426a73cb36"
+      "constitutional_opportunity_events.db": "0e5f6c3fa0aaffde",
+      "universe_snapshot.db": "686cee78b45cef3c",
+      "candidate_pool.db": "b3dcab40dfb7eaed"
     }
   },
   "near_constitutional": [
     {
       "ticker": "FWRY.CA",
-      "candidate_r2": 55.12,
-      "expected_reward_score": 65.54,
-      "candidate_entry_zone": 19.31,
+      "candidate_r2": 56.98,
+      "expected_reward_score": 64.78,
+      "candidate_entry_zone": 19.21,
       "current_price": 19.21,
       "sector": "FinTech",
-      "distance_to_constitutional": 4.9,
-      "need_move_pct": 0.5
+      "distance_to_constitutional": 3.0,
+      "need_move_pct": 0.0
+    },
+    {
+      "ticker": "JUFO.CA",
+      "candidate_r2": 56.87,
+      "expected_reward_score": 81.41,
+      "candidate_entry_zone": 26.71,
+      "current_price": 26.71,
+      "sector": "Industrial",
+      "distance_to_constitutional": 3.1,
+      "need_move_pct": 0.0
+    },
+    {
+      "ticker": "GBCO.CA",
+      "candidate_r2": 52.21,
+      "expected_reward_score": 37.35,
+      "candidate_entry_zone": 29.32,
+      "current_price": 29.32,
+      "sector": "Telecom",
+      "distance_to_constitutional": 7.8,
+      "need_move_pct": 0.0
     }
   ],
   "active": [
@@ -50,10 +70,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 141.65
+      "last_price_update": "2026-08-23",
+      "return_pct": 142.92
     },
     {
       "ticker": "RMDA.CA",
@@ -67,10 +87,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-04",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 86.54
+      "last_price_update": "2026-08-23",
+      "return_pct": 88.98
     },
     {
       "ticker": "PHDC.CA",
@@ -84,10 +104,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 76.28
+      "last_price_update": "2026-08-23",
+      "return_pct": 76.16
     },
     {
       "ticker": "ORHD.CA",
@@ -101,10 +121,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 65.48
+      "last_price_update": "2026-08-23",
+      "return_pct": 66.41
     },
     {
       "ticker": "ARCC.CA",
@@ -112,16 +132,16 @@
       "status": "PREMIUM",
       "constitutional_entry_price": 44.521,
       "distance": 61.97,
-      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
+      "waiting_for_reason": "Below Threshold \u2014 Needs R2\u226550 (R2 35.0/60)",
       "action": "HOLD \u2014 TARGET HIT",
       "constitutional_memory": 1,
-      "candidate_r2": 0.0,
-      "expected_reward_score": 0.0,
-      "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
-      "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 62.8
+      "candidate_r2": 35.05,
+      "expected_reward_score": 24.73,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
+      "source": "candidate_pool",
+      "last_price_update": "2026-08-23",
+      "return_pct": 61.97
     },
     {
       "ticker": "COMI.CA",
@@ -135,10 +155,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-05-25",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 43.22
+      "last_price_update": "2026-08-23",
+      "return_pct": 43.01
     },
     {
       "ticker": "MCQE.CA",
@@ -146,16 +166,16 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 167.34,
       "distance": 32.66,
-      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
+      "waiting_for_reason": "Below Threshold \u2014 Needs R2\u226550 (R2 45.2/60)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 0.0,
-      "expected_reward_score": 39.0,
-      "last_scan": "2026-07-06",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
-      "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 31.42
+      "candidate_r2": 45.2,
+      "expected_reward_score": 24.92,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
+      "source": "candidate_pool",
+      "last_price_update": "2026-08-23",
+      "return_pct": 32.66
     },
     {
       "ticker": "EFID.CA",
@@ -169,10 +189,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 37.0,
       "last_scan": "2026-06-14",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 31.07
+      "last_price_update": "2026-08-23",
+      "return_pct": 32.62
     },
     {
       "ticker": "EFIH.CA",
@@ -186,27 +206,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 30.48
-    },
-    {
-      "ticker": "ISPH.CA",
-      "current_price": 13.02,
-      "status": "ACTIVE",
-      "constitutional_entry_price": 10.2186,
-      "distance": 27.41,
-      "waiting_for_reason": "Waiting for Constitutional Trigger (R2 58.9/60)",
-      "action": "HOLD",
-      "constitutional_memory": 1,
-      "candidate_r2": 58.87,
-      "expected_reward_score": 24.68,
-      "last_scan": "2026-08-17",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
-      "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
-      "return_pct": 28.78
+      "last_price_update": "2026-08-23",
+      "return_pct": 31.02
     },
     {
       "ticker": "ETEL.CA",
@@ -220,10 +223,27 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 49.0,
       "last_scan": "2026-06-15",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 26.83
+      "last_price_update": "2026-08-23",
+      "return_pct": 27.43
+    },
+    {
+      "ticker": "ISPH.CA",
+      "current_price": 13.02,
+      "status": "ACTIVE",
+      "constitutional_entry_price": 10.2186,
+      "distance": 27.41,
+      "waiting_for_reason": "Waiting for Score \u226535 (Score 30.3/35)",
+      "action": "HOLD",
+      "constitutional_memory": 1,
+      "candidate_r2": 60.47,
+      "expected_reward_score": 30.34,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
+      "source": "candidate_pool",
+      "last_price_update": "2026-08-23",
+      "return_pct": 27.41
     },
     {
       "ticker": "EMFD.CA",
@@ -237,10 +257,27 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 25.37
+      "last_price_update": "2026-08-23",
+      "return_pct": 26.45
+    },
+    {
+      "ticker": "TMGH.CA",
+      "current_price": 97.7,
+      "status": "ACTIVE",
+      "constitutional_entry_price": 78.7479,
+      "distance": 24.07,
+      "waiting_for_reason": "Below Threshold \u2014 Needs R2\u226550 (R2 49.6/60)",
+      "action": "HOLD",
+      "constitutional_memory": 1,
+      "candidate_r2": 49.59,
+      "expected_reward_score": 63.31,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
+      "source": "candidate_pool",
+      "last_price_update": "2026-08-23",
+      "return_pct": 24.07
     },
     {
       "ticker": "ORWE.CA",
@@ -254,27 +291,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 22.92
-    },
-    {
-      "ticker": "TMGH.CA",
-      "current_price": 97.7,
-      "status": "ACTIVE",
-      "constitutional_entry_price": 78.7479,
-      "distance": 24.07,
-      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
-      "action": "HOLD",
-      "constitutional_memory": 1,
-      "candidate_r2": 0.0,
-      "expected_reward_score": 0.0,
-      "last_scan": "2026-06-04",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
-      "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 22.68
+      "last_price_update": "2026-08-23",
+      "return_pct": 23.26
     },
     {
       "ticker": "GBCO.CA",
@@ -282,16 +302,16 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 25.52,
       "distance": 14.89,
-      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
+      "waiting_for_reason": "Waiting for Demand Confirmation (R2 52.2/60)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 0.0,
-      "expected_reward_score": 68.0,
-      "last_scan": "2026-05-06",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
-      "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 15.05
+      "candidate_r2": 52.21,
+      "expected_reward_score": 37.35,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
+      "source": "candidate_pool",
+      "last_price_update": "2026-08-23",
+      "return_pct": 14.89
     },
     {
       "ticker": "EGAL.CA",
@@ -299,16 +319,16 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 296.19,
       "distance": 11.41,
-      "waiting_for_reason": "Waiting for Constitutional Trigger (R2 59.5/60)",
+      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 59.46,
-      "expected_reward_score": 71.52,
-      "last_scan": "2026-08-10",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
-      "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
-      "return_pct": 12.06
+      "candidate_r2": 0.0,
+      "expected_reward_score": 0.0,
+      "last_scan": "2026-06-01",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
+      "source": "egx_research",
+      "last_price_update": "2026-08-23",
+      "return_pct": 11.41
     },
     {
       "ticker": "ABUK.CA",
@@ -316,16 +336,16 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 73.65,
       "distance": 2.54,
-      "waiting_for_reason": "Waiting for Demand Confirmation (R2 53.6/60)",
+      "waiting_for_reason": "READY FOR RE-ACCUMULATION",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 53.58,
-      "expected_reward_score": 70.19,
-      "last_scan": "2026-08-13",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "candidate_r2": 64.49,
+      "expected_reward_score": 52.62,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
-      "return_pct": 2.73
+      "last_price_update": "2026-08-23",
+      "return_pct": 2.54
     },
     {
       "ticker": "FWRY.CA",
@@ -333,15 +353,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 18.77,
       "distance": 2.34,
-      "waiting_for_reason": "Waiting for Order Block Touch (R2 55.1/60)",
+      "waiting_for_reason": "Waiting for Order Block Touch (R2 57.0/60)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 55.12,
-      "expected_reward_score": 65.54,
-      "last_scan": "2026-08-17",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "candidate_r2": 56.98,
+      "expected_reward_score": 64.78,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
+      "last_price_update": "2026-08-23",
       "return_pct": 2.34
     },
     {
@@ -350,33 +370,33 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 26.63,
       "distance": 0.3,
-      "waiting_for_reason": "Waiting for Demand Confirmation (R2 50.6/60)",
+      "waiting_for_reason": "Waiting for Order Block Touch (R2 56.9/60)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 50.6,
-      "expected_reward_score": 55.59,
-      "last_scan": "2026-08-13",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "candidate_r2": 56.87,
+      "expected_reward_score": 81.41,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
+      "last_price_update": "2026-08-23",
       "return_pct": 0.3
     },
     {
       "ticker": "BTFH.CA",
       "current_price": 2.98,
-      "status": "ACTIVE",
+      "status": "UNDER_REVIEW",
       "constitutional_entry_price": 2.99,
       "distance": -0.33,
-      "waiting_for_reason": "Below Threshold \u2014 Needs R2\u226550 (R2 48.9/60)",
-      "action": "HOLD",
+      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
+      "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 48.87,
-      "expected_reward_score": 49.91,
-      "last_scan": "2026-08-17",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "candidate_r2": 65.02,
+      "expected_reward_score": 36.53,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
-      "return_pct": 0.0
+      "last_price_update": "2026-08-23",
+      "return_pct": -0.33
     },
     {
       "ticker": "HRHO.CA",
@@ -387,13 +407,13 @@
       "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 66.62,
-      "expected_reward_score": 46.39,
-      "last_scan": "2026-08-17",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "candidate_r2": 66.76,
+      "expected_reward_score": 48.79,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
-      "return_pct": -2.96
+      "last_price_update": "2026-08-23",
+      "return_pct": -2.63
     },
     {
       "ticker": "EAST.CA",
@@ -404,13 +424,13 @@
       "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 64.66,
-      "expected_reward_score": 67.31,
-      "last_scan": "2026-08-17",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "candidate_r2": 71.53,
+      "expected_reward_score": 67.28,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
-      "return_pct": -6.48
+      "last_price_update": "2026-08-23",
+      "return_pct": -6.58
     }
   ],
   "re_accumulation": [
@@ -430,7 +450,7 @@
       "current_price": 7.69,
       "return_pct": 149.55,
       "peak_return_pct": 107.68,
-      "days_active": 218,
+      "days_active": 221,
       "status": "PREMIUM_NOW"
     },
     {
@@ -449,7 +469,7 @@
       "current_price": 26.71,
       "return_pct": 4.19,
       "peak_return_pct": 20.15,
-      "days_active": 218,
+      "days_active": 221,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -468,7 +488,7 @@
       "current_price": 7.69,
       "return_pct": 142.92,
       "peak_return_pct": 102.17,
-      "days_active": 207,
+      "days_active": 210,
       "status": "PREMIUM_NOW"
     },
     {
@@ -487,7 +507,7 @@
       "current_price": 36.02,
       "return_pct": -6.58,
       "peak_return_pct": 1.15,
-      "days_active": 182,
+      "days_active": 185,
       "status": "UNDER_REVIEW"
     },
     {
@@ -506,7 +526,7 @@
       "current_price": 11.81,
       "return_pct": 26.45,
       "peak_return_pct": 33.83,
-      "days_active": 179,
+      "days_active": 182,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -525,7 +545,7 @@
       "current_price": 25.36,
       "return_pct": 20.52,
       "peak_return_pct": 10.16,
-      "days_active": 179,
+      "days_active": 182,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -544,7 +564,7 @@
       "current_price": 2.98,
       "return_pct": -0.67,
       "peak_return_pct": 3.67,
-      "days_active": 176,
+      "days_active": 179,
       "status": "UNDER_REVIEW"
     },
     {
@@ -563,7 +583,7 @@
       "current_price": 13.02,
       "return_pct": 17.53,
       "peak_return_pct": 31.34,
-      "days_active": 172,
+      "days_active": 175,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -582,7 +602,7 @@
       "current_price": 26.3,
       "return_pct": -0.38,
       "peak_return_pct": 5.68,
-      "days_active": 171,
+      "days_active": 174,
       "status": "UNDER_REVIEW"
     },
     {
@@ -601,7 +621,7 @@
       "current_price": 40.97,
       "return_pct": 65.27,
       "peak_return_pct": 50.83,
-      "days_active": 171,
+      "days_active": 174,
       "status": "PREMIUM_NOW"
     },
     {
@@ -619,8 +639,8 @@
       "signal_version": "v1",
       "current_price": 72.11,
       "return_pct": 61.97,
-      "peak_return_pct": 26.03,
-      "days_active": 165,
+      "peak_return_pct": 61.97,
+      "days_active": 168,
       "status": "PREMIUM_NOW"
     },
     {
@@ -639,7 +659,7 @@
       "current_price": 19.21,
       "return_pct": 10.59,
       "peak_return_pct": 11.63,
-      "days_active": 161,
+      "days_active": 164,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -658,7 +678,7 @@
       "current_price": 26.71,
       "return_pct": 4.15,
       "peak_return_pct": 20.1,
-      "days_active": 157,
+      "days_active": 160,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -677,7 +697,7 @@
       "current_price": 40.97,
       "return_pct": 66.88,
       "peak_return_pct": 52.3,
-      "days_active": 157,
+      "days_active": 160,
       "status": "PREMIUM_NOW"
     },
     {
@@ -696,7 +716,7 @@
       "current_price": 13.02,
       "return_pct": 27.41,
       "peak_return_pct": 42.39,
-      "days_active": 156,
+      "days_active": 159,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -714,8 +734,8 @@
       "signal_version": "v1",
       "current_price": 29.32,
       "return_pct": 19.2,
-      "peak_return_pct": 15.17,
-      "days_active": 154,
+      "peak_return_pct": 19.2,
+      "days_active": 157,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -734,7 +754,7 @@
       "current_price": 19.21,
       "return_pct": 11.82,
       "peak_return_pct": 12.86,
-      "days_active": 149,
+      "days_active": 152,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -753,7 +773,7 @@
       "current_price": 40.97,
       "return_pct": 66.41,
       "peak_return_pct": 51.87,
-      "days_active": 144,
+      "days_active": 147,
       "status": "PREMIUM_NOW"
     },
     {
@@ -772,7 +792,7 @@
       "current_price": 25.36,
       "return_pct": 23.26,
       "peak_return_pct": 12.66,
-      "days_active": 144,
+      "days_active": 147,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -791,7 +811,7 @@
       "current_price": 26.3,
       "return_pct": -2.63,
       "peak_return_pct": 3.3,
-      "days_active": 94,
+      "days_active": 97,
       "status": "UNDER_REVIEW"
     },
     {
@@ -809,8 +829,8 @@
       "signal_version": "v1",
       "current_price": 29.32,
       "return_pct": 14.89,
-      "peak_return_pct": 11.01,
-      "days_active": 91,
+      "peak_return_pct": 14.89,
+      "days_active": 94,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -829,7 +849,7 @@
       "current_price": 114.89,
       "return_pct": 27.43,
       "peak_return_pct": 3.15,
-      "days_active": 70,
+      "days_active": 73,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -848,7 +868,7 @@
       "current_price": 2.98,
       "return_pct": -0.33,
       "peak_return_pct": 4.01,
-      "days_active": 65,
+      "days_active": 68,
       "status": "UNDER_REVIEW"
     },
     {
@@ -867,7 +887,7 @@
       "current_price": 330.0,
       "return_pct": 11.41,
       "peak_return_pct": 17.51,
-      "days_active": 18,
+      "days_active": 21,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -886,7 +906,7 @@
       "current_price": 19.21,
       "return_pct": 2.34,
       "peak_return_pct": 2.88,
-      "days_active": 18,
+      "days_active": 21,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -905,7 +925,7 @@
       "current_price": 26.3,
       "return_pct": -2.63,
       "peak_return_pct": 1.3,
-      "days_active": 18,
+      "days_active": 21,
       "status": "UNDER_REVIEW"
     },
     {
@@ -924,7 +944,7 @@
       "current_price": 75.52,
       "return_pct": 2.54,
       "peak_return_pct": 8.21,
-      "days_active": 9,
+      "days_active": 12,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -933,8 +953,8 @@
       "event_type": "RE_ACCUMULATION",
       "event_index": 2,
       "event_date": "2026-08-11",
-      "event_end_date": "2026-08-20",
-      "event_cluster_days": 10,
+      "event_end_date": "2026-08-23",
+      "event_cluster_days": 13,
       "constitutional_entry_price": 38.557,
       "constitutional_r2": 67.21,
       "constitutional_score": 67.92,
@@ -943,7 +963,7 @@
       "current_price": 36.02,
       "return_pct": -6.58,
       "peak_return_pct": -4.84,
-      "days_active": 9,
+      "days_active": 12,
       "status": "UNDER_REVIEW"
     },
     {
@@ -962,7 +982,7 @@
       "current_price": 26.71,
       "return_pct": 0.3,
       "peak_return_pct": 3.76,
-      "days_active": 9,
+      "days_active": 12,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -971,8 +991,8 @@
       "event_type": "RE_ACCUMULATION",
       "event_index": 4,
       "event_date": "2026-08-17",
-      "event_end_date": "2026-08-20",
-      "event_cluster_days": 4,
+      "event_end_date": "2026-08-23",
+      "event_cluster_days": 7,
       "constitutional_entry_price": 27.01,
       "constitutional_r2": 66.62,
       "constitutional_score": 46.39,
@@ -980,8 +1000,27 @@
       "signal_version": "v1",
       "current_price": 26.3,
       "return_pct": -2.63,
-      "peak_return_pct": -2.59,
-      "days_active": 3,
+      "peak_return_pct": -2.63,
+      "days_active": 6,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "BTFH.CA_E03",
+      "ticker": "BTFH.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 3,
+      "event_date": "2026-08-23",
+      "event_end_date": "2026-08-23",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 2.99,
+      "constitutional_r2": 65.02,
+      "constitutional_score": 36.53,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 2.98,
+      "return_pct": -0.33,
+      "peak_return_pct": -0.33,
+      "days_active": 0,
       "status": "UNDER_REVIEW"
     }
   ],
@@ -1002,7 +1041,7 @@
       "current_price": 137.0,
       "return_pct": 43.01,
       "peak_return_pct": 39.25,
-      "days_active": 228,
+      "days_active": 231,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1021,7 +1060,7 @@
       "current_price": 36.02,
       "return_pct": 3.9,
       "peak_return_pct": 12.5,
-      "days_active": 228,
+      "days_active": 231,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1040,7 +1079,7 @@
       "current_price": 7.69,
       "return_pct": 132.63,
       "peak_return_pct": 93.6,
-      "days_active": 228,
+      "days_active": 231,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1059,7 +1098,7 @@
       "current_price": 26.3,
       "return_pct": 6.05,
       "peak_return_pct": 12.5,
-      "days_active": 228,
+      "days_active": 231,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1078,7 +1117,7 @@
       "current_price": 26.71,
       "return_pct": 7.59,
       "peak_return_pct": 24.06,
-      "days_active": 228,
+      "days_active": 231,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1097,7 +1136,7 @@
       "current_price": 6.2,
       "return_pct": 88.98,
       "peak_return_pct": 55.15,
-      "days_active": 228,
+      "days_active": 231,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1116,7 +1155,7 @@
       "current_price": 13.02,
       "return_pct": 22.33,
       "peak_return_pct": 36.7,
-      "days_active": 219,
+      "days_active": 222,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1135,7 +1174,7 @@
       "current_price": 40.97,
       "return_pct": 78.91,
       "peak_return_pct": 63.28,
-      "days_active": 214,
+      "days_active": 217,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1154,7 +1193,7 @@
       "current_price": 25.36,
       "return_pct": 23.43,
       "peak_return_pct": 12.82,
-      "days_active": 214,
+      "days_active": 217,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1173,7 +1212,7 @@
       "current_price": 2.98,
       "return_pct": -1.97,
       "peak_return_pct": 2.3,
-      "days_active": 211,
+      "days_active": 214,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1192,7 +1231,7 @@
       "current_price": 11.81,
       "return_pct": 29.78,
       "peak_return_pct": 37.36,
-      "days_active": 207,
+      "days_active": 210,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1210,8 +1249,8 @@
       "signal_version": "v1",
       "current_price": 72.11,
       "return_pct": 69.0,
-      "peak_return_pct": 31.5,
-      "days_active": 197,
+      "peak_return_pct": 69.0,
+      "days_active": 200,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1229,8 +1268,8 @@
       "signal_version": "v1",
       "current_price": 29.32,
       "return_pct": 6.85,
-      "peak_return_pct": 3.24,
-      "days_active": 172,
+      "peak_return_pct": 6.85,
+      "days_active": 175,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1249,7 +1288,7 @@
       "current_price": 19.21,
       "return_pct": 10.78,
       "peak_return_pct": 11.82,
-      "days_active": 170,
+      "days_active": 173,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1267,8 +1306,8 @@
       "signal_version": "v1",
       "current_price": 97.7,
       "return_pct": 24.07,
-      "peak_return_pct": 21.4,
-      "days_active": 169,
+      "peak_return_pct": 24.07,
+      "days_active": 172,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1287,7 +1326,7 @@
       "current_price": 15.15,
       "return_pct": 76.16,
       "peak_return_pct": 83.72,
-      "days_active": 158,
+      "days_active": 161,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1306,7 +1345,7 @@
       "current_price": 24.5,
       "return_pct": 31.02,
       "peak_return_pct": 12.3,
-      "days_active": 144,
+      "days_active": 147,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1325,7 +1364,7 @@
       "current_price": 32.49,
       "return_pct": 32.62,
       "peak_return_pct": 15.89,
-      "days_active": 143,
+      "days_active": 146,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1344,7 +1383,7 @@
       "current_price": 114.89,
       "return_pct": 47.73,
       "peak_return_pct": 19.58,
-      "days_active": 143,
+      "days_active": 146,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1363,7 +1402,7 @@
       "current_price": 75.52,
       "return_pct": 9.37,
       "peak_return_pct": 15.42,
-      "days_active": 54,
+      "days_active": 57,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1381,8 +1420,8 @@
       "signal_version": "v1",
       "current_price": 222.0,
       "return_pct": 32.66,
-      "peak_return_pct": 14.73,
-      "days_active": 54,
+      "peak_return_pct": 32.66,
+      "days_active": 57,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1401,19 +1440,38 @@
       "current_price": 330.0,
       "return_pct": 15.43,
       "peak_return_pct": 21.75,
-      "days_active": 49,
+      "days_active": 52,
       "status": "ACTIVE_OPPORTUNITY"
     }
   ],
   "timeline": [
+    {
+      "event_id": "BTFH.CA_E03",
+      "ticker": "BTFH.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 3,
+      "event_date": "2026-08-23",
+      "event_end_date": "2026-08-23",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 2.99,
+      "constitutional_r2": 65.02,
+      "constitutional_score": 36.53,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 2.98,
+      "return_pct": -0.33,
+      "peak_return_pct": -0.33,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
     {
       "event_id": "HRHO.CA_E04",
       "ticker": "HRHO.CA",
       "event_type": "RE_ACCUMULATION",
       "event_index": 4,
       "event_date": "2026-08-17",
-      "event_end_date": "2026-08-20",
-      "event_cluster_days": 4,
+      "event_end_date": "2026-08-23",
+      "event_cluster_days": 7,
       "constitutional_entry_price": 27.01,
       "constitutional_r2": 66.62,
       "constitutional_score": 46.39,
@@ -1421,8 +1479,8 @@
       "signal_version": "v1",
       "current_price": 26.3,
       "return_pct": -2.63,
-      "peak_return_pct": -2.59,
-      "days_active": 3,
+      "peak_return_pct": -2.63,
+      "days_active": 6,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1441,7 +1499,7 @@
       "current_price": 75.52,
       "return_pct": 2.54,
       "peak_return_pct": 8.21,
-      "days_active": 9,
+      "days_active": 12,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1450,8 +1508,8 @@
       "event_type": "RE_ACCUMULATION",
       "event_index": 2,
       "event_date": "2026-08-11",
-      "event_end_date": "2026-08-20",
-      "event_cluster_days": 10,
+      "event_end_date": "2026-08-23",
+      "event_cluster_days": 13,
       "constitutional_entry_price": 38.557,
       "constitutional_r2": 67.21,
       "constitutional_score": 67.92,
@@ -1460,7 +1518,7 @@
       "current_price": 36.02,
       "return_pct": -6.58,
       "peak_return_pct": -4.84,
-      "days_active": 9,
+      "days_active": 12,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1479,7 +1537,7 @@
       "current_price": 26.71,
       "return_pct": 0.3,
       "peak_return_pct": 3.76,
-      "days_active": 9,
+      "days_active": 12,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1498,7 +1556,7 @@
       "current_price": 330.0,
       "return_pct": 11.41,
       "peak_return_pct": 17.51,
-      "days_active": 18,
+      "days_active": 21,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1517,7 +1575,7 @@
       "current_price": 19.21,
       "return_pct": 2.34,
       "peak_return_pct": 2.88,
-      "days_active": 18,
+      "days_active": 21,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1536,7 +1594,7 @@
       "current_price": 26.3,
       "return_pct": -2.63,
       "peak_return_pct": 1.3,
-      "days_active": 18,
+      "days_active": 21,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1555,7 +1613,7 @@
       "current_price": 330.0,
       "return_pct": 15.43,
       "peak_return_pct": 21.75,
-      "days_active": 49,
+      "days_active": 52,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1574,7 +1632,7 @@
       "current_price": 75.52,
       "return_pct": 9.37,
       "peak_return_pct": 15.42,
-      "days_active": 54,
+      "days_active": 57,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1592,8 +1650,8 @@
       "signal_version": "v1",
       "current_price": 222.0,
       "return_pct": 32.66,
-      "peak_return_pct": 14.73,
-      "days_active": 54,
+      "peak_return_pct": 32.66,
+      "days_active": 57,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1612,7 +1670,7 @@
       "current_price": 2.98,
       "return_pct": -0.33,
       "peak_return_pct": 4.01,
-      "days_active": 65,
+      "days_active": 68,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1631,7 +1689,7 @@
       "current_price": 114.89,
       "return_pct": 27.43,
       "peak_return_pct": 3.15,
-      "days_active": 70,
+      "days_active": 73,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1649,8 +1707,8 @@
       "signal_version": "v1",
       "current_price": 29.32,
       "return_pct": 14.89,
-      "peak_return_pct": 11.01,
-      "days_active": 91,
+      "peak_return_pct": 14.89,
+      "days_active": 94,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1669,7 +1727,7 @@
       "current_price": 26.3,
       "return_pct": -2.63,
       "peak_return_pct": 3.3,
-      "days_active": 94,
+      "days_active": 97,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1688,7 +1746,7 @@
       "current_price": 32.49,
       "return_pct": 32.62,
       "peak_return_pct": 15.89,
-      "days_active": 143,
+      "days_active": 146,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1707,7 +1765,7 @@
       "current_price": 114.89,
       "return_pct": 47.73,
       "peak_return_pct": 19.58,
-      "days_active": 143,
+      "days_active": 146,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1726,7 +1784,7 @@
       "current_price": 24.5,
       "return_pct": 31.02,
       "peak_return_pct": 12.3,
-      "days_active": 144,
+      "days_active": 147,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1745,7 +1803,7 @@
       "current_price": 40.97,
       "return_pct": 66.41,
       "peak_return_pct": 51.87,
-      "days_active": 144,
+      "days_active": 147,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1764,7 +1822,7 @@
       "current_price": 25.36,
       "return_pct": 23.26,
       "peak_return_pct": 12.66,
-      "days_active": 144,
+      "days_active": 147,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1783,7 +1841,7 @@
       "current_price": 19.21,
       "return_pct": 11.82,
       "peak_return_pct": 12.86,
-      "days_active": 149,
+      "days_active": 152,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1801,8 +1859,8 @@
       "signal_version": "v1",
       "current_price": 29.32,
       "return_pct": 19.2,
-      "peak_return_pct": 15.17,
-      "days_active": 154,
+      "peak_return_pct": 19.2,
+      "days_active": 157,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1821,7 +1879,7 @@
       "current_price": 13.02,
       "return_pct": 27.41,
       "peak_return_pct": 42.39,
-      "days_active": 156,
+      "days_active": 159,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1840,7 +1898,7 @@
       "current_price": 26.71,
       "return_pct": 4.15,
       "peak_return_pct": 20.1,
-      "days_active": 157,
+      "days_active": 160,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1859,7 +1917,7 @@
       "current_price": 40.97,
       "return_pct": 66.88,
       "peak_return_pct": 52.3,
-      "days_active": 157,
+      "days_active": 160,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1878,7 +1936,7 @@
       "current_price": 15.15,
       "return_pct": 76.16,
       "peak_return_pct": 83.72,
-      "days_active": 158,
+      "days_active": 161,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1897,7 +1955,7 @@
       "current_price": 19.21,
       "return_pct": 10.59,
       "peak_return_pct": 11.63,
-      "days_active": 161,
+      "days_active": 164,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1915,8 +1973,8 @@
       "signal_version": "v1",
       "current_price": 72.11,
       "return_pct": 61.97,
-      "peak_return_pct": 26.03,
-      "days_active": 165,
+      "peak_return_pct": 61.97,
+      "days_active": 168,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1934,8 +1992,8 @@
       "signal_version": "v1",
       "current_price": 97.7,
       "return_pct": 24.07,
-      "peak_return_pct": 21.4,
-      "days_active": 169,
+      "peak_return_pct": 24.07,
+      "days_active": 172,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1954,7 +2012,7 @@
       "current_price": 19.21,
       "return_pct": 10.78,
       "peak_return_pct": 11.82,
-      "days_active": 170,
+      "days_active": 173,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1973,7 +2031,7 @@
       "current_price": 26.3,
       "return_pct": -0.38,
       "peak_return_pct": 5.68,
-      "days_active": 171,
+      "days_active": 174,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1992,7 +2050,7 @@
       "current_price": 40.97,
       "return_pct": 65.27,
       "peak_return_pct": 50.83,
-      "days_active": 171,
+      "days_active": 174,
       "status": "PREMIUM_NOW"
     },
     {
@@ -2010,8 +2068,8 @@
       "signal_version": "v1",
       "current_price": 29.32,
       "return_pct": 6.85,
-      "peak_return_pct": 3.24,
-      "days_active": 172,
+      "peak_return_pct": 6.85,
+      "days_active": 175,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2030,7 +2088,7 @@
       "current_price": 13.02,
       "return_pct": 17.53,
       "peak_return_pct": 31.34,
-      "days_active": 172,
+      "days_active": 175,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2049,7 +2107,7 @@
       "current_price": 2.98,
       "return_pct": -0.67,
       "peak_return_pct": 3.67,
-      "days_active": 176,
+      "days_active": 179,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2068,7 +2126,7 @@
       "current_price": 11.81,
       "return_pct": 26.45,
       "peak_return_pct": 33.83,
-      "days_active": 179,
+      "days_active": 182,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2087,7 +2145,7 @@
       "current_price": 25.36,
       "return_pct": 20.52,
       "peak_return_pct": 10.16,
-      "days_active": 179,
+      "days_active": 182,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2106,7 +2164,7 @@
       "current_price": 36.02,
       "return_pct": -6.58,
       "peak_return_pct": 1.15,
-      "days_active": 182,
+      "days_active": 185,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2124,8 +2182,8 @@
       "signal_version": "v1",
       "current_price": 72.11,
       "return_pct": 69.0,
-      "peak_return_pct": 31.5,
-      "days_active": 197,
+      "peak_return_pct": 69.0,
+      "days_active": 200,
       "status": "PREMIUM_NOW"
     },
     {
@@ -2144,7 +2202,7 @@
       "current_price": 11.81,
       "return_pct": 29.78,
       "peak_return_pct": 37.36,
-      "days_active": 207,
+      "days_active": 210,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2163,7 +2221,7 @@
       "current_price": 7.69,
       "return_pct": 142.92,
       "peak_return_pct": 102.17,
-      "days_active": 207,
+      "days_active": 210,
       "status": "PREMIUM_NOW"
     },
     {
@@ -2182,7 +2240,7 @@
       "current_price": 2.98,
       "return_pct": -1.97,
       "peak_return_pct": 2.3,
-      "days_active": 211,
+      "days_active": 214,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2201,7 +2259,7 @@
       "current_price": 40.97,
       "return_pct": 78.91,
       "peak_return_pct": 63.28,
-      "days_active": 214,
+      "days_active": 217,
       "status": "PREMIUM_NOW"
     },
     {
@@ -2220,7 +2278,7 @@
       "current_price": 25.36,
       "return_pct": 23.43,
       "peak_return_pct": 12.82,
-      "days_active": 214,
+      "days_active": 217,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2239,7 +2297,7 @@
       "current_price": 7.69,
       "return_pct": 149.55,
       "peak_return_pct": 107.68,
-      "days_active": 218,
+      "days_active": 221,
       "status": "PREMIUM_NOW"
     },
     {
@@ -2258,7 +2316,7 @@
       "current_price": 26.71,
       "return_pct": 4.19,
       "peak_return_pct": 20.15,
-      "days_active": 218,
+      "days_active": 221,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2277,7 +2335,7 @@
       "current_price": 13.02,
       "return_pct": 22.33,
       "peak_return_pct": 36.7,
-      "days_active": 219,
+      "days_active": 222,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2296,7 +2354,7 @@
       "current_price": 137.0,
       "return_pct": 43.01,
       "peak_return_pct": 39.25,
-      "days_active": 228,
+      "days_active": 231,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2315,7 +2373,7 @@
       "current_price": 36.02,
       "return_pct": 3.9,
       "peak_return_pct": 12.5,
-      "days_active": 228,
+      "days_active": 231,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2334,7 +2392,7 @@
       "current_price": 7.69,
       "return_pct": 132.63,
       "peak_return_pct": 93.6,
-      "days_active": 228,
+      "days_active": 231,
       "status": "PREMIUM_NOW"
     },
     {
@@ -2353,7 +2411,7 @@
       "current_price": 26.3,
       "return_pct": 6.05,
       "peak_return_pct": 12.5,
-      "days_active": 228,
+      "days_active": 231,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2372,7 +2430,7 @@
       "current_price": 26.71,
       "return_pct": 7.59,
       "peak_return_pct": 24.06,
-      "days_active": 228,
+      "days_active": 231,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2391,7 +2449,7 @@
       "current_price": 6.2,
       "return_pct": 88.98,
       "peak_return_pct": 55.15,
-      "days_active": 228,
+      "days_active": 231,
       "status": "PREMIUM_NOW"
     }
   ],
@@ -2408,9 +2466,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-05-24",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
+      "last_price_update": "2026-08-23",
       "return_pct": null
     },
     {
@@ -2425,9 +2483,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
+      "last_price_update": "2026-08-23",
       "return_pct": null
     },
     {
@@ -2442,9 +2500,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 18.0,
       "last_scan": "2026-06-18",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
+      "last_price_update": "2026-08-23",
       "return_pct": null
     },
     {
@@ -2458,32 +2516,34 @@
       "constitutional_memory": 0,
       "candidate_r2": null,
       "expected_reward_score": null,
-      "last_scan": "2026-08-20",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "signal_history",
-      "last_price_update": "2026-08-20",
+      "last_price_update": "2026-08-23",
       "return_pct": null
     },
     {
       "ticker": "RAYA.CA",
       "current_price": 7.0,
       "status": "BELOW_THRESHOLD",
-      "constitutional_entry_price": null,
-      "distance": null,
-      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
+      "constitutional_entry_price": 7.0,
+      "distance": 0.0,
+      "waiting_for_reason": "Waiting for Score \u226535 (Score 33.4/35)",
       "action": "MONITOR",
       "constitutional_memory": 0,
-      "candidate_r2": 0.0,
-      "expected_reward_score": 0.0,
-      "last_scan": "2026-06-04",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
-      "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": null
+      "candidate_r2": 64.19,
+      "expected_reward_score": 33.44,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
+      "source": "candidate_pool",
+      "last_price_update": "2026-08-23",
+      "return_pct": 0.0
     }
   ],
   "watchlist": [
     "FWRY.CA",
+    "JUFO.CA",
+    "GBCO.CA",
     "ADIB.CA",
     "CCAP.CA",
     "OIH.CA",
@@ -2497,16 +2557,16 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 73.65,
       "distance": 2.54,
-      "waiting_for_reason": "Waiting for Demand Confirmation (R2 53.6/60)",
+      "waiting_for_reason": "READY FOR RE-ACCUMULATION",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 53.58,
-      "expected_reward_score": 70.19,
-      "last_scan": "2026-08-13",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "candidate_r2": 64.49,
+      "expected_reward_score": 52.62,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
-      "return_pct": 2.73
+      "last_price_update": "2026-08-23",
+      "return_pct": 2.54
     },
     {
       "ticker": "ADIB.CA",
@@ -2520,9 +2580,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-05-24",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
+      "last_price_update": "2026-08-23",
       "return_pct": null
     },
     {
@@ -2531,33 +2591,33 @@
       "status": "PREMIUM",
       "constitutional_entry_price": 44.521,
       "distance": 61.97,
-      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
+      "waiting_for_reason": "Below Threshold \u2014 Needs R2\u226550 (R2 35.0/60)",
       "action": "HOLD \u2014 TARGET HIT",
       "constitutional_memory": 1,
-      "candidate_r2": 0.0,
-      "expected_reward_score": 0.0,
-      "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
-      "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 62.8
+      "candidate_r2": 35.05,
+      "expected_reward_score": 24.73,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
+      "source": "candidate_pool",
+      "last_price_update": "2026-08-23",
+      "return_pct": 61.97
     },
     {
       "ticker": "BTFH.CA",
       "current_price": 2.98,
-      "status": "ACTIVE",
+      "status": "UNDER_REVIEW",
       "constitutional_entry_price": 2.99,
       "distance": -0.33,
-      "waiting_for_reason": "Below Threshold \u2014 Needs R2\u226550 (R2 48.9/60)",
-      "action": "HOLD",
+      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
+      "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 48.87,
-      "expected_reward_score": 49.91,
-      "last_scan": "2026-08-17",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "candidate_r2": 65.02,
+      "expected_reward_score": 36.53,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
-      "return_pct": 0.0
+      "last_price_update": "2026-08-23",
+      "return_pct": -0.33
     },
     {
       "ticker": "CCAP.CA",
@@ -2571,9 +2631,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
+      "last_price_update": "2026-08-23",
       "return_pct": null
     },
     {
@@ -2588,10 +2648,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-05-25",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 43.22
+      "last_price_update": "2026-08-23",
+      "return_pct": 43.01
     },
     {
       "ticker": "EAST.CA",
@@ -2602,13 +2662,13 @@
       "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 64.66,
-      "expected_reward_score": 67.31,
-      "last_scan": "2026-08-17",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "candidate_r2": 71.53,
+      "expected_reward_score": 67.28,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
-      "return_pct": -6.48
+      "last_price_update": "2026-08-23",
+      "return_pct": -6.58
     },
     {
       "ticker": "EFID.CA",
@@ -2622,10 +2682,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 37.0,
       "last_scan": "2026-06-14",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 31.07
+      "last_price_update": "2026-08-23",
+      "return_pct": 32.62
     },
     {
       "ticker": "EFIH.CA",
@@ -2639,10 +2699,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 30.48
+      "last_price_update": "2026-08-23",
+      "return_pct": 31.02
     },
     {
       "ticker": "EGAL.CA",
@@ -2650,16 +2710,16 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 296.19,
       "distance": 11.41,
-      "waiting_for_reason": "Waiting for Constitutional Trigger (R2 59.5/60)",
+      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 59.46,
-      "expected_reward_score": 71.52,
-      "last_scan": "2026-08-10",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
-      "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
-      "return_pct": 12.06
+      "candidate_r2": 0.0,
+      "expected_reward_score": 0.0,
+      "last_scan": "2026-06-01",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
+      "source": "egx_research",
+      "last_price_update": "2026-08-23",
+      "return_pct": 11.41
     },
     {
       "ticker": "EMFD.CA",
@@ -2673,10 +2733,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 25.37
+      "last_price_update": "2026-08-23",
+      "return_pct": 26.45
     },
     {
       "ticker": "ETEL.CA",
@@ -2690,10 +2750,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 49.0,
       "last_scan": "2026-06-15",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 26.83
+      "last_price_update": "2026-08-23",
+      "return_pct": 27.43
     },
     {
       "ticker": "FWRY.CA",
@@ -2701,15 +2761,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 18.77,
       "distance": 2.34,
-      "waiting_for_reason": "Waiting for Order Block Touch (R2 55.1/60)",
+      "waiting_for_reason": "Waiting for Order Block Touch (R2 57.0/60)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 55.12,
-      "expected_reward_score": 65.54,
-      "last_scan": "2026-08-17",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "candidate_r2": 56.98,
+      "expected_reward_score": 64.78,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
+      "last_price_update": "2026-08-23",
       "return_pct": 2.34
     },
     {
@@ -2718,16 +2778,16 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 25.52,
       "distance": 14.89,
-      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
+      "waiting_for_reason": "Waiting for Demand Confirmation (R2 52.2/60)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 0.0,
-      "expected_reward_score": 68.0,
-      "last_scan": "2026-05-06",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
-      "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 15.05
+      "candidate_r2": 52.21,
+      "expected_reward_score": 37.35,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
+      "source": "candidate_pool",
+      "last_price_update": "2026-08-23",
+      "return_pct": 14.89
     },
     {
       "ticker": "HELI.CA",
@@ -2741,10 +2801,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 141.65
+      "last_price_update": "2026-08-23",
+      "return_pct": 142.92
     },
     {
       "ticker": "HRHO.CA",
@@ -2755,13 +2815,13 @@
       "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 66.62,
-      "expected_reward_score": 46.39,
-      "last_scan": "2026-08-17",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "candidate_r2": 66.76,
+      "expected_reward_score": 48.79,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
-      "return_pct": -2.96
+      "last_price_update": "2026-08-23",
+      "return_pct": -2.63
     },
     {
       "ticker": "ISPH.CA",
@@ -2769,16 +2829,16 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 10.2186,
       "distance": 27.41,
-      "waiting_for_reason": "Waiting for Constitutional Trigger (R2 58.9/60)",
+      "waiting_for_reason": "Waiting for Score \u226535 (Score 30.3/35)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 58.87,
-      "expected_reward_score": 24.68,
-      "last_scan": "2026-08-17",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "candidate_r2": 60.47,
+      "expected_reward_score": 30.34,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
-      "return_pct": 28.78
+      "last_price_update": "2026-08-23",
+      "return_pct": 27.41
     },
     {
       "ticker": "JUFO.CA",
@@ -2786,15 +2846,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 26.63,
       "distance": 0.3,
-      "waiting_for_reason": "Waiting for Demand Confirmation (R2 50.6/60)",
+      "waiting_for_reason": "Waiting for Order Block Touch (R2 56.9/60)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 50.6,
-      "expected_reward_score": 55.59,
-      "last_scan": "2026-08-13",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "candidate_r2": 56.87,
+      "expected_reward_score": 81.41,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-08-20",
+      "last_price_update": "2026-08-23",
       "return_pct": 0.3
     },
     {
@@ -2803,16 +2863,16 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 167.34,
       "distance": 32.66,
-      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
+      "waiting_for_reason": "Below Threshold \u2014 Needs R2\u226550 (R2 45.2/60)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 0.0,
-      "expected_reward_score": 39.0,
-      "last_scan": "2026-07-06",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
-      "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 31.42
+      "candidate_r2": 45.2,
+      "expected_reward_score": 24.92,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
+      "source": "candidate_pool",
+      "last_price_update": "2026-08-23",
+      "return_pct": 32.66
     },
     {
       "ticker": "OIH.CA",
@@ -2826,9 +2886,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 18.0,
       "last_scan": "2026-06-18",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
+      "last_price_update": "2026-08-23",
       "return_pct": null
     },
     {
@@ -2842,10 +2902,10 @@
       "constitutional_memory": 0,
       "candidate_r2": null,
       "expected_reward_score": null,
-      "last_scan": "2026-08-20",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "signal_history",
-      "last_price_update": "2026-08-20",
+      "last_price_update": "2026-08-23",
       "return_pct": null
     },
     {
@@ -2860,10 +2920,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 65.48
+      "last_price_update": "2026-08-23",
+      "return_pct": 66.41
     },
     {
       "ticker": "ORWE.CA",
@@ -2877,10 +2937,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 22.92
+      "last_price_update": "2026-08-23",
+      "return_pct": 23.26
     },
     {
       "ticker": "PHDC.CA",
@@ -2894,27 +2954,27 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 76.28
+      "last_price_update": "2026-08-23",
+      "return_pct": 76.16
     },
     {
       "ticker": "RAYA.CA",
       "current_price": 7.0,
       "status": "BELOW_THRESHOLD",
-      "constitutional_entry_price": null,
-      "distance": null,
-      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
+      "constitutional_entry_price": 7.0,
+      "distance": 0.0,
+      "waiting_for_reason": "Waiting for Score \u226535 (Score 33.4/35)",
       "action": "MONITOR",
       "constitutional_memory": 0,
-      "candidate_r2": 0.0,
-      "expected_reward_score": 0.0,
-      "last_scan": "2026-06-04",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
-      "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": null
+      "candidate_r2": 64.19,
+      "expected_reward_score": 33.44,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
+      "source": "candidate_pool",
+      "last_price_update": "2026-08-23",
+      "return_pct": 0.0
     },
     {
       "ticker": "RMDA.CA",
@@ -2928,10 +2988,10 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-04",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 86.54
+      "last_price_update": "2026-08-23",
+      "return_pct": 88.98
     },
     {
       "ticker": "TMGH.CA",
@@ -2939,16 +2999,16 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 78.7479,
       "distance": 24.07,
-      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
+      "waiting_for_reason": "Below Threshold \u2014 Needs R2\u226550 (R2 49.6/60)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 0.0,
-      "expected_reward_score": 0.0,
-      "last_scan": "2026-06-04",
-      "generated_at": "2026-08-20T14:46:23.917055+03:00",
-      "source": "egx_research",
-      "last_price_update": "2026-08-20",
-      "return_pct": 22.68
+      "candidate_r2": 49.59,
+      "expected_reward_score": 63.31,
+      "last_scan": "2026-08-23",
+      "generated_at": "2026-08-23T07:03:02.945262+03:00",
+      "source": "candidate_pool",
+      "last_price_update": "2026-08-23",
+      "return_pct": 24.07
     }
   ],
   "portfolio_extra_prices": [
@@ -2963,7 +3023,27 @@
       "current_price": 41.05
     }
   ],
-  "new_events_today": [],
+  "new_events_today": [
+    {
+      "event_id": "BTFH.CA_E03",
+      "ticker": "BTFH.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 3,
+      "event_date": "2026-08-23",
+      "event_end_date": "2026-08-23",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 2.99,
+      "constitutional_r2": 65.02,
+      "constitutional_score": 36.53,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 2.98,
+      "return_pct": -0.33,
+      "peak_return_pct": -0.33,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    }
+  ],
   "stock_dna": {
     "COMI.CA": {
       "ticker": "COMI.CA",
@@ -2972,16 +3052,16 @@
       "buy_count": 2,
       "re_accum_count": 2,
       "avg_entry_price": 53.3416,
-      "current_price": 137.2,
-      "avg_return_pct": 270.22,
-      "best_return_pct": 483.16,
-      "worst_return_pct": 43.22,
+      "current_price": 132.5,
+      "avg_return_pct": 257.5325,
+      "best_return_pct": 463.18,
+      "worst_return_pct": 38.31,
       "historical_buy_zone_low": 23.527,
       "historical_buy_zone_high": 95.7993,
       "constitutional_memory_hits": 4,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-01-04",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "TMGH.CA": {
       "ticker": "TMGH.CA",
@@ -2990,16 +3070,16 @@
       "buy_count": 2,
       "re_accum_count": 4,
       "avg_entry_price": 27.4325,
-      "current_price": 96.61,
-      "avg_return_pct": 755.8967,
-      "best_return_pct": 1182.32,
-      "worst_return_pct": 22.68,
+      "current_price": 95.86,
+      "avg_return_pct": 749.2517,
+      "best_return_pct": 1172.37,
+      "worst_return_pct": 21.73,
       "historical_buy_zone_low": 7.534,
       "historical_buy_zone_high": 78.7479,
       "constitutional_memory_hits": 6,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-03-04",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "ETEL.CA": {
       "ticker": "ETEL.CA",
@@ -3008,70 +3088,70 @@
       "buy_count": 2,
       "re_accum_count": 5,
       "avg_entry_price": 42.2887,
-      "current_price": 114.35,
-      "avg_return_pct": 303.4886,
-      "best_return_pct": 878.69,
-      "worst_return_pct": 26.83,
+      "current_price": 93.65,
+      "avg_return_pct": 230.4471,
+      "best_return_pct": 701.52,
+      "worst_return_pct": 3.87,
       "historical_buy_zone_low": 11.684,
       "historical_buy_zone_high": 90.16,
       "constitutional_memory_hits": 7,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-06-11",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "EGAL.CA": {
       "ticker": "EGAL.CA",
       "first_buy_date": "2021-12-14",
       "first_buy_price": 13.789,
-      "buy_count": 2,
-      "re_accum_count": 5,
-      "avg_entry_price": 92.375,
-      "current_price": 331.9,
-      "avg_return_pct": 1789.6414,
-      "best_return_pct": 2868.69,
-      "worst_return_pct": 12.06,
+      "buy_count": 1,
+      "re_accum_count": 4,
+      "avg_entry_price": 12.911,
+      "current_price": 281.82,
+      "avg_return_pct": 2107.574,
+      "best_return_pct": 2420.75,
+      "worst_return_pct": 1762.78,
       "historical_buy_zone_low": 11.18,
-      "historical_buy_zone_high": 296.19,
-      "constitutional_memory_hits": 7,
-      "constitutional_memory_confidence": "CONFIRMED",
-      "last_event_date": "2026-08-02",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "historical_buy_zone_high": 15.129,
+      "constitutional_memory_hits": 5,
+      "constitutional_memory_confidence": "DEVELOPING",
+      "last_event_date": "2022-06-28",
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "EAST.CA": {
       "ticker": "EAST.CA",
       "first_buy_date": "2022-01-26",
       "first_buy_price": 7.021,
       "buy_count": 2,
-      "re_accum_count": 24,
-      "avg_entry_price": 17.9952,
-      "current_price": 36.06,
-      "avg_return_pct": 203.6973,
-      "best_return_pct": 442.34,
-      "worst_return_pct": -6.48,
+      "re_accum_count": 23,
+      "avg_entry_price": 17.1727,
+      "current_price": 38.5,
+      "avg_return_pct": 233.2232,
+      "best_return_pct": 479.03,
+      "worst_return_pct": -0.15,
       "historical_buy_zone_low": 6.649,
       "historical_buy_zone_high": 38.557,
-      "constitutional_memory_hits": 26,
+      "constitutional_memory_hits": 25,
       "constitutional_memory_confidence": "CONFIRMED",
-      "last_event_date": "2026-08-11",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_event_date": "2026-04-06",
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "ABUK.CA": {
       "ticker": "ABUK.CA",
       "first_buy_date": "2024-03-20",
       "first_buy_price": 48.763,
       "buy_count": 2,
-      "re_accum_count": 19,
-      "avg_entry_price": 47.2215,
-      "current_price": 75.66,
-      "avg_return_pct": 64.151,
-      "best_return_pct": 89.31,
-      "worst_return_pct": 2.73,
+      "re_accum_count": 18,
+      "avg_entry_price": 45.9001,
+      "current_price": 69.05,
+      "avg_return_pct": 52.611,
+      "best_return_pct": 72.77,
+      "worst_return_pct": 0.0,
       "historical_buy_zone_low": 39.967,
-      "historical_buy_zone_high": 73.65,
-      "constitutional_memory_hits": 21,
+      "historical_buy_zone_high": 69.05,
+      "constitutional_memory_hits": 20,
       "constitutional_memory_confidence": "CONFIRMED",
-      "last_event_date": "2026-08-11",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_event_date": "2026-06-27",
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "ORAS.CA": {
       "ticker": "ORAS.CA",
@@ -3080,7 +3160,7 @@
       "buy_count": 0,
       "re_accum_count": 0,
       "avg_entry_price": 0.0,
-      "current_price": 757.7,
+      "current_price": 734.0,
       "avg_return_pct": 0.0,
       "best_return_pct": 0.0,
       "worst_return_pct": 0.0,
@@ -3089,7 +3169,7 @@
       "constitutional_memory_hits": 0,
       "constitutional_memory_confidence": "MONITORING",
       "last_event_date": null,
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "EFIH.CA": {
       "ticker": "EFIH.CA",
@@ -3098,16 +3178,16 @@
       "buy_count": 2,
       "re_accum_count": 12,
       "avg_entry_price": 15.8629,
-      "current_price": 24.4,
-      "avg_return_pct": 58.76,
-      "best_return_pct": 113.55,
-      "worst_return_pct": 22.95,
+      "current_price": 20.78,
+      "avg_return_pct": 35.205,
+      "best_return_pct": 81.87,
+      "worst_return_pct": 4.71,
       "historical_buy_zone_low": 11.426,
       "historical_buy_zone_high": 19.846,
       "constitutional_memory_hits": 14,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-03-29",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "ADIB.CA": {
       "ticker": "ADIB.CA",
@@ -3116,34 +3196,34 @@
       "buy_count": 1,
       "re_accum_count": 11,
       "avg_entry_price": 20.3147,
-      "current_price": 53.98,
-      "avg_return_pct": 262.5392,
-      "best_return_pct": 507.68,
-      "worst_return_pct": 44.72,
+      "current_price": 44.65,
+      "avg_return_pct": 199.8792,
+      "best_return_pct": 402.65,
+      "worst_return_pct": 19.71,
       "historical_buy_zone_low": 8.883,
       "historical_buy_zone_high": 37.3,
       "constitutional_memory_hits": 12,
       "constitutional_memory_confidence": "DEVELOPING",
       "last_event_date": "2025-09-18",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "FWRY.CA": {
       "ticker": "FWRY.CA",
       "first_buy_date": "2021-10-25",
       "first_buy_price": 7.58,
       "buy_count": 2,
-      "re_accum_count": 25,
-      "avg_entry_price": 7.1346,
-      "current_price": 19.21,
-      "avg_return_pct": 241.6841,
-      "best_return_pct": 511.78,
-      "worst_return_pct": 2.34,
+      "re_accum_count": 24,
+      "avg_entry_price": 6.687,
+      "current_price": 18.7,
+      "avg_return_pct": 241.5742,
+      "best_return_pct": 495.54,
+      "worst_return_pct": 7.66,
       "historical_buy_zone_low": 3.14,
-      "historical_buy_zone_high": 18.77,
-      "constitutional_memory_hits": 27,
+      "historical_buy_zone_high": 17.37,
+      "constitutional_memory_hits": 26,
       "constitutional_memory_confidence": "CONFIRMED",
-      "last_event_date": "2026-08-02",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_event_date": "2026-03-24",
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "EMFD.CA": {
       "ticker": "EMFD.CA",
@@ -3152,16 +3232,16 @@
       "buy_count": 2,
       "re_accum_count": 18,
       "avg_entry_price": 4.9805,
-      "current_price": 11.71,
-      "avg_return_pct": 228.507,
-      "best_return_pct": 411.35,
-      "worst_return_pct": 25.37,
+      "current_price": 11.84,
+      "avg_return_pct": 232.152,
+      "best_return_pct": 417.03,
+      "worst_return_pct": 26.77,
       "historical_buy_zone_low": 2.29,
       "historical_buy_zone_high": 9.34,
       "constitutional_memory_hits": 20,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-02-26",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "PHDC.CA": {
       "ticker": "PHDC.CA",
@@ -3170,16 +3250,16 @@
       "buy_count": 2,
       "re_accum_count": 11,
       "avg_entry_price": 2.7083,
-      "current_price": 15.16,
-      "avg_return_pct": 738.8038,
-      "best_return_pct": 1181.49,
-      "worst_return_pct": 76.28,
+      "current_price": 15.13,
+      "avg_return_pct": 737.1438,
+      "best_return_pct": 1178.95,
+      "worst_return_pct": 75.93,
       "historical_buy_zone_low": 1.183,
       "historical_buy_zone_high": 8.6,
       "constitutional_memory_hits": 13,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-03-15",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "ORHD.CA": {
       "ticker": "ORHD.CA",
@@ -3188,16 +3268,16 @@
       "buy_count": 2,
       "re_accum_count": 13,
       "avg_entry_price": 11.7042,
-      "current_price": 40.74,
-      "avg_return_pct": 488.5353,
-      "best_return_pct": 953.26,
-      "worst_return_pct": 64.34,
+      "current_price": 38.82,
+      "avg_return_pct": 460.7987,
+      "best_return_pct": 903.62,
+      "worst_return_pct": 56.6,
       "historical_buy_zone_low": 3.868,
       "historical_buy_zone_high": 24.79,
       "constitutional_memory_hits": 15,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-03-29",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "EFID.CA": {
       "ticker": "EFID.CA",
@@ -3206,52 +3286,52 @@
       "buy_count": 2,
       "re_accum_count": 12,
       "avg_entry_price": 21.6848,
-      "current_price": 32.11,
-      "avg_return_pct": 97.6007,
-      "best_return_pct": 437.5,
-      "worst_return_pct": 13.78,
+      "current_price": 26.8,
+      "avg_return_pct": 64.9257,
+      "best_return_pct": 348.61,
+      "worst_return_pct": -5.03,
       "historical_buy_zone_low": 5.974,
       "historical_buy_zone_high": 28.22,
       "constitutional_memory_hits": 14,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-03-30",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "HRHO.CA": {
       "ticker": "HRHO.CA",
       "first_buy_date": "2022-05-18",
       "first_buy_price": 10.033,
       "buy_count": 2,
-      "re_accum_count": 25,
-      "avg_entry_price": 19.2264,
-      "current_price": 26.21,
-      "avg_return_pct": 66.4756,
-      "best_return_pct": 227.62,
-      "worst_return_pct": -2.96,
+      "re_accum_count": 23,
+      "avg_entry_price": 18.6037,
+      "current_price": 26.86,
+      "avg_return_pct": 76.2972,
+      "best_return_pct": 235.75,
+      "worst_return_pct": -0.56,
       "historical_buy_zone_low": 8.0,
       "historical_buy_zone_high": 27.01,
-      "constitutional_memory_hits": 27,
+      "constitutional_memory_hits": 25,
       "constitutional_memory_confidence": "CONFIRMED",
-      "last_event_date": "2026-08-17",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_event_date": "2026-06-11",
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "JUFO.CA": {
       "ticker": "JUFO.CA",
       "first_buy_date": "2023-10-10",
       "first_buy_price": 12.096,
       "buy_count": 2,
-      "re_accum_count": 10,
-      "avg_entry_price": 23.7773,
-      "current_price": 26.71,
-      "avg_return_pct": 20.3625,
-      "best_return_pct": 120.82,
-      "worst_return_pct": -1.21,
+      "re_accum_count": 9,
+      "avg_entry_price": 23.518,
+      "current_price": 30.46,
+      "avg_return_pct": 39.3418,
+      "best_return_pct": 151.82,
+      "worst_return_pct": 12.66,
       "historical_buy_zone_low": 12.096,
       "historical_buy_zone_high": 27.038,
-      "constitutional_memory_hits": 12,
+      "constitutional_memory_hits": 11,
       "constitutional_memory_confidence": "CONFIRMED",
-      "last_event_date": "2026-08-11",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_event_date": "2026-03-16",
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "BTFH.CA": {
       "ticker": "BTFH.CA",
@@ -3260,16 +3340,16 @@
       "buy_count": 2,
       "re_accum_count": 34,
       "avg_entry_price": 2.3661,
-      "current_price": 2.99,
-      "avg_return_pct": 44.6961,
-      "best_return_pct": 194.29,
-      "worst_return_pct": -7.14,
+      "current_price": 3.03,
+      "avg_return_pct": 46.6317,
+      "best_return_pct": 198.23,
+      "worst_return_pct": -5.9,
       "historical_buy_zone_low": 1.016,
       "historical_buy_zone_high": 3.22,
       "constitutional_memory_hits": 36,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-06-16",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "RAYA.CA": {
       "ticker": "RAYA.CA",
@@ -3278,16 +3358,16 @@
       "buy_count": 1,
       "re_accum_count": 10,
       "avg_entry_price": 2.3052,
-      "current_price": 7.01,
-      "avg_return_pct": 208.2918,
-      "best_return_pct": 263.21,
-      "worst_return_pct": 164.93,
+      "current_price": 7.4,
+      "avg_return_pct": 225.4455,
+      "best_return_pct": 283.42,
+      "worst_return_pct": 179.67,
       "historical_buy_zone_low": 1.93,
       "historical_buy_zone_high": 2.646,
       "constitutional_memory_hits": 11,
       "constitutional_memory_confidence": "DEVELOPING",
       "last_event_date": "2025-04-03",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "GBCO.CA": {
       "ticker": "GBCO.CA",
@@ -3296,16 +3376,16 @@
       "buy_count": 2,
       "re_accum_count": 14,
       "avg_entry_price": 11.3506,
-      "current_price": 29.36,
-      "avg_return_pct": 522.7544,
-      "best_return_pct": 1146.71,
-      "worst_return_pct": 6.99,
+      "current_price": 31.5,
+      "avg_return_pct": 568.145,
+      "best_return_pct": 1237.58,
+      "worst_return_pct": 14.79,
       "historical_buy_zone_low": 2.355,
       "historical_buy_zone_high": 27.441,
       "constitutional_memory_hits": 16,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-05-21",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "HELI.CA": {
       "ticker": "HELI.CA",
@@ -3314,16 +3394,16 @@
       "buy_count": 2,
       "re_accum_count": 12,
       "avg_entry_price": 4.9604,
-      "current_price": 7.65,
-      "avg_return_pct": 86.225,
-      "best_return_pct": 159.23,
-      "worst_return_pct": -10.86,
+      "current_price": 6.53,
+      "avg_return_pct": 58.9614,
+      "best_return_pct": 121.28,
+      "worst_return_pct": -23.91,
       "historical_buy_zone_low": 2.951,
       "historical_buy_zone_high": 8.582,
       "constitutional_memory_hits": 14,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-01-25",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "ARCC.CA": {
       "ticker": "ARCC.CA",
@@ -3332,16 +3412,16 @@
       "buy_count": 2,
       "re_accum_count": 7,
       "avg_entry_price": 11.9392,
-      "current_price": 72.48,
-      "avg_return_pct": 2043.4433,
-      "best_return_pct": 3160.46,
-      "worst_return_pct": 62.8,
+      "current_price": 55.44,
+      "avg_return_pct": 1539.5222,
+      "best_return_pct": 2393.93,
+      "worst_return_pct": 24.53,
       "historical_buy_zone_low": 2.223,
       "historical_buy_zone_high": 44.521,
       "constitutional_memory_hits": 9,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-03-08",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "MCQE.CA": {
       "ticker": "MCQE.CA",
@@ -3350,16 +3430,16 @@
       "buy_count": 2,
       "re_accum_count": 18,
       "avg_entry_price": 19.848,
-      "current_price": 219.91,
-      "avg_return_pct": 1758.636,
-      "best_return_pct": 2815.42,
-      "worst_return_pct": 31.42,
+      "current_price": 167.99,
+      "avg_return_pct": 1319.8185,
+      "best_return_pct": 2127.1,
+      "worst_return_pct": 0.39,
       "historical_buy_zone_low": 7.543,
       "historical_buy_zone_high": 167.34,
       "constitutional_memory_hits": 20,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-06-27",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "ORWE.CA": {
       "ticker": "ORWE.CA",
@@ -3368,16 +3448,16 @@
       "buy_count": 2,
       "re_accum_count": 10,
       "avg_entry_price": 14.739,
-      "current_price": 25.29,
-      "avg_return_pct": 144.8708,
-      "best_return_pct": 397.05,
-      "worst_return_pct": 15.9,
+      "current_price": 22.84,
+      "avg_return_pct": 121.1475,
+      "best_return_pct": 348.9,
+      "worst_return_pct": 4.67,
       "historical_buy_zone_low": 5.088,
       "historical_buy_zone_high": 21.821,
       "constitutional_memory_hits": 12,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-03-29",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "ISPH.CA": {
       "ticker": "ISPH.CA",
@@ -3386,16 +3466,16 @@
       "buy_count": 2,
       "re_accum_count": 22,
       "avg_entry_price": 3.1034,
-      "current_price": 13.16,
-      "avg_return_pct": 502.52,
-      "best_return_pct": 859.88,
-      "worst_return_pct": 18.79,
+      "current_price": 12.05,
+      "avg_return_pct": 451.6996,
+      "best_return_pct": 778.92,
+      "worst_return_pct": 8.77,
       "historical_buy_zone_low": 1.371,
       "historical_buy_zone_high": 11.0784,
       "constitutional_memory_hits": 24,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-03-17",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "RMDA.CA": {
       "ticker": "RMDA.CA",
@@ -3404,16 +3484,16 @@
       "buy_count": 2,
       "re_accum_count": 8,
       "avg_entry_price": 2.4039,
-      "current_price": 6.12,
-      "avg_return_pct": 206.365,
-      "best_return_pct": 389.6,
-      "worst_return_pct": 86.54,
+      "current_price": 4.94,
+      "avg_return_pct": 147.294,
+      "best_return_pct": 295.2,
+      "worst_return_pct": 50.57,
       "historical_buy_zone_low": 1.25,
       "historical_buy_zone_high": 3.2808,
       "constitutional_memory_hits": 10,
       "constitutional_memory_confidence": "CONFIRMED",
       "last_event_date": "2026-01-28",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "OIH.CA": {
       "ticker": "OIH.CA",
@@ -3422,16 +3502,16 @@
       "buy_count": 1,
       "re_accum_count": 18,
       "avg_entry_price": 0.3643,
-      "current_price": 1.88,
-      "avg_return_pct": 641.7016,
-      "best_return_pct": 1005.88,
-      "worst_return_pct": 79.05,
+      "current_price": 1.41,
+      "avg_return_pct": 456.2758,
+      "best_return_pct": 729.41,
+      "worst_return_pct": 34.29,
       "historical_buy_zone_low": 0.17,
       "historical_buy_zone_high": 1.05,
       "constitutional_memory_hits": 19,
       "constitutional_memory_confidence": "DEVELOPING",
       "last_event_date": "2025-11-17",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     },
     "CCAP.CA": {
       "ticker": "CCAP.CA",
@@ -3440,16 +3520,16 @@
       "buy_count": 1,
       "re_accum_count": 14,
       "avg_entry_price": 1.9311,
-      "current_price": 5.57,
-      "avg_return_pct": 224.984,
-      "best_return_pct": 408.68,
-      "worst_return_pct": 112.6,
+      "current_price": 4.88,
+      "avg_return_pct": 184.7233,
+      "best_return_pct": 345.66,
+      "worst_return_pct": 86.26,
       "historical_buy_zone_low": 1.095,
       "historical_buy_zone_high": 2.62,
       "constitutional_memory_hits": 15,
       "constitutional_memory_confidence": "DEVELOPING",
       "last_event_date": "2025-09-30",
-      "last_updated": "2026-08-20T11:46:19.369718"
+      "last_updated": "2026-06-29T10:00:59.008550"
     }
   },
   "mpi_behavior": {
@@ -3542,24 +3622,24 @@
       "phase": "Fear",
       "confidence": 0.25,
       "confidence_label": "LOW",
-      "explanation": "Price in discount zone \u2014 demand confirmation pending. A liquidity sweep followed by a demand reaction supports the reversal thesis. This behavior resembles 129 historical constitutional reversals with an average MFE40 of +15%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
-      "historical_cases": 129,
-      "similarity_score": 0.6909,
+      "explanation": "Price in discount zone \u2014 demand confirmation pending. A liquidity sweep followed by a demand reaction supports the reversal thesis. This behavior resembles 128 historical constitutional reversals with an average MFE40 of +15%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
+      "historical_cases": 128,
+      "similarity_score": 0.6908,
       "avg_mfe40": 15.1,
-      "avg_drawdown": 6.2,
-      "avg_holding_days": 141.7
+      "avg_drawdown": 6.3,
+      "avg_holding_days": 139.7
     },
     "FWRY.CA": {
       "ticker": "FWRY.CA",
       "phase": "Fear",
       "confidence": 0.275,
       "confidence_label": "LOW",
-      "explanation": "Price in discount zone \u2014 demand confirmation pending. A liquidity sweep followed by a demand reaction supports the reversal thesis. This behavior resembles 113 historical constitutional reversals with an average MFE40 of +15%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
-      "historical_cases": 113,
-      "similarity_score": 0.7848,
+      "explanation": "Price in discount zone \u2014 demand confirmation pending. A liquidity sweep followed by a demand reaction supports the reversal thesis. This behavior resembles 112 historical constitutional reversals with an average MFE40 of +15%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
+      "historical_cases": 112,
+      "similarity_score": 0.7843,
       "avg_mfe40": 15.0,
       "avg_drawdown": 7.1,
-      "avg_holding_days": 140.3
+      "avg_holding_days": 138.1
     },
     "EFID.CA": {
       "ticker": "EFID.CA",
@@ -3602,36 +3682,36 @@
       "phase": "Confidence Building",
       "confidence": 0.2,
       "confidence_label": "LOW",
-      "explanation": "Confidence-building phase in progress. Higher-timeframe structure shows higher highs and higher lows, confirming the underlying trend. This behavior resembles 133 historical constitutional reversals with an average MFE40 of +16%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
-      "historical_cases": 133,
-      "similarity_score": 0.6468,
-      "avg_mfe40": 15.5,
-      "avg_drawdown": 6.8,
-      "avg_holding_days": 135.3
+      "explanation": "Confidence-building phase in progress. Higher-timeframe structure shows higher highs and higher lows, confirming the underlying trend. This behavior resembles 20 historical constitutional reversals with an average MFE40 of +21%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
+      "historical_cases": 20,
+      "similarity_score": 0.6452,
+      "avg_mfe40": 20.8,
+      "avg_drawdown": 5.2,
+      "avg_holding_days": 96.7
     },
     "GBCO.CA": {
       "ticker": "GBCO.CA",
       "phase": "Fear",
       "confidence": 0.2,
       "confidence_label": "LOW",
-      "explanation": "Price in discount zone \u2014 demand confirmation pending. A high-volume demand node indicates historically significant traded volume at the current price level. This behavior resembles 133 historical constitutional reversals with an average MFE40 of +16%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
-      "historical_cases": 133,
-      "similarity_score": 0.6727,
-      "avg_mfe40": 16.2,
-      "avg_drawdown": 6.1,
-      "avg_holding_days": 140.1
+      "explanation": "Price in discount zone \u2014 demand confirmation pending. A high-volume demand node indicates historically significant traded volume at the current price level. This behavior resembles 62 historical constitutional reversals with an average MFE40 of +18%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
+      "historical_cases": 62,
+      "similarity_score": 0.6241,
+      "avg_mfe40": 18.0,
+      "avg_drawdown": 4.8,
+      "avg_holding_days": 100.0
     },
     "TMGH.CA": {
       "ticker": "TMGH.CA",
       "phase": "Fear",
       "confidence": 0.25,
       "confidence_label": "LOW",
-      "explanation": "Price in discount zone \u2014 demand confirmation pending. A liquidity sweep followed by a demand reaction supports the reversal thesis. This behavior resembles 126 historical constitutional reversals with an average MFE40 of +16%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
-      "historical_cases": 126,
-      "similarity_score": 0.6736,
+      "explanation": "Price in discount zone \u2014 demand confirmation pending. A liquidity sweep followed by a demand reaction supports the reversal thesis. This behavior resembles 125 historical constitutional reversals with an average MFE40 of +16%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
+      "historical_cases": 125,
+      "similarity_score": 0.673,
       "avg_mfe40": 15.5,
-      "avg_drawdown": 6.1,
-      "avg_holding_days": 144.2
+      "avg_drawdown": 6.2,
+      "avg_holding_days": 142.1
     }
   },
   "valuation": {
@@ -3890,16 +3970,16 @@
     }
   },
   "statistics": {
-    "total_timeline_events": 52,
+    "total_timeline_events": 53,
     "total_tickers_in_timeline": 22,
-    "near_constitutional_count": 1,
+    "near_constitutional_count": 3,
     "active_count": 22,
-    "re_accumulation_count": 30,
+    "re_accumulation_count": 31,
     "first_buys_count": 22,
     "premium_count": 5,
     "future_candidates_count": 5,
     "universe_size": 27,
-    "new_events_today": 0
+    "new_events_today": 1
   },
   "health_stars": "\u2605\u2605\u2606\u2606\u2606",
   "health_label": "Needs Attention",
@@ -3933,6 +4013,16 @@
   ],
   "knowledge_count": 8,
   "event_timeline": [
+    {
+      "id": 7654,
+      "event_type": "BUY_SIGNAL",
+      "ticker": "BTFH.CA",
+      "badge": "BUY SIGNAL",
+      "description": "BUY LIMIT @ 2.99 EGP \u2014 Constitutional model confirmed (R\u00b2=65.0, Score=37)",
+      "icon": "TrendingUp",
+      "timestamp": "2026-08-23T14:30:00+03:00",
+      "metadata": "{\"entry_price\": 2.99, \"r2\": 65.02, \"score\": 36.53}"
+    },
     {
       "id": 7653,
       "event_type": "NEAR_ENTRY",
@@ -4422,21 +4512,11 @@
       "icon": "Clock",
       "timestamp": "2026-08-20T12:48:35+03:00",
       "metadata": "{\"pct_above\": 1.5}"
-    },
-    {
-      "id": 7604,
-      "event_type": "SCAN",
-      "ticker": "",
-      "badge": "SCAN",
-      "description": "Full universe scan completed \u2014 27 tickers processed",
-      "icon": "RefreshCw",
-      "timestamp": "2026-08-20T12:48:35+03:00",
-      "metadata": "{\"tickers_processed\": 27}"
     }
   ],
   "event_timeline_engine": {
-    "last_event_ts": "2026-08-20T14:46:24+03:00",
-    "total_events": 7537,
+    "last_event_ts": "2026-08-23T14:30:00+03:00",
+    "total_events": 7538,
     "db_path": "/home/runner/work/smartlist/smartlist/event_timeline.db"
   }
 }

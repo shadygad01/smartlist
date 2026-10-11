@@ -1,12 +1,12 @@
 {
   "scan_id": "1cd1c6f5-50d1-4db8-a194-f00fa2c41017",
-  "generated_at": "2026-10-08T20:42:30.151641+03:00",
-  "price_data_as_of": "2026-10-08",
-  "market_date": "2026-10-08",
-  "market_status": "CLOSED (After Hours)",
-  "build_hash": "",
-  "commit": "021ba8d76",
-  "last_scan_ts": "2026-10-08T14:28:36.705384+03:00",
+  "generated_at": "2026-10-11T07:07:00.215223+03:00",
+  "price_data_as_of": "2026-10-11",
+  "market_date": "2026-10-11",
+  "market_status": "PRE-MARKET (opens 10:00)",
+  "build_hash": "708f1b2a8572c1de",
+  "commit": "021ba8d",
+  "last_scan_ts": "2026-10-11T07:06:58.865567+03:00",
   "_lineage": {
     "scan_id": "1cd1c6f5-50d1-4db8-a194-f00fa2c41017",
     "producer": "presentation_snapshot.py",
@@ -15,17 +15,28 @@
       "universe_snapshot.db",
       "candidate_pool.db"
     ],
-    "generation_timestamp": "2026-10-08T17:42:30+00:00",
+    "generation_timestamp": "2026-10-11T04:07:00+00:00",
     "git_commit": "021ba8d76",
     "gate_version": "cff742390944766e",
     "workflow_run": "35842995302",
     "source_fingerprints": {
-      "constitutional_opportunity_events.db": "17c3e8b7499f863d",
-      "universe_snapshot.db": "a22396233586045f",
-      "candidate_pool.db": "dcfe7c42cb3af7f5"
+      "constitutional_opportunity_events.db": "54bb10091138bae8",
+      "universe_snapshot.db": "e6ba0cd9e9ed7a38",
+      "candidate_pool.db": "316ed6138340edaf"
     }
   },
-  "near_constitutional": [],
+  "near_constitutional": [
+    {
+      "ticker": "HELI.CA",
+      "candidate_r2": 50.75,
+      "expected_reward_score": 41.08,
+      "candidate_entry_zone": 7.49,
+      "current_price": 7.49,
+      "sector": "Real Estate",
+      "distance_to_constitutional": 9.2,
+      "need_move_pct": 0.0
+    }
+  ],
   "active": [
     {
       "ticker": "HELI.CA",
@@ -33,15 +44,15 @@
       "status": "PREMIUM",
       "constitutional_entry_price": 3.1657,
       "distance": 136.6,
-      "waiting_for_reason": "Waiting for Score \u226535 and Demand Confirmation (R2 50.2/60, Score 29.0/35)",
+      "waiting_for_reason": "Waiting for Demand Confirmation (R2 50.8/60)",
       "action": "HOLD \u2014 TARGET HIT",
       "constitutional_memory": 1,
-      "candidate_r2": 50.2,
-      "expected_reward_score": 29.0,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 50.75,
+      "expected_reward_score": 41.08,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 136.6
     },
     {
@@ -56,9 +67,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 49.0,
       "last_scan": "2026-06-15",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 64.15
     },
     {
@@ -67,15 +78,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 9.34,
       "distance": 35.97,
-      "waiting_for_reason": "Waiting for Order Block Touch (R2 57.7/60)",
+      "waiting_for_reason": "READY FOR RE-ACCUMULATION",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 57.69,
-      "expected_reward_score": 34.57,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 60.45,
+      "expected_reward_score": 41.16,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 35.97
     },
     {
@@ -84,15 +95,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 18.7,
       "distance": 34.92,
-      "waiting_for_reason": "Waiting for Order Block Touch (R2 55.5/60)",
+      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 55.51,
-      "expected_reward_score": 36.99,
-      "last_scan": "2026-09-30",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
-      "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "candidate_r2": 0.0,
+      "expected_reward_score": 0.0,
+      "last_scan": "2026-06-01",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
+      "source": "egx_research",
+      "last_price_update": "2026-10-11",
       "return_pct": 34.92
     },
     {
@@ -107,9 +118,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 31.91
     },
     {
@@ -118,15 +129,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 95.7993,
       "distance": 30.12,
-      "waiting_for_reason": "Waiting for Score \u226535 (Score 33.8/35)",
+      "waiting_for_reason": "READY FOR RE-ACCUMULATION",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 65.55,
-      "expected_reward_score": 33.77,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 74.06,
+      "expected_reward_score": 40.5,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 30.12
     },
     {
@@ -135,15 +146,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 25.52,
       "distance": 21.51,
-      "waiting_for_reason": "Waiting for Score \u226535 and Demand Confirmation (R2 52.6/60, Score 32.7/35)",
+      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 52.65,
-      "expected_reward_score": 32.69,
-      "last_scan": "2026-09-30",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
-      "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "candidate_r2": 0.0,
+      "expected_reward_score": 68.0,
+      "last_scan": "2026-05-06",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
+      "source": "egx_research",
+      "last_price_update": "2026-10-11",
       "return_pct": 21.51
     },
     {
@@ -158,9 +169,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-05-25",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 19.17
     },
     {
@@ -175,9 +186,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 14.59
     },
     {
@@ -186,15 +197,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 67.0,
       "distance": 6.07,
-      "waiting_for_reason": "Waiting for Constitutional Trigger (R2 58.6/60)",
+      "waiting_for_reason": "Below Threshold \u2014 Needs R2\u226550 (R2 41.2/60)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 58.6,
-      "expected_reward_score": 44.95,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 41.25,
+      "expected_reward_score": 36.33,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 6.07
     },
     {
@@ -203,15 +214,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 18.77,
       "distance": 1.55,
-      "waiting_for_reason": "Waiting for Order Block Touch (R2 56.9/60)",
+      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 56.88,
-      "expected_reward_score": 28.54,
-      "last_scan": "2026-09-30",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
-      "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "candidate_r2": 0.0,
+      "expected_reward_score": 0.0,
+      "last_scan": "2026-05-24",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
+      "source": "egx_research",
+      "last_price_update": "2026-10-11",
       "return_pct": 1.55
     },
     {
@@ -220,15 +231,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 27.01,
       "distance": -1.63,
-      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
+      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 66.39,
-      "expected_reward_score": 48.39,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
-      "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "candidate_r2": 0.0,
+      "expected_reward_score": 36.0,
+      "last_scan": "2026-09-24",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
+      "source": "egx_research",
+      "last_price_update": "2026-10-11",
       "return_pct": -1.63
     },
     {
@@ -237,15 +248,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 206.54,
       "distance": -4.75,
-      "waiting_for_reason": "Waiting for Score \u226535 (Score 24.4/35)",
+      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 79.7,
-      "expected_reward_score": 24.37,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 74.53,
+      "expected_reward_score": 45.35,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -4.75
     },
     {
@@ -254,15 +265,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 5.77,
       "distance": -6.24,
-      "waiting_for_reason": "Waiting for Score \u226535 (Score 32.9/35)",
+      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 80.43,
-      "expected_reward_score": 32.93,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 81.52,
+      "expected_reward_score": 77.46,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -6.24
     },
     {
@@ -271,15 +282,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 94.7,
       "distance": -7.19,
-      "waiting_for_reason": "Waiting for Score \u226535 (Score 29.0/35)",
+      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 73.92,
-      "expected_reward_score": 29.01,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 73.11,
+      "expected_reward_score": 47.09,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -7.19
     },
     {
@@ -291,12 +302,12 @@
       "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 63.72,
-      "expected_reward_score": 38.46,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 71.62,
+      "expected_reward_score": 48.23,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -7.36
     },
     {
@@ -308,12 +319,12 @@
       "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 76.45,
-      "expected_reward_score": 48.0,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 83.86,
+      "expected_reward_score": 44.7,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -7.64
     },
     {
@@ -325,12 +336,12 @@
       "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 79.48,
-      "expected_reward_score": 40.68,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 80.66,
+      "expected_reward_score": 52.8,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -7.78
     },
     {
@@ -339,15 +350,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 7.24,
       "distance": -8.84,
-      "waiting_for_reason": "Waiting for Score \u226535 (Score 29.3/35)",
+      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 69.62,
-      "expected_reward_score": 29.27,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 72.32,
+      "expected_reward_score": 48.16,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -8.84
     },
     {
@@ -360,11 +371,11 @@
       "action": "MONITOR",
       "constitutional_memory": 1,
       "candidate_r2": 92.88,
-      "expected_reward_score": 51.23,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "expected_reward_score": 53.89,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -9.79
     },
     {
@@ -376,12 +387,12 @@
       "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 89.72,
-      "expected_reward_score": 63.24,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 91.52,
+      "expected_reward_score": 65.86,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -22.16
     },
     {
@@ -390,15 +401,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 38.557,
       "distance": -26.84,
-      "waiting_for_reason": "Waiting for Score \u226535 (Score 20.0/35)",
+      "waiting_for_reason": "Waiting for Score \u226535 (Score 34.7/35)",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 88.94,
-      "expected_reward_score": 20.04,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 94.02,
+      "expected_reward_score": 34.7,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -26.84
     },
     {
@@ -407,15 +418,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 24.62,
       "distance": -51.26,
-      "waiting_for_reason": "Waiting for Score \u226535 and Demand Confirmation (R2 53.5/60, Score 28.2/35)",
+      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 53.51,
-      "expected_reward_score": 28.24,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 94.25,
+      "expected_reward_score": 53.13,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -51.26
     }
   ],
@@ -435,8 +446,8 @@
       "signal_version": "v1",
       "current_price": 7.49,
       "return_pct": 143.06,
-      "peak_return_pct": 142.08,
-      "days_active": 267,
+      "peak_return_pct": 143.06,
+      "days_active": 270,
       "status": "PREMIUM_NOW"
     },
     {
@@ -455,7 +466,7 @@
       "current_price": 25.0,
       "return_pct": -2.48,
       "peak_return_pct": 20.15,
-      "days_active": 267,
+      "days_active": 270,
       "status": "UNDER_REVIEW"
     },
     {
@@ -473,8 +484,8 @@
       "signal_version": "v1",
       "current_price": 7.49,
       "return_pct": 136.6,
-      "peak_return_pct": 135.65,
-      "days_active": 256,
+      "peak_return_pct": 136.6,
+      "days_active": 259,
       "status": "PREMIUM_NOW"
     },
     {
@@ -493,7 +504,7 @@
       "current_price": 28.21,
       "return_pct": -26.84,
       "peak_return_pct": 1.15,
-      "days_active": 231,
+      "days_active": 234,
       "status": "UNDER_REVIEW"
     },
     {
@@ -512,7 +523,7 @@
       "current_price": 12.7,
       "return_pct": 35.97,
       "peak_return_pct": 37.04,
-      "days_active": 228,
+      "days_active": 231,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -531,7 +542,7 @@
       "current_price": 27.14,
       "return_pct": 28.98,
       "peak_return_pct": 10.16,
-      "days_active": 228,
+      "days_active": 231,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -550,7 +561,7 @@
       "current_price": 2.77,
       "return_pct": -7.67,
       "peak_return_pct": 3.67,
-      "days_active": 225,
+      "days_active": 228,
       "status": "UNDER_REVIEW"
     },
     {
@@ -569,7 +580,7 @@
       "current_price": 11.7,
       "return_pct": 5.61,
       "peak_return_pct": 31.34,
-      "days_active": 221,
+      "days_active": 224,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -588,7 +599,7 @@
       "current_price": 26.57,
       "return_pct": 0.64,
       "peak_return_pct": 5.68,
-      "days_active": 220,
+      "days_active": 223,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -607,7 +618,7 @@
       "current_price": 12.0,
       "return_pct": -51.59,
       "peak_return_pct": 56.92,
-      "days_active": 220,
+      "days_active": 223,
       "status": "UNDER_REVIEW"
     },
     {
@@ -626,7 +637,7 @@
       "current_price": 71.07,
       "return_pct": 59.63,
       "peak_return_pct": 69.87,
-      "days_active": 214,
+      "days_active": 217,
       "status": "PREMIUM_NOW"
     },
     {
@@ -645,7 +656,7 @@
       "current_price": 19.06,
       "return_pct": 9.73,
       "peak_return_pct": 11.63,
-      "days_active": 210,
+      "days_active": 213,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -664,7 +675,7 @@
       "current_price": 25.0,
       "return_pct": -2.52,
       "peak_return_pct": 20.1,
-      "days_active": 206,
+      "days_active": 209,
       "status": "UNDER_REVIEW"
     },
     {
@@ -683,7 +694,7 @@
       "current_price": 12.0,
       "return_pct": -51.12,
       "peak_return_pct": 58.45,
-      "days_active": 206,
+      "days_active": 209,
       "status": "UNDER_REVIEW"
     },
     {
@@ -702,7 +713,7 @@
       "current_price": 11.7,
       "return_pct": 14.5,
       "peak_return_pct": 42.39,
-      "days_active": 205,
+      "days_active": 208,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -721,7 +732,7 @@
       "current_price": 31.01,
       "return_pct": 26.07,
       "peak_return_pct": 26.03,
-      "days_active": 203,
+      "days_active": 206,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -740,7 +751,7 @@
       "current_price": 19.06,
       "return_pct": 10.94,
       "peak_return_pct": 12.86,
-      "days_active": 198,
+      "days_active": 201,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -759,7 +770,7 @@
       "current_price": 12.0,
       "return_pct": -51.26,
       "peak_return_pct": 58.0,
-      "days_active": 193,
+      "days_active": 196,
       "status": "UNDER_REVIEW"
     },
     {
@@ -778,7 +789,7 @@
       "current_price": 27.14,
       "return_pct": 31.91,
       "peak_return_pct": 12.66,
-      "days_active": 193,
+      "days_active": 196,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -797,7 +808,7 @@
       "current_price": 26.57,
       "return_pct": -1.63,
       "peak_return_pct": 3.3,
-      "days_active": 143,
+      "days_active": 146,
       "status": "UNDER_REVIEW"
     },
     {
@@ -816,7 +827,7 @@
       "current_price": 31.01,
       "return_pct": 21.51,
       "peak_return_pct": 21.47,
-      "days_active": 140,
+      "days_active": 143,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -835,7 +846,7 @@
       "current_price": 148.0,
       "return_pct": 64.15,
       "peak_return_pct": 3.15,
-      "days_active": 119,
+      "days_active": 122,
       "status": "PREMIUM_NOW"
     },
     {
@@ -854,7 +865,7 @@
       "current_price": 2.77,
       "return_pct": -7.36,
       "peak_return_pct": 4.01,
-      "days_active": 114,
+      "days_active": 117,
       "status": "UNDER_REVIEW"
     },
     {
@@ -873,7 +884,7 @@
       "current_price": 339.4,
       "return_pct": 14.59,
       "peak_return_pct": 17.51,
-      "days_active": 67,
+      "days_active": 70,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -892,7 +903,7 @@
       "current_price": 19.06,
       "return_pct": 1.55,
       "peak_return_pct": 2.88,
-      "days_active": 67,
+      "days_active": 70,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -911,7 +922,7 @@
       "current_price": 26.57,
       "return_pct": -1.63,
       "peak_return_pct": 1.3,
-      "days_active": 67,
+      "days_active": 70,
       "status": "UNDER_REVIEW"
     },
     {
@@ -930,7 +941,7 @@
       "current_price": 90.0,
       "return_pct": 22.2,
       "peak_return_pct": 27.63,
-      "days_active": 58,
+      "days_active": 61,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -949,7 +960,7 @@
       "current_price": 28.21,
       "return_pct": -26.84,
       "peak_return_pct": -4.84,
-      "days_active": 58,
+      "days_active": 61,
       "status": "UNDER_REVIEW"
     },
     {
@@ -968,7 +979,7 @@
       "current_price": 25.0,
       "return_pct": -6.12,
       "peak_return_pct": 3.76,
-      "days_active": 58,
+      "days_active": 61,
       "status": "UNDER_REVIEW"
     },
     {
@@ -987,7 +998,7 @@
       "current_price": 26.57,
       "return_pct": -1.63,
       "peak_return_pct": -2.63,
-      "days_active": 52,
+      "days_active": 55,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1006,7 +1017,7 @@
       "current_price": 90.0,
       "return_pct": 19.17,
       "peak_return_pct": 24.47,
-      "days_active": 46,
+      "days_active": 49,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1025,7 +1036,7 @@
       "current_price": 2.77,
       "return_pct": -7.36,
       "peak_return_pct": 1.34,
-      "days_active": 46,
+      "days_active": 49,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1044,7 +1055,7 @@
       "current_price": 19.06,
       "return_pct": 1.55,
       "peak_return_pct": 1.65,
-      "days_active": 43,
+      "days_active": 46,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1053,8 +1064,8 @@
       "event_type": "RE_ACCUMULATION",
       "event_index": 3,
       "event_date": "2026-09-01",
-      "event_end_date": "2026-10-08",
-      "event_cluster_days": 38,
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 41,
       "constitutional_entry_price": 12.97,
       "constitutional_r2": 67.36,
       "constitutional_score": 37.69,
@@ -1063,7 +1074,7 @@
       "current_price": 11.7,
       "return_pct": -9.79,
       "peak_return_pct": 1.62,
-      "days_active": 37,
+      "days_active": 40,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1082,7 +1093,7 @@
       "current_price": 25.0,
       "return_pct": -7.78,
       "peak_return_pct": 1.18,
-      "days_active": 37,
+      "days_active": 40,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1101,7 +1112,7 @@
       "current_price": 2.77,
       "return_pct": -7.36,
       "peak_return_pct": 1.34,
-      "days_active": 29,
+      "days_active": 32,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1110,8 +1121,8 @@
       "event_type": "RE_ACCUMULATION",
       "event_index": 1,
       "event_date": "2026-09-15",
-      "event_end_date": "2026-10-08",
-      "event_cluster_days": 24,
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 27,
       "constitutional_entry_price": 14.0,
       "constitutional_r2": 71.16,
       "constitutional_score": 37.5,
@@ -1120,7 +1131,7 @@
       "current_price": 12.93,
       "return_pct": -7.64,
       "peak_return_pct": -3.57,
-      "days_active": 23,
+      "days_active": 26,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1139,7 +1150,7 @@
       "current_price": 87.89,
       "return_pct": -7.19,
       "peak_return_pct": -3.06,
-      "days_active": 17,
+      "days_active": 20,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1157,8 +1168,8 @@
       "signal_version": "v1",
       "current_price": 71.07,
       "return_pct": 6.07,
-      "peak_return_pct": 0.75,
-      "days_active": 11,
+      "peak_return_pct": 6.07,
+      "days_active": 14,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1177,7 +1188,7 @@
       "current_price": 28.21,
       "return_pct": -26.84,
       "peak_return_pct": -23.57,
-      "days_active": 11,
+      "days_active": 14,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1186,8 +1197,8 @@
       "event_type": "RE_ACCUMULATION",
       "event_index": 5,
       "event_date": "2026-09-27",
-      "event_end_date": "2026-10-08",
-      "event_cluster_days": 12,
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 15,
       "constitutional_entry_price": 27.11,
       "constitutional_r2": 66.64,
       "constitutional_score": 53.82,
@@ -1196,7 +1207,7 @@
       "current_price": 25.0,
       "return_pct": -7.78,
       "peak_return_pct": -7.49,
-      "days_active": 11,
+      "days_active": 14,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1214,8 +1225,8 @@
       "signal_version": "v1",
       "current_price": 196.73,
       "return_pct": -4.75,
-      "peak_return_pct": -8.11,
-      "days_active": 11,
+      "peak_return_pct": -4.75,
+      "days_active": 14,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1234,7 +1245,7 @@
       "current_price": 5.41,
       "return_pct": -6.24,
       "peak_return_pct": -5.55,
-      "days_active": 11,
+      "days_active": 14,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1243,8 +1254,8 @@
       "event_type": "RE_ACCUMULATION",
       "event_index": 5,
       "event_date": "2026-10-04",
-      "event_end_date": "2026-10-08",
-      "event_cluster_days": 5,
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 8,
       "constitutional_entry_price": 2.99,
       "constitutional_r2": 63.72,
       "constitutional_score": 38.46,
@@ -1252,8 +1263,8 @@
       "signal_version": "v1",
       "current_price": 2.77,
       "return_pct": -7.36,
-      "peak_return_pct": -5.35,
-      "days_active": 4,
+      "peak_return_pct": -7.36,
+      "days_active": 7,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1262,8 +1273,8 @@
       "event_type": "RE_ACCUMULATION",
       "event_index": 1,
       "event_date": "2026-10-04",
-      "event_end_date": "2026-10-08",
-      "event_cluster_days": 5,
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 8,
       "constitutional_entry_price": 24.4978,
       "constitutional_r2": 89.72,
       "constitutional_score": 63.24,
@@ -1271,8 +1282,8 @@
       "signal_version": "v1",
       "current_price": 19.07,
       "return_pct": -22.16,
-      "peak_return_pct": -21.26,
-      "days_active": 4,
+      "peak_return_pct": -22.16,
+      "days_active": 7,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1291,7 +1302,102 @@
       "current_price": 26.57,
       "return_pct": -1.63,
       "peak_return_pct": -10.4,
-      "days_active": 4,
+      "days_active": 7,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "MCQE.CA_E02",
+      "ticker": "MCQE.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 2,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 206.54,
+      "constitutional_r2": 74.53,
+      "constitutional_score": 45.35,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 196.73,
+      "return_pct": -4.75,
+      "peak_return_pct": -4.75,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "ORHD.CA_E04",
+      "ticker": "ORHD.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 4,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 24.62,
+      "constitutional_r2": 94.25,
+      "constitutional_score": 53.13,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 12.0,
+      "return_pct": -51.26,
+      "peak_return_pct": -51.26,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "RAYA.CA_E01",
+      "ticker": "RAYA.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 1,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 7.24,
+      "constitutional_r2": 72.32,
+      "constitutional_score": 48.16,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 6.6,
+      "return_pct": -8.84,
+      "peak_return_pct": -8.84,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "RMDA.CA_E02",
+      "ticker": "RMDA.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 2,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 5.77,
+      "constitutional_r2": 81.52,
+      "constitutional_score": 77.46,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 5.41,
+      "return_pct": -6.24,
+      "peak_return_pct": -6.24,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "TMGH.CA_E02",
+      "ticker": "TMGH.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 2,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 94.7,
+      "constitutional_r2": 73.11,
+      "constitutional_score": 47.09,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 87.89,
+      "return_pct": -7.19,
+      "peak_return_pct": -7.19,
+      "days_active": 0,
       "status": "UNDER_REVIEW"
     }
   ],
@@ -1312,7 +1418,7 @@
       "current_price": 124.65,
       "return_pct": 30.12,
       "peak_return_pct": 39.55,
-      "days_active": 277,
+      "days_active": 280,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1331,7 +1437,7 @@
       "current_price": 28.21,
       "return_pct": -18.63,
       "peak_return_pct": 12.5,
-      "days_active": 277,
+      "days_active": 280,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1349,8 +1455,8 @@
       "signal_version": "v1",
       "current_price": 7.49,
       "return_pct": 126.58,
-      "peak_return_pct": 125.67,
-      "days_active": 277,
+      "peak_return_pct": 126.58,
+      "days_active": 280,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1369,7 +1475,7 @@
       "current_price": 26.57,
       "return_pct": 7.14,
       "peak_return_pct": 12.5,
-      "days_active": 277,
+      "days_active": 280,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1388,7 +1494,7 @@
       "current_price": 25.0,
       "return_pct": 0.7,
       "peak_return_pct": 24.06,
-      "days_active": 277,
+      "days_active": 280,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1407,7 +1513,7 @@
       "current_price": 5.41,
       "return_pct": 64.9,
       "peak_return_pct": 85.93,
-      "days_active": 277,
+      "days_active": 280,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1426,7 +1532,7 @@
       "current_price": 11.7,
       "return_pct": 9.93,
       "peak_return_pct": 36.7,
-      "days_active": 268,
+      "days_active": 271,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1445,7 +1551,7 @@
       "current_price": 12.0,
       "return_pct": -47.6,
       "peak_return_pct": 69.87,
-      "days_active": 263,
+      "days_active": 266,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1464,7 +1570,7 @@
       "current_price": 27.14,
       "return_pct": 32.09,
       "peak_return_pct": 12.82,
-      "days_active": 263,
+      "days_active": 266,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1483,7 +1589,7 @@
       "current_price": 2.77,
       "return_pct": -8.88,
       "peak_return_pct": 2.3,
-      "days_active": 260,
+      "days_active": 263,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1502,7 +1608,7 @@
       "current_price": 12.7,
       "return_pct": 39.56,
       "peak_return_pct": 40.66,
-      "days_active": 256,
+      "days_active": 259,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1521,7 +1627,7 @@
       "current_price": 71.07,
       "return_pct": 66.56,
       "peak_return_pct": 77.25,
-      "days_active": 246,
+      "days_active": 249,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1540,7 +1646,7 @@
       "current_price": 31.01,
       "return_pct": 13.01,
       "peak_return_pct": 12.97,
-      "days_active": 221,
+      "days_active": 224,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1559,7 +1665,7 @@
       "current_price": 19.06,
       "return_pct": 9.92,
       "peak_return_pct": 11.82,
-      "days_active": 219,
+      "days_active": 222,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1578,7 +1684,7 @@
       "current_price": 87.89,
       "return_pct": 11.61,
       "peak_return_pct": 24.19,
-      "days_active": 218,
+      "days_active": 221,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1597,7 +1703,7 @@
       "current_price": 12.93,
       "return_pct": 50.35,
       "peak_return_pct": 83.72,
-      "days_active": 207,
+      "days_active": 210,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1616,7 +1722,7 @@
       "current_price": 25.23,
       "return_pct": 34.92,
       "peak_return_pct": 25.13,
-      "days_active": 193,
+      "days_active": 196,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1635,7 +1741,7 @@
       "current_price": 19.07,
       "return_pct": -22.16,
       "peak_return_pct": 25.68,
-      "days_active": 192,
+      "days_active": 195,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1654,7 +1760,7 @@
       "current_price": 148.0,
       "return_pct": 90.3,
       "peak_return_pct": 19.58,
-      "days_active": 192,
+      "days_active": 195,
       "status": "PREMIUM_NOW"
     },
     {
@@ -1673,7 +1779,7 @@
       "current_price": 90.0,
       "return_pct": 30.34,
       "peak_return_pct": 36.13,
-      "days_active": 103,
+      "days_active": 106,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1692,7 +1798,7 @@
       "current_price": 196.73,
       "return_pct": 17.56,
       "peak_return_pct": 39.24,
-      "days_active": 103,
+      "days_active": 106,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1711,7 +1817,7 @@
       "current_price": 339.4,
       "return_pct": 18.72,
       "peak_return_pct": 21.75,
-      "days_active": 98,
+      "days_active": 101,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1730,19 +1836,114 @@
       "current_price": 6.6,
       "return_pct": -8.84,
       "peak_return_pct": -1.66,
-      "days_active": 29,
+      "days_active": 32,
       "status": "UNDER_REVIEW"
     }
   ],
   "timeline": [
+    {
+      "event_id": "MCQE.CA_E02",
+      "ticker": "MCQE.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 2,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 206.54,
+      "constitutional_r2": 74.53,
+      "constitutional_score": 45.35,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 196.73,
+      "return_pct": -4.75,
+      "peak_return_pct": -4.75,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "ORHD.CA_E04",
+      "ticker": "ORHD.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 4,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 24.62,
+      "constitutional_r2": 94.25,
+      "constitutional_score": 53.13,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 12.0,
+      "return_pct": -51.26,
+      "peak_return_pct": -51.26,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "RAYA.CA_E01",
+      "ticker": "RAYA.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 1,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 7.24,
+      "constitutional_r2": 72.32,
+      "constitutional_score": 48.16,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 6.6,
+      "return_pct": -8.84,
+      "peak_return_pct": -8.84,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "RMDA.CA_E02",
+      "ticker": "RMDA.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 2,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 5.77,
+      "constitutional_r2": 81.52,
+      "constitutional_score": 77.46,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 5.41,
+      "return_pct": -6.24,
+      "peak_return_pct": -6.24,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "TMGH.CA_E02",
+      "ticker": "TMGH.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 2,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 94.7,
+      "constitutional_r2": 73.11,
+      "constitutional_score": 47.09,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 87.89,
+      "return_pct": -7.19,
+      "peak_return_pct": -7.19,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
     {
       "event_id": "BTFH.CA_E05",
       "ticker": "BTFH.CA",
       "event_type": "RE_ACCUMULATION",
       "event_index": 5,
       "event_date": "2026-10-04",
-      "event_end_date": "2026-10-08",
-      "event_cluster_days": 5,
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 8,
       "constitutional_entry_price": 2.99,
       "constitutional_r2": 63.72,
       "constitutional_score": 38.46,
@@ -1750,8 +1951,8 @@
       "signal_version": "v1",
       "current_price": 2.77,
       "return_pct": -7.36,
-      "peak_return_pct": -5.35,
-      "days_active": 4,
+      "peak_return_pct": -7.36,
+      "days_active": 7,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1760,8 +1961,8 @@
       "event_type": "RE_ACCUMULATION",
       "event_index": 1,
       "event_date": "2026-10-04",
-      "event_end_date": "2026-10-08",
-      "event_cluster_days": 5,
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 8,
       "constitutional_entry_price": 24.4978,
       "constitutional_r2": 89.72,
       "constitutional_score": 63.24,
@@ -1769,8 +1970,8 @@
       "signal_version": "v1",
       "current_price": 19.07,
       "return_pct": -22.16,
-      "peak_return_pct": -21.26,
-      "days_active": 4,
+      "peak_return_pct": -22.16,
+      "days_active": 7,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1789,7 +1990,7 @@
       "current_price": 26.57,
       "return_pct": -1.63,
       "peak_return_pct": -10.4,
-      "days_active": 4,
+      "days_active": 7,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1807,8 +2008,8 @@
       "signal_version": "v1",
       "current_price": 71.07,
       "return_pct": 6.07,
-      "peak_return_pct": 0.75,
-      "days_active": 11,
+      "peak_return_pct": 6.07,
+      "days_active": 14,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -1827,7 +2028,7 @@
       "current_price": 28.21,
       "return_pct": -26.84,
       "peak_return_pct": -23.57,
-      "days_active": 11,
+      "days_active": 14,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1836,8 +2037,8 @@
       "event_type": "RE_ACCUMULATION",
       "event_index": 5,
       "event_date": "2026-09-27",
-      "event_end_date": "2026-10-08",
-      "event_cluster_days": 12,
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 15,
       "constitutional_entry_price": 27.11,
       "constitutional_r2": 66.64,
       "constitutional_score": 53.82,
@@ -1846,7 +2047,7 @@
       "current_price": 25.0,
       "return_pct": -7.78,
       "peak_return_pct": -7.49,
-      "days_active": 11,
+      "days_active": 14,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1864,8 +2065,8 @@
       "signal_version": "v1",
       "current_price": 196.73,
       "return_pct": -4.75,
-      "peak_return_pct": -8.11,
-      "days_active": 11,
+      "peak_return_pct": -4.75,
+      "days_active": 14,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1884,7 +2085,7 @@
       "current_price": 5.41,
       "return_pct": -6.24,
       "peak_return_pct": -5.55,
-      "days_active": 11,
+      "days_active": 14,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1903,7 +2104,7 @@
       "current_price": 87.89,
       "return_pct": -7.19,
       "peak_return_pct": -3.06,
-      "days_active": 17,
+      "days_active": 20,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1912,8 +2113,8 @@
       "event_type": "RE_ACCUMULATION",
       "event_index": 1,
       "event_date": "2026-09-15",
-      "event_end_date": "2026-10-08",
-      "event_cluster_days": 24,
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 27,
       "constitutional_entry_price": 14.0,
       "constitutional_r2": 71.16,
       "constitutional_score": 37.5,
@@ -1922,7 +2123,7 @@
       "current_price": 12.93,
       "return_pct": -7.64,
       "peak_return_pct": -3.57,
-      "days_active": 23,
+      "days_active": 26,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1941,7 +2142,7 @@
       "current_price": 6.6,
       "return_pct": -8.84,
       "peak_return_pct": -1.66,
-      "days_active": 29,
+      "days_active": 32,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1960,7 +2161,7 @@
       "current_price": 2.77,
       "return_pct": -7.36,
       "peak_return_pct": 1.34,
-      "days_active": 29,
+      "days_active": 32,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1969,8 +2170,8 @@
       "event_type": "RE_ACCUMULATION",
       "event_index": 3,
       "event_date": "2026-09-01",
-      "event_end_date": "2026-10-08",
-      "event_cluster_days": 38,
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 41,
       "constitutional_entry_price": 12.97,
       "constitutional_r2": 67.36,
       "constitutional_score": 37.69,
@@ -1979,7 +2180,7 @@
       "current_price": 11.7,
       "return_pct": -9.79,
       "peak_return_pct": 1.62,
-      "days_active": 37,
+      "days_active": 40,
       "status": "UNDER_REVIEW"
     },
     {
@@ -1998,7 +2199,7 @@
       "current_price": 25.0,
       "return_pct": -7.78,
       "peak_return_pct": 1.18,
-      "days_active": 37,
+      "days_active": 40,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2017,7 +2218,7 @@
       "current_price": 19.06,
       "return_pct": 1.55,
       "peak_return_pct": 1.65,
-      "days_active": 43,
+      "days_active": 46,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2036,7 +2237,7 @@
       "current_price": 90.0,
       "return_pct": 19.17,
       "peak_return_pct": 24.47,
-      "days_active": 46,
+      "days_active": 49,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2055,7 +2256,7 @@
       "current_price": 2.77,
       "return_pct": -7.36,
       "peak_return_pct": 1.34,
-      "days_active": 46,
+      "days_active": 49,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2074,7 +2275,7 @@
       "current_price": 26.57,
       "return_pct": -1.63,
       "peak_return_pct": -2.63,
-      "days_active": 52,
+      "days_active": 55,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2093,7 +2294,7 @@
       "current_price": 90.0,
       "return_pct": 22.2,
       "peak_return_pct": 27.63,
-      "days_active": 58,
+      "days_active": 61,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2112,7 +2313,7 @@
       "current_price": 28.21,
       "return_pct": -26.84,
       "peak_return_pct": -4.84,
-      "days_active": 58,
+      "days_active": 61,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2131,7 +2332,7 @@
       "current_price": 25.0,
       "return_pct": -6.12,
       "peak_return_pct": 3.76,
-      "days_active": 58,
+      "days_active": 61,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2150,7 +2351,7 @@
       "current_price": 339.4,
       "return_pct": 14.59,
       "peak_return_pct": 17.51,
-      "days_active": 67,
+      "days_active": 70,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2169,7 +2370,7 @@
       "current_price": 19.06,
       "return_pct": 1.55,
       "peak_return_pct": 2.88,
-      "days_active": 67,
+      "days_active": 70,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2188,7 +2389,7 @@
       "current_price": 26.57,
       "return_pct": -1.63,
       "peak_return_pct": 1.3,
-      "days_active": 67,
+      "days_active": 70,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2207,7 +2408,7 @@
       "current_price": 339.4,
       "return_pct": 18.72,
       "peak_return_pct": 21.75,
-      "days_active": 98,
+      "days_active": 101,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2226,7 +2427,7 @@
       "current_price": 90.0,
       "return_pct": 30.34,
       "peak_return_pct": 36.13,
-      "days_active": 103,
+      "days_active": 106,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2245,7 +2446,7 @@
       "current_price": 196.73,
       "return_pct": 17.56,
       "peak_return_pct": 39.24,
-      "days_active": 103,
+      "days_active": 106,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2264,7 +2465,7 @@
       "current_price": 2.77,
       "return_pct": -7.36,
       "peak_return_pct": 4.01,
-      "days_active": 114,
+      "days_active": 117,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2283,7 +2484,7 @@
       "current_price": 148.0,
       "return_pct": 64.15,
       "peak_return_pct": 3.15,
-      "days_active": 119,
+      "days_active": 122,
       "status": "PREMIUM_NOW"
     },
     {
@@ -2302,7 +2503,7 @@
       "current_price": 31.01,
       "return_pct": 21.51,
       "peak_return_pct": 21.47,
-      "days_active": 140,
+      "days_active": 143,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2321,7 +2522,7 @@
       "current_price": 26.57,
       "return_pct": -1.63,
       "peak_return_pct": 3.3,
-      "days_active": 143,
+      "days_active": 146,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2340,7 +2541,7 @@
       "current_price": 19.07,
       "return_pct": -22.16,
       "peak_return_pct": 25.68,
-      "days_active": 192,
+      "days_active": 195,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2359,7 +2560,7 @@
       "current_price": 148.0,
       "return_pct": 90.3,
       "peak_return_pct": 19.58,
-      "days_active": 192,
+      "days_active": 195,
       "status": "PREMIUM_NOW"
     },
     {
@@ -2378,7 +2579,7 @@
       "current_price": 25.23,
       "return_pct": 34.92,
       "peak_return_pct": 25.13,
-      "days_active": 193,
+      "days_active": 196,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2397,7 +2598,7 @@
       "current_price": 12.0,
       "return_pct": -51.26,
       "peak_return_pct": 58.0,
-      "days_active": 193,
+      "days_active": 196,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2416,7 +2617,7 @@
       "current_price": 27.14,
       "return_pct": 31.91,
       "peak_return_pct": 12.66,
-      "days_active": 193,
+      "days_active": 196,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2435,7 +2636,7 @@
       "current_price": 19.06,
       "return_pct": 10.94,
       "peak_return_pct": 12.86,
-      "days_active": 198,
+      "days_active": 201,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2454,7 +2655,7 @@
       "current_price": 31.01,
       "return_pct": 26.07,
       "peak_return_pct": 26.03,
-      "days_active": 203,
+      "days_active": 206,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2473,7 +2674,7 @@
       "current_price": 11.7,
       "return_pct": 14.5,
       "peak_return_pct": 42.39,
-      "days_active": 205,
+      "days_active": 208,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2492,7 +2693,7 @@
       "current_price": 25.0,
       "return_pct": -2.52,
       "peak_return_pct": 20.1,
-      "days_active": 206,
+      "days_active": 209,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2511,7 +2712,7 @@
       "current_price": 12.0,
       "return_pct": -51.12,
       "peak_return_pct": 58.45,
-      "days_active": 206,
+      "days_active": 209,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2530,7 +2731,7 @@
       "current_price": 12.93,
       "return_pct": 50.35,
       "peak_return_pct": 83.72,
-      "days_active": 207,
+      "days_active": 210,
       "status": "PREMIUM_NOW"
     },
     {
@@ -2549,7 +2750,7 @@
       "current_price": 19.06,
       "return_pct": 9.73,
       "peak_return_pct": 11.63,
-      "days_active": 210,
+      "days_active": 213,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2568,7 +2769,7 @@
       "current_price": 71.07,
       "return_pct": 59.63,
       "peak_return_pct": 69.87,
-      "days_active": 214,
+      "days_active": 217,
       "status": "PREMIUM_NOW"
     },
     {
@@ -2587,7 +2788,7 @@
       "current_price": 87.89,
       "return_pct": 11.61,
       "peak_return_pct": 24.19,
-      "days_active": 218,
+      "days_active": 221,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2606,7 +2807,7 @@
       "current_price": 19.06,
       "return_pct": 9.92,
       "peak_return_pct": 11.82,
-      "days_active": 219,
+      "days_active": 222,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2625,7 +2826,7 @@
       "current_price": 26.57,
       "return_pct": 0.64,
       "peak_return_pct": 5.68,
-      "days_active": 220,
+      "days_active": 223,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2644,7 +2845,7 @@
       "current_price": 12.0,
       "return_pct": -51.59,
       "peak_return_pct": 56.92,
-      "days_active": 220,
+      "days_active": 223,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2663,7 +2864,7 @@
       "current_price": 31.01,
       "return_pct": 13.01,
       "peak_return_pct": 12.97,
-      "days_active": 221,
+      "days_active": 224,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2682,7 +2883,7 @@
       "current_price": 11.7,
       "return_pct": 5.61,
       "peak_return_pct": 31.34,
-      "days_active": 221,
+      "days_active": 224,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2701,7 +2902,7 @@
       "current_price": 2.77,
       "return_pct": -7.67,
       "peak_return_pct": 3.67,
-      "days_active": 225,
+      "days_active": 228,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2720,7 +2921,7 @@
       "current_price": 12.7,
       "return_pct": 35.97,
       "peak_return_pct": 37.04,
-      "days_active": 228,
+      "days_active": 231,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2739,7 +2940,7 @@
       "current_price": 27.14,
       "return_pct": 28.98,
       "peak_return_pct": 10.16,
-      "days_active": 228,
+      "days_active": 231,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2758,7 +2959,7 @@
       "current_price": 28.21,
       "return_pct": -26.84,
       "peak_return_pct": 1.15,
-      "days_active": 231,
+      "days_active": 234,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2777,7 +2978,7 @@
       "current_price": 71.07,
       "return_pct": 66.56,
       "peak_return_pct": 77.25,
-      "days_active": 246,
+      "days_active": 249,
       "status": "PREMIUM_NOW"
     },
     {
@@ -2796,7 +2997,7 @@
       "current_price": 12.7,
       "return_pct": 39.56,
       "peak_return_pct": 40.66,
-      "days_active": 256,
+      "days_active": 259,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2814,8 +3015,8 @@
       "signal_version": "v1",
       "current_price": 7.49,
       "return_pct": 136.6,
-      "peak_return_pct": 135.65,
-      "days_active": 256,
+      "peak_return_pct": 136.6,
+      "days_active": 259,
       "status": "PREMIUM_NOW"
     },
     {
@@ -2834,7 +3035,7 @@
       "current_price": 2.77,
       "return_pct": -8.88,
       "peak_return_pct": 2.3,
-      "days_active": 260,
+      "days_active": 263,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2853,7 +3054,7 @@
       "current_price": 12.0,
       "return_pct": -47.6,
       "peak_return_pct": 69.87,
-      "days_active": 263,
+      "days_active": 266,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2872,7 +3073,7 @@
       "current_price": 27.14,
       "return_pct": 32.09,
       "peak_return_pct": 12.82,
-      "days_active": 263,
+      "days_active": 266,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2890,8 +3091,8 @@
       "signal_version": "v1",
       "current_price": 7.49,
       "return_pct": 143.06,
-      "peak_return_pct": 142.08,
-      "days_active": 267,
+      "peak_return_pct": 143.06,
+      "days_active": 270,
       "status": "PREMIUM_NOW"
     },
     {
@@ -2910,7 +3111,7 @@
       "current_price": 25.0,
       "return_pct": -2.48,
       "peak_return_pct": 20.15,
-      "days_active": 267,
+      "days_active": 270,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2929,7 +3130,7 @@
       "current_price": 11.7,
       "return_pct": 9.93,
       "peak_return_pct": 36.7,
-      "days_active": 268,
+      "days_active": 271,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2948,7 +3149,7 @@
       "current_price": 124.65,
       "return_pct": 30.12,
       "peak_return_pct": 39.55,
-      "days_active": 277,
+      "days_active": 280,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -2967,7 +3168,7 @@
       "current_price": 28.21,
       "return_pct": -18.63,
       "peak_return_pct": 12.5,
-      "days_active": 277,
+      "days_active": 280,
       "status": "UNDER_REVIEW"
     },
     {
@@ -2985,8 +3186,8 @@
       "signal_version": "v1",
       "current_price": 7.49,
       "return_pct": 126.58,
-      "peak_return_pct": 125.67,
-      "days_active": 277,
+      "peak_return_pct": 126.58,
+      "days_active": 280,
       "status": "PREMIUM_NOW"
     },
     {
@@ -3005,7 +3206,7 @@
       "current_price": 26.57,
       "return_pct": 7.14,
       "peak_return_pct": 12.5,
-      "days_active": 277,
+      "days_active": 280,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -3024,7 +3225,7 @@
       "current_price": 25.0,
       "return_pct": 0.7,
       "peak_return_pct": 24.06,
-      "days_active": 277,
+      "days_active": 280,
       "status": "ACTIVE_OPPORTUNITY"
     },
     {
@@ -3043,7 +3244,7 @@
       "current_price": 5.41,
       "return_pct": 64.9,
       "peak_return_pct": 85.93,
-      "days_active": 277,
+      "days_active": 280,
       "status": "PREMIUM_NOW"
     }
   ],
@@ -3052,18 +3253,18 @@
       "ticker": "ADIB.CA",
       "current_price": 47.8,
       "status": "BELOW_THRESHOLD",
-      "constitutional_entry_price": 49.82,
-      "distance": -4.05,
-      "waiting_for_reason": "Below Threshold \u2014 Needs R2\u226550 (R2 48.1/60)",
+      "constitutional_entry_price": 47.8,
+      "distance": 0.0,
+      "waiting_for_reason": "Waiting for Score \u226535 (Score 18.7/35)",
       "action": "MONITOR",
       "constitutional_memory": 0,
-      "candidate_r2": 48.12,
-      "expected_reward_score": 34.96,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 63.15,
+      "expected_reward_score": 18.72,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
-      "return_pct": -4.05
+      "last_price_update": "2026-10-11",
+      "return_pct": 0.0
     },
     {
       "ticker": "CCAP.CA",
@@ -3077,9 +3278,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": null
     },
     {
@@ -3094,9 +3295,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 18.0,
       "last_scan": "2026-06-18",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": null
     },
     {
@@ -3110,14 +3311,15 @@
       "constitutional_memory": 0,
       "candidate_r2": null,
       "expected_reward_score": null,
-      "last_scan": "2026-10-08",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "signal_history",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": null
     }
   ],
   "watchlist": [
+    "HELI.CA",
     "ADIB.CA",
     "CCAP.CA",
     "OIH.CA",
@@ -3136,27 +3338,27 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-05-25",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 19.17
     },
     {
       "ticker": "ADIB.CA",
       "current_price": 47.8,
       "status": "BELOW_THRESHOLD",
-      "constitutional_entry_price": 49.82,
-      "distance": -4.05,
-      "waiting_for_reason": "Below Threshold \u2014 Needs R2\u226550 (R2 48.1/60)",
+      "constitutional_entry_price": 47.8,
+      "distance": 0.0,
+      "waiting_for_reason": "Waiting for Score \u226535 (Score 18.7/35)",
       "action": "MONITOR",
       "constitutional_memory": 0,
-      "candidate_r2": 48.12,
-      "expected_reward_score": 34.96,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 63.15,
+      "expected_reward_score": 18.72,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
-      "return_pct": -4.05
+      "last_price_update": "2026-10-11",
+      "return_pct": 0.0
     },
     {
       "ticker": "ARCC.CA",
@@ -3164,15 +3366,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 67.0,
       "distance": 6.07,
-      "waiting_for_reason": "Waiting for Constitutional Trigger (R2 58.6/60)",
+      "waiting_for_reason": "Below Threshold \u2014 Needs R2\u226550 (R2 41.2/60)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 58.6,
-      "expected_reward_score": 44.95,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 41.25,
+      "expected_reward_score": 36.33,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 6.07
     },
     {
@@ -3184,12 +3386,12 @@
       "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 63.72,
-      "expected_reward_score": 38.46,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 71.62,
+      "expected_reward_score": 48.23,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -7.36
     },
     {
@@ -3204,9 +3406,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": null
     },
     {
@@ -3215,15 +3417,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 95.7993,
       "distance": 30.12,
-      "waiting_for_reason": "Waiting for Score \u226535 (Score 33.8/35)",
+      "waiting_for_reason": "READY FOR RE-ACCUMULATION",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 65.55,
-      "expected_reward_score": 33.77,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 74.06,
+      "expected_reward_score": 40.5,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 30.12
     },
     {
@@ -3232,15 +3434,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 38.557,
       "distance": -26.84,
-      "waiting_for_reason": "Waiting for Score \u226535 (Score 20.0/35)",
+      "waiting_for_reason": "Waiting for Score \u226535 (Score 34.7/35)",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 88.94,
-      "expected_reward_score": 20.04,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 94.02,
+      "expected_reward_score": 34.7,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -26.84
     },
     {
@@ -3252,12 +3454,12 @@
       "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 89.72,
-      "expected_reward_score": 63.24,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 91.52,
+      "expected_reward_score": 65.86,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -22.16
     },
     {
@@ -3266,15 +3468,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 18.7,
       "distance": 34.92,
-      "waiting_for_reason": "Waiting for Order Block Touch (R2 55.5/60)",
+      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 55.51,
-      "expected_reward_score": 36.99,
-      "last_scan": "2026-09-30",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
-      "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "candidate_r2": 0.0,
+      "expected_reward_score": 0.0,
+      "last_scan": "2026-06-01",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
+      "source": "egx_research",
+      "last_price_update": "2026-10-11",
       "return_pct": 34.92
     },
     {
@@ -3289,9 +3491,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 14.59
     },
     {
@@ -3300,15 +3502,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 9.34,
       "distance": 35.97,
-      "waiting_for_reason": "Waiting for Order Block Touch (R2 57.7/60)",
+      "waiting_for_reason": "READY FOR RE-ACCUMULATION",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 57.69,
-      "expected_reward_score": 34.57,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 60.45,
+      "expected_reward_score": 41.16,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 35.97
     },
     {
@@ -3323,9 +3525,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 49.0,
       "last_scan": "2026-06-15",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 64.15
     },
     {
@@ -3334,15 +3536,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 18.77,
       "distance": 1.55,
-      "waiting_for_reason": "Waiting for Order Block Touch (R2 56.9/60)",
+      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 56.88,
-      "expected_reward_score": 28.54,
-      "last_scan": "2026-09-30",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
-      "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "candidate_r2": 0.0,
+      "expected_reward_score": 0.0,
+      "last_scan": "2026-05-24",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
+      "source": "egx_research",
+      "last_price_update": "2026-10-11",
       "return_pct": 1.55
     },
     {
@@ -3351,15 +3553,15 @@
       "status": "ACTIVE",
       "constitutional_entry_price": 25.52,
       "distance": 21.51,
-      "waiting_for_reason": "Waiting for Score \u226535 and Demand Confirmation (R2 52.6/60, Score 32.7/35)",
+      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
       "action": "HOLD",
       "constitutional_memory": 1,
-      "candidate_r2": 52.65,
-      "expected_reward_score": 32.69,
-      "last_scan": "2026-09-30",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
-      "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "candidate_r2": 0.0,
+      "expected_reward_score": 68.0,
+      "last_scan": "2026-05-06",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
+      "source": "egx_research",
+      "last_price_update": "2026-10-11",
       "return_pct": 21.51
     },
     {
@@ -3368,15 +3570,15 @@
       "status": "PREMIUM",
       "constitutional_entry_price": 3.1657,
       "distance": 136.6,
-      "waiting_for_reason": "Waiting for Score \u226535 and Demand Confirmation (R2 50.2/60, Score 29.0/35)",
+      "waiting_for_reason": "Waiting for Demand Confirmation (R2 50.8/60)",
       "action": "HOLD \u2014 TARGET HIT",
       "constitutional_memory": 1,
-      "candidate_r2": 50.2,
-      "expected_reward_score": 29.0,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 50.75,
+      "expected_reward_score": 41.08,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 136.6
     },
     {
@@ -3385,15 +3587,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 27.01,
       "distance": -1.63,
-      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
+      "waiting_for_reason": "R1=0 \u2014 Price Zone not met (score=0)",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 66.39,
-      "expected_reward_score": 48.39,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
-      "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "candidate_r2": 0.0,
+      "expected_reward_score": 36.0,
+      "last_scan": "2026-09-24",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
+      "source": "egx_research",
+      "last_price_update": "2026-10-11",
       "return_pct": -1.63
     },
     {
@@ -3406,11 +3608,11 @@
       "action": "MONITOR",
       "constitutional_memory": 1,
       "candidate_r2": 92.88,
-      "expected_reward_score": 51.23,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "expected_reward_score": 53.89,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -9.79
     },
     {
@@ -3422,12 +3624,12 @@
       "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 79.48,
-      "expected_reward_score": 40.68,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 80.66,
+      "expected_reward_score": 52.8,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -7.78
     },
     {
@@ -3436,15 +3638,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 206.54,
       "distance": -4.75,
-      "waiting_for_reason": "Waiting for Score \u226535 (Score 24.4/35)",
+      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 79.7,
-      "expected_reward_score": 24.37,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 74.53,
+      "expected_reward_score": 45.35,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -4.75
     },
     {
@@ -3459,9 +3661,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 18.0,
       "last_scan": "2026-06-18",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": null
     },
     {
@@ -3475,10 +3677,10 @@
       "constitutional_memory": 0,
       "candidate_r2": null,
       "expected_reward_score": null,
-      "last_scan": "2026-10-08",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "signal_history",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": null
     },
     {
@@ -3487,15 +3689,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 24.62,
       "distance": -51.26,
-      "waiting_for_reason": "Waiting for Score \u226535 and Demand Confirmation (R2 53.5/60, Score 28.2/35)",
+      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 53.51,
-      "expected_reward_score": 28.24,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 94.25,
+      "expected_reward_score": 53.13,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -51.26
     },
     {
@@ -3510,9 +3712,9 @@
       "candidate_r2": 0.0,
       "expected_reward_score": 0.0,
       "last_scan": "2026-06-01",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "egx_research",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": 31.91
     },
     {
@@ -3524,12 +3726,12 @@
       "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 76.45,
-      "expected_reward_score": 48.0,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 83.86,
+      "expected_reward_score": 44.7,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -7.64
     },
     {
@@ -3538,15 +3740,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 7.24,
       "distance": -8.84,
-      "waiting_for_reason": "Waiting for Score \u226535 (Score 29.3/35)",
+      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 69.62,
-      "expected_reward_score": 29.27,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 72.32,
+      "expected_reward_score": 48.16,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -8.84
     },
     {
@@ -3555,15 +3757,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 5.77,
       "distance": -6.24,
-      "waiting_for_reason": "Waiting for Score \u226535 (Score 32.9/35)",
+      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 80.43,
-      "expected_reward_score": 32.93,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 81.52,
+      "expected_reward_score": 77.46,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -6.24
     },
     {
@@ -3572,15 +3774,15 @@
       "status": "UNDER_REVIEW",
       "constitutional_entry_price": 94.7,
       "distance": -7.19,
-      "waiting_for_reason": "Waiting for Score \u226535 (Score 29.0/35)",
+      "waiting_for_reason": "READY NOW \u2014 R2\u226560, Score\u226535",
       "action": "MONITOR",
       "constitutional_memory": 1,
-      "candidate_r2": 73.92,
-      "expected_reward_score": 29.01,
-      "last_scan": "2026-10-04",
-      "generated_at": "2026-10-08T14:28:34.706642+03:00",
+      "candidate_r2": 73.11,
+      "expected_reward_score": 47.09,
+      "last_scan": "2026-10-11",
+      "generated_at": "2026-10-11T07:03:00.600036+03:00",
       "source": "candidate_pool",
-      "last_price_update": "2026-10-08",
+      "last_price_update": "2026-10-11",
       "return_pct": -7.19
     }
   ],
@@ -3596,7 +3798,103 @@
       "current_price": 36.73
     }
   ],
-  "new_events_today": [],
+  "new_events_today": [
+    {
+      "event_id": "MCQE.CA_E02",
+      "ticker": "MCQE.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 2,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 206.54,
+      "constitutional_r2": 74.53,
+      "constitutional_score": 45.35,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 196.73,
+      "return_pct": -4.75,
+      "peak_return_pct": -4.75,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "ORHD.CA_E04",
+      "ticker": "ORHD.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 4,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 24.62,
+      "constitutional_r2": 94.25,
+      "constitutional_score": 53.13,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 12.0,
+      "return_pct": -51.26,
+      "peak_return_pct": -51.26,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "RAYA.CA_E01",
+      "ticker": "RAYA.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 1,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 7.24,
+      "constitutional_r2": 72.32,
+      "constitutional_score": 48.16,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 6.6,
+      "return_pct": -8.84,
+      "peak_return_pct": -8.84,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "RMDA.CA_E02",
+      "ticker": "RMDA.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 2,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 5.77,
+      "constitutional_r2": 81.52,
+      "constitutional_score": 77.46,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 5.41,
+      "return_pct": -6.24,
+      "peak_return_pct": -6.24,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    },
+    {
+      "event_id": "TMGH.CA_E02",
+      "ticker": "TMGH.CA",
+      "event_type": "RE_ACCUMULATION",
+      "event_index": 2,
+      "event_date": "2026-10-11",
+      "event_end_date": "2026-10-11",
+      "event_cluster_days": 1,
+      "constitutional_entry_price": 94.7,
+      "constitutional_r2": 73.11,
+      "constitutional_score": 47.09,
+      "sector": "",
+      "signal_version": "v1",
+      "current_price": 87.89,
+      "return_pct": -7.19,
+      "peak_return_pct": -7.19,
+      "days_active": 0,
+      "status": "UNDER_REVIEW"
+    }
+  ],
   "stock_dna": {
     "COMI.CA": {
       "ticker": "COMI.CA",
@@ -4127,12 +4425,12 @@
       "phase": "Fear",
       "confidence": 0.2,
       "confidence_label": "LOW",
-      "explanation": "Price in discount zone \u2014 demand confirmation pending. A high-volume demand node indicates historically significant traded volume at the current price level. This behavior resembles 104 historical constitutional reversals with an average MFE40 of +11%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
-      "historical_cases": 104,
-      "similarity_score": 0.6408,
-      "avg_mfe40": 10.6,
+      "explanation": "Price in discount zone \u2014 demand confirmation pending. A high-volume demand node indicates historically significant traded volume at the current price level. This behavior resembles 102 historical constitutional reversals with an average MFE40 of +10%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
+      "historical_cases": 102,
+      "similarity_score": 0.6344,
+      "avg_mfe40": 10.3,
       "avg_drawdown": 3.7,
-      "avg_holding_days": 67.1
+      "avg_holding_days": 61.2
     },
     "COMI.CA": {
       "ticker": "COMI.CA",
@@ -4149,14 +4447,14 @@
     "BTFH.CA": {
       "ticker": "BTFH.CA",
       "phase": "Fear",
-      "confidence": 0.25,
+      "confidence": 0.275,
       "confidence_label": "LOW",
-      "explanation": "Price in discount zone \u2014 demand confirmation pending. A liquidity sweep followed by a demand reaction supports the reversal thesis. This behavior resembles 164 historical constitutional reversals with an average MFE40 of +12%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
-      "historical_cases": 164,
-      "similarity_score": 0.6985,
+      "explanation": "Price in discount zone \u2014 demand confirmation pending. A liquidity sweep followed by a demand reaction supports the reversal thesis. This behavior resembles 167 historical constitutional reversals with an average MFE40 of +12%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
+      "historical_cases": 167,
+      "similarity_score": 0.7187,
       "avg_mfe40": 11.8,
-      "avg_drawdown": 4.9,
-      "avg_holding_days": 117.0
+      "avg_drawdown": 5.2,
+      "avg_holding_days": 119.6
     },
     "EGAL.CA": {
       "ticker": "EGAL.CA",
@@ -4199,24 +4497,24 @@
       "phase": "Fear",
       "confidence": 0.275,
       "confidence_label": "LOW",
-      "explanation": "Price in discount zone \u2014 demand confirmation pending. A liquidity sweep followed by a demand reaction supports the reversal thesis. This behavior resembles 161 historical constitutional reversals with an average MFE40 of +12%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
-      "historical_cases": 161,
-      "similarity_score": 0.7048,
-      "avg_mfe40": 11.9,
+      "explanation": "Price in discount zone \u2014 demand confirmation pending. A liquidity sweep followed by a demand reaction supports the reversal thesis. This behavior resembles 168 historical constitutional reversals with an average MFE40 of +12%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
+      "historical_cases": 168,
+      "similarity_score": 0.7489,
+      "avg_mfe40": 11.7,
       "avg_drawdown": 5.1,
-      "avg_holding_days": 118.8
+      "avg_holding_days": 119.0
     },
     "ISPH.CA": {
       "ticker": "ISPH.CA",
       "phase": "Fear",
       "confidence": 0.2,
       "confidence_label": "LOW",
-      "explanation": "Price in discount zone \u2014 demand confirmation pending. A high-volume demand node indicates historically significant traded volume at the current price level. This behavior resembles 183 historical constitutional reversals with an average MFE40 of +13%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
-      "historical_cases": 183,
-      "similarity_score": 0.672,
-      "avg_mfe40": 13.0,
-      "avg_drawdown": 5.1,
-      "avg_holding_days": 113.6
+      "explanation": "Price in discount zone \u2014 demand confirmation pending. A high-volume demand node indicates historically significant traded volume at the current price level. This behavior resembles 188 historical constitutional reversals with an average MFE40 of +13%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
+      "historical_cases": 188,
+      "similarity_score": 0.6948,
+      "avg_mfe40": 12.9,
+      "avg_drawdown": 5.5,
+      "avg_holding_days": 119.1
     },
     "JUFO.CA": {
       "ticker": "JUFO.CA",
@@ -4269,14 +4567,14 @@
     "RMDA.CA": {
       "ticker": "RMDA.CA",
       "phase": "Fear",
-      "confidence": 0.22,
+      "confidence": 0.2,
       "confidence_label": "LOW",
-      "explanation": "Price in discount zone \u2014 demand confirmation pending. A high-volume demand node indicates historically significant traded volume at the current price level. This behavior resembles 181 historical constitutional reversals with an average MFE40 of +13%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
-      "historical_cases": 181,
-      "similarity_score": 0.7195,
-      "avg_mfe40": 12.9,
-      "avg_drawdown": 5.1,
-      "avg_holding_days": 115.4
+      "explanation": "Price in discount zone \u2014 demand confirmation pending. A high-volume demand node indicates historically significant traded volume at the current price level. This behavior resembles 107 historical constitutional reversals with an average MFE40 of +11%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
+      "historical_cases": 107,
+      "similarity_score": 0.657,
+      "avg_mfe40": 11.4,
+      "avg_drawdown": 3.2,
+      "avg_holding_days": 70.1
     },
     "PHDC.CA": {
       "ticker": "PHDC.CA",
@@ -4295,10 +4593,10 @@
       "phase": "Fear",
       "confidence": 0.275,
       "confidence_label": "LOW",
-      "explanation": "Price in discount zone \u2014 demand confirmation pending. A liquidity sweep followed by a demand reaction supports the reversal thesis. This behavior resembles 161 historical constitutional reversals with an average MFE40 of +12%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
-      "historical_cases": 161,
-      "similarity_score": 0.7028,
-      "avg_mfe40": 11.9,
+      "explanation": "Price in discount zone \u2014 demand confirmation pending. A liquidity sweep followed by a demand reaction supports the reversal thesis. This behavior resembles 166 historical constitutional reversals with an average MFE40 of +12%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
+      "historical_cases": 166,
+      "similarity_score": 0.7485,
+      "avg_mfe40": 11.7,
       "avg_drawdown": 5.1,
       "avg_holding_days": 118.8
     },
@@ -4307,12 +4605,12 @@
       "phase": "Fear",
       "confidence": 0.22,
       "confidence_label": "LOW",
-      "explanation": "Price in discount zone \u2014 demand confirmation pending. A high-volume demand node indicates historically significant traded volume at the current price level. This behavior resembles 186 historical constitutional reversals with an average MFE40 of +13%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
-      "historical_cases": 186,
-      "similarity_score": 0.7025,
-      "avg_mfe40": 13.1,
-      "avg_drawdown": 5.1,
-      "avg_holding_days": 116.1
+      "explanation": "Price in discount zone \u2014 demand confirmation pending. A high-volume demand node indicates historically significant traded volume at the current price level. This behavior resembles 179 historical constitutional reversals with an average MFE40 of +13%. Behavioral evidence is preliminary \u2014 additional confirmation recommended.",
+      "historical_cases": 179,
+      "similarity_score": 0.7188,
+      "avg_mfe40": 13.0,
+      "avg_drawdown": 5.0,
+      "avg_holding_days": 115.4
     },
     "ORHD.CA": {
       "ticker": "ORHD.CA",
@@ -4606,16 +4904,16 @@
     }
   },
   "statistics": {
-    "total_timeline_events": 69,
+    "total_timeline_events": 74,
     "total_tickers_in_timeline": 23,
-    "near_constitutional_count": 0,
+    "near_constitutional_count": 1,
     "active_count": 23,
-    "re_accumulation_count": 46,
+    "re_accumulation_count": 51,
     "first_buys_count": 23,
     "premium_count": 2,
     "future_candidates_count": 4,
     "universe_size": 27,
-    "new_events_today": 0
+    "new_events_today": 5
   },
   "health_stars": "\u2605\u2605\u2606\u2606\u2606",
   "health_label": "Needs Attention",
@@ -4649,6 +4947,56 @@
   ],
   "knowledge_count": 8,
   "event_timeline": [
+    {
+      "id": 13788,
+      "event_type": "BUY_SIGNAL",
+      "ticker": "TMGH.CA",
+      "badge": "BUY SIGNAL",
+      "description": "BUY LIMIT @ 94.70 EGP \u2014 Constitutional model confirmed (R\u00b2=73.1, Score=47)",
+      "icon": "TrendingUp",
+      "timestamp": "2026-10-11T14:30:00+03:00",
+      "metadata": "{\"entry_price\": 94.7, \"r2\": 73.11, \"score\": 47.09}"
+    },
+    {
+      "id": 13787,
+      "event_type": "BUY_SIGNAL",
+      "ticker": "RMDA.CA",
+      "badge": "BUY SIGNAL",
+      "description": "BUY LIMIT @ 5.77 EGP \u2014 Constitutional model confirmed (R\u00b2=81.5, Score=77)",
+      "icon": "TrendingUp",
+      "timestamp": "2026-10-11T14:30:00+03:00",
+      "metadata": "{\"entry_price\": 5.77, \"r2\": 81.52, \"score\": 77.46}"
+    },
+    {
+      "id": 13786,
+      "event_type": "BUY_SIGNAL",
+      "ticker": "RAYA.CA",
+      "badge": "BUY SIGNAL",
+      "description": "BUY LIMIT @ 7.24 EGP \u2014 Constitutional model confirmed (R\u00b2=72.3, Score=48)",
+      "icon": "TrendingUp",
+      "timestamp": "2026-10-11T14:30:00+03:00",
+      "metadata": "{\"entry_price\": 7.24, \"r2\": 72.32, \"score\": 48.16}"
+    },
+    {
+      "id": 13785,
+      "event_type": "BUY_SIGNAL",
+      "ticker": "ORHD.CA",
+      "badge": "BUY SIGNAL",
+      "description": "BUY LIMIT @ 24.62 EGP \u2014 Constitutional model confirmed (R\u00b2=94.2, Score=53)",
+      "icon": "TrendingUp",
+      "timestamp": "2026-10-11T14:30:00+03:00",
+      "metadata": "{\"entry_price\": 24.62, \"r2\": 94.25, \"score\": 53.13}"
+    },
+    {
+      "id": 13784,
+      "event_type": "BUY_SIGNAL",
+      "ticker": "MCQE.CA",
+      "badge": "BUY SIGNAL",
+      "description": "BUY LIMIT @ 206.54 EGP \u2014 Constitutional model confirmed (R\u00b2=74.5, Score=45)",
+      "icon": "TrendingUp",
+      "timestamp": "2026-10-11T14:30:00+03:00",
+      "metadata": "{\"entry_price\": 206.54, \"r2\": 74.53, \"score\": 45.35}"
+    },
     {
       "id": 13783,
       "event_type": "VOL_SPIKE",
@@ -5098,61 +5446,11 @@
       "icon": "AlertTriangle",
       "timestamp": "2026-10-08T12:38:32+03:00",
       "metadata": "{\"vol_ratio\": 3.16}"
-    },
-    {
-      "id": 13738,
-      "event_type": "SCAN",
-      "ticker": "",
-      "badge": "SCAN",
-      "description": "Full universe scan completed \u2014 27 tickers processed",
-      "icon": "RefreshCw",
-      "timestamp": "2026-10-08T12:38:32+03:00",
-      "metadata": "{\"tickers_processed\": 27}"
-    },
-    {
-      "id": 13737,
-      "event_type": "VOL_SPIKE",
-      "ticker": "FWRY.CA",
-      "badge": "VOL SPIKE",
-      "description": "Volume anomaly detected \u2014 3.2\u00d7 average daily volume",
-      "icon": "AlertTriangle",
-      "timestamp": "2026-10-08T12:33:24+03:00",
-      "metadata": "{\"vol_ratio\": 3.16}"
-    },
-    {
-      "id": 13736,
-      "event_type": "SCAN",
-      "ticker": "",
-      "badge": "SCAN",
-      "description": "Full universe scan completed \u2014 27 tickers processed",
-      "icon": "RefreshCw",
-      "timestamp": "2026-10-08T12:33:24+03:00",
-      "metadata": "{\"tickers_processed\": 27}"
-    },
-    {
-      "id": 13735,
-      "event_type": "VOL_SPIKE",
-      "ticker": "FWRY.CA",
-      "badge": "VOL SPIKE",
-      "description": "Volume anomaly detected \u2014 3.2\u00d7 average daily volume",
-      "icon": "AlertTriangle",
-      "timestamp": "2026-10-08T12:28:33+03:00",
-      "metadata": "{\"vol_ratio\": 3.16}"
-    },
-    {
-      "id": 13734,
-      "event_type": "SCAN",
-      "ticker": "",
-      "badge": "SCAN",
-      "description": "Full universe scan completed \u2014 27 tickers processed",
-      "icon": "RefreshCw",
-      "timestamp": "2026-10-08T12:28:33+03:00",
-      "metadata": "{\"tickers_processed\": 27}"
     }
   ],
   "event_timeline_engine": {
-    "last_event_ts": "2026-10-08T14:28:35+03:00",
-    "total_events": 13667,
+    "last_event_ts": "2026-10-11T14:30:00+03:00",
+    "total_events": 13672,
     "db_path": "/home/runner/work/smartlist/smartlist/event_timeline.db"
   }
 }

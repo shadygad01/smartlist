@@ -1,11 +1,11 @@
 {
   "ETEL.CA": {
     "ok": true,
-    "price": 131.01,
+    "price": 130.9,
     "last_dt": "2026-11-09",
     "is_fresh": true,
     "price_src": "yfinance + TradingView patch",
-    "target": 146.73,
+    "target": 146.61,
     "eq": 126.77,
     "buy_hi": 106.31,
     "sell_lo": 147.23,
@@ -30,7 +30,7 @@
         "Price Position",
         0,
         7.0,
-        "Premium Zone @ 131.0 — 7.3% above EQ — SMC setup inactive"
+        "Premium Zone @ 130.9 — 7.1% above EQ — SMC setup inactive"
       ],
       [
         "Liquidity Context",
@@ -82,7 +82,7 @@
     "hvn_score": 0.0,
     "hvn_price": null,
     "macd_val": null,
-    "vol_spike": 0.14,
+    "vol_spike": 0.15,
     "rsi_val": null,
     "macd_hist": null,
     "macd_signal": null,
@@ -102,26 +102,26 @@
     "early_buy_research": false,
     "sv_depth": 0.0
   },
-  "ORAS.CA": {
+  "COMI.CA": {
     "ok": true,
-    "price": 801.06,
+    "price": 128.04,
     "last_dt": "2026-11-09",
     "is_fresh": true,
     "price_src": "yfinance + TradingView patch",
-    "target": 897.19,
-    "eq": 439.93,
-    "buy_hi": 181.71,
-    "sell_lo": 698.14,
-    "avwap": 803.62,
-    "avwap_l": 803.62,
-    "score": 0,
-    "raw_score": 0,
+    "target": 143.4,
+    "eq": 130.15,
+    "buy_hi": 121.23,
+    "sell_lo": 139.06,
+    "avwap": 123.28,
+    "avwap_l": 120.18,
+    "score": 37,
+    "raw_score": 37.08,
     "ctx_label": "",
-    "signal": "Skip",
+    "signal": "Wait",
     "tc": "#721c24",
     "tbg": "#f8d7da",
     "tbr": "#f5c6cb",
-    "r1": 0,
+    "r1": 1,
     "entry_zones": null,
     "pattern": {
       "ok": false,
@@ -131,51 +131,51 @@
     "rows": [
       [
         "Price Position",
-        0,
+        1,
         7.0,
-        "Premium Zone @ 801.1 — 49.0% above EQ — SMC setup inactive"
+        "Mid-Discount @ 128.0 — 26.7% away from Deep Discount — 1/7.0 ⛔ Price gate failed — not in Deep Discount (need >= 3.8500000000000005/7.0)"
       ],
       [
         "Liquidity Context",
-        0,
         13.87,
-        "Locked — price not in discount zone (0–50%)"
+        13.87,
+        "Sweep & Reverse @ 117.8 — stop hunt confirmed ✓"
       ],
       [
         "Demand Zone (SV+VP)",
         0,
         26.72,
-        "Locked — price not in discount zone (0–50%)"
+        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
       ],
       [
         "Order Block Quality",
-        0,
+        3,
         13.17,
-        "Locked — price not in discount zone (0–50%)"
+        "OB zone 118.0–120.5 [Buy Zone] — moderate distance → 3/13.17"
       ],
       [
         "Higher Timeframe",
         0,
         0.74,
-        "Locked — price not in discount zone (0–50%)"
+        "Below MA50 (128.7) [no MA200] | MA50 falling (-2.68) | No HH/HL — downtrend structure"
       ],
       [
         "Anchored VWAP",
         0,
         7.52,
-        "Locked — price not in discount zone (0–50%)"
+        "Above AVWAP 123.3"
       ],
       [
         "MACD vs Zero",
-        0,
+        8,
         15.76,
-        "Locked — price not in discount zone (0–50%)"
+        "MACD below zero (-0.4773), no cross yet — 2/4"
       ],
       [
         "Divergence",
-        0,
         11.21,
-        "Locked — price not in discount zone (0–50%)"
+        11.21,
+        "STRONG: RSI div (RSI 21.2→33.3 ↑, price ↓) | MACD div (MACD -3.5389→-2.6857 ↑, price ↓)"
       ]
     ],
     "sv_hit": false,
@@ -184,47 +184,47 @@
     "hvn_hit": false,
     "hvn_score": 0.0,
     "hvn_price": null,
-    "macd_val": null,
-    "vol_spike": null,
-    "rsi_val": null,
-    "macd_hist": null,
-    "macd_signal": null,
-    "rsi_div": false,
-    "macd_div": false,
-    "ob_quality": null,
-    "ob_dist": null,
+    "macd_val": -0.4773,
+    "vol_spike": 0.19,
+    "rsi_val": 55.76714049025454,
+    "macd_hist": 1.0882,
+    "macd_signal": -1.5655,
+    "rsi_div": true,
+    "macd_div": true,
+    "ob_quality": 0.76,
+    "ob_dist": 0.075,
     "htf_hh": false,
     "htf_hl": false,
     "avwap_gap": 0.0,
-    "sweep_detected": false,
+    "sweep_detected": true,
     "wick_rejection": false,
     "equal_lows": false,
     "price_gate": 3.8500000000000005,
     "price_ok": false,
-    "liq_confirmed": false,
+    "liq_confirmed": true,
     "early_buy_research": false,
     "sv_depth": 0.0
   },
-  "EFIH.CA": {
+  "TMGH.CA": {
     "ok": true,
-    "price": 23.91,
+    "price": 82.62,
     "last_dt": "2026-11-09",
     "is_fresh": true,
     "price_src": "yfinance + TradingView patch",
-    "target": 26.78,
-    "eq": 22.8,
-    "buy_hi": 20.98,
-    "sell_lo": 24.62,
-    "avwap": 23.17,
-    "avwap_l": 22.11,
-    "score": 0,
-    "raw_score": 0,
+    "target": 92.53,
+    "eq": 90.19,
+    "buy_hi": 80.61,
+    "sell_lo": 99.76,
+    "avwap": 81.12,
+    "avwap_l": 79.46,
+    "score": 36,
+    "raw_score": 36.08,
     "ctx_label": "",
-    "signal": "Skip",
+    "signal": "Wait",
     "tc": "#721c24",
     "tbg": "#f8d7da",
     "tbr": "#f5c6cb",
-    "r1": 0,
+    "r1": 3,
     "entry_zones": null,
     "pattern": {
       "ok": false,
@@ -234,51 +234,51 @@
     "rows": [
       [
         "Price Position",
-        0,
+        3,
         7.0,
-        "Premium Zone @ 23.9 — 21.3% above EQ — SMC setup inactive"
+        "Mid-Discount @ 82.6 — 7.4% away from Deep Discount — 3/7.0 ⛔ Price gate failed — not in Deep Discount (need >= 3.8500000000000005/7.0)"
       ],
       [
         "Liquidity Context",
-        0,
         13.87,
-        "Locked — price not in discount zone (0–50%)"
+        13.87,
+        "Sweep & Reverse @ 77.2 — stop hunt confirmed ✓"
       ],
       [
         "Demand Zone (SV+VP)",
         0,
         26.72,
-        "Locked — price not in discount zone (0–50%)"
+        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
       ],
       [
         "Order Block Quality",
         0,
         13.17,
-        "Locked — price not in discount zone (0–50%)"
+        "No valid OB found in discount zone (last 40 bars)"
       ],
       [
         "Higher Timeframe",
         0,
         0.74,
-        "Locked — price not in discount zone (0–50%)"
+        "Below MA50 (89.0) [no MA200] | MA50 falling (-2.97) | Partial structure (HH:True, HL:False)"
       ],
       [
         "Anchored VWAP",
         0,
         7.52,
-        "Locked — price not in discount zone (0–50%)"
+        "Above AVWAP 81.1"
       ],
       [
         "MACD vs Zero",
-        0,
+        8,
         15.76,
-        "Locked — price not in discount zone (0–50%)"
+        "MACD below zero (-1.9865), no cross yet — 2/4"
       ],
       [
         "Divergence",
-        0,
         11.21,
-        "Locked — price not in discount zone (0–50%)"
+        11.21,
+        "STRONG: RSI div (RSI 20.3→31.8 ↑, price ↓) | MACD div (MACD -3.2298→-3.0426 ↑, price ↓)"
       ]
     ],
     "sv_hit": false,
@@ -287,24 +287,24 @@
     "hvn_hit": false,
     "hvn_score": 0.0,
     "hvn_price": null,
-    "macd_val": null,
-    "vol_spike": 0.06,
-    "rsi_val": null,
-    "macd_hist": null,
-    "macd_signal": null,
-    "rsi_div": false,
-    "macd_div": false,
+    "macd_val": -1.9865,
+    "vol_spike": 0.19,
+    "rsi_val": 45.50739114249961,
+    "macd_hist": 0.5085,
+    "macd_signal": -2.4949,
+    "rsi_div": true,
+    "macd_div": true,
     "ob_quality": null,
     "ob_dist": null,
-    "htf_hh": false,
+    "htf_hh": true,
     "htf_hl": false,
     "avwap_gap": 0.0,
-    "sweep_detected": false,
+    "sweep_detected": true,
     "wick_rejection": false,
     "equal_lows": false,
     "price_gate": 3.8500000000000005,
     "price_ok": false,
-    "liq_confirmed": false,
+    "liq_confirmed": true,
     "early_buy_research": false,
     "sv_depth": 0.0
   },
@@ -411,327 +411,18 @@
     "early_buy_research": false,
     "sv_depth": 0.0
   },
-  "EGAL.CA": {
-    "ok": true,
-    "price": 315.05,
-    "last_dt": "2026-11-09",
-    "is_fresh": true,
-    "price_src": "yfinance + TradingView patch",
-    "target": 352.86,
-    "eq": 335.0,
-    "buy_hi": 293.0,
-    "sell_lo": 377.0,
-    "avwap": 304.99,
-    "avwap_l": 295.28,
-    "score": 19,
-    "raw_score": 18.740000000000002,
-    "ctx_label": "",
-    "signal": "Skip",
-    "tc": "#721c24",
-    "tbg": "#f8d7da",
-    "tbr": "#f5c6cb",
-    "r1": 2,
-    "entry_zones": null,
-    "pattern": {
-      "ok": false,
-      "reason": "removed",
-      "label": ""
-    },
-    "rows": [
-      [
-        "Price Position",
-        2,
-        7.0,
-        "Mid-Discount @ 315.1 — 18.4% away from Deep Discount — 2/7.0"
-      ],
-      [
-        "Liquidity Context",
-        8,
-        13.87,
-        "Rejection wick @ 311.0 — lower wick 60% of range"
-      ],
-      [
-        "Demand Zone (SV+VP)",
-        0,
-        26.72,
-        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
-      ],
-      [
-        "Order Block Quality",
-        0,
-        13.17,
-        "No valid OB found in discount zone (last 40 bars)"
-      ],
-      [
-        "Higher Timeframe",
-        0.74,
-        0.74,
-        "Below MA50 (336.7) [no MA200] | MA50 falling (-6.33) | HH+HL structure confirmed ✓"
-      ],
-      [
-        "Anchored VWAP",
-        0,
-        7.52,
-        "Above AVWAP 305.0"
-      ],
-      [
-        "MACD vs Zero",
-        8,
-        15.76,
-        "MACD below zero (-4.7963), no cross yet — 2/4"
-      ],
-      [
-        "Divergence",
-        0,
-        11.21,
-        "No price LL (lo1=281.9, lo2=289.9) — no divergence"
-      ]
-    ],
-    "sv_hit": false,
-    "sv_score": 0.0,
-    "sv_price": null,
-    "hvn_hit": false,
-    "hvn_score": 0.0,
-    "hvn_price": null,
-    "macd_val": -4.7963,
-    "vol_spike": 0.67,
-    "rsi_val": 49.44184982682332,
-    "macd_hist": 3.8027,
-    "macd_signal": -8.5989,
-    "rsi_div": false,
-    "macd_div": false,
-    "ob_quality": null,
-    "ob_dist": null,
-    "htf_hh": true,
-    "htf_hl": true,
-    "avwap_gap": 0.0,
-    "sweep_detected": false,
-    "wick_rejection": true,
-    "equal_lows": false,
-    "price_gate": 3.8500000000000005,
-    "price_ok": false,
-    "liq_confirmed": false,
-    "early_buy_research": false,
-    "sv_depth": 0.0
-  },
-  "TMGH.CA": {
-    "ok": true,
-    "price": 82.99,
-    "last_dt": "2026-11-09",
-    "is_fresh": true,
-    "price_src": "yfinance + TradingView patch",
-    "target": 92.95,
-    "eq": 90.19,
-    "buy_hi": 80.61,
-    "sell_lo": 99.76,
-    "avwap": 81.12,
-    "avwap_l": 79.45,
-    "score": 36,
-    "raw_score": 36.08,
-    "ctx_label": "",
-    "signal": "Wait",
-    "tc": "#721c24",
-    "tbg": "#f8d7da",
-    "tbr": "#f5c6cb",
-    "r1": 3,
-    "entry_zones": null,
-    "pattern": {
-      "ok": false,
-      "reason": "removed",
-      "label": ""
-    },
-    "rows": [
-      [
-        "Price Position",
-        3,
-        7.0,
-        "Mid-Discount @ 83.0 — 8.7% away from Deep Discount — 3/7.0 ⛔ Price gate failed — not in Deep Discount (need >= 3.8500000000000005/7.0)"
-      ],
-      [
-        "Liquidity Context",
-        13.87,
-        13.87,
-        "Sweep & Reverse @ 77.2 — stop hunt confirmed ✓"
-      ],
-      [
-        "Demand Zone (SV+VP)",
-        0,
-        26.72,
-        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
-      ],
-      [
-        "Order Block Quality",
-        0,
-        13.17,
-        "No valid OB found in discount zone (last 40 bars)"
-      ],
-      [
-        "Higher Timeframe",
-        0,
-        0.74,
-        "Below MA50 (89.0) [no MA200] | MA50 falling (-2.96) | Partial structure (HH:True, HL:False)"
-      ],
-      [
-        "Anchored VWAP",
-        0,
-        7.52,
-        "Above AVWAP 81.1"
-      ],
-      [
-        "MACD vs Zero",
-        8,
-        15.76,
-        "MACD below zero (-1.9570), no cross yet — 2/4"
-      ],
-      [
-        "Divergence",
-        11.21,
-        11.21,
-        "STRONG: RSI div (RSI 20.3→31.8 ↑, price ↓) | MACD div (MACD -3.2298→-3.0426 ↑, price ↓)"
-      ]
-    ],
-    "sv_hit": false,
-    "sv_score": 0.0,
-    "sv_price": null,
-    "hvn_hit": false,
-    "hvn_score": 0.0,
-    "hvn_price": null,
-    "macd_val": -1.957,
-    "vol_spike": 0.18,
-    "rsi_val": 46.39449105492059,
-    "macd_hist": 0.5321,
-    "macd_signal": -2.489,
-    "rsi_div": true,
-    "macd_div": true,
-    "ob_quality": null,
-    "ob_dist": null,
-    "htf_hh": true,
-    "htf_hl": false,
-    "avwap_gap": 0.0,
-    "sweep_detected": true,
-    "wick_rejection": false,
-    "equal_lows": false,
-    "price_gate": 3.8500000000000005,
-    "price_ok": false,
-    "liq_confirmed": true,
-    "early_buy_research": false,
-    "sv_depth": 0.0
-  },
-  "COMI.CA": {
-    "ok": true,
-    "price": 127.9,
-    "last_dt": "2026-11-09",
-    "is_fresh": true,
-    "price_src": "yfinance + TradingView patch",
-    "target": 143.25,
-    "eq": 130.15,
-    "buy_hi": 121.23,
-    "sell_lo": 139.06,
-    "avwap": 123.25,
-    "avwap_l": 120.17,
-    "score": 37,
-    "raw_score": 37.08,
-    "ctx_label": "",
-    "signal": "Wait",
-    "tc": "#721c24",
-    "tbg": "#f8d7da",
-    "tbr": "#f5c6cb",
-    "r1": 1,
-    "entry_zones": null,
-    "pattern": {
-      "ok": false,
-      "reason": "removed",
-      "label": ""
-    },
-    "rows": [
-      [
-        "Price Position",
-        1,
-        7.0,
-        "Mid-Discount @ 127.9 — 26.2% away from Deep Discount — 1/7.0 ⛔ Price gate failed — not in Deep Discount (need >= 3.8500000000000005/7.0)"
-      ],
-      [
-        "Liquidity Context",
-        13.87,
-        13.87,
-        "Sweep & Reverse @ 117.8 — stop hunt confirmed ✓"
-      ],
-      [
-        "Demand Zone (SV+VP)",
-        0,
-        26.72,
-        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
-      ],
-      [
-        "Order Block Quality",
-        3,
-        13.17,
-        "OB zone 118.0–120.5 [Buy Zone] — moderate distance → 3/13.17"
-      ],
-      [
-        "Higher Timeframe",
-        0,
-        0.74,
-        "Below MA50 (128.7) [no MA200] | MA50 falling (-2.68) | No HH/HL — downtrend structure"
-      ],
-      [
-        "Anchored VWAP",
-        0,
-        7.52,
-        "Above AVWAP 123.2"
-      ],
-      [
-        "MACD vs Zero",
-        8,
-        15.76,
-        "MACD below zero (-0.4885), no cross yet — 2/4"
-      ],
-      [
-        "Divergence",
-        11.21,
-        11.21,
-        "STRONG: RSI div (RSI 21.2→33.3 ↑, price ↓) | MACD div (MACD -3.5389→-2.6857 ↑, price ↓)"
-      ]
-    ],
-    "sv_hit": false,
-    "sv_score": 0.0,
-    "sv_price": null,
-    "hvn_hit": false,
-    "hvn_score": 0.0,
-    "hvn_price": null,
-    "macd_val": -0.4885,
-    "vol_spike": 0.17,
-    "rsi_val": 55.50960963633745,
-    "macd_hist": 1.0792,
-    "macd_signal": -1.5677,
-    "rsi_div": true,
-    "macd_div": true,
-    "ob_quality": 0.76,
-    "ob_dist": 0.075,
-    "htf_hh": false,
-    "htf_hl": false,
-    "avwap_gap": 0.0,
-    "sweep_detected": true,
-    "wick_rejection": false,
-    "equal_lows": false,
-    "price_gate": 3.8500000000000005,
-    "price_ok": false,
-    "liq_confirmed": true,
-    "early_buy_research": false,
-    "sv_depth": 0.0
-  },
   "ABUK.CA": {
     "ok": true,
-    "price": 73.96,
+    "price": 73.75,
     "last_dt": "2026-11-09",
     "is_fresh": true,
     "price_src": "yfinance + TradingView patch",
-    "target": 82.84,
+    "target": 82.6,
     "eq": 83.44,
     "buy_hi": 74.45,
     "sell_lo": 92.44,
-    "avwap": 85.34,
-    "avwap_l": 79.8,
+    "avwap": 85.29,
+    "avwap_l": 79.71,
     "score": 21,
     "raw_score": 21.259999999999998,
     "ctx_label": "",
@@ -751,7 +442,7 @@
         "Price Position",
         5,
         7.0,
-        "Buy Zone @ 74.0 — 4.8% above Deep Discount floor — 5/7.0"
+        "Buy Zone @ 73.8 — 4.5% above Deep Discount floor — 5/7.0"
       ],
       [
         "Liquidity Context",
@@ -775,25 +466,25 @@
         "Higher Timeframe",
         0.74,
         0.74,
-        "Below MA50 (88.0) [no MA200] | MA50 rising (+0.83) ✓ | HH+HL structure confirmed ✓"
+        "Below MA50 (88.0) [no MA200] | MA50 rising (+0.82) ✓ | HH+HL structure confirmed ✓"
       ],
       [
         "Anchored VWAP",
         7.52,
         7.52,
-        "At/below AVWAP lower band 79.8"
+        "At/below AVWAP lower band 79.7"
       ],
       [
         "MACD vs Zero",
         8,
         15.76,
-        "MACD below zero (-2.8225), no cross yet — 2/4"
+        "MACD below zero (-2.8392), no cross yet — 2/4"
       ],
       [
         "Divergence",
         0,
         11.21,
-        "No divergence (price LL confirmed: 83.2→74.0, but indicators confirmed trend)"
+        "No divergence (price LL confirmed: 83.2→73.8, but indicators confirmed trend)"
       ]
     ],
     "sv_hit": false,
@@ -802,11 +493,11 @@
     "hvn_hit": true,
     "hvn_score": 1.0,
     "hvn_price": 70.36,
-    "macd_val": -2.8225,
-    "vol_spike": 1.26,
-    "rsi_val": 33.73269816735811,
-    "macd_hist": -1.6,
-    "macd_signal": -1.2225,
+    "macd_val": -2.8392,
+    "vol_spike": 1.35,
+    "rsi_val": 33.5343477160184,
+    "macd_hist": -1.6134,
+    "macd_signal": -1.2258,
     "rsi_div": false,
     "macd_div": false,
     "ob_quality": null,
@@ -823,26 +514,26 @@
     "early_buy_research": false,
     "sv_depth": 0.0
   },
-  "ADIB.CA": {
+  "EFIH.CA": {
     "ok": true,
-    "price": 48.48,
+    "price": 23.79,
     "last_dt": "2026-11-09",
     "is_fresh": true,
     "price_src": "yfinance + TradingView patch",
-    "target": 54.3,
-    "eq": 49.41,
-    "buy_hi": 45.03,
-    "sell_lo": 53.78,
-    "avwap": 46.82,
-    "avwap_l": 45.21,
-    "score": 9,
-    "raw_score": 9,
+    "target": 26.64,
+    "eq": 22.8,
+    "buy_hi": 20.98,
+    "sell_lo": 24.62,
+    "avwap": 23.17,
+    "avwap_l": 22.11,
+    "score": 0,
+    "raw_score": 0,
     "ctx_label": "",
     "signal": "Skip",
     "tc": "#721c24",
     "tbg": "#f8d7da",
     "tbr": "#f5c6cb",
-    "r1": 1,
+    "r1": 0,
     "entry_zones": null,
     "pattern": {
       "ok": false,
@@ -852,51 +543,51 @@
     "rows": [
       [
         "Price Position",
-        1,
+        0,
         7.0,
-        "Mid-Discount @ 48.5 — 27.6% away from Deep Discount — 1/7.0"
+        "Premium Zone @ 23.8 — 19.0% above EQ — SMC setup inactive"
       ],
       [
         "Liquidity Context",
         0,
         13.87,
-        "No liquidity event detected"
+        "Locked — price not in discount zone (0–50%)"
       ],
       [
         "Demand Zone (SV+VP)",
         0,
         26.72,
-        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
+        "Locked — price not in discount zone (0–50%)"
       ],
       [
         "Order Block Quality",
         0,
         13.17,
-        "No valid OB found in discount zone (last 40 bars)"
+        "Locked — price not in discount zone (0–50%)"
       ],
       [
         "Higher Timeframe",
         0,
         0.74,
-        "Below MA50 (49.3) [no MA200] | MA50 falling (-1.15) | Partial structure (HH:False, HL:True)"
+        "Locked — price not in discount zone (0–50%)"
       ],
       [
         "Anchored VWAP",
         0,
         7.52,
-        "Above AVWAP 46.8"
+        "Locked — price not in discount zone (0–50%)"
       ],
       [
         "MACD vs Zero",
-        8,
+        0,
         15.76,
-        "MACD below zero (-0.0727), no cross yet — 2/4"
+        "Locked — price not in discount zone (0–50%)"
       ],
       [
         "Divergence",
         0,
         11.21,
-        "No price LL (lo1=44.5, lo2=44.5) — no divergence"
+        "Locked — price not in discount zone (0–50%)"
       ]
     ],
     "sv_hit": false,
@@ -905,17 +596,17 @@
     "hvn_hit": false,
     "hvn_score": 0.0,
     "hvn_price": null,
-    "macd_val": -0.0727,
-    "vol_spike": 0.16,
-    "rsi_val": 52.73434732101997,
-    "macd_hist": 0.5446,
-    "macd_signal": -0.6173,
+    "macd_val": null,
+    "vol_spike": 0.06,
+    "rsi_val": null,
+    "macd_hist": null,
+    "macd_signal": null,
     "rsi_div": false,
     "macd_div": false,
     "ob_quality": null,
     "ob_dist": null,
     "htf_hh": false,
-    "htf_hl": true,
+    "htf_hl": false,
     "avwap_gap": 0.0,
     "sweep_detected": false,
     "wick_rejection": false,
@@ -926,20 +617,20 @@
     "early_buy_research": false,
     "sv_depth": 0.0
   },
-  "EMFD.CA": {
+  "EGAL.CA": {
     "ok": true,
-    "price": 12.3,
+    "price": 314.9,
     "last_dt": "2026-11-09",
     "is_fresh": true,
     "price_src": "yfinance + TradingView patch",
-    "target": 13.78,
-    "eq": 12.95,
-    "buy_hi": 11.31,
-    "sell_lo": 14.6,
-    "avwap": 11.96,
-    "avwap_l": 11.76,
-    "score": 26,
-    "raw_score": 26,
+    "target": 352.69,
+    "eq": 335.0,
+    "buy_hi": 293.0,
+    "sell_lo": 377.0,
+    "avwap": 305.04,
+    "avwap_l": 295.32,
+    "score": 19,
+    "raw_score": 18.740000000000002,
     "ctx_label": "",
     "signal": "Skip",
     "tc": "#721c24",
@@ -957,13 +648,13 @@
         "Price Position",
         2,
         7.0,
-        "Mid-Discount @ 12.3 — 21.2% away from Deep Discount — 2/7.0"
+        "Mid-Discount @ 314.9 — 18.2% away from Deep Discount — 2/7.0"
       ],
       [
         "Liquidity Context",
         8,
         13.87,
-        "Rejection wick @ 11.6 — lower wick 81% of range · Rejection wick @ 12.0 — lower wick 63% of range · Rejection wick @ 12.2 — lower wick 72% of range"
+        "Rejection wick @ 311.0 — lower wick 60% of range"
       ],
       [
         "Demand Zone (SV+VP)",
@@ -979,27 +670,27 @@
       ],
       [
         "Higher Timeframe",
-        0,
         0.74,
-        "Below MA50 (12.9) [no MA200] | MA50 rising (+0.02) ✓ | No HH/HL — downtrend structure"
+        0.74,
+        "Below MA50 (336.7) [no MA200] | MA50 falling (-6.34) | HH+HL structure confirmed ✓"
       ],
       [
         "Anchored VWAP",
         0,
         7.52,
-        "Above AVWAP 12.0"
+        "Above AVWAP 305.0"
       ],
       [
         "MACD vs Zero",
         8,
         15.76,
-        "MACD below zero (-0.1187), no cross yet — 2/4"
+        "MACD below zero (-4.8082), no cross yet — 2/4"
       ],
       [
         "Divergence",
-        8,
+        0,
         11.21,
-        "RSI div (RSI 34.7→35.1 ↑, price ↓)"
+        "No price LL (lo1=281.9, lo2=289.9) — no divergence"
       ]
     ],
     "sv_hit": false,
@@ -1008,12 +699,115 @@
     "hvn_hit": false,
     "hvn_score": 0.0,
     "hvn_price": null,
-    "macd_val": -0.1187,
-    "vol_spike": 0.08,
-    "rsi_val": 51.450365963733354,
-    "macd_hist": 0.1108,
-    "macd_signal": -0.2295,
-    "rsi_div": true,
+    "macd_val": -4.8082,
+    "vol_spike": 0.73,
+    "rsi_val": 49.34691595213336,
+    "macd_hist": 3.7931,
+    "macd_signal": -8.6013,
+    "rsi_div": false,
+    "macd_div": false,
+    "ob_quality": null,
+    "ob_dist": null,
+    "htf_hh": true,
+    "htf_hl": true,
+    "avwap_gap": 0.0,
+    "sweep_detected": false,
+    "wick_rejection": true,
+    "equal_lows": false,
+    "price_gate": 3.8500000000000005,
+    "price_ok": false,
+    "liq_confirmed": false,
+    "early_buy_research": false,
+    "sv_depth": 0.0
+  },
+  "ORAS.CA": {
+    "ok": true,
+    "price": 801.06,
+    "last_dt": "2026-11-09",
+    "is_fresh": true,
+    "price_src": "yfinance + TradingView patch",
+    "target": 897.19,
+    "eq": 439.93,
+    "buy_hi": 181.71,
+    "sell_lo": 698.14,
+    "avwap": 803.3,
+    "avwap_l": 803.3,
+    "score": 0,
+    "raw_score": 0,
+    "ctx_label": "",
+    "signal": "Skip",
+    "tc": "#721c24",
+    "tbg": "#f8d7da",
+    "tbr": "#f5c6cb",
+    "r1": 0,
+    "entry_zones": null,
+    "pattern": {
+      "ok": false,
+      "reason": "removed",
+      "label": ""
+    },
+    "rows": [
+      [
+        "Price Position",
+        0,
+        7.0,
+        "Premium Zone @ 801.1 — 49.0% above EQ — SMC setup inactive"
+      ],
+      [
+        "Liquidity Context",
+        0,
+        13.87,
+        "Locked — price not in discount zone (0–50%)"
+      ],
+      [
+        "Demand Zone (SV+VP)",
+        0,
+        26.72,
+        "Locked — price not in discount zone (0–50%)"
+      ],
+      [
+        "Order Block Quality",
+        0,
+        13.17,
+        "Locked — price not in discount zone (0–50%)"
+      ],
+      [
+        "Higher Timeframe",
+        0,
+        0.74,
+        "Locked — price not in discount zone (0–50%)"
+      ],
+      [
+        "Anchored VWAP",
+        0,
+        7.52,
+        "Locked — price not in discount zone (0–50%)"
+      ],
+      [
+        "MACD vs Zero",
+        0,
+        15.76,
+        "Locked — price not in discount zone (0–50%)"
+      ],
+      [
+        "Divergence",
+        0,
+        11.21,
+        "Locked — price not in discount zone (0–50%)"
+      ]
+    ],
+    "sv_hit": false,
+    "sv_score": 0.0,
+    "sv_price": null,
+    "hvn_hit": false,
+    "hvn_score": 0.0,
+    "hvn_price": null,
+    "macd_val": null,
+    "vol_spike": null,
+    "rsi_val": null,
+    "macd_hist": null,
+    "macd_signal": null,
+    "rsi_div": false,
     "macd_div": false,
     "ob_quality": null,
     "ob_dist": null,
@@ -1021,9 +815,9 @@
     "htf_hl": false,
     "avwap_gap": 0.0,
     "sweep_detected": false,
-    "wick_rejection": true,
+    "wick_rejection": false,
     "equal_lows": false,
-    "price_gate": 3.5,
+    "price_gate": 3.8500000000000005,
     "price_ok": false,
     "liq_confirmed": false,
     "early_buy_research": false,
@@ -1031,11 +825,11 @@
   },
   "ORHD.CA": {
     "ok": true,
-    "price": 10.5,
+    "price": 10.51,
     "last_dt": "2026-11-09",
     "is_fresh": true,
     "price_src": "yfinance + TradingView patch",
-    "target": 11.76,
+    "target": 11.77,
     "eq": 26.25,
     "buy_hi": 13.82,
     "sell_lo": 38.67,
@@ -1060,7 +854,7 @@
         "Price Position",
         6,
         7.0,
-        "Buy Zone @ 10.5 — 23.5% above Deep Discount floor — 6/7.0"
+        "Buy Zone @ 10.5 — 23.6% above Deep Discount floor — 6/7.0"
       ],
       [
         "Liquidity Context",
@@ -1096,7 +890,7 @@
         "MACD vs Zero",
         8,
         15.76,
-        "MACD below zero (-3.0235), no cross yet — 2/4"
+        "MACD below zero (-3.0228), no cross yet — 2/4"
       ],
       [
         "Divergence",
@@ -1111,11 +905,11 @@
     "hvn_hit": true,
     "hvn_score": 1.0,
     "hvn_price": 9.39,
-    "macd_val": -3.0235,
-    "vol_spike": 0.16,
-    "rsi_val": 26.253589668357378,
-    "macd_hist": 1.0933,
-    "macd_signal": -4.1168,
+    "macd_val": -3.0228,
+    "vol_spike": 0.17,
+    "rsi_val": 26.35572643595124,
+    "macd_hist": 1.0939,
+    "macd_signal": -4.1167,
     "rsi_div": true,
     "macd_div": true,
     "ob_quality": 0.91,
@@ -1132,20 +926,20 @@
     "early_buy_research": false,
     "sv_depth": 0.0
   },
-  "FWRY.CA": {
+  "ADIB.CA": {
     "ok": true,
-    "price": 17.33,
+    "price": 48.45,
     "last_dt": "2026-11-09",
     "is_fresh": true,
     "price_src": "yfinance + TradingView patch",
-    "target": 19.41,
-    "eq": 17.54,
-    "buy_hi": 15.95,
-    "sell_lo": 19.13,
-    "avwap": 16.53,
-    "avwap_l": 16.03,
-    "score": 17,
-    "raw_score": 17,
+    "target": 54.26,
+    "eq": 49.41,
+    "buy_hi": 45.03,
+    "sell_lo": 53.78,
+    "avwap": 46.82,
+    "avwap_l": 45.21,
+    "score": 9,
+    "raw_score": 9,
     "ctx_label": "",
     "signal": "Skip",
     "tc": "#721c24",
@@ -1163,13 +957,13 @@
         "Price Position",
         1,
         7.0,
-        "Mid-Discount @ 17.3 — 30.4% away from Deep Discount — 1/7.0"
+        "Mid-Discount @ 48.5 — 27.4% away from Deep Discount — 1/7.0"
       ],
       [
         "Liquidity Context",
-        8,
+        0,
         13.87,
-        "Rejection wick @ 17.0 — lower wick 76% of range"
+        "No liquidity event detected"
       ],
       [
         "Demand Zone (SV+VP)",
@@ -1187,25 +981,25 @@
         "Higher Timeframe",
         0,
         0.74,
-        "Below MA50 (18.3) [no MA200] | MA50 falling (-0.41) | No HH/HL — downtrend structure"
+        "Below MA50 (49.3) [no MA200] | MA50 falling (-1.15) | Partial structure (HH:False, HL:True)"
       ],
       [
         "Anchored VWAP",
         0,
         7.52,
-        "Above AVWAP 16.5"
+        "Above AVWAP 46.8"
       ],
       [
         "MACD vs Zero",
         8,
         15.76,
-        "MACD below zero (-0.4417), no cross yet — 2/4"
+        "MACD below zero (-0.0751), no cross yet — 2/4"
       ],
       [
         "Divergence",
         0,
         11.21,
-        "No divergence (price LL confirmed: 18.2→15.8, but indicators confirmed trend)"
+        "No price LL (lo1=44.5, lo2=44.5) — no divergence"
       ]
     ],
     "sv_hit": false,
@@ -1214,34 +1008,137 @@
     "hvn_hit": false,
     "hvn_score": 0.0,
     "hvn_price": null,
-    "macd_val": -0.4417,
-    "vol_spike": 0.11,
-    "rsi_val": 46.64894645242752,
-    "macd_hist": 0.0461,
-    "macd_signal": -0.4877,
+    "macd_val": -0.0751,
+    "vol_spike": 0.17,
+    "rsi_val": 52.61883778178657,
+    "macd_hist": 0.5427,
+    "macd_signal": -0.6178,
     "rsi_div": false,
     "macd_div": false,
     "ob_quality": null,
     "ob_dist": null,
     "htf_hh": false,
+    "htf_hl": true,
+    "avwap_gap": 0.0,
+    "sweep_detected": false,
+    "wick_rejection": false,
+    "equal_lows": false,
+    "price_gate": 3.8500000000000005,
+    "price_ok": false,
+    "liq_confirmed": false,
+    "early_buy_research": false,
+    "sv_depth": 0.0
+  },
+  "EFID.CA": {
+    "ok": true,
+    "price": 19.47,
+    "last_dt": "2026-11-09",
+    "is_fresh": true,
+    "price_src": "yfinance + TradingView patch",
+    "target": 21.81,
+    "eq": 25.45,
+    "buy_hi": 18.84,
+    "sell_lo": 32.06,
+    "avwap": 18.24,
+    "avwap_l": 17.49,
+    "score": 37,
+    "raw_score": 37.21,
+    "ctx_label": "",
+    "signal": "Wait",
+    "tc": "#721c24",
+    "tbg": "#f8d7da",
+    "tbr": "#f5c6cb",
+    "r1": 4,
+    "entry_zones": null,
+    "pattern": {
+      "ok": false,
+      "reason": "removed",
+      "label": ""
+    },
+    "rows": [
+      [
+        "Price Position",
+        4,
+        7.0,
+        "Mid-Discount @ 19.5 — 3.3% away from Deep Discount — 4/7.0"
+      ],
+      [
+        "Liquidity Context",
+        8,
+        13.87,
+        "Rejection wick @ 19.4 — lower wick 70% of range ⏳ Adjusted score 37 below entry gate (40) — quality pending"
+      ],
+      [
+        "Demand Zone (SV+VP)",
+        0,
+        26.72,
+        "HVN only — HVN @ 18.4 — 100% of peak vol — depth 75% into discount | No SV: No Stopping Volume detected in discount zone"
+      ],
+      [
+        "Order Block Quality",
+        6,
+        13.17,
+        "Near OB zone 18.2–18.8 [Buy Zone] — quality 74% → 6/13.17"
+      ],
+      [
+        "Higher Timeframe",
+        0,
+        0.74,
+        "Below MA50 (22.2) [no MA200] | MA50 falling (-2.50) | Partial structure (HH:True, HL:False)"
+      ],
+      [
+        "Anchored VWAP",
+        0,
+        7.52,
+        "Above AVWAP 18.2"
+      ],
+      [
+        "MACD vs Zero",
+        8,
+        15.76,
+        "MACD below zero (-0.6473), no cross yet — 2/4"
+      ],
+      [
+        "Divergence",
+        11.21,
+        11.21,
+        "STRONG: RSI div (RSI 17.4→23.2 ↑, price ↓) | MACD div (MACD -3.2774→-2.0862 ↑, price ↓)"
+      ]
+    ],
+    "sv_hit": false,
+    "sv_score": 0.0,
+    "sv_price": null,
+    "hvn_hit": true,
+    "hvn_score": 1.0,
+    "hvn_price": 18.37,
+    "macd_val": -0.6473,
+    "vol_spike": 0.09,
+    "rsi_val": 50.503196163616145,
+    "macd_hist": 0.511,
+    "macd_signal": -1.1582,
+    "rsi_div": true,
+    "macd_div": true,
+    "ob_quality": 0.74,
+    "ob_dist": 0.035,
+    "htf_hh": true,
     "htf_hl": false,
     "avwap_gap": 0.0,
     "sweep_detected": false,
     "wick_rejection": true,
     "equal_lows": false,
-    "price_gate": 3.5,
-    "price_ok": false,
+    "price_gate": 3.8500000000000005,
+    "price_ok": true,
     "liq_confirmed": false,
     "early_buy_research": false,
     "sv_depth": 0.0
   },
   "PHDC.CA": {
     "ok": true,
-    "price": 11.91,
+    "price": 11.88,
     "last_dt": "2026-11-09",
     "is_fresh": true,
     "price_src": "yfinance + TradingView patch",
-    "target": 13.34,
+    "target": 13.31,
     "eq": 13.27,
     "buy_hi": 11.21,
     "sell_lo": 15.32,
@@ -1266,7 +1163,7 @@
         "Price Position",
         3,
         7.0,
-        "Mid-Discount @ 11.9 — 11.9% away from Deep Discount — 3/7.0"
+        "Mid-Discount @ 11.9 — 11.4% away from Deep Discount — 3/7.0"
       ],
       [
         "Liquidity Context",
@@ -1302,7 +1199,7 @@
         "MACD vs Zero",
         8,
         15.76,
-        "MACD below zero (-0.4264), no cross yet — 2/4"
+        "MACD below zero (-0.4288), no cross yet — 2/4"
       ],
       [
         "Divergence",
@@ -1317,11 +1214,11 @@
     "hvn_hit": false,
     "hvn_score": 0.0,
     "hvn_price": null,
-    "macd_val": -0.4264,
-    "vol_spike": 0.43,
-    "rsi_val": 46.38825464560274,
-    "macd_hist": 0.0934,
-    "macd_signal": -0.5199,
+    "macd_val": -0.4288,
+    "vol_spike": 0.44,
+    "rsi_val": 46.03454400224364,
+    "macd_hist": 0.0915,
+    "macd_signal": -0.5203,
     "rsi_div": true,
     "macd_div": false,
     "ob_quality": null,
@@ -1338,17 +1235,223 @@
     "early_buy_research": false,
     "sv_depth": 0.0
   },
-  "JUFO.CA": {
+  "EMFD.CA": {
     "ok": true,
-    "price": 24.11,
+    "price": 12.29,
     "last_dt": "2026-11-09",
     "is_fresh": true,
     "price_src": "yfinance + TradingView patch",
-    "target": 27.0,
+    "target": 13.76,
+    "eq": 12.95,
+    "buy_hi": 11.31,
+    "sell_lo": 14.6,
+    "avwap": 11.96,
+    "avwap_l": 11.76,
+    "score": 26,
+    "raw_score": 26,
+    "ctx_label": "",
+    "signal": "Skip",
+    "tc": "#721c24",
+    "tbg": "#f8d7da",
+    "tbr": "#f5c6cb",
+    "r1": 2,
+    "entry_zones": null,
+    "pattern": {
+      "ok": false,
+      "reason": "removed",
+      "label": ""
+    },
+    "rows": [
+      [
+        "Price Position",
+        2,
+        7.0,
+        "Mid-Discount @ 12.3 — 21.0% away from Deep Discount — 2/7.0"
+      ],
+      [
+        "Liquidity Context",
+        8,
+        13.87,
+        "Rejection wick @ 11.6 — lower wick 81% of range · Rejection wick @ 12.0 — lower wick 63% of range · Rejection wick @ 12.2 — lower wick 67% of range"
+      ],
+      [
+        "Demand Zone (SV+VP)",
+        0,
+        26.72,
+        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
+      ],
+      [
+        "Order Block Quality",
+        0,
+        13.17,
+        "No valid OB found in discount zone (last 40 bars)"
+      ],
+      [
+        "Higher Timeframe",
+        0,
+        0.74,
+        "Below MA50 (12.9) [no MA200] | MA50 rising (+0.02) ✓ | No HH/HL — downtrend structure"
+      ],
+      [
+        "Anchored VWAP",
+        0,
+        7.52,
+        "Above AVWAP 12.0"
+      ],
+      [
+        "MACD vs Zero",
+        8,
+        15.76,
+        "MACD below zero (-0.1195), no cross yet — 2/4"
+      ],
+      [
+        "Divergence",
+        8,
+        11.21,
+        "RSI div (RSI 34.7→35.1 ↑, price ↓)"
+      ]
+    ],
+    "sv_hit": false,
+    "sv_score": 0.0,
+    "sv_price": null,
+    "hvn_hit": false,
+    "hvn_score": 0.0,
+    "hvn_price": null,
+    "macd_val": -0.1195,
+    "vol_spike": 0.08,
+    "rsi_val": 51.23229899435278,
+    "macd_hist": 0.1102,
+    "macd_signal": -0.2297,
+    "rsi_div": true,
+    "macd_div": false,
+    "ob_quality": null,
+    "ob_dist": null,
+    "htf_hh": false,
+    "htf_hl": false,
+    "avwap_gap": 0.0,
+    "sweep_detected": false,
+    "wick_rejection": true,
+    "equal_lows": false,
+    "price_gate": 3.5,
+    "price_ok": false,
+    "liq_confirmed": false,
+    "early_buy_research": false,
+    "sv_depth": 0.0
+  },
+  "FWRY.CA": {
+    "ok": true,
+    "price": 17.3,
+    "last_dt": "2026-11-09",
+    "is_fresh": true,
+    "price_src": "yfinance + TradingView patch",
+    "target": 19.38,
+    "eq": 17.54,
+    "buy_hi": 15.95,
+    "sell_lo": 19.13,
+    "avwap": 16.53,
+    "avwap_l": 16.03,
+    "score": 17,
+    "raw_score": 17,
+    "ctx_label": "",
+    "signal": "Skip",
+    "tc": "#721c24",
+    "tbg": "#f8d7da",
+    "tbr": "#f5c6cb",
+    "r1": 1,
+    "entry_zones": null,
+    "pattern": {
+      "ok": false,
+      "reason": "removed",
+      "label": ""
+    },
+    "rows": [
+      [
+        "Price Position",
+        1,
+        7.0,
+        "Mid-Discount @ 17.3 — 29.7% away from Deep Discount — 1/7.0"
+      ],
+      [
+        "Liquidity Context",
+        8,
+        13.87,
+        "Rejection wick @ 17.0 — lower wick 76% of range"
+      ],
+      [
+        "Demand Zone (SV+VP)",
+        0,
+        26.72,
+        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
+      ],
+      [
+        "Order Block Quality",
+        0,
+        13.17,
+        "No valid OB found in discount zone (last 40 bars)"
+      ],
+      [
+        "Higher Timeframe",
+        0,
+        0.74,
+        "Below MA50 (18.3) [no MA200] | MA50 falling (-0.41) | No HH/HL — downtrend structure"
+      ],
+      [
+        "Anchored VWAP",
+        0,
+        7.52,
+        "Above AVWAP 16.5"
+      ],
+      [
+        "MACD vs Zero",
+        8,
+        15.76,
+        "MACD below zero (-0.4441), no cross yet — 2/4"
+      ],
+      [
+        "Divergence",
+        0,
+        11.21,
+        "No divergence (price LL confirmed: 18.2→15.8, but indicators confirmed trend)"
+      ]
+    ],
+    "sv_hit": false,
+    "sv_score": 0.0,
+    "sv_price": null,
+    "hvn_hit": false,
+    "hvn_score": 0.0,
+    "hvn_price": null,
+    "macd_val": -0.4441,
+    "vol_spike": 0.11,
+    "rsi_val": 46.295922826766066,
+    "macd_hist": 0.0441,
+    "macd_signal": -0.4882,
+    "rsi_div": false,
+    "macd_div": false,
+    "ob_quality": null,
+    "ob_dist": null,
+    "htf_hh": false,
+    "htf_hl": false,
+    "avwap_gap": 0.0,
+    "sweep_detected": false,
+    "wick_rejection": true,
+    "equal_lows": false,
+    "price_gate": 3.5,
+    "price_ok": false,
+    "liq_confirmed": false,
+    "early_buy_research": false,
+    "sv_depth": 0.0
+  },
+  "JUFO.CA": {
+    "ok": true,
+    "price": 24.17,
+    "last_dt": "2026-11-09",
+    "is_fresh": true,
+    "price_src": "yfinance + TradingView patch",
+    "target": 27.07,
     "eq": 25.58,
     "buy_hi": 22.38,
     "sell_lo": 28.78,
-    "avwap": 22.96,
+    "avwap": 22.97,
     "avwap_l": 22.42,
     "score": 18,
     "raw_score": 18,
@@ -1369,7 +1472,7 @@
         "Price Position",
         2,
         7.0,
-        "Mid-Discount @ 24.1 — 18.9% away from Deep Discount — 2/7.0"
+        "Mid-Discount @ 24.2 — 19.6% away from Deep Discount — 2/7.0"
       ],
       [
         "Liquidity Context",
@@ -1405,7 +1508,7 @@
         "MACD vs Zero",
         8,
         15.76,
-        "MACD below zero (-0.3951), no cross yet — 2/4"
+        "MACD below zero (-0.3903), no cross yet — 2/4"
       ],
       [
         "Divergence",
@@ -1420,11 +1523,11 @@
     "hvn_hit": false,
     "hvn_score": 0.0,
     "hvn_price": null,
-    "macd_val": -0.3951,
-    "vol_spike": 0.36,
-    "rsi_val": 51.25832601122066,
-    "macd_hist": 0.2432,
-    "macd_signal": -0.6383,
+    "macd_val": -0.3903,
+    "vol_spike": 0.39,
+    "rsi_val": 51.65540617799834,
+    "macd_hist": 0.247,
+    "macd_signal": -0.6373,
     "rsi_div": false,
     "macd_div": false,
     "ob_quality": null,
@@ -1441,109 +1544,6 @@
     "early_buy_research": false,
     "sv_depth": 0.0
   },
-  "EFID.CA": {
-    "ok": true,
-    "price": 19.45,
-    "last_dt": "2026-11-09",
-    "is_fresh": true,
-    "price_src": "yfinance + TradingView patch",
-    "target": 21.78,
-    "eq": 25.45,
-    "buy_hi": 18.84,
-    "sell_lo": 32.06,
-    "avwap": 18.24,
-    "avwap_l": 17.49,
-    "score": 29,
-    "raw_score": 29.21,
-    "ctx_label": "",
-    "signal": "Skip",
-    "tc": "#721c24",
-    "tbg": "#f8d7da",
-    "tbr": "#f5c6cb",
-    "r1": 4,
-    "entry_zones": null,
-    "pattern": {
-      "ok": false,
-      "reason": "removed",
-      "label": ""
-    },
-    "rows": [
-      [
-        "Price Position",
-        4,
-        7.0,
-        "Mid-Discount @ 19.4 — 3.2% away from Deep Discount — 4/7.0"
-      ],
-      [
-        "Liquidity Context",
-        0,
-        13.87,
-        "No liquidity event detected"
-      ],
-      [
-        "Demand Zone (SV+VP)",
-        0,
-        26.72,
-        "HVN only — HVN @ 18.4 — 100% of peak vol — depth 75% into discount | No SV: No Stopping Volume detected in discount zone"
-      ],
-      [
-        "Order Block Quality",
-        6,
-        13.17,
-        "Near OB zone 18.2–18.8 [Buy Zone] — quality 74% → 6/13.17"
-      ],
-      [
-        "Higher Timeframe",
-        0,
-        0.74,
-        "Below MA50 (22.2) [no MA200] | MA50 falling (-2.50) | Partial structure (HH:True, HL:False)"
-      ],
-      [
-        "Anchored VWAP",
-        0,
-        7.52,
-        "Above AVWAP 18.2"
-      ],
-      [
-        "MACD vs Zero",
-        8,
-        15.76,
-        "MACD below zero (-0.6488), no cross yet — 2/4"
-      ],
-      [
-        "Divergence",
-        11.21,
-        11.21,
-        "STRONG: RSI div (RSI 17.4→23.2 ↑, price ↓) | MACD div (MACD -3.2774→-2.0862 ↑, price ↓)"
-      ]
-    ],
-    "sv_hit": false,
-    "sv_score": 0.0,
-    "sv_price": null,
-    "hvn_hit": true,
-    "hvn_score": 1.0,
-    "hvn_price": 18.37,
-    "macd_val": -0.6488,
-    "vol_spike": 0.09,
-    "rsi_val": 50.37037775042585,
-    "macd_hist": 0.5097,
-    "macd_signal": -1.1586,
-    "rsi_div": true,
-    "macd_div": true,
-    "ob_quality": 0.74,
-    "ob_dist": 0.035,
-    "htf_hh": true,
-    "htf_hl": false,
-    "avwap_gap": 0.0,
-    "sweep_detected": false,
-    "wick_rejection": false,
-    "equal_lows": false,
-    "price_gate": 3.8500000000000005,
-    "price_ok": true,
-    "liq_confirmed": false,
-    "early_buy_research": false,
-    "sv_depth": 0.0
-  },
   "HRHO.CA": {
     "ok": true,
     "price": 23.61,
@@ -1555,7 +1555,7 @@
     "buy_hi": 22.8,
     "sell_lo": 27.17,
     "avwap": 23.03,
-    "avwap_l": 22.59,
+    "avwap_l": 22.6,
     "score": 30,
     "raw_score": 30.21,
     "ctx_label": "",
@@ -1627,7 +1627,7 @@
     "hvn_score": 0.0,
     "hvn_price": null,
     "macd_val": -0.484,
-    "vol_spike": 0.12,
+    "vol_spike": 0.14,
     "rsi_val": 44.69964111681979,
     "macd_hist": -0.0019,
     "macd_signal": -0.4821,
@@ -1644,6 +1644,212 @@
     "price_gate": 3.5,
     "price_ok": false,
     "liq_confirmed": false,
+    "early_buy_research": false,
+    "sv_depth": 0.0
+  },
+  "ARCC.CA": {
+    "ok": true,
+    "price": 69.4,
+    "last_dt": "2026-11-09",
+    "is_fresh": true,
+    "price_src": "yfinance + TradingView patch",
+    "target": 77.73,
+    "eq": 73.01,
+    "buy_hi": 59.91,
+    "sell_lo": 86.11,
+    "avwap": 64.42,
+    "avwap_l": 62.03,
+    "score": 28,
+    "raw_score": 28.21,
+    "ctx_label": "",
+    "signal": "Skip",
+    "tc": "#721c24",
+    "tbg": "#f8d7da",
+    "tbr": "#f5c6cb",
+    "r1": 1,
+    "entry_zones": null,
+    "pattern": {
+      "ok": false,
+      "reason": "removed",
+      "label": ""
+    },
+    "rows": [
+      [
+        "Price Position",
+        1,
+        7.0,
+        "Mid-Discount @ 69.4 — 25.4% away from Deep Discount — 1/7.0"
+      ],
+      [
+        "Liquidity Context",
+        8,
+        13.87,
+        "Rejection wick @ 66.5 — lower wick 82% of range"
+      ],
+      [
+        "Demand Zone (SV+VP)",
+        0,
+        26.72,
+        "HVN only — HVN @ 55.9 — 100% of peak vol — depth 91% into discount | No SV: No Stopping Volume detected in discount zone"
+      ],
+      [
+        "Order Block Quality",
+        0,
+        13.17,
+        "No valid OB found in discount zone (last 40 bars)"
+      ],
+      [
+        "Higher Timeframe",
+        0,
+        0.74,
+        "Above MA50 (69.2) [no MA200] ✓ | MA50 falling (-1.63) | Partial structure (HH:False, HL:True)"
+      ],
+      [
+        "Anchored VWAP",
+        0,
+        7.52,
+        "Above AVWAP 64.4"
+      ],
+      [
+        "MACD vs Zero",
+        8,
+        15.76,
+        "MACD below zero (-0.3460), no cross yet — 2/4"
+      ],
+      [
+        "Divergence",
+        11.21,
+        11.21,
+        "STRONG: RSI div (RSI 27.2→33.4 ↑, price ↓) | MACD div (MACD -2.2444→-1.8745 ↑, price ↓)"
+      ]
+    ],
+    "sv_hit": false,
+    "sv_score": 0.0,
+    "sv_price": null,
+    "hvn_hit": true,
+    "hvn_score": 1.0,
+    "hvn_price": 55.9,
+    "macd_val": -0.346,
+    "vol_spike": 0.44,
+    "rsi_val": 57.88150016532717,
+    "macd_hist": 0.7661,
+    "macd_signal": -1.1121,
+    "rsi_div": true,
+    "macd_div": true,
+    "ob_quality": null,
+    "ob_dist": null,
+    "htf_hh": false,
+    "htf_hl": true,
+    "avwap_gap": 0.0,
+    "sweep_detected": false,
+    "wick_rejection": true,
+    "equal_lows": false,
+    "price_gate": 3.8500000000000005,
+    "price_ok": false,
+    "liq_confirmed": false,
+    "early_buy_research": false,
+    "sv_depth": 0.0
+  },
+  "RAYA.CA": {
+    "ok": true,
+    "price": 5.8,
+    "last_dt": "2026-11-09",
+    "is_fresh": true,
+    "price_src": "yfinance + TradingView patch",
+    "target": 6.5,
+    "eq": 6.54,
+    "buy_hi": 5.48,
+    "sell_lo": 7.6,
+    "avwap": 5.37,
+    "avwap_l": 5.21,
+    "score": 33,
+    "raw_score": 32.87,
+    "ctx_label": "",
+    "signal": "Skip",
+    "tc": "#721c24",
+    "tbg": "#f8d7da",
+    "tbr": "#f5c6cb",
+    "r1": 3,
+    "entry_zones": null,
+    "pattern": {
+      "ok": false,
+      "reason": "removed",
+      "label": ""
+    },
+    "rows": [
+      [
+        "Price Position",
+        3,
+        7.0,
+        "Mid-Discount @ 5.8 — 10.7% away from Deep Discount — 3/7.0"
+      ],
+      [
+        "Liquidity Context",
+        13.87,
+        13.87,
+        "Sweep & Reverse @ 5.0 — stop hunt confirmed ✓"
+      ],
+      [
+        "Demand Zone (SV+VP)",
+        0,
+        26.72,
+        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
+      ],
+      [
+        "Order Block Quality",
+        0,
+        13.17,
+        "No valid OB found in discount zone (last 40 bars)"
+      ],
+      [
+        "Higher Timeframe",
+        0,
+        0.74,
+        "Below MA50 (6.4) [no MA200] | MA50 falling (-0.30) | No HH/HL — downtrend structure"
+      ],
+      [
+        "Anchored VWAP",
+        0,
+        7.52,
+        "Above AVWAP 5.4"
+      ],
+      [
+        "MACD vs Zero",
+        8,
+        15.76,
+        "MACD below zero (-0.2361), no cross yet — 2/4"
+      ],
+      [
+        "Divergence",
+        8,
+        11.21,
+        "RSI div (RSI 24.7→25.5 ↑, price ↓)"
+      ]
+    ],
+    "sv_hit": false,
+    "sv_score": 0.0,
+    "sv_price": null,
+    "hvn_hit": false,
+    "hvn_score": 0.0,
+    "hvn_price": null,
+    "macd_val": -0.2361,
+    "vol_spike": 0.76,
+    "rsi_val": 49.51339243716358,
+    "macd_hist": 0.0707,
+    "macd_signal": -0.3068,
+    "rsi_div": true,
+    "macd_div": false,
+    "ob_quality": null,
+    "ob_dist": null,
+    "htf_hh": false,
+    "htf_hl": false,
+    "avwap_gap": 0.0,
+    "sweep_detected": true,
+    "wick_rejection": false,
+    "equal_lows": false,
+    "price_gate": 3.8500000000000005,
+    "price_ok": false,
+    "liq_confirmed": true,
     "early_buy_research": false,
     "sv_depth": 0.0
   },
@@ -1752,11 +1958,11 @@
   },
   "BTFH.CA": {
     "ok": true,
-    "price": 2.39,
+    "price": 2.38,
     "last_dt": "2026-11-09",
     "is_fresh": true,
     "price_src": "yfinance + TradingView patch",
-    "target": 2.68,
+    "target": 2.67,
     "eq": 2.65,
     "buy_hi": 2.23,
     "sell_lo": 3.08,
@@ -1781,7 +1987,7 @@
         "Price Position",
         3,
         7.0,
-        "Mid-Discount @ 2.4 — 13.1% away from Deep Discount — 3/7.0"
+        "Mid-Discount @ 2.4 — 12.3% away from Deep Discount — 3/7.0"
       ],
       [
         "Liquidity Context",
@@ -1817,7 +2023,7 @@
         "MACD vs Zero",
         8,
         15.76,
-        "MACD below zero (-0.1092), no cross yet — 2/4"
+        "MACD below zero (-0.1100), no cross yet — 2/4"
       ],
       [
         "Divergence",
@@ -1832,326 +2038,17 @@
     "hvn_hit": false,
     "hvn_score": 0.0,
     "hvn_price": null,
-    "macd_val": -0.1092,
-    "vol_spike": 0.14,
-    "rsi_val": 42.655633634906245,
-    "macd_hist": 0.0183,
-    "macd_signal": -0.1275,
+    "macd_val": -0.11,
+    "vol_spike": 0.15,
+    "rsi_val": 42.13033770977644,
+    "macd_hist": 0.0177,
+    "macd_signal": -0.1277,
     "rsi_div": false,
     "macd_div": false,
     "ob_quality": null,
     "ob_dist": null,
     "htf_hh": false,
     "htf_hl": false,
-    "avwap_gap": 0.0,
-    "sweep_detected": false,
-    "wick_rejection": true,
-    "equal_lows": false,
-    "price_gate": 3.8500000000000005,
-    "price_ok": false,
-    "liq_confirmed": false,
-    "early_buy_research": false,
-    "sv_depth": 0.0
-  },
-  "GBCO.CA": {
-    "ok": true,
-    "price": 22.9,
-    "last_dt": "2026-11-09",
-    "is_fresh": true,
-    "price_src": "yfinance + TradingView patch",
-    "target": 25.65,
-    "eq": 27.2,
-    "buy_hi": 22.79,
-    "sell_lo": 31.61,
-    "avwap": 22.24,
-    "avwap_l": 21.85,
-    "score": 26,
-    "raw_score": 25.869999999999997,
-    "ctx_label": "",
-    "signal": "Skip",
-    "tc": "#721c24",
-    "tbg": "#f8d7da",
-    "tbr": "#f5c6cb",
-    "r1": 4,
-    "entry_zones": null,
-    "pattern": {
-      "ok": false,
-      "reason": "removed",
-      "label": ""
-    },
-    "rows": [
-      [
-        "Price Position",
-        4,
-        7.0,
-        "Mid-Discount @ 22.9 — 0.9% away from Deep Discount — 4/7.0"
-      ],
-      [
-        "Liquidity Context",
-        13.87,
-        13.87,
-        "Sweep & Reverse @ 20.9 — stop hunt confirmed ✓"
-      ],
-      [
-        "Demand Zone (SV+VP)",
-        0,
-        26.72,
-        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
-      ],
-      [
-        "Order Block Quality",
-        0,
-        13.17,
-        "No valid OB found in discount zone (last 40 bars)"
-      ],
-      [
-        "Higher Timeframe",
-        0,
-        0.74,
-        "Below MA50 (28.2) [no MA200] | MA50 falling (-1.27) | No HH/HL — downtrend structure"
-      ],
-      [
-        "Anchored VWAP",
-        0,
-        7.52,
-        "Above AVWAP 22.2"
-      ],
-      [
-        "MACD vs Zero",
-        8,
-        15.76,
-        "MACD below zero (-1.9634), no cross yet — 2/4"
-      ],
-      [
-        "Divergence",
-        0,
-        11.21,
-        "No divergence (price LL confirmed: 29.0→21.5, but indicators confirmed trend)"
-      ]
-    ],
-    "sv_hit": false,
-    "sv_score": 0.0,
-    "sv_price": null,
-    "hvn_hit": false,
-    "hvn_score": 0.0,
-    "hvn_price": null,
-    "macd_val": -1.9634,
-    "vol_spike": 0.51,
-    "rsi_val": 34.122973610672005,
-    "macd_hist": -0.0245,
-    "macd_signal": -1.9389,
-    "rsi_div": false,
-    "macd_div": false,
-    "ob_quality": null,
-    "ob_dist": null,
-    "htf_hh": false,
-    "htf_hl": false,
-    "avwap_gap": 0.0,
-    "sweep_detected": true,
-    "wick_rejection": false,
-    "equal_lows": false,
-    "price_gate": 3.5,
-    "price_ok": true,
-    "liq_confirmed": true,
-    "early_buy_research": false,
-    "sv_depth": 0.0
-  },
-  "RAYA.CA": {
-    "ok": true,
-    "price": 5.77,
-    "last_dt": "2026-11-09",
-    "is_fresh": true,
-    "price_src": "yfinance + TradingView patch",
-    "target": 6.46,
-    "eq": 6.54,
-    "buy_hi": 5.48,
-    "sell_lo": 7.6,
-    "avwap": 5.37,
-    "avwap_l": 5.21,
-    "score": 33,
-    "raw_score": 32.87,
-    "ctx_label": "",
-    "signal": "Skip",
-    "tc": "#721c24",
-    "tbg": "#f8d7da",
-    "tbr": "#f5c6cb",
-    "r1": 3,
-    "entry_zones": null,
-    "pattern": {
-      "ok": false,
-      "reason": "removed",
-      "label": ""
-    },
-    "rows": [
-      [
-        "Price Position",
-        3,
-        7.0,
-        "Mid-Discount @ 5.8 — 9.7% away from Deep Discount — 3/7.0"
-      ],
-      [
-        "Liquidity Context",
-        13.87,
-        13.87,
-        "Sweep & Reverse @ 5.0 — stop hunt confirmed ✓"
-      ],
-      [
-        "Demand Zone (SV+VP)",
-        0,
-        26.72,
-        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
-      ],
-      [
-        "Order Block Quality",
-        0,
-        13.17,
-        "No valid OB found in discount zone (last 40 bars)"
-      ],
-      [
-        "Higher Timeframe",
-        0,
-        0.74,
-        "Below MA50 (6.4) [no MA200] | MA50 falling (-0.30) | No HH/HL — downtrend structure"
-      ],
-      [
-        "Anchored VWAP",
-        0,
-        7.52,
-        "Above AVWAP 5.4"
-      ],
-      [
-        "MACD vs Zero",
-        8,
-        15.76,
-        "MACD below zero (-0.2385), no cross yet — 2/4"
-      ],
-      [
-        "Divergence",
-        8,
-        11.21,
-        "RSI div (RSI 24.7→25.5 ↑, price ↓)"
-      ]
-    ],
-    "sv_hit": false,
-    "sv_score": 0.0,
-    "sv_price": null,
-    "hvn_hit": false,
-    "hvn_score": 0.0,
-    "hvn_price": null,
-    "macd_val": -0.2385,
-    "vol_spike": 0.63,
-    "rsi_val": 48.794374674040064,
-    "macd_hist": 0.0688,
-    "macd_signal": -0.3073,
-    "rsi_div": true,
-    "macd_div": false,
-    "ob_quality": null,
-    "ob_dist": null,
-    "htf_hh": false,
-    "htf_hl": false,
-    "avwap_gap": 0.0,
-    "sweep_detected": true,
-    "wick_rejection": false,
-    "equal_lows": false,
-    "price_gate": 3.8500000000000005,
-    "price_ok": false,
-    "liq_confirmed": true,
-    "early_buy_research": false,
-    "sv_depth": 0.0
-  },
-  "ARCC.CA": {
-    "ok": true,
-    "price": 68.81,
-    "last_dt": "2026-11-09",
-    "is_fresh": true,
-    "price_src": "yfinance + TradingView patch",
-    "target": 77.07,
-    "eq": 73.01,
-    "buy_hi": 59.91,
-    "sell_lo": 86.11,
-    "avwap": 64.4,
-    "avwap_l": 62.04,
-    "score": 28,
-    "raw_score": 28.21,
-    "ctx_label": "",
-    "signal": "Skip",
-    "tc": "#721c24",
-    "tbg": "#f8d7da",
-    "tbr": "#f5c6cb",
-    "r1": 1,
-    "entry_zones": null,
-    "pattern": {
-      "ok": false,
-      "reason": "removed",
-      "label": ""
-    },
-    "rows": [
-      [
-        "Price Position",
-        1,
-        7.0,
-        "Mid-Discount @ 68.8 — 23.8% away from Deep Discount — 1/7.0"
-      ],
-      [
-        "Liquidity Context",
-        8,
-        13.87,
-        "Rejection wick @ 66.5 — lower wick 82% of range"
-      ],
-      [
-        "Demand Zone (SV+VP)",
-        0,
-        26.72,
-        "HVN only — HVN @ 55.9 — 100% of peak vol — depth 91% into discount | No SV: No Stopping Volume detected in discount zone"
-      ],
-      [
-        "Order Block Quality",
-        0,
-        13.17,
-        "No valid OB found in discount zone (last 40 bars)"
-      ],
-      [
-        "Higher Timeframe",
-        0,
-        0.74,
-        "Below MA50 (69.2) [no MA200] | MA50 falling (-1.64) | Partial structure (HH:False, HL:True)"
-      ],
-      [
-        "Anchored VWAP",
-        0,
-        7.52,
-        "Above AVWAP 64.4"
-      ],
-      [
-        "MACD vs Zero",
-        8,
-        15.76,
-        "MACD below zero (-0.3930), no cross yet — 2/4"
-      ],
-      [
-        "Divergence",
-        11.21,
-        11.21,
-        "STRONG: RSI div (RSI 27.2→33.4 ↑, price ↓) | MACD div (MACD -2.2444→-1.8745 ↑, price ↓)"
-      ]
-    ],
-    "sv_hit": false,
-    "sv_score": 0.0,
-    "sv_price": null,
-    "hvn_hit": true,
-    "hvn_score": 1.0,
-    "hvn_price": 55.9,
-    "macd_val": -0.393,
-    "vol_spike": 0.44,
-    "rsi_val": 56.64984386901852,
-    "macd_hist": 0.7285,
-    "macd_signal": -1.1215,
-    "rsi_div": true,
-    "macd_div": true,
-    "ob_quality": null,
-    "ob_dist": null,
-    "htf_hh": false,
-    "htf_hl": true,
     "avwap_gap": 0.0,
     "sweep_detected": false,
     "wick_rejection": true,
@@ -2245,7 +2142,7 @@
     "hvn_score": 0.0,
     "hvn_price": null,
     "macd_val": -5.8419,
-    "vol_spike": 0.79,
+    "vol_spike": 0.8,
     "rsi_val": 52.451167489129695,
     "macd_hist": 3.335,
     "macd_signal": -9.1769,
@@ -2260,6 +2157,315 @@
     "wick_rejection": true,
     "equal_lows": false,
     "price_gate": 3.5,
+    "price_ok": false,
+    "liq_confirmed": false,
+    "early_buy_research": false,
+    "sv_depth": 0.0
+  },
+  "GBCO.CA": {
+    "ok": true,
+    "price": 22.86,
+    "last_dt": "2026-11-09",
+    "is_fresh": true,
+    "price_src": "yfinance + TradingView patch",
+    "target": 25.6,
+    "eq": 27.2,
+    "buy_hi": 22.79,
+    "sell_lo": 31.61,
+    "avwap": 22.24,
+    "avwap_l": 21.85,
+    "score": 26,
+    "raw_score": 25.869999999999997,
+    "ctx_label": "",
+    "signal": "Skip",
+    "tc": "#721c24",
+    "tbg": "#f8d7da",
+    "tbr": "#f5c6cb",
+    "r1": 4,
+    "entry_zones": null,
+    "pattern": {
+      "ok": false,
+      "reason": "removed",
+      "label": ""
+    },
+    "rows": [
+      [
+        "Price Position",
+        4,
+        7.0,
+        "Mid-Discount @ 22.9 — 0.6% away from Deep Discount — 4/7.0"
+      ],
+      [
+        "Liquidity Context",
+        13.87,
+        13.87,
+        "Sweep & Reverse @ 20.9 — stop hunt confirmed ✓"
+      ],
+      [
+        "Demand Zone (SV+VP)",
+        0,
+        26.72,
+        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
+      ],
+      [
+        "Order Block Quality",
+        0,
+        13.17,
+        "No valid OB found in discount zone (last 40 bars)"
+      ],
+      [
+        "Higher Timeframe",
+        0,
+        0.74,
+        "Below MA50 (28.2) [no MA200] | MA50 falling (-1.27) | No HH/HL — downtrend structure"
+      ],
+      [
+        "Anchored VWAP",
+        0,
+        7.52,
+        "Above AVWAP 22.2"
+      ],
+      [
+        "MACD vs Zero",
+        8,
+        15.76,
+        "MACD below zero (-1.9666), no cross yet — 2/4"
+      ],
+      [
+        "Divergence",
+        0,
+        11.21,
+        "No divergence (price LL confirmed: 29.0→21.5, but indicators confirmed trend)"
+      ]
+    ],
+    "sv_hit": false,
+    "sv_score": 0.0,
+    "sv_price": null,
+    "hvn_hit": false,
+    "hvn_score": 0.0,
+    "hvn_price": null,
+    "macd_val": -1.9666,
+    "vol_spike": 0.51,
+    "rsi_val": 33.926260124336935,
+    "macd_hist": -0.0271,
+    "macd_signal": -1.9395,
+    "rsi_div": false,
+    "macd_div": false,
+    "ob_quality": null,
+    "ob_dist": null,
+    "htf_hh": false,
+    "htf_hl": false,
+    "avwap_gap": 0.0,
+    "sweep_detected": true,
+    "wick_rejection": false,
+    "equal_lows": false,
+    "price_gate": 3.5,
+    "price_ok": true,
+    "liq_confirmed": true,
+    "early_buy_research": false,
+    "sv_depth": 0.0
+  },
+  "ISPH.CA": {
+    "ok": true,
+    "price": 10.64,
+    "last_dt": "2026-11-09",
+    "is_fresh": true,
+    "price_src": "yfinance + TradingView patch",
+    "target": 11.92,
+    "eq": 12.88,
+    "buy_hi": 10.18,
+    "sell_lo": 15.58,
+    "avwap": 10.11,
+    "avwap_l": 9.89,
+    "score": 27,
+    "raw_score": 26.869999999999997,
+    "ctx_label": "",
+    "signal": "Skip",
+    "tc": "#721c24",
+    "tbg": "#f8d7da",
+    "tbr": "#f5c6cb",
+    "r1": 3,
+    "entry_zones": null,
+    "pattern": {
+      "ok": false,
+      "reason": "removed",
+      "label": ""
+    },
+    "rows": [
+      [
+        "Price Position",
+        3,
+        7.0,
+        "Mid-Discount @ 10.6 — 6.0% away from Deep Discount — 3/7.0"
+      ],
+      [
+        "Liquidity Context",
+        13.87,
+        13.87,
+        "Sweep & Reverse @ 9.0 — stop hunt confirmed ✓"
+      ],
+      [
+        "Demand Zone (SV+VP)",
+        0,
+        26.72,
+        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
+      ],
+      [
+        "Order Block Quality",
+        2,
+        13.17,
+        "OB zone 9.1–9.5 [Buy Zone] — far (11% away) → 2/13.17"
+      ],
+      [
+        "Higher Timeframe",
+        0,
+        0.74,
+        "Below MA50 (11.4) [no MA200] | MA50 falling (-0.55) | No HH/HL — downtrend structure"
+      ],
+      [
+        "Anchored VWAP",
+        0,
+        7.52,
+        "Above AVWAP 10.1"
+      ],
+      [
+        "MACD vs Zero",
+        8,
+        15.76,
+        "MACD below zero (-0.3491), no cross yet — 2/4"
+      ],
+      [
+        "Divergence",
+        0,
+        11.21,
+        "No divergence (price LL confirmed: 10.6→9.1, but indicators confirmed trend)"
+      ]
+    ],
+    "sv_hit": false,
+    "sv_score": 0.0,
+    "sv_price": null,
+    "hvn_hit": false,
+    "hvn_score": 0.0,
+    "hvn_price": null,
+    "macd_val": -0.3491,
+    "vol_spike": 0.84,
+    "rsi_val": 51.66505820034035,
+    "macd_hist": 0.1405,
+    "macd_signal": -0.4896,
+    "rsi_div": false,
+    "macd_div": false,
+    "ob_quality": 1.0,
+    "ob_dist": 0.11,
+    "htf_hh": false,
+    "htf_hl": false,
+    "avwap_gap": 0.0,
+    "sweep_detected": true,
+    "wick_rejection": false,
+    "equal_lows": false,
+    "price_gate": 3.8500000000000005,
+    "price_ok": false,
+    "liq_confirmed": true,
+    "early_buy_research": false,
+    "sv_depth": 0.0
+  },
+  "RMDA.CA": {
+    "ok": true,
+    "price": 5.64,
+    "last_dt": "2026-11-09",
+    "is_fresh": true,
+    "price_src": "yfinance + TradingView patch",
+    "target": 6.32,
+    "eq": 5.94,
+    "buy_hi": 4.93,
+    "sell_lo": 6.96,
+    "avwap": 5.22,
+    "avwap_l": 4.98,
+    "score": 25,
+    "raw_score": 25,
+    "ctx_label": "",
+    "signal": "Skip",
+    "tc": "#721c24",
+    "tbg": "#f8d7da",
+    "tbr": "#f5c6cb",
+    "r1": 1,
+    "entry_zones": null,
+    "pattern": {
+      "ok": false,
+      "reason": "removed",
+      "label": ""
+    },
+    "rows": [
+      [
+        "Price Position",
+        1,
+        7.0,
+        "Mid-Discount @ 5.6 — 24.4% away from Deep Discount — 1/7.0"
+      ],
+      [
+        "Liquidity Context",
+        8,
+        13.87,
+        "Rejection wick @ 5.4 — lower wick 77% of range"
+      ],
+      [
+        "Demand Zone (SV+VP)",
+        0,
+        26.72,
+        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
+      ],
+      [
+        "Order Block Quality",
+        0,
+        13.17,
+        "No valid OB found in discount zone (last 40 bars)"
+      ],
+      [
+        "Higher Timeframe",
+        0,
+        0.74,
+        "Above MA50 (5.6) [no MA200] ✓ | MA50 falling (-0.16) | Partial structure (HH:False, HL:True)"
+      ],
+      [
+        "Anchored VWAP",
+        0,
+        7.52,
+        "Above AVWAP 5.2"
+      ],
+      [
+        "MACD vs Zero",
+        8,
+        15.76,
+        "MACD below zero (-0.0017), no cross yet — 2/4"
+      ],
+      [
+        "Divergence",
+        8,
+        11.21,
+        "RSI div (RSI 28.1→28.8 ↑, price ↓)"
+      ]
+    ],
+    "sv_hit": false,
+    "sv_score": 0.0,
+    "sv_price": null,
+    "hvn_hit": false,
+    "hvn_score": 0.0,
+    "hvn_price": null,
+    "macd_val": -0.0017,
+    "vol_spike": 0.68,
+    "rsi_val": 59.80593838271431,
+    "macd_hist": 0.1014,
+    "macd_signal": -0.1031,
+    "rsi_div": true,
+    "macd_div": false,
+    "ob_quality": null,
+    "ob_dist": null,
+    "htf_hh": false,
+    "htf_hl": true,
+    "avwap_gap": 0.0,
+    "sweep_detected": false,
+    "wick_rejection": true,
+    "equal_lows": false,
+    "price_gate": 3.8500000000000005,
     "price_ok": false,
     "liq_confirmed": false,
     "early_buy_research": false,
@@ -2368,219 +2574,13 @@
     "early_buy_research": false,
     "sv_depth": 0.0
   },
-  "RMDA.CA": {
-    "ok": true,
-    "price": 5.63,
-    "last_dt": "2026-11-09",
-    "is_fresh": true,
-    "price_src": "yfinance + TradingView patch",
-    "target": 6.31,
-    "eq": 5.94,
-    "buy_hi": 4.93,
-    "sell_lo": 6.96,
-    "avwap": 5.22,
-    "avwap_l": 4.98,
-    "score": 25,
-    "raw_score": 25,
-    "ctx_label": "",
-    "signal": "Skip",
-    "tc": "#721c24",
-    "tbg": "#f8d7da",
-    "tbr": "#f5c6cb",
-    "r1": 1,
-    "entry_zones": null,
-    "pattern": {
-      "ok": false,
-      "reason": "removed",
-      "label": ""
-    },
-    "rows": [
-      [
-        "Price Position",
-        1,
-        7.0,
-        "Mid-Discount @ 5.6 — 24.1% away from Deep Discount — 1/7.0"
-      ],
-      [
-        "Liquidity Context",
-        8,
-        13.87,
-        "Rejection wick @ 5.4 — lower wick 77% of range"
-      ],
-      [
-        "Demand Zone (SV+VP)",
-        0,
-        26.72,
-        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
-      ],
-      [
-        "Order Block Quality",
-        0,
-        13.17,
-        "No valid OB found in discount zone (last 40 bars)"
-      ],
-      [
-        "Higher Timeframe",
-        0,
-        0.74,
-        "Above MA50 (5.6) [no MA200] ✓ | MA50 falling (-0.16) | Partial structure (HH:False, HL:True)"
-      ],
-      [
-        "Anchored VWAP",
-        0,
-        7.52,
-        "Above AVWAP 5.2"
-      ],
-      [
-        "MACD vs Zero",
-        8,
-        15.76,
-        "MACD below zero (-0.0025), no cross yet — 2/4"
-      ],
-      [
-        "Divergence",
-        8,
-        11.21,
-        "RSI div (RSI 28.1→28.8 ↑, price ↓)"
-      ]
-    ],
-    "sv_hit": false,
-    "sv_score": 0.0,
-    "sv_price": null,
-    "hvn_hit": false,
-    "hvn_score": 0.0,
-    "hvn_price": null,
-    "macd_val": -0.0025,
-    "vol_spike": 0.67,
-    "rsi_val": 59.58264349265751,
-    "macd_hist": 0.1008,
-    "macd_signal": -0.1033,
-    "rsi_div": true,
-    "macd_div": false,
-    "ob_quality": null,
-    "ob_dist": null,
-    "htf_hh": false,
-    "htf_hl": true,
-    "avwap_gap": 0.0,
-    "sweep_detected": false,
-    "wick_rejection": true,
-    "equal_lows": false,
-    "price_gate": 3.8500000000000005,
-    "price_ok": false,
-    "liq_confirmed": false,
-    "early_buy_research": false,
-    "sv_depth": 0.0
-  },
-  "ISPH.CA": {
-    "ok": true,
-    "price": 10.65,
-    "last_dt": "2026-11-09",
-    "is_fresh": true,
-    "price_src": "yfinance + TradingView patch",
-    "target": 11.93,
-    "eq": 12.88,
-    "buy_hi": 10.18,
-    "sell_lo": 15.58,
-    "avwap": 10.11,
-    "avwap_l": 9.89,
-    "score": 27,
-    "raw_score": 26.869999999999997,
-    "ctx_label": "",
-    "signal": "Skip",
-    "tc": "#721c24",
-    "tbg": "#f8d7da",
-    "tbr": "#f5c6cb",
-    "r1": 3,
-    "entry_zones": null,
-    "pattern": {
-      "ok": false,
-      "reason": "removed",
-      "label": ""
-    },
-    "rows": [
-      [
-        "Price Position",
-        3,
-        7.0,
-        "Mid-Discount @ 10.7 — 6.1% away from Deep Discount — 3/7.0"
-      ],
-      [
-        "Liquidity Context",
-        13.87,
-        13.87,
-        "Sweep & Reverse @ 9.0 — stop hunt confirmed ✓"
-      ],
-      [
-        "Demand Zone (SV+VP)",
-        0,
-        26.72,
-        "No demand confluence — SV: No Stopping Volume detected in discount zone | VP: No HVN in discount zone"
-      ],
-      [
-        "Order Block Quality",
-        2,
-        13.17,
-        "OB zone 9.1–9.5 [Buy Zone] — far (11% away) → 2/13.17"
-      ],
-      [
-        "Higher Timeframe",
-        0,
-        0.74,
-        "Below MA50 (11.4) [no MA200] | MA50 falling (-0.55) | No HH/HL — downtrend structure"
-      ],
-      [
-        "Anchored VWAP",
-        0,
-        7.52,
-        "Above AVWAP 10.1"
-      ],
-      [
-        "MACD vs Zero",
-        8,
-        15.76,
-        "MACD below zero (-0.3483), no cross yet — 2/4"
-      ],
-      [
-        "Divergence",
-        0,
-        11.21,
-        "No divergence (price LL confirmed: 10.6→9.1, but indicators confirmed trend)"
-      ]
-    ],
-    "sv_hit": false,
-    "sv_score": 0.0,
-    "sv_price": null,
-    "hvn_hit": false,
-    "hvn_score": 0.0,
-    "hvn_price": null,
-    "macd_val": -0.3483,
-    "vol_spike": 0.82,
-    "rsi_val": 51.78819275840177,
-    "macd_hist": 0.1412,
-    "macd_signal": -0.4895,
-    "rsi_div": false,
-    "macd_div": false,
-    "ob_quality": 1.0,
-    "ob_dist": 0.11,
-    "htf_hh": false,
-    "htf_hl": false,
-    "avwap_gap": 0.0,
-    "sweep_detected": true,
-    "wick_rejection": false,
-    "equal_lows": false,
-    "price_gate": 3.8500000000000005,
-    "price_ok": false,
-    "liq_confirmed": true,
-    "early_buy_research": false,
-    "sv_depth": 0.0
-  },
   "CCAP.CA": {
     "ok": true,
-    "price": 5.92,
+    "price": 5.93,
     "last_dt": "2026-11-09",
     "is_fresh": true,
     "price_src": "yfinance + TradingView patch",
-    "target": 6.63,
+    "target": 6.64,
     "eq": 6.23,
     "buy_hi": 5.47,
     "sell_lo": 6.99,
@@ -2605,7 +2605,7 @@
         "Price Position",
         2,
         7.0,
-        "Mid-Discount @ 5.9 — 20.8% away from Deep Discount — 2/7.0"
+        "Mid-Discount @ 5.9 — 21.2% away from Deep Discount — 2/7.0"
       ],
       [
         "Liquidity Context",
@@ -2641,7 +2641,7 @@
         "MACD vs Zero",
         8,
         15.76,
-        "MACD below zero (-0.1484), no cross yet — 2/4"
+        "MACD below zero (-0.1476), no cross yet — 2/4"
       ],
       [
         "Divergence",
@@ -2656,18 +2656,18 @@
     "hvn_hit": true,
     "hvn_score": 1.0,
     "hvn_price": 5.38,
-    "macd_val": -0.1484,
-    "vol_spike": 0.35,
-    "rsi_val": 44.52991784177642,
-    "macd_hist": -0.0156,
-    "macd_signal": -0.1328,
+    "macd_val": -0.1476,
+    "vol_spike": 0.36,
+    "rsi_val": 44.818084919488655,
+    "macd_hist": -0.015,
+    "macd_signal": -0.1326,
     "rsi_div": true,
     "macd_div": false,
     "ob_quality": null,
     "ob_dist": null,
     "htf_hh": false,
     "htf_hl": false,
-    "avwap_gap": 0.7456,
+    "avwap_gap": 0.7246,
     "sweep_detected": false,
     "wick_rejection": true,
     "equal_lows": false,
@@ -2760,7 +2760,7 @@
     "hvn_score": 1.0,
     "hvn_price": 1.42,
     "macd_val": -0.0368,
-    "vol_spike": 0.42,
+    "vol_spike": 0.43,
     "rsi_val": 50.40891179907638,
     "macd_hist": 0.0225,
     "macd_signal": -0.0593,
